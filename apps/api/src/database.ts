@@ -1,4 +1,7 @@
+import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool, type PoolConfig } from "pg";
+
+import * as schema from "./db/schema.js";
 
 function getDatabaseConfig(): PoolConfig {
   const connectionString = process.env.DATABASE_URL;
@@ -15,6 +18,7 @@ function getDatabaseConfig(): PoolConfig {
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
     application_name: "wasla-api",
+
     ssl:
       process.env.DATABASE_SSL === "true"
         ? { rejectUnauthorized: true }
@@ -34,6 +38,13 @@ export function getDatabasePool(): Pool {
   }
 
   return pool;
+}
+
+export function getDrizzleDatabase() {
+  return drizzle({
+    client: getDatabasePool(),
+    schema,
+  });
 }
 
 export async function checkDatabaseConnection(): Promise<boolean> {
