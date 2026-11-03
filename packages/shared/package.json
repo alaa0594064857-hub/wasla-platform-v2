@@ -1,3 +1,4 @@
+
 {
   "name": "@wasla/shared",
   "version": "1.0.0",
@@ -10,9 +11,11 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
-    "typescript": "5.7.2"
+    "typescript": "5.7.2",
+    "vitest": "2.1.8"
   }
 }
