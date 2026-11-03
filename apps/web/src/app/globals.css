@@ -1,6 +1,4 @@
 
-@import "tailwindcss";
-
 :root {
   --wasla-navy: #14243A;
   --wasla-gold: #C6A15B;
@@ -33,3 +31,35 @@ a {
 button {
   cursor: pointer;
 }
+
+.min-h-screen { min-height: 100vh; }
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.flex-wrap { flex-wrap: wrap; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.text-center { text-align: center; }
+.px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
+.mt-3 { margin-top: .75rem; }
+.mt-4 { margin-top: 1rem; }
+.mt-5 { margin-top: 1.25rem; }
+.mt-6 { margin-top: 1.5rem; }
+.mt-10 { margin-top: 2.5rem; }
+.gap-3 { gap: .75rem; }
+.max-w-xl { max-width: 36rem; }
+.text-5xl { font-size: 3rem; }
+.text-xl { font-size: 1.25rem; }
+.text-lg { font-size: 1.125rem; }
+.text-sm { font-size: .875rem; }
+.font-bold { font-weight: 700; }
+.font-semibold { font-weight: 600; }
+.tracking-wide { letter-spacing: .025em; }
+.opacity-70 { opacity: .7; }
+.h-1 { height: .25rem; }
+.w-24 { width: 6rem; }
+.rounded-full { border-radius: 9999px; }
+.rounded-xl { border-radius: .75rem; }
+.bg-\[var\(--wasla-gold\)\] { background: var(--wasla-gold); }
+.border { border: 1px solid var(--wasla-gold); }
+.px-5 { padding-left: 1.25rem; padding-right: 1.25rem; }
+.py-3 { padding-top: .75rem; padding-bottom: .75rem; }
