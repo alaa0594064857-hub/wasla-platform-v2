@@ -9,7 +9,7 @@ describe("WASLA database configuration", () => {
   it("requires DATABASE_URL before creating a connection pool", async () => {
     vi.stubEnv("DATABASE_URL", "");
 
-    const database = await import("./database");
+    const database = await import("./database.js");
 
     expect(() => database.getDatabasePool()).toThrow(
       "DATABASE_URL environment variable is required",
@@ -22,7 +22,7 @@ describe("WASLA database configuration", () => {
       "postgresql://test:test@localhost:5432/wasla_test",
     );
 
-    const database = await import("./database");
+    const database = await import("./database.js");
 
     const pool = database.getDatabasePool();
 
