@@ -2,42 +2,47 @@
 
 ## 1. Purpose
 
-Define the initial data structure and relationships
-for WASLA V2.
+Define the logical database structure for WASLA V2.
 
-This document describes the logical database model.
-It does not create database tables or SQL migrations.
+This document describes entities, relationships,
+constraints, and ownership rules.
 
-## 2. Data Principles
+It does not create database tables or migrations.
 
-- Use one unified identity per person.
+## 2. Core Principles
+
+- One unified identity per person.
 - Separate users from business accounts.
-- Support multiple business memberships per user.
-- Enforce data ownership and account isolation.
+- Separate business accounts from stores.
+- Support multiple memberships per user.
+- Enforce strict resource ownership and isolation.
+- Store timestamps in UTC.
 - Use stable unique identifiers.
-- Store timestamps consistently in UTC.
-- Avoid duplicating authoritative data.
-- Keep sensitive data access restricted.
+- Keep authentication secrets outside application profiles.
+- Enforce authorization on the backend.
 
 ## 3. Identity Entities
 
 ### users
 
-Represents the platform user.
+Represents one person on the platform.
 
-Main attributes:
+Attributes:
 - id
 - status
 - preferred_locale
 - created_at
 - updated_at
 
+A user may act as a buyer and participate
+in multiple business accounts.
+
 ### auth_identities
 
-Connects authentication credentials or providers
-to a user.
+Connects authentication provider identities
+to a unified WASLA user.
 
-Main attributes:
+Attributes:
 - id
 - user_id
 - provider
@@ -46,21 +51,24 @@ Main attributes:
 - email_verified_at
 - created_at
 
-A user may have multiple authentication identities.
+Constraints:
+- A provider subject must be unique
+  within its provider.
+- One user may have multiple identities.
+- Authentication secrets must not be stored here.
 
 ### profiles
 
 Stores personal profile information.
 
-Main attributes:
+Attributes:
 - user_id
 - display_name
 - avatar_reference
 - created_at
 - updated_at
 
-Authentication credentials must not be stored
-inside personal profile records.
+Each user has one personal profile.
 
 ## 4. Business Entities
 
@@ -68,7 +76,7 @@ inside personal profile records.
 
 Represents an independent business organization.
 
-Main attributes:
+Attributes:
 - id
 - account_type
 - legal_name
@@ -78,12 +86,22 @@ Main attributes:
 - created_at
 - updated_at
 
+Initial account categories:
+- company
+- supplier
+- manufacturer
+- trader
+- brand
+
+Buyer is a personal capability,
+not a business account category.
+
 ### business_profiles
 
 Stores public and commercial information
 for business accounts.
 
-Main attributes:
+Attributes:
 - account_id
 - description
 - website
@@ -92,16 +110,16 @@ Main attributes:
 - created_at
 - updated_at
 
-Private verification documents must be stored
-separately with restricted access.
+Private verification documents must use
+separate restricted storage.
 
-## 5. Membership Entities
+## 5. Account Memberships
 
 ### account_members
 
 Connects users to business accounts.
 
-Main attributes:
+Attributes:
 - id
 - account_id
 - user_id
@@ -112,16 +130,21 @@ Main attributes:
 - created_at
 - updated_at
 
-A user may have memberships in multiple accounts.
+Constraints:
+- Unique user and account combination.
+- Role scope must be account.
+- Suspended memberships grant no access.
 
-A membership must be unique for each user
-and account combination.
+A user may belong to multiple accounts.
+
+## 6. Store Entities
 
 ### stores
 
-Represents an independent store.
+Represents an independent store owned
+by a business account.
 
-Main attributes:
+Attributes:
 - id
 - account_id
 - name
@@ -130,11 +153,19 @@ Main attributes:
 - created_at
 - updated_at
 
+Constraints:
+- Every store belongs to one account.
+- Store ownership must be explicit.
+- Store slug uniqueness must be defined
+  within its intended public namespace.
+
+One account may own multiple stores.
+
 ### store_members
 
-Connects users to stores.
+Connects users to individual stores.
 
-Main attributes:
+Attributes:
 - id
 - store_id
 - user_id
@@ -143,48 +174,135 @@ Main attributes:
 - created_at
 - updated_at
 
-Store membership must not automatically
-grant access to unrelated stores.
+Constraints:
+- Unique user and store combination.
+- Role scope must be store.
+- Membership grants access only to its store.
 
-## 6. Roles and Permissions
+Account membership does not automatically
+grant access to every store.
+
+## 7. Roles and Permissions
 
 ### roles
 
-Stores role definitions.
+Stores reusable role definitions.
 
-Main attributes:
+Attributes:
 - id
 - name
 - scope_type
 - description
 - is_system_role
+- created_at
+- updated_at
+
+Allowed scope types:
+- personal
+- platform
+- account
+- store
 
 ### permissions
 
 Stores available system permissions.
 
-Main attributes:
+Attributes:
 - id
 - permission_key
 - description
+- scope_type
+
+Each permission must have a defined scope.
 
 ### role_permissions
 
 Connects roles to permissions.
 
-Main attributes:
+Attributes:
 - role_id
 - permission_id
 
-Role assignments must be validated
-and enforced by the backend.
+Constraints:
+- Unique role and permission combination.
+- Role and permission scopes must be compatible.
 
-Platform-level role assignments require
-a separate protected administrative process.
+## 8. Platform Role Assignments
 
-## 7. Commerce Entities
+### platform_role_assignments
 
-Future commerce entities:
+Connects users to platform-level roles.
+
+Attributes:
+- id
+- user_id
+- role_id
+- status
+- assigned_by
+- assigned_at
+- created_at
+
+Rules:
+- Assigned roles must have platform scope.
+- Platform assignments are separate
+  from account and store memberships.
+- Assignment requires a protected process.
+- Every assignment and revocation must be audited.
+- Business account owners cannot assign
+  platform administrator privileges.
+
+## 9. Personal Capabilities
+
+Buyer and individual-user capabilities
+belong to the unified user identity.
+
+They must not be represented as business accounts.
+
+Personal capabilities must not grant access
+to unrelated business or platform resources.
+
+## 10. Authentication Sessions
+
+The authentication provider manages
+authentication sessions initially.
+
+WASLA does not duplicate provider session secrets.
+
+If required later, non-secret session metadata
+may be stored separately.
+
+No local session table is required
+for the initial implementation.
+
+## 11. Audit Entities
+
+### audit_logs
+
+Records sensitive system operations.
+
+Attributes:
+- id
+- actor_user_id
+- action
+- resource_type
+- resource_id
+- account_id
+- metadata
+- created_at
+
+Audit records must not expose:
+- Passwords
+- Session tokens
+- Authentication secrets
+- Private credentials
+
+Platform role changes, membership changes,
+and sensitive administrative operations
+must create audit records.
+
+## 12. Commerce Entities
+
+Future entities:
 
 - products
 - product_categories
@@ -195,15 +313,19 @@ Future commerce entities:
 - shipments
 - returns
 
-Each entity must define its ownership,
-visibility, and access scope.
+Each entity must define:
+- Ownership
+- Visibility
+- Authorization scope
+- Lifecycle status
+- Audit requirements
 
-Commerce tables will be designed in the
-commerce implementation phase.
+Commerce schema will be designed
+in its implementation phase.
 
-## 8. Communication Entities
+## 13. Communication Entities
 
-Future communication entities:
+Future entities:
 
 - conversations
 - conversation_members
@@ -214,100 +336,102 @@ Future communication entities:
 Messages and attachments must enforce
 participant access and secure file permissions.
 
-## 9. Audit Entities
-
-### audit_logs
-
-Records sensitive system operations.
-
-Main attributes:
-- id
-- actor_user_id
-- action
-- resource_type
-- resource_id
-- account_id
-- metadata
-- created_at
-
-Audit records must not expose passwords,
-session tokens, or other authentication secrets.
-
-## 10. Data Relationships
+## 14. Data Relationships
 
 Initial relationships:
 
-- users have one personal profile.
-- users may have multiple authentication identities.
-- users may belong to multiple accounts.
-- accounts may have multiple members.
-- accounts may own multiple stores.
-- stores may have multiple members.
-- roles may contain multiple permissions.
-- permissions may belong to multiple roles.
-- sensitive operations may produce audit records.
+- One user has one personal profile.
+- One user may have multiple auth identities.
+- One user may belong to multiple accounts.
+- One account may have multiple members.
+- One account may own multiple stores.
+- One store may have multiple members.
+- One role may contain multiple permissions.
+- One permission may belong to multiple roles.
+- One user may have multiple platform role assignments.
+- Sensitive operations may produce audit records.
 
-## 11. Data Integrity
+## 15. Data Integrity and Security
 
-The database design must enforce:
+The database must enforce:
 
 - Primary keys.
-- Foreign key relationships.
+- Foreign keys.
 - Unique identity constraints.
-- Unique account membership constraints.
+- Unique membership constraints.
+- Valid role scope assignments.
 - Required fields.
 - Valid status values.
 - Appropriate indexes.
+- Ownership constraints.
 - Safe deletion and retention rules.
 
-Deleting a user or account must not silently
+Database policies must reinforce
+backend authorization.
+
+Deleting users or accounts must not silently
 destroy legally or operationally required records.
 
-## 12. Demo Data Isolation
+## 16. Demo Data Isolation
 
-Demo buyer and demo company records must be
-clearly identifiable as test data.
+Demo buyer and demo company records
+must be clearly identifiable as test data.
 
 Demo records must:
 - Use fictional information.
 - Never contain real credentials.
-- Be separated from production data.
+- Be isolated from production data.
 - Be removable without affecting real users.
 - Follow the same authorization rules as production.
 
-## 13. Localization
+## 17. Localization
 
-- Store the user's preferred locale.
-- Initially support ar and en.
+- Store each user's preferred locale.
+- Initially support Arabic and English.
 - Store language-neutral business data where possible.
 - Keep translated content separate when needed.
 - Do not assume every business has only one language.
 
-## 14. Deferred Decisions
+## 18. Database Technology
 
-The following require separate evaluation:
+Database engine: PostgreSQL.
 
-- Database hosting provider.
+Recommended access layer: Drizzle ORM.
+
+Recommended migration tool: Drizzle Kit.
+
+Hosting provider remains undecided.
+
+Database credentials must remain server-side.
+
+## 19. Deferred Entities and Decisions
+
+Future evaluation:
 - Authentication provider.
-- Database migration tooling.
+- Database hosting provider.
 - File storage provider.
-- Payment and shipping integrations.
-- Data retention periods.
-- Multi-region deployment strategy.
+- Payment integrations.
+- Shipping integrations.
+- Data retention policies.
+- Multi-region deployment.
 
-## 15. Implementation Order
+## 20. Implementation Order
 
-1. Finalize the logical data model.
-2. Select database and migration tooling.
-3. Create identity and account migrations.
-4. Add membership and permission structures.
-5. Add database access policies.
-6. Test isolation and integrity.
-7. Introduce demo records.
+1. Identity and authentication integration.
+2. Personal profiles and identities.
+3. Business accounts.
+4. Roles and permissions.
+5. Account memberships.
+6. Platform role assignments.
+7. Stores and store memberships.
+8. Database access policies.
+9. Integrity and isolation tests.
+10. Demo buyer and company records.
 
-## 16. Status
+## 21. Status
 
-Status: Logical data model defined.
+Status: Logical data model aligned
+with the architecture decisions.
 
 No production database or migrations
 are created by this document.
