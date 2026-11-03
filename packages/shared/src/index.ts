@@ -27,12 +27,6 @@ export function getTextDirection(
   return locale === "ar" ? "rtl" : "ltr";
 }
 
-/**
- * Account types describe the user's commercial relationship
- * with WASLA. They do not grant permissions by themselves.
- *
- * Guest visitors are not registered WaslaUser records.
- */
 export const ACCOUNT_TYPES = [
   "buyer",
   "store_owner",
@@ -43,10 +37,6 @@ export const ACCOUNT_TYPES = [
 
 export type AccountType = (typeof ACCOUNT_TYPES)[number];
 
-/**
- * Roles determine what an authenticated user may do.
- * A user may have multiple roles.
- */
 export const USER_ROLES = [
   "buyer",
   "store_owner",
@@ -59,103 +49,70 @@ export const USER_ROLES = [
 
 export type UserRole = (typeof USER_ROLES)[number];
 
-/**
- * A guest is an unauthenticated visitor.
- * It is not a registered account or an authorization role.
- */
 export interface GuestSession {
   kind: "guest";
   locale: WaslaLocale;
 }
 
-/**
- * Registered user status.
- */
 export type UserStatus =
   | "active"
   | "suspended"
   | "pending_verification"
   | "deactivated";
 
-/**
- * Granular permissions for WASLA modules.
- */
 export const PERMISSIONS = [
   "profile.read",
   "profile.update",
-
   "store.read",
   "store.create",
   "store.update",
   "store.manage",
-
   "product.read",
   "product.create",
   "product.update",
   "product.delete",
   "product.manage",
-
   "order.read",
   "order.create",
   "order.update",
   "order.cancel",
   "order.manage",
-
   "business.read",
   "business.create",
   "business.update",
   "business.manage",
-
   "trade.read",
   "trade.create",
   "trade.update",
   "trade.negotiate",
   "trade.manage",
-
   "message.read",
   "message.send",
   "message.manage",
-
   "support.read",
   "support.manage",
-
   "users.read",
   "users.manage",
-
   "reports.read",
   "reports.manage",
-
   "platform.manage",
   "settings.manage",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
 
-/**
- * Authenticated WASLA user.
- *
- * accountTypes describe commercial account capabilities.
- * roles describe authorization assignments.
- */
 export interface WaslaUser {
   id: string;
   email: string;
   displayName: string;
-
   accountTypes: AccountType[];
   roles: UserRole[];
-
   locale: WaslaLocale;
   status: UserStatus;
-
   createdAt: string;
   updatedAt: string;
 }
 
-/**
- * Role definitions are defaults for initial application behavior.
- * Production role assignments must be controlled by the backend.
- */
 export interface RoleDefinition {
   readonly role: UserRole;
   readonly permissions: readonly Permission[];
@@ -272,10 +229,7 @@ export const DEFAULT_ROLE_PERMISSIONS = [
 
 /**
  * UI convenience helper only.
- *
- * Never use this function as the sole security boundary.
- * The backend must independently validate the user's identity,
- * status, role assignments and requested permission.
+ * Backend authorization is mandatory.
  */
 export function hasPermission(
   user: WaslaUser,
@@ -290,6 +244,9 @@ export function hasPermission(
       (item) => item.role === role,
     );
 
-    return definition?.permissions.includes(permission) ?? false;
+    const rolePermissions: readonly Permission[] =
+      definition?.permissions ?? [];
+
+    return rolePermissions.includes(permission);
   });
 }
