@@ -1,3 +1,4 @@
+
 CREATE TYPE "public"."account_status" AS ENUM('pending_verification', 'active', 'suspended', 'deactivated');--> statement-breakpoint
 CREATE TYPE "public"."account_type" AS ENUM('company', 'supplier', 'manufacturer', 'trader', 'brand');--> statement-breakpoint
 CREATE TYPE "public"."membership_status" AS ENUM('invited', 'active', 'suspended', 'revoked');--> statement-breakpoint
@@ -5,6 +6,7 @@ CREATE TYPE "public"."record_status" AS ENUM('active', 'suspended', 'deactivated
 CREATE TYPE "public"."role_scope" AS ENUM('personal', 'platform', 'account', 'store');--> statement-breakpoint
 CREATE TYPE "public"."user_status" AS ENUM('pending_verification', 'active', 'suspended', 'deactivated');--> statement-breakpoint
 CREATE TYPE "public"."verification_status" AS ENUM('unverified', 'pending', 'verified', 'rejected');--> statement-breakpoint
+
 CREATE TABLE "account_members" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"account_id" uuid NOT NULL,
@@ -106,6 +108,8 @@ CREATE TABLE "roles" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE UNIQUE INDEX "roles_id_scope_unique" ON "roles" USING btree ("id","scope_type");
+--> statement-breakpoint
 CREATE TABLE "store_members" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"store_id" uuid NOT NULL,
@@ -137,6 +141,7 @@ CREATE TABLE "users" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+
 ALTER TABLE "account_members" ADD CONSTRAINT "account_members_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "account_members" ADD CONSTRAINT "account_members_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "account_members" ADD CONSTRAINT "account_members_invited_by_users_id_fk" FOREIGN KEY ("invited_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
@@ -156,6 +161,7 @@ ALTER TABLE "store_members" ADD CONSTRAINT "store_members_store_id_stores_id_fk"
 ALTER TABLE "store_members" ADD CONSTRAINT "store_members_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "store_members" ADD CONSTRAINT "store_members_role_scope_fk" FOREIGN KEY ("role_id","role_scope") REFERENCES "public"."roles"("id","scope_type") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "stores" ADD CONSTRAINT "stores_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+
 CREATE UNIQUE INDEX "account_members_user_account_unique" ON "account_members" USING btree ("user_id","account_id");--> statement-breakpoint
 CREATE INDEX "account_members_account_idx" ON "account_members" USING btree ("account_id");--> statement-breakpoint
 CREATE INDEX "accounts_status_idx" ON "accounts" USING btree ("status");--> statement-breakpoint
@@ -171,7 +177,6 @@ CREATE INDEX "permissions_scope_idx" ON "permissions" USING btree ("scope_type")
 CREATE UNIQUE INDEX "platform_role_user_role_unique" ON "platform_role_assignments" USING btree ("user_id","role_id");--> statement-breakpoint
 CREATE INDEX "platform_role_user_idx" ON "platform_role_assignments" USING btree ("user_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "roles_scope_name_unique" ON "roles" USING btree ("scope_type","name");--> statement-breakpoint
-CREATE UNIQUE INDEX "roles_id_scope_unique" ON "roles" USING btree ("id","scope_type");--> statement-breakpoint
 CREATE UNIQUE INDEX "store_members_user_store_unique" ON "store_members" USING btree ("user_id","store_id");--> statement-breakpoint
 CREATE INDEX "store_members_store_idx" ON "store_members" USING btree ("store_id");--> statement-breakpoint
 CREATE INDEX "stores_account_id_idx" ON "stores" USING btree ("account_id");--> statement-breakpoint
