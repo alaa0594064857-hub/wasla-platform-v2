@@ -77,7 +77,7 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
           name: name.trim(),
           email: email.trim(),
           password,
-          preferredLocale: locale,
+          
         });
 
         if (result.error) {
