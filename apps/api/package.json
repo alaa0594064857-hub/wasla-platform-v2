@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@wasla/shared": "workspace:*",
+    "better-auth": "1.7.15",
     "drizzle-orm": "0.45.4",
     "pg": "8.13.1"
   },
