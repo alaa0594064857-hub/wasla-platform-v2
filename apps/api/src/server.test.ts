@@ -1,3 +1,4 @@
+
 import { afterEach, describe, expect, it } from "vitest";
 import type { Server } from "node:http";
 import { createWaslaServer } from "./server";
@@ -58,6 +59,13 @@ describe("WASLA API", () => {
       success: false,
       error: "Method not allowed",
     });
+  });
+
+  it("responds to the Better Auth health endpoint", async () => {
+    const baseUrl = await startTestServer();
+    const response = await fetch(`${baseUrl}/api/auth/ok`);
+
+    expect(response.status).toBe(200);
   });
 
   it("returns 404 for unknown routes", async () => {
