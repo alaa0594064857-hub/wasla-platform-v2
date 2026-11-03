@@ -73,12 +73,11 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
 
     try {
       if (isRegister) {
-        const extraFields = { preferredLocale: locale };
         const result = await authClient.signUp.email({
           name: name.trim(),
           email: email.trim(),
           password,
-          ...extraFields,
+          preferredLocale: locale,
         });
 
         if (result.error) {
@@ -110,7 +109,7 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
     <main className="auth-page" lang={locale} dir={locale === "ar" ? "rtl" : "ltr"}>
       <section className="auth-panel">
         <header className="auth-header">
-          <Link href="/" className="auth-brand" aria-label="WASLA home">
+          <Link href="/" className="auth-brand">
             <span className="auth-brand-symbol">W</span>
             <span>{t.brand}</span>
           </Link>
@@ -126,7 +125,9 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
 
         <div className="auth-content">
           <span className="auth-eyebrow">WASLA ACCOUNT</span>
+
           <h1>{isRegister ? t.registerTitle : t.loginTitle}</h1>
+
           <p className="auth-description">
             {isRegister ? t.registerText : t.loginText}
           </p>
@@ -205,6 +206,7 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
       <aside className="auth-aside">
         <div className="auth-aside-orbit auth-aside-orbit-one" />
         <div className="auth-aside-orbit auth-aside-orbit-two" />
+
         <div className="auth-aside-center">
           <span>W</span>
           <strong>WASLA</strong>
