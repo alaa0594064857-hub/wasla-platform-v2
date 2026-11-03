@@ -1,4 +1,3 @@
-
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 
@@ -41,6 +40,17 @@ export const auth = betterAuth({
       verification: schema.authVerifications,
     },
   }),
+
+  user: {
+    additionalFields: {
+      preferredLocale: {
+        type: "string",
+        required: false,
+        defaultValue: "ar",
+        input: true,
+      },
+    },
+  },
 
   emailAndPassword: {
     enabled: true,
