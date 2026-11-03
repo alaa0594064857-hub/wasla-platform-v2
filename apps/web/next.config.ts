@@ -1,20 +1,29 @@
 import type { NextConfig } from "next";
 
+const apiUrl = (
+  process.env.WASLA_API_URL ?? "http://localhost:4000"
+).replace(/\/$/, "");
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-
   poweredByHeader: false,
-
   compress: true,
-
   productionBrowserSourceMaps: false,
-
   transpilePackages: ["@wasla/shared"],
+
+  async rewrites() {
+    return [
+      {
+        source: "/api/auth/:path*",
+        destination: `${apiUrl}/api/auth/:path*`,
+      },
+    ];
+  },
 
   images: {
     formats: ["image/avif", "image/webp"],
-    remotePatterns: []
-  }
+    remotePatterns: [],
+  },
 };
 
 export default nextConfig;
