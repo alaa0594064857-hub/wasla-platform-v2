@@ -1,11 +1,9 @@
 import {
   createServer,
   type IncomingMessage,
+  type Server,
   type ServerResponse,
 } from "node:http";
-
-const PORT = Number(process.env.PORT ?? 4000);
-const HOST = process.env.HOST ?? "0.0.0.0";
 
 function sendJson(
   response: ServerResponse,
@@ -54,32 +52,49 @@ function handleRequest(
   });
 }
 
-if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) {
-  throw new Error("PORT must be a valid number between 1 and 65535");
+export function createWaslaServer(): Server {
+  return createServer(handleRequest);
 }
 
-const server = createServer(handleRequest);
+export function startWaslaServer(): Server {
+  const port = Number(process.env.PORT ?? 4000);
+  const host = process.env.HOST ?? "0.0.0.0";
 
-server.listen(PORT, HOST, () => {
-  console.log(`WASLA API is running on ${HOST}:${PORT}`);
-});
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error(
+      "PORT must be a valid number between 1 and 65535",
+    );
+  }
 
-server.on("error", (error: Error) => {
-  console.error("WASLA API server error:", error);
-  process.exitCode = 1;
-});
+  const server = createWaslaServer();
 
-function shutdown(): void {
-  server.close((error) => {
-    if (error) {
-      console.error("Error while stopping WASLA API:", error);
-      process.exitCode = 1;
-      return;
-    }
-
-    console.log("WASLA API stopped.");
+  server.listen(port, host, () => {
+    console.log(`WASLA API is running on ${host}:${port}`);
   });
+
+  server.on("error", (error: Error) => {
+    console.error("WASLA API server error:", error);
+    process.exitCode = 1;
+  });
+
+  function shutdown(): void {
+    server.close((error) => {
+      if (error) {
+        console.error("Error while stopping WASLA API:", error);
+        process.exitCode = 1;
+        return;
+      }
+
+      console.log("WASLA API stopped.");
+    });
+  }
+
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
+
+  return server;
 }
 
-process.on("SIGINT", shutdown);
-process.on("SIGTERM", shutdown);
+if (require.main === module) {
+  startWaslaServer();
+}
