@@ -15,6 +15,13 @@
       "when": 1793737094945,
       "tag": "0001_sturdy_argent",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793739604315,
+      "tag": "0002_harsh_baron_zemo",
+      "breakpoints": true
     }
   ]
 }
