@@ -2,176 +2,252 @@
 
 ## 1. Purpose
 
-Define a scalable account model for the WASLA global commerce platform.
+Define the unified identity and business account
+architecture for the WASLA platform.
 
-This document is the architectural reference for identity,
-accounts, memberships, roles, and permissions.
+This document must be read together with:
+- architecture-decisions.md
+- authentication-and-sessions.md
+- authorization-model.md
+- data-model.md
 
 ## 2. Core Principles
 
 - One person has one unified user identity.
 - A user may have multiple roles.
-- A user may belong to multiple businesses and stores.
-- Business entities are separate from personal user profiles.
-- Permissions are scoped to the relevant account or entity.
+- A user may belong to multiple business accounts.
+- A user may manage multiple stores.
+- Business accounts are separate from personal identities.
+- Stores are separate entities owned by business accounts.
+- Permissions are evaluated within the correct scope.
 - Backend authorization is mandatory.
-- Shared frontend types are not security authorities.
 - Arabic and English are supported from the foundation.
 
-## 3. Main Entities
+## 3. User Identity
 
-### User
-Represents a person's identity.
+A user represents one person on the platform.
 
 A user has:
 - Unique ID
-- Email identity
+- Authentication identities
 - Personal profile
 - Preferred locale
 - Account status
 - Creation and update timestamps
 
-### Account
-Represents an independent business or organizational entity.
+A user may act as a buyer and may also belong
+to multiple business accounts.
 
-Account types may include:
-- Individual
+Separate login identities must not be required
+for different business activities.
+
+## 4. Business Accounts
+
+An account represents an independent
+business organization.
+
+Initial account categories include:
 - Company
-- Store
-- Supplier organization
+- Supplier
+- Manufacturer
+- Trader
+- Brand
 
-### Membership
-Connects a user to an account.
+An account has:
+- Unique ID
+- Account category
+- Legal name
+- Display name
+- Status
+- Country
+- Creation and update timestamps
 
-A membership contains:
+Account categories describe the organization.
+They do not represent user roles.
+
+## 5. Stores
+
+A store is an independent commercial entity
+owned by a business account.
+
+Rules:
+- One account may own multiple stores.
+- Every store belongs to an owning account.
+- A store has its own status and identity.
+- Store membership is managed separately.
+- Store access must be restricted to authorized users.
+
+A store is not a separate user identity
+or an account category in the initial model.
+
+## 6. Memberships
+
+Memberships connect users to business resources.
+
+### Account Membership
+
+Connects a user to a business account.
+
+Each membership contains:
 - User ID
 - Account ID
-- Assigned role
+- Assigned account role
 - Membership status
-- Creation timestamp
+- Inviting user
+- Creation and update timestamps
 
-A user may have multiple memberships.
+A user may belong to multiple accounts.
 
-### Role
-Defines a named set of permissions within a scope.
+A user-account membership must be unique.
+
+### Store Membership
+
+Connects a user to an individual store.
+
+Each membership contains:
+- User ID
+- Store ID
+- Assigned store role
+- Membership status
+- Creation and update timestamps
+
+A user-store membership must be unique.
+
+Membership in one store does not automatically
+grant access to another store.
+
+## 7. Roles and Authorization Scopes
+
+WASLA uses four authorization scopes:
+
+- Personal
+- Platform
+- Account
+- Store
+
+Roles must be evaluated only within
+their assigned scope.
+
+### Personal Capabilities
 
 Examples:
-- Owner
-- Administrator
-- Manager
-- Employee
 - Buyer
-- Supplier representative
+- Individual user
 
-### Permission
-Defines an allowed action.
+### Platform Roles
 
 Examples:
-- profile.read
-- account.update
-- member.invite
-- product.create
-- product.update
-- order.read
-- order.manage
-- trade.negotiate
-- message.send
+- Platform owner
+- Platform administrator
+- Support administrator
 
-## 4. Identity and Account Separation
+### Account Roles
 
-The personal user identity must not be confused with
-a company, store, or supplier account.
+Examples:
+- Account owner
+- Account administrator
+- Account manager
+- Account employee
+- Account viewer
 
-Example:
+### Store Roles
 
-One user may:
-- Buy products as an individual.
-- Own Company A.
-- Manage Store B.
-- Work as an employee in Company C.
+Examples:
+- Store owner
+- Store administrator
+- Store manager
+- Store employee
 
-These relationships must not require separate user identities.
+Platform roles must remain separate
+from business account and store roles.
 
-## 5. Authorization Rules
+A business account owner is not automatically
+a platform administrator.
 
-- The backend is the final authority for authorization.
-- Every protected operation must verify the user's identity.
-- Every account operation must verify active membership.
-- Permissions must be checked within the correct account scope.
-- Suspended users and memberships must be denied access.
-- Administrative permissions must be explicitly restricted.
-- Sensitive actions must be recorded in audit logs.
+## 8. Authorization Rules
 
-## 6. Initial Database Entities
+- The backend is the final authority.
+- Every protected operation requires authentication.
+- User status must be checked.
+- Resource scope must be identified.
+- Active membership must be verified when required.
+- Role scope must match the resource scope.
+- Permissions must be checked before access.
+- Access must be denied by default.
+- Sensitive operations must be audited.
 
-Planned entities:
+Frontend permission checks are not security controls.
 
-- users
-- auth_identities
-- sessions
-- accounts
-- account_members
-- roles
-- permissions
-- role_permissions
-- profiles
-- business_profiles
-- stores
-- store_members
+## 9. Authentication and Sessions
 
-These entities will be introduced incrementally.
-This document does not imply that database tables
-or migrations already exist.
+Authentication identifies the user.
 
-## 7. Localization
+Authorization determines what the user can do.
 
-- Supported initial locales: Arabic and English.
-- Arabic uses RTL direction.
-- English uses LTR direction.
-- User locale preference is stored independently.
-- Translation content must remain separate from business logic.
+The authentication provider manages sessions initially.
 
-## 8. Demo and Test Accounts
+WASLA must not duplicate provider session secrets
+in its own database.
 
-Testing must use isolated demo data.
+Provider selection remains a separate decision.
 
-Initial test scenarios:
+## 10. Demo and Test Accounts
+
+Initial demo scenarios:
 
 ### Demo Buyer
+
 - Browse published products.
 - View business profiles.
 - Create test orders when order functionality exists.
 
 ### Demo Company
+
 - Maintain a business profile.
 - Publish test products after approval.
 - Receive inquiries.
 - Manage authorized company members.
+- Own and manage test stores.
 
-Demo accounts must never contain real customer credentials
-or production personal data.
+Demo data must:
+- Use fictional information.
+- Remain separate from production data.
+- Follow the same authorization rules.
+- Never contain real customer credentials.
 
-## 9. Security Requirements
+## 11. Security Requirements
 
 - Never expose secret service credentials in frontend code.
 - Enforce authorization on the backend.
-- Validate all user input on the server.
+- Validate user input on the server.
 - Apply database access policies where supported.
-- Keep audit records for sensitive administrative actions.
-- Separate test data from production data.
+- Audit sensitive administrative actions.
+- Enforce account and store isolation.
+- Protect private business verification documents.
 
-## 10. Implementation Order
+## 12. Localization
 
-1. Identity and authentication design.
-2. Account and membership model.
-3. Roles and permission enforcement.
-4. Personal and business profiles.
-5. Demo buyer and company test scenarios.
-6. Registration and account management interfaces.
+- Initial supported locales: Arabic and English.
+- Arabic uses RTL direction.
+- English uses LTR direction.
+- User locale preference is stored independently.
+- Translation content remains separate from business logic.
 
-## 11. Architecture Status
+## 13. Implementation Order
 
-Status: Approved architectural direction for implementation.
+1. Identity and authentication.
+2. Business account model.
+3. Account memberships.
+4. Store ownership and memberships.
+5. Roles and permission enforcement.
+6. Personal and business profiles.
+7. Demo buyer and company scenarios.
+8. Registration and account management interfaces.
 
-No production database schema or authentication provider
-is implied by this document.
+## 14. Architecture Status
+
+Status: Updated to align with architecture decisions.
+
+No production database schema,
+authentication provider, or live service
+is created by this document.
