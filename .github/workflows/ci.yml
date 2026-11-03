@@ -1,4 +1,3 @@
-
 name: WASLA CI
 
 on:
@@ -37,8 +36,14 @@ jobs:
       - name: Test shared package
         run: pnpm --filter @wasla/shared test
 
-      - name: TypeScript check
+      - name: TypeScript check shared package
         run: pnpm --filter @wasla/shared typecheck
+
+      - name: TypeScript check API
+        run: pnpm --filter @wasla/api typecheck
+
+      - name: Build API
+        run: pnpm --filter @wasla/api build
 
       - name: Build web application
         run: pnpm --filter @wasla/web build
