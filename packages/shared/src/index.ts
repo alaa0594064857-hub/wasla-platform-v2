@@ -469,3 +469,5 @@ export function hasPermission(
     );
 
     return definition?.permissions.some((rolePermission) => rolePermission === permission) ?? false;
+      });
+}
