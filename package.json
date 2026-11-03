@@ -13,7 +13,10 @@
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
-    "clean": "turbo clean"
+    "clean": "turbo clean",
+    "db:generate": "pnpm --filter @wasla/api db:generate",
+    "db:migrate": "pnpm --filter @wasla/api db:migrate",
+    "db:check": "pnpm --filter @wasla/api db:check"
   },
   "devDependencies": {
     "turbo": "2.3.3",
