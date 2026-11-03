@@ -1,3 +1,4 @@
+
 import {
   createServer,
   type IncomingMessage,
@@ -19,14 +20,44 @@ function sendJson(
   response.end(JSON.stringify(data));
 }
 
-function handleRequest(
+async function handleRequest(
   request: IncomingMessage,
   response: ServerResponse,
-): void {
+): Promise<void> {
   const requestUrl = new URL(
     request.url ?? "/",
     "http://localhost",
   );
+
+  if (
+    requestUrl.pathname === "/api/auth" ||
+    requestUrl.pathname.startsWith("/api/auth/")
+  ) {
+    try {
+      const [{ auth }, { toNodeHandler }] =
+        await Promise.all([
+          import("./auth.mjs"),
+          import("better-auth/node"),
+        ]);
+
+      await toNodeHandler(auth.handler)(request, response);
+    } catch (error) {
+      console.error("WASLA authentication error:", error);
+
+      if (!response.headersSent) {
+        sendJson(response, 500, {
+          success: false,
+          error: "Authentication service error",
+        });
+      } else {
+        response.destroy(
+          error instanceof Error ? error : undefined,
+        );
+      }
+    }
+
+    return;
+  }
 
   if (requestUrl.pathname === "/health") {
     if (request.method !== "GET") {
@@ -53,7 +84,9 @@ function handleRequest(
 }
 
 export function createWaslaServer(): Server {
-  return createServer(handleRequest);
+  return createServer((request, response) => {
+    void handleRequest(request, response);
+  });
 }
 
 export function startWaslaServer(): Server {
