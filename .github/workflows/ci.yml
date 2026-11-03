@@ -39,6 +39,9 @@ jobs:
       - name: TypeScript check shared package
         run: pnpm --filter @wasla/shared typecheck
 
+      - name: Test API
+        run: pnpm --filter @wasla/api test
+
       - name: TypeScript check API
         run: pnpm --filter @wasla/api typecheck
 
