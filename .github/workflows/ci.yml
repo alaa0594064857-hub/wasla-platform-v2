@@ -63,6 +63,11 @@ jobs:
       - name: Apply database migrations
         run: pnpm db:migrate
 
+      - name: Seed authorization roles and permissions
+        run: |
+          pnpm --filter @wasla/api db:seed
+          pnpm --filter @wasla/api db:seed
+
       - name: Test database constraints
         run: pnpm --filter @wasla/api test:integration
 
