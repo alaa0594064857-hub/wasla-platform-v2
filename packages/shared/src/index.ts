@@ -468,6 +468,4 @@ export function hasPermission(
         role.scope === assignment.scope,
     );
 
-    return definition?.permissions.includes(permission) ?? false;
-  });
-}
+    return definition?.permissions.some((rolePermission) => rolePermission === permission) ?? false;
