@@ -1,297 +1,321 @@
 
-# WASLA V2 — Architecture Decisions
+# WASLA V2 — Account Model
 
 ## 1. Purpose
 
-Record decisions that resolve overlaps
-between the account, authentication,
-authorization, and data model documents.
+Define how personal identities, business accounts,
+account memberships, and stores relate to each other.
 
-These decisions guide implementation
-and take precedence where earlier documents
-contain conflicting descriptions.
+This document describes the account model.
+It does not implement authentication or permissions.
 
 ## 2. Unified User Identity
 
-Decision:
-
-Each person has one unified platform user.
+Every person has one unified WASLA user identity.
 
 A user may:
-- Buy products.
-- Own or manage business accounts.
-- Join multiple companies.
+- Act as an individual buyer.
+- Own one or more business accounts.
+- Join multiple business accounts.
 - Manage multiple stores.
-- Hold different roles in different scopes.
+- Have different roles in different accounts and stores.
 
 A person must not need separate login identities
-for each business activity.
+for different business activities.
 
-## 3. Business Accounts and Stores
+The users table represents the unified person.
 
-Decision:
+## 3. Personal User Profile
 
-A business account represents an organization.
+Each user may have one personal profile.
 
-Account categories may include:
-- Company
-- Supplier
-- Manufacturer
-- Trader
-- Brand
+The profile contains personal presentation data,
+such as:
+- Display name.
+- Avatar reference.
+- Personal preferences.
 
-A store is a separate entity owned by
-a business account.
+Authentication credentials and provider sessions
+must not be stored in the public profile.
 
-A store is not a separate user identity
-or an account category in the initial model.
+A personal profile is separate from business data.
+
+## 4. Business Accounts
+
+A business account represents an independent
+commercial organization on WASLA.
+
+Initial account types:
+- company
+- supplier
+- manufacturer
+- trader
+- brand
+
+Buyer is a personal capability.
+It is not a business account type.
+
+Each business account has:
+- A unique identifier.
+- An account type.
+- A legal name.
+- A display name.
+- A lifecycle status.
+- An optional country code.
+- Creation and update timestamps.
+
+One user may own or participate in multiple accounts.
+
+One account may have multiple users as members.
+
+## 5. Business Profiles
+
+Business profile information is stored separately
+from the core account record.
+
+It may include:
+- Business description.
+- Website.
+- Public contact information.
+- Verification status.
+
+Private verification documents must be stored
+in restricted storage and must never be exposed
+as public business profile data.
+
+## 6. Account Ownership
+
+Account ownership is represented through
+an account membership with the account_owner role.
+
+The initial account creation process must:
+1. Authenticate the user.
+2. Validate the business information.
+3. Create the business account.
+4. Create its business profile.
+5. Add the creator as an active account owner.
+6. Record the operation in the audit log.
+
+These operations must succeed or fail together
+inside a database transaction.
+
+Every active business account must have
+at least one active account owner.
+
+Ownership transfer must use a protected backend
+operation and must be audited.
+
+A business account owner is not automatically
+a WASLA platform administrator.
+
+## 7. Account Memberships
+
+The account_members entity connects users
+to business accounts.
+
+Each membership contains:
+- User.
+- Business account.
+- Account-scoped role.
+- Membership status.
+- Inviting user, when applicable.
+- Join timestamp.
+- Creation and update timestamps.
+
+A user-account membership must be unique.
+
+Supported membership states:
+- invited
+- active
+- suspended
+- revoked
+
+Only active memberships grant account access.
+
+Suspended or revoked memberships must not
+grant access to account resources.
+
+A user may belong to multiple accounts,
+with a different role in each account.
+
+## 8. Account Roles
+
+Initial account role definitions:
+- account_owner
+- account_admin
+- account_manager
+- account_employee
+- account_viewer
+
+Every account role must use account scope.
+
+Role definitions are separate from role assignments.
+
+The account_members table stores assignments.
+The roles table stores reusable role definitions.
+
+The backend must validate every role assignment.
+
+## 9. Stores
+
+A store is a separate commercial resource
+owned by one business account.
+
+A store is not:
+- A user identity.
+- A business account.
+- A login account.
 
 One business account may own multiple stores.
 
-Store membership is managed independently
-from business account membership.
+Each store has:
+- A unique identifier.
+- An owning business account.
+- A name.
+- A public slug.
+- A lifecycle status.
+- Creation and update timestamps.
 
-## 4. Buyer Identity
+A store must always belong to one business account.
 
-Decision:
+## 10. Store Memberships
 
-Buyer is a personal platform capability,
-not a business account type.
+The store_members entity connects users
+to individual stores.
 
-A user may act as a buyer while also belonging
-to one or more business accounts.
+Initial store role definitions:
+- store_owner
+- store_admin
+- store_manager
+- store_employee
 
-Buyer permissions must not grant access
-to unrelated business resources.
+Every store role must use store scope.
 
-## 5. Authorization Scopes
+A user-store membership must be unique.
 
-The platform uses four authorization scopes:
+Store membership grants access only to
+the assigned store.
 
-- Personal
-- Platform
-- Account
-- Store
+Account membership does not automatically
+grant access to every store owned by that account.
 
-Every role assignment must belong
-to exactly one applicable scope.
+The backend must verify store membership
+and role permissions for every protected action.
 
-A role from one scope must never grant
-permissions in another scope automatically.
+## 11. Authorization Boundaries
 
-## 6. Role Assignments
-
-Decision:
-
-Keep role definitions separate from
-role assignments.
-
-The initial assignment model uses:
-
-- account_members for account roles.
-- store_members for store roles.
-- platform_role_assignments for platform roles.
-- Personal capabilities for user-level actions.
-
-Platform roles must never be assigned
-through account or store membership records.
-
-Platform role assignment requires
-a protected administrative process.
-
-A company owner is not automatically
-a platform administrator.
-
-## 7. Role Scope Integrity
-
-Each role must define its scope type.
-
-Allowed scope types:
-
+WASLA uses four authorization scopes:
 - personal
 - platform
 - account
 - store
 
-The backend must verify that a role's scope
-matches the resource being accessed.
+Account roles must not grant platform permissions.
 
-Role assignments must be validated
-against their target scope.
+Store roles must not grant access to unrelated stores.
 
-The database must enforce appropriate
-foreign keys and uniqueness constraints.
+Platform roles must be assigned separately
+through platform_role_assignments.
 
-## 8. Sessions and Authentication
+Frontend role checks are not security enforcement.
 
-Decision:
+The backend is responsible for authorization.
+Database constraints and policies must reinforce it.
 
-Initial authentication provider: Better Auth.
+## 12. Account Lifecycle
 
-The implementation uses:
-- Better Auth.
-- Better Auth Drizzle adapter.
-- PostgreSQL.
-- Drizzle ORM.
+Initial account states:
+- pending_verification
+- active
+- suspended
+- deactivated
 
-Better Auth manages authentication credentials
-and authentication sessions.
+Account lifecycle changes must be performed
+through authorized backend operations.
 
-The auth_sessions table is provider-managed
-session persistence. It is not a separate
-WASLA session-token system.
+Suspended or deactivated accounts must not
+be available for normal business operations.
 
-WASLA must not duplicate provider session
-secrets in another application table.
+Lifecycle changes must be recorded
+when they affect access or business operations.
 
-The provider integration must preserve
-one unified WASLA user identity.
+## 13. Data Ownership and Isolation
 
-Production activation remains subject
-to the security requirements in
-authentication-and-sessions.md.
+- Users own their personal profile data.
+- Business accounts own their business profile data.
+- Accounts own their stores.
+- Memberships define user access to accounts.
+- Store memberships define access to individual stores.
+- Resource identifiers alone never prove authorization.
 
-Changing the authentication provider requires
-a documented architecture decision
-and a migration plan.
+Business data must not be exposed to unrelated users
+or business accounts.
 
-## 9. Authentication Identity Separation
+Deletion and retention rules must preserve
+legally or operationally required records.
 
-Authentication records remain separate
-from personal profiles and business accounts.
+## 14. Audit Requirements
 
-The users table represents the unified
-WASLA identity and is shared with
-the authentication provider.
+The following operations must be audited:
+- Business account creation.
+- Account ownership assignment and transfer.
+- Member invitations.
+- Membership activation and revocation.
+- Membership suspension.
+- Store creation.
+- Store ownership or access changes.
+- Sensitive account lifecycle changes.
 
-The auth_accounts, auth_sessions, and
-auth_verifications tables are managed
-through the Better Auth Drizzle integration.
+Audit records must not contain passwords,
+session tokens, or authentication secrets.
 
-The auth_identities table currently exists
-as a separate WASLA identity-mapping structure.
-It is not mapped as a Better Auth table
-in the current integration.
+## 15. Demo Accounts
 
-Its future responsibility and relationship
-to provider-managed identity records must
-be reviewed before implementing additional
-social login providers or writing duplicate
-identity records.
+Demo buyer and demo company records must:
+- Use fictional information.
+- Be isolated from production data.
+- Use the same authorization rules as real users.
+- Never contain real credentials.
+- Be removable without affecting real users.
 
-Provider credentials and secrets must not
-be stored in public profile records.
+## 16. Current Data Model Mapping
 
-## 10. Authorization Evaluation
+The initial database schema uses:
+- users
+- profiles
+- accounts
+- business_profiles
+- account_members
+- stores
+- store_members
+- roles
+- permissions
+- role_permissions
+- platform_role_assignments
+- audit_logs
 
-Every protected request must:
+Authentication provider tables are documented
+in authentication-and-sessions.md.
 
-1. Authenticate the user.
-2. Verify the user status.
-3. Identify the requested resource.
-4. Determine its authorization scope.
-5. Verify the applicable membership or assignment.
-6. Validate the role scope.
-7. Check the required permission.
-8. Enforce resource ownership and isolation.
-9. Record sensitive operations.
+## 17. Implementation Boundary
 
-Access must be denied by default.
+This document defines the account model.
 
-Frontend checks are never sufficient
-for security enforcement.
+It does not claim that:
+- All account APIs are implemented.
+- All role definitions are seeded.
+- All authorization checks are implemented.
+- Production verification is configured.
+- Production data is available.
 
-## 11. Membership Rules
+These capabilities must be implemented
+and tested before the account foundation
+is declared production-ready.
 
-Account membership is unique per user
-and account combination.
+## 18. Status
 
-Store membership is unique per user
-and store combination.
+Status: Account model documented.
 
-Suspended or revoked memberships
-must not grant access.
-
-Store membership does not automatically
-grant access to every store owned
-by the same business account.
-
-Account ownership and membership changes
-must be audited.
-
-## 12. Database and Migration Direction
-
-Database engine: PostgreSQL.
-
-Database access layer: Drizzle ORM.
-
-Migration tool: Drizzle Kit.
-
-Database hosting provider remains deferred.
-
-All migrations must be reviewed,
-version-controlled, and tested before use.
-
-Schema changes must be accompanied by
-reviewed migrations and relevant tests.
-
-## 13. Demo Data
-
-Demo buyer and demo company records
-must use fictional information.
-
-Demo data must be isolated from production.
-
-Demo users must follow the same authorization
-rules as real users.
-
-Demo credentials must never be reused
-for real accounts.
-
-## 14. Documentation Reconciliation
-
-Architecture documents must remain aligned:
-
-- account-model.md defines the account
-  and store model.
-- authorization-model.md defines scoped roles
-  and backend authorization.
-- authentication-and-sessions.md records
-  the Better Auth integration and security rules.
-- data-model.md defines database entities
-  and their relationships.
-
-Any future change to these decisions must
-be reflected in the relevant documents
-before implementation.
-
-## 15. Implementation Boundary
-
-These decisions establish the logical architecture
-and the initial authentication provider.
-
-They do not:
-- Select a database hosting provider.
-- Create a production database.
-- Configure production credentials.
-- Complete production email delivery.
-- Declare authentication production-ready.
-- Replace the need for security and integration tests.
-
-## 16. Status
-
-Status:
-- Unified user and business account model recorded.
-- Four authorization scopes recorded.
-- Better Auth selected as the initial provider.
-- Provider-managed session persistence clarified.
-- Database and migration direction recorded.
-
-Remaining review:
-- Clarify the future responsibility of auth_identities.
-- Complete authentication security tests.
-- Verify production email and secret configuration.
-- Continue database schema and migration review.
-
-Next step: Complete the identity and account
-foundation before moving to the next stage.
+Database foundation exists.
+Full account workflows and backend authorization
+remain implementation tasks.
