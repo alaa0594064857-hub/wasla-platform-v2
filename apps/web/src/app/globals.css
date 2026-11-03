@@ -1,0 +1,35 @@
+
+@import "tailwindcss";
+
+:root {
+  --wasla-navy: #14243A;
+  --wasla-gold: #C6A15B;
+  --wasla-cream: #F7F4ED;
+  --background: var(--wasla-cream);
+  --foreground: var(--wasla-navy);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+}
