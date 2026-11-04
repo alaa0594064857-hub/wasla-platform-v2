@@ -1,3 +1,4 @@
+
 import {
   createServer,
   type IncomingMessage,
@@ -33,11 +34,10 @@ async function handleRequest(
     requestUrl.pathname.startsWith("/api/auth/")
   ) {
     try {
-      const [{ auth }, { toNodeHandler }] =
-        await Promise.all([
-          import("./auth.mjs"),
-          import("better-auth/node"),
-        ]);
+      const [{ auth }, { toNodeHandler }] = await Promise.all([
+        import("./auth.mjs"),
+        import("better-auth/node"),
+      ]);
 
       await toNodeHandler(auth.handler)(request, response);
     } catch (error) {
@@ -49,9 +49,7 @@ async function handleRequest(
           error: "Authentication service error",
         });
       } else {
-        response.destroy(
-          error instanceof Error ? error : undefined,
-        );
+        response.destroy(error instanceof Error ? error : undefined);
       }
     }
 
@@ -60,9 +58,7 @@ async function handleRequest(
 
   if (requestUrl.pathname === "/api/profile") {
     try {
-      const { handleProfileRequest } =
-        await import("./profile.mjs");
-
+      const { handleProfileRequest } = await import("./profile.mjs");
       await handleProfileRequest(request, response);
     } catch (error) {
       console.error("WASLA profile route error:", error);
@@ -73,9 +69,7 @@ async function handleRequest(
           error: "Profile service error",
         });
       } else {
-        response.destroy(
-          error instanceof Error ? error : undefined,
-        );
+        response.destroy(error instanceof Error ? error : undefined);
       }
     }
 
@@ -84,9 +78,7 @@ async function handleRequest(
 
   if (requestUrl.pathname === "/api/invitations") {
     try {
-      const { handleInvitationsRequest } =
-        await import("./invitations.mjs");
-
+      const { handleInvitationsRequest } = await import("./invitations.mjs");
       await handleInvitationsRequest(request, response);
     } catch (error) {
       console.error("WASLA invitations route error:", error);
@@ -97,9 +89,7 @@ async function handleRequest(
           error: "Invitations service error",
         });
       } else {
-        response.destroy(
-          error instanceof Error ? error : undefined,
-        );
+        response.destroy(error instanceof Error ? error : undefined);
       }
     }
 
@@ -112,18 +102,14 @@ async function handleRequest(
 
   if (memberActionMatch) {
     try {
-      const { handleMemberAction } =
-        await import("./member-actions.mjs");
+      const { handleMemberAction } = await import("./member-actions.mjs");
 
       await handleMemberAction(
         request,
         response,
         memberActionMatch[1],
         memberActionMatch[2],
-        memberActionMatch[3] as
-          | "accept"
-          | "revoke"
-          | "decline",
+        memberActionMatch[3] as "accept" | "revoke" | "decline",
       );
     } catch (error) {
       console.error("WASLA member action route error:", error);
@@ -134,9 +120,7 @@ async function handleRequest(
           error: "Member action service error",
         });
       } else {
-        response.destroy(
-          error instanceof Error ? error : undefined,
-        );
+        response.destroy(error instanceof Error ? error : undefined);
       }
     }
 
@@ -147,13 +131,9 @@ async function handleRequest(
     /^\/api\/accounts\/([0-9a-f-]{36})\/members\/([0-9a-f-]{36})$/,
   );
 
-  if (
-    memberManagementMatch &&
-    request.method === "PATCH"
-  ) {
+  if (memberManagementMatch && request.method === "PATCH") {
     try {
-      const { handleMemberManagement } =
-        await import("./member-management.mjs");
+      const { handleMemberManagement } = await import("./member-management.mjs");
 
       await handleMemberManagement(
         request,
@@ -162,10 +142,7 @@ async function handleRequest(
         memberManagementMatch[2],
       );
     } catch (error) {
-      console.error(
-        "WASLA member management error:",
-        error,
-      );
+      console.error("WASLA member management error:", error);
 
       if (!response.headersSent) {
         sendJson(response, 500, {
@@ -173,9 +150,7 @@ async function handleRequest(
           error: "Member management service error",
         });
       } else {
-        response.destroy(
-          error instanceof Error ? error : undefined,
-        );
+        response.destroy(error instanceof Error ? error : undefined);
       }
     }
 
@@ -188,14 +163,8 @@ async function handleRequest(
 
   if (membersMatch) {
     try {
-      const { handleMembersRequest } =
-        await import("./members.mjs");
-
-      await handleMembersRequest(
-        request,
-        response,
-        membersMatch[1],
-      );
+      const { handleMembersRequest } = await import("./members.mjs");
+      await handleMembersRequest(request, response, membersMatch[1]);
     } catch (error) {
       console.error("WASLA members route error:", error);
 
@@ -205,9 +174,7 @@ async function handleRequest(
           error: "Members service error",
         });
       } else {
-        response.destroy(
-          error instanceof Error ? error : undefined,
-        );
+        response.destroy(error instanceof Error ? error : undefined);
       }
     }
 
@@ -216,9 +183,7 @@ async function handleRequest(
 
   if (requestUrl.pathname === "/api/accounts") {
     try {
-      const { handleAccountsRequest } =
-        await import("./accounts.mjs");
-
+      const { handleAccountsRequest } = await import("./accounts.mjs");
       await handleAccountsRequest(request, response);
     } catch (error) {
       console.error("WASLA accounts route error:", error);
@@ -229,9 +194,7 @@ async function handleRequest(
           error: "Accounts service error",
         });
       } else {
-        response.destroy(
-          error instanceof Error ? error : undefined,
-        );
+        response.destroy(error instanceof Error ? error : undefined);
       }
     }
 
@@ -252,6 +215,38 @@ async function handleRequest(
       service: "WASLA API",
       status: "healthy",
     });
+    return;
+  }
+
+  if (requestUrl.pathname === "/ready") {
+    if (request.method !== "GET") {
+      sendJson(response, 405, {
+        success: false,
+        error: "Method not allowed",
+      });
+      return;
+    }
+
+    try {
+      const { checkDatabaseConnection } = await import("./database.js");
+      await checkDatabaseConnection();
+
+      sendJson(response, 200, {
+        success: true,
+        service: "WASLA API",
+        status: "ready",
+        database: "connected",
+      });
+    } catch (error) {
+      console.error("WASLA readiness check failed:", error);
+
+      sendJson(response, 503, {
+        success: false,
+        service: "WASLA API",
+        status: "not_ready",
+        database: "unavailable",
+      });
+    }
 
     return;
   }
@@ -264,22 +259,18 @@ async function handleRequest(
 
 export function createWaslaServer(): Server {
   return createServer((request, response) => {
-    void handleRequest(request, response).catch(
-      (error: unknown) => {
-        console.error("WASLA API unhandled error:", error);
+    void handleRequest(request, response).catch((error: unknown) => {
+      console.error("WASLA API unhandled error:", error);
 
-        if (!response.headersSent) {
-          sendJson(response, 500, {
-            success: false,
-            error: "Internal server error",
-          });
-        } else {
-          response.destroy(
-            error instanceof Error ? error : undefined,
-          );
-        }
-      },
-    );
+      if (!response.headersSent) {
+        sendJson(response, 500, {
+          success: false,
+          error: "Internal server error",
+        });
+      } else {
+        response.destroy(error instanceof Error ? error : undefined);
+      }
+    });
   });
 }
 
