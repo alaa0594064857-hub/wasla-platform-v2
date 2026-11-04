@@ -56,6 +56,8 @@ const labels = {
     activate: "تفعيل",
     inviteSuccess: "تم إنشاء الدعوة بنجاح.",
     updateSuccess: "تم تحديث العضوية بنجاح.",
+    revoke: "إلغاء الدعوة",
+    revoking: "جارٍ إلغاء الدعوة...",
     actionError: "تعذر تنفيذ العملية. تحقق من الصلاحيات والبيانات.",
     accountType: "نوع الحساب",
     company: "شركة",
@@ -65,6 +67,7 @@ const labels = {
     brandType: "علامة تجارية",
     accessDenied: "ليس لديك صلاحية لإدارة هذا العضو.",
     back: "العودة للرئيسية",
+    readOnly: "صلاحية عرض فقط",
   },
   en: {
     brand: "WASLA",
@@ -98,6 +101,8 @@ const labels = {
     activate: "Activate",
     inviteSuccess: "Invitation created successfully.",
     updateSuccess: "Membership updated successfully.",
+    revoke: "Revoke invitation",
+    revoking: "Revoking invitation...",
     actionError: "Action failed. Check permissions and details.",
     accountType: "Account type",
     company: "Company",
@@ -107,6 +112,7 @@ const labels = {
     brandType: "Brand",
     accessDenied: "You do not have permission to manage this member.",
     back: "Back to home",
+    readOnly: "View-only access",
   },
 };
 
@@ -125,7 +131,10 @@ async function apiRequest<T>(
     },
   });
 
-  const data = await response.json();
+  const contentType = response.headers.get("content-type") ?? "";
+  const data = contentType.includes("application/json")
+    ? await response.json()
+    : {};
 
   if (!response.ok || data.success === false) {
     throw new Error(data.error ?? "Request failed");
@@ -144,6 +153,7 @@ export default function BusinessManagementPage() {
   const [loading, setLoading] = useState(true);
   const [membersLoading, setMembersLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [revokingId, setRevokingId] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -262,6 +272,28 @@ export default function BusinessManagementPage() {
     }
   }
 
+  async function revokeInvitation(member: Member) {
+    setError("");
+    setMessage("");
+    setRevokingId(member.membership_id);
+
+    try {
+      await apiRequest(
+        `/api/accounts/${selectedAccount}/members/${member.membership_id}/revoke`,
+        {
+          method: "POST",
+        },
+      );
+
+      setMessage(t.updateSuccess);
+      await loadMembers();
+    } catch {
+      setError(t.actionError);
+    } finally {
+      setRevokingId("");
+    }
+  }
+
   function roleLabel(value: string) {
     const map: Record<string, string> = {
       account_owner: t.owner,
@@ -300,6 +332,10 @@ export default function BusinessManagementPage() {
   const selected = accounts.find(
     (account) => account.id === selectedAccount,
   );
+
+  const canManageTeam =
+    selected?.role === "account_owner" ||
+    selected?.role === "account_admin";
 
   const manageableRoles = [
     "account_manager",
@@ -461,6 +497,7 @@ export default function BusinessManagementPage() {
                         <tbody>
                           {members.map((member) => {
                             const manageable =
+                              canManageTeam &&
                               manageableRoles.includes(member.role) &&
                               ["active", "suspended"].includes(member.status);
 
@@ -472,7 +509,9 @@ export default function BusinessManagementPage() {
                                     <small>{member.email}</small>
                                   </div>
                                 </td>
+
                                 <td>{roleLabel(member.role)}</td>
+
                                 <td>
                                   <span
                                     className={`business-status status-${member.status}`}
@@ -480,8 +519,22 @@ export default function BusinessManagementPage() {
                                     {statusLabel(member.status)}
                                   </span>
                                 </td>
+
                                 <td>
-                                  {manageable ? (
+                                  {canManageTeam && member.status === "invited" ? (
+                                    <button
+                                      type="button"
+                                      className="business-status-button"
+                                      disabled={revokingId === member.membership_id}
+                                      onClick={() =>
+                                        void revokeInvitation(member)
+                                      }
+                                    >
+                                      {revokingId === member.membership_id
+                                        ? t.revoking
+                                        : t.revoke}
+                                    </button>
+                                  ) : manageable ? (
                                     <div className="business-member-actions">
                                       <select
                                         aria-label={t.changeRole}
@@ -518,7 +571,9 @@ export default function BusinessManagementPage() {
                                     </div>
                                   ) : (
                                     <span className="business-protected">
-                                      {roleLabel(member.role)}
+                                      {canManageTeam
+                                        ? roleLabel(member.role)
+                                        : t.readOnly}
                                     </span>
                                   )}
                                 </td>
@@ -533,7 +588,7 @@ export default function BusinessManagementPage() {
               </section>
             )}
 
-            {selected && (
+            {selected && canManageTeam && (
               <section className="business-invite-section">
                 <div className="business-section-heading">
                   <div>
