@@ -84,6 +84,41 @@ async function handleRequest(
     return;
   }
 
+  // Accept or revoke a business account invitation
+  const memberActionMatch = requestUrl.pathname.match(
+    /^\/api\/accounts\/([0-9a-f-]{36})\/members\/([0-9a-f-]{36})\/(accept|revoke)$/,
+  );
+
+  if (memberActionMatch) {
+    try {
+      const { handleMemberAction } =
+        await import("./member-actions.mjs");
+
+      await handleMemberAction(
+        request,
+        response,
+        memberActionMatch[1],
+        memberActionMatch[2],
+        memberActionMatch[3] as "accept" | "revoke",
+      );
+    } catch (error) {
+      console.error("WASLA member action route error:", error);
+
+      if (!response.headersSent) {
+        sendJson(response, 500, {
+          success: false,
+          error: "Member action service error",
+        });
+      } else {
+        response.destroy(
+          error instanceof Error ? error : undefined,
+        );
+      }
+    }
+
+    return;
+  }
+
   // Business account member routes
   const membersMatch = requestUrl.pathname.match(
     /^\/api\/accounts\/([0-9a-f-]{36})\/members$/,
