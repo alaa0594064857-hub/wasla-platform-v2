@@ -268,8 +268,9 @@ async function handleRequest(
   });
 }
 
-const server: Server = createServer(
-  (request, response) => {
+// Exported server factory used by tests and other modules
+export function createWaslaServer(): Server {
+  return createServer((request, response) => {
     void handleRequest(request, response).catch(
       (error: unknown) => {
         console.error("WASLA API unhandled error:", error);
@@ -286,11 +287,15 @@ const server: Server = createServer(
         }
       },
     );
-  },
-);
+  });
+}
 
-const port = Number(process.env.PORT ?? 4000);
+// Start the API when running outside the test environment
+if (process.env.NODE_ENV !== "test") {
+  const port = Number(process.env.PORT ?? 4000);
+  const server = createWaslaServer();
 
-server.listen(port, "0.0.0.0", () => {
-  console.log(`WASLA API listening on port ${port}`);
-});
+  server.listen(port, "0.0.0.0", () => {
+    console.log(`WASLA API listening on port ${port}`);
+  });
+}
