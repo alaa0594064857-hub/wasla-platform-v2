@@ -80,7 +80,7 @@ export default function HomePage() {
   return (
     <main className="wasla-page" lang={locale} dir={t.direction}>
       <header className="site-header">
-        <a className="brand" href="#" aria-label="WASLA home">
+        <a className="brand" href="/" aria-label="WASLA home">
           <span className="brand-symbol">W</span>
           <span className="brand-name">
             WASLA
@@ -94,7 +94,7 @@ export default function HomePage() {
               key={item}
               href={
                 index === 0
-                  ? "#"
+                  ? "/"
                   : index === 5
                     ? "/invitations"
                     : "#modules"
@@ -113,7 +113,7 @@ export default function HomePage() {
           >
             {t.language}
           </button>
-          <a className="sign-in-button" href="#get-started">
+          <a className="sign-in-button" href="/login">
             {t.signIn}
           </a>
         </div>
@@ -139,7 +139,7 @@ export default function HomePage() {
               {t.explore}
               <span aria-hidden="true">↗</span>
             </a>
-            <a className="secondary-button" href="#get-started">
+            <a className="secondary-button" href="/register">
               {t.join}
             </a>
           </div>
@@ -197,14 +197,14 @@ export default function HomePage() {
           <h2>{t.bannerTitle}</h2>
           <p>{t.bannerText}</p>
         </div>
-        <a className="primary-button" href="#modules">
-          {t.explore}
+        <a className="primary-button" href="/register">
+          {t.join}
           <span aria-hidden="true">↗</span>
         </a>
       </section>
 
       <footer className="site-footer">
-        <a className="footer-brand" href="#">
+        <a className="footer-brand" href="/">
           WASLA <span>وصلة</span>
         </a>
         <p>{t.footer}</p>
