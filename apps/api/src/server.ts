@@ -28,7 +28,6 @@ async function handleRequest(
     "http://localhost",
   );
 
-  // Authentication routes
   if (
     requestUrl.pathname === "/api/auth" ||
     requestUrl.pathname.startsWith("/api/auth/")
@@ -59,7 +58,6 @@ async function handleRequest(
     return;
   }
 
-  // User profile routes
   if (requestUrl.pathname === "/api/profile") {
     try {
       const { handleProfileRequest } =
@@ -84,7 +82,6 @@ async function handleRequest(
     return;
   }
 
-  // Incoming business account invitations
   if (requestUrl.pathname === "/api/invitations") {
     try {
       const { handleInvitationsRequest } =
@@ -109,9 +106,8 @@ async function handleRequest(
     return;
   }
 
-  // Accept or revoke a business account invitation
   const memberActionMatch = requestUrl.pathname.match(
-    /^\/api\/accounts\/([0-9a-f-]{36})\/members\/([0-9a-f-]{36})\/(accept|revoke)$/,
+    /^\/api\/accounts\/([0-9a-f-]{36})\/members\/([0-9a-f-]{36})\/(accept|revoke|decline)$/,
   );
 
   if (memberActionMatch) {
@@ -124,7 +120,10 @@ async function handleRequest(
         response,
         memberActionMatch[1],
         memberActionMatch[2],
-        memberActionMatch[3] as "accept" | "revoke",
+        memberActionMatch[3] as
+          | "accept"
+          | "revoke"
+          | "decline",
       );
     } catch (error) {
       console.error("WASLA member action route error:", error);
@@ -144,7 +143,6 @@ async function handleRequest(
     return;
   }
 
-  // Update member role or membership status
   const memberManagementMatch = requestUrl.pathname.match(
     /^\/api\/accounts\/([0-9a-f-]{36})\/members\/([0-9a-f-]{36})$/,
   );
@@ -184,7 +182,6 @@ async function handleRequest(
     return;
   }
 
-  // Business account member routes
   const membersMatch = requestUrl.pathname.match(
     /^\/api\/accounts\/([0-9a-f-]{36})\/members$/,
   );
@@ -217,7 +214,6 @@ async function handleRequest(
     return;
   }
 
-  // Business account routes
   if (requestUrl.pathname === "/api/accounts") {
     try {
       const { handleAccountsRequest } =
@@ -242,7 +238,6 @@ async function handleRequest(
     return;
   }
 
-  // Health check
   if (requestUrl.pathname === "/health") {
     if (request.method !== "GET") {
       sendJson(response, 405, {
@@ -261,14 +256,12 @@ async function handleRequest(
     return;
   }
 
-  // Unknown routes
   sendJson(response, 404, {
     success: false,
     error: "Route not found",
   });
 }
 
-// Exported server factory used by tests and other modules
 export function createWaslaServer(): Server {
   return createServer((request, response) => {
     void handleRequest(request, response).catch(
@@ -290,7 +283,6 @@ export function createWaslaServer(): Server {
   });
 }
 
-// Start the API when running outside the test environment
 if (process.env.NODE_ENV !== "test") {
   const port = Number(process.env.PORT ?? 4000);
   const server = createWaslaServer();
