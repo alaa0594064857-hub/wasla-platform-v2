@@ -1,3 +1,4 @@
+
 import { sql } from "drizzle-orm";
 
 import {
@@ -65,7 +66,6 @@ export const roleScopeEnum = pgEnum("role_scope", [
   "store",
 ]);
 
-// Unified WASLA user identity + Better Auth user fields.
 export const users = pgTable(
   "users",
   {
@@ -74,7 +74,9 @@ export const users = pgTable(
     email: varchar("email", { length: 320 }).notNull(),
     emailVerified: boolean("email_verified").default(false).notNull(),
     image: text("image"),
-    status: userStatusEnum("status").default("pending_verification").notNull(),
+    status: userStatusEnum("status")
+      .default("pending_verification")
+      .notNull(),
     preferredLocale: varchar("preferred_locale", { length: 5 })
       .default("ar")
       .notNull(),
@@ -90,7 +92,6 @@ export const users = pgTable(
   ],
 );
 
-// Existing external identity records are preserved.
 export const authIdentities = pgTable(
   "auth_identities",
   {
@@ -118,7 +119,6 @@ export const authIdentities = pgTable(
   ],
 );
 
-// Better Auth sessions.
 export const authSessions = pgTable(
   "auth_sessions",
   {
@@ -143,8 +143,6 @@ export const authSessions = pgTable(
   ],
 );
 
-// Better Auth login providers and credential records.
-// This is NOT the WASLA business accounts table.
 export const authAccounts = pgTable(
   "auth_accounts",
   {
@@ -181,7 +179,6 @@ export const authAccounts = pgTable(
   ],
 );
 
-// Better Auth email and token verification records.
 export const authVerifications = pgTable(
   "auth_verifications",
   {
@@ -222,7 +219,9 @@ export const accounts = pgTable(
     accountType: accountTypeEnum("account_type").notNull(),
     legalName: varchar("legal_name", { length: 255 }).notNull(),
     displayName: varchar("display_name", { length: 255 }).notNull(),
-    status: accountStatusEnum("status").default("pending_verification").notNull(),
+    status: accountStatusEnum("status")
+      .default("pending_verification")
+      .notNull(),
     countryCode: varchar("country_code", { length: 2 }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -253,8 +252,8 @@ export const businessProfiles = pgTable("business_profiles", {
     .defaultNow()
     .notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
+      .defaultNow()
+      .notNull(),
 });
 
 export const roles = pgTable(
