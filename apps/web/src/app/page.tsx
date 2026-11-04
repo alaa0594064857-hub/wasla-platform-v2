@@ -6,7 +6,7 @@ const content = {
   ar: {
     direction: "rtl" as const,
     language: "EN",
-    nav: ["الرئيسية", "المتاجر", "الأعمال", "التجارة", "عن وصلة"],
+    nav: ["الرئيسية", "المتاجر", "الأعمال", "التجارة", "عن وصلة", "الدعوات"],
     signIn: "تسجيل الدخول",
     eyebrow: "منصة واحدة. فرص بلا حدود.",
     title: "العالم التجاري",
@@ -40,7 +40,7 @@ const content = {
   en: {
     direction: "ltr" as const,
     language: "عربي",
-    nav: ["Home", "Stores", "Business", "Trade", "About"],
+    nav: ["Home", "Stores", "Business", "Trade", "About", "Invitations"],
     signIn: "Sign in",
     eyebrow: "One platform. Limitless possibilities.",
     title: "Global commerce",
@@ -92,7 +92,13 @@ export default function HomePage() {
           {t.nav.map((item, index) => (
             <a
               key={item}
-              href={index === 0 ? "#" : "#modules"}
+              href={
+                index === 0
+                  ? "#"
+                  : index === 5
+                    ? "/invitations"
+                    : "#modules"
+              }
             >
               {item}
             </a>
