@@ -84,6 +84,31 @@ async function handleRequest(
     return;
   }
 
+  // Business account routes
+  if (requestUrl.pathname === "/api/accounts") {
+    try {
+      const { handleAccountsRequest } =
+        await import("./accounts.mjs");
+
+      await handleAccountsRequest(request, response);
+    } catch (error) {
+      console.error("WASLA accounts route error:", error);
+
+      if (!response.headersSent) {
+        sendJson(response, 500, {
+          success: false,
+          error: "Accounts service error",
+        });
+      } else {
+        response.destroy(
+          error instanceof Error ? error : undefined,
+        );
+      }
+    }
+
+    return;
+  }
+
   // Health check
   if (requestUrl.pathname === "/health") {
     if (request.method !== "GET") {
