@@ -6,7 +6,15 @@ const content = {
   ar: {
     direction: "rtl" as const,
     language: "EN",
-    nav: ["الرئيسية", "المتاجر", "الأعمال", "التجارة", "عن وصلة", "الدعوات"],
+    nav: [
+      "الرئيسية",
+      "المتاجر",
+      "الأعمال",
+      "التجارة",
+      "عن وصلة",
+      "الدعوات",
+      "الملف الشخصي",
+    ],
     signIn: "تسجيل الدخول",
     eyebrow: "منصة واحدة. فرص بلا حدود.",
     title: "العالم التجاري",
@@ -40,7 +48,15 @@ const content = {
   en: {
     direction: "ltr" as const,
     language: "عربي",
-    nav: ["Home", "Stores", "Business", "Trade", "About", "Invitations"],
+    nav: [
+      "Home",
+      "Stores",
+      "Business",
+      "Trade",
+      "About",
+      "Invitations",
+      "Profile",
+    ],
     signIn: "Sign in",
     eyebrow: "One platform. Limitless possibilities.",
     title: "Global commerce",
@@ -97,7 +113,9 @@ export default function HomePage() {
                   ? "/"
                   : index === 5
                     ? "/invitations"
-                    : "#modules"
+                    : index === 6
+                      ? "/profile"
+                      : "#modules"
               }
             >
               {item}
