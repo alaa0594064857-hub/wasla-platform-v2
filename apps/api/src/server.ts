@@ -1,4 +1,3 @@
-
 import {
   createServer,
   type IncomingMessage,
@@ -29,6 +28,7 @@ async function handleRequest(
     "http://localhost",
   );
 
+  // Authentication routes
   if (
     requestUrl.pathname === "/api/auth" ||
     requestUrl.pathname.startsWith("/api/auth/")
@@ -59,6 +59,32 @@ async function handleRequest(
     return;
   }
 
+  // User profile routes
+  if (requestUrl.pathname === "/api/profile") {
+    try {
+      const { handleProfileRequest } =
+        await import("./profile.mjs");
+
+      await handleProfileRequest(request, response);
+    } catch (error) {
+      console.error("WASLA profile route error:", error);
+
+      if (!response.headersSent) {
+        sendJson(response, 500, {
+          success: false,
+          error: "Profile service error",
+        });
+      } else {
+        response.destroy(
+          error instanceof Error ? error : undefined,
+        );
+      }
+    }
+
+    return;
+  }
+
+  // Health check
   if (requestUrl.pathname === "/health") {
     if (request.method !== "GET") {
       sendJson(response, 405, {
@@ -77,6 +103,7 @@ async function handleRequest(
     return;
   }
 
+  // Unknown routes
   sendJson(response, 404, {
     success: false,
     error: "Route not found",
@@ -93,7 +120,11 @@ export function startWaslaServer(): Server {
   const port = Number(process.env.PORT ?? 4000);
   const host = process.env.HOST ?? "0.0.0.0";
 
-  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+  if (
+    !Number.isInteger(port) ||
+    port < 1 ||
+    port > 65535
+  ) {
     throw new Error(
       "PORT must be a valid number between 1 and 65535",
     );
@@ -102,7 +133,9 @@ export function startWaslaServer(): Server {
   const server = createWaslaServer();
 
   server.listen(port, host, () => {
-    console.log(`WASLA API is running on ${host}:${port}`);
+    console.log(
+      `WASLA API is running on ${host}:${port}`,
+    );
   });
 
   server.on("error", (error: Error) => {
@@ -113,7 +146,10 @@ export function startWaslaServer(): Server {
   function shutdown(): void {
     server.close((error) => {
       if (error) {
-        console.error("Error while stopping WASLA API:", error);
+        console.error(
+          "Error while stopping WASLA API:",
+          error,
+        );
         process.exitCode = 1;
         return;
       }
