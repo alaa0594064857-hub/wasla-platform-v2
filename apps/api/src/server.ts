@@ -84,6 +84,39 @@ async function handleRequest(
     return;
   }
 
+  // Business account member routes
+  const membersMatch = requestUrl.pathname.match(
+    /^\/api\/accounts\/([0-9a-f-]{36})\/members$/,
+  );
+
+  if (membersMatch) {
+    try {
+      const { handleMembersRequest } =
+        await import("./members.mjs");
+
+      await handleMembersRequest(
+        request,
+        response,
+        membersMatch[1],
+      );
+    } catch (error) {
+      console.error("WASLA members route error:", error);
+
+      if (!response.headersSent) {
+        sendJson(response, 500, {
+          success: false,
+          error: "Members service error",
+        });
+      } else {
+        response.destroy(
+          error instanceof Error ? error : undefined,
+        );
+      }
+    }
+
+    return;
+  }
+
   // Business account routes
   if (requestUrl.pathname === "/api/accounts") {
     try {
