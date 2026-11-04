@@ -119,6 +119,46 @@ async function handleRequest(
     return;
   }
 
+  // Update member role or membership status
+  const memberManagementMatch = requestUrl.pathname.match(
+    /^\/api\/accounts\/([0-9a-f-]{36})\/members\/([0-9a-f-]{36})$/,
+  );
+
+  if (
+    memberManagementMatch &&
+    request.method === "PATCH"
+  ) {
+    try {
+      const { handleMemberManagement } =
+        await import("./member-management.mjs");
+
+      await handleMemberManagement(
+        request,
+        response,
+        memberManagementMatch[1],
+        memberManagementMatch[2],
+      );
+    } catch (error) {
+      console.error(
+        "WASLA member management route error:",
+        error,
+      );
+
+      if (!response.headersSent) {
+        sendJson(response, 500, {
+          success: false,
+          error: "Member management service error",
+        });
+      } else {
+        response.destroy(
+          error instanceof Error ? error : undefined,
+        );
+      }
+    }
+
+    return;
+  }
+
   // Business account member routes
   const membersMatch = requestUrl.pathname.match(
     /^\/api\/accounts\/([0-9a-f-]{36})\/members$/,
