@@ -62,7 +62,7 @@ const labels = {
     supplier: "مورد",
     manufacturer: "مصنّع",
     trader: "تاجر",
-    brand: "علامة تجارية",
+    brandType: "علامة تجارية",
     accessDenied: "ليس لديك صلاحية لإدارة هذا العضو.",
     back: "العودة للرئيسية",
   },
@@ -104,7 +104,7 @@ const labels = {
     supplier: "Supplier",
     manufacturer: "Manufacturer",
     trader: "Trader",
-    brand: "Brand",
+    brandType: "Brand",
     accessDenied: "You do not have permission to manage this member.",
     back: "Back to home",
   },
@@ -291,7 +291,7 @@ export default function BusinessManagementPage() {
       supplier: t.supplier,
       manufacturer: t.manufacturer,
       trader: t.trader,
-      brand: t.brand,
+      brand: t.brandType,
     };
 
     return map[value] ?? value;
@@ -472,9 +472,7 @@ export default function BusinessManagementPage() {
                                     <small>{member.email}</small>
                                   </div>
                                 </td>
-                                <td>
-                                  {roleLabel(member.role)}
-                                </td>
+                                <td>{roleLabel(member.role)}</td>
                                 <td>
                                   <span
                                     className={`business-status status-${member.status}`}
