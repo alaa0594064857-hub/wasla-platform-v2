@@ -4,11 +4,9 @@ import type {
 } from "node:http";
 
 import { fromNodeHeaders } from "better-auth/node";
-import { eq } from "drizzle-orm";
 
 import { auth } from "./auth.mjs";
-import { getDrizzleDatabase } from "./database.js";
-import { profiles } from "./db/schema.js";
+import { getDatabasePool } from "./database.js";
 
 function respond(
   response: ServerResponse,
@@ -47,7 +45,10 @@ export async function handleProfileRequest(
   request: IncomingMessage,
   response: ServerResponse,
 ): Promise<void> {
-  if (request.method !== "GET" && request.method !== "PATCH") {
+  if (
+    request.method !== "GET" &&
+    request.method !== "PATCH"
+  ) {
     respond(response, 405, {
       success: false,
       error: "Method not allowed",
@@ -68,23 +69,27 @@ export async function handleProfileRequest(
       return;
     }
 
-    const database = getDrizzleDatabase();
+    const database = getDatabasePool();
 
     if (request.method === "GET") {
-      const result = await database
-        .select()
-        .from(profiles)
-        .where(eq(profiles.userId, session.user.id))
-        .limit(1);
+      const result = await database.query(
+        `SELECT display_name, avatar_reference
+         FROM profiles
+         WHERE user_id = $1
+         LIMIT 1`,
+        [session.user.id],
+      );
 
-      const profile = result[0];
+      const profile = result.rows[0];
 
       respond(response, 200, {
         success: true,
         profile: {
           userId: session.user.id,
-          displayName: profile?.displayName ?? session.user.name,
-          avatarReference: profile?.avatarReference ?? null,
+          displayName:
+            profile?.display_name ?? session.user.name,
+          avatarReference:
+            profile?.avatar_reference ?? null,
           email: session.user.email,
         },
       });
@@ -137,25 +142,27 @@ export async function handleProfileRequest(
       return;
     }
 
-    const values = {
-      displayName: displayName.trim(),
-      avatarReference:
+    await database.query(
+      `INSERT INTO profiles (
+         user_id,
+         display_name,
+         avatar_reference,
+         updated_at
+       )
+       VALUES ($1, $2, $3, NOW())
+       ON CONFLICT (user_id)
+       DO UPDATE SET
+         display_name = EXCLUDED.display_name,
+         avatar_reference = EXCLUDED.avatar_reference,
+         updated_at = NOW()`,
+      [
+        session.user.id,
+        displayName.trim(),
         typeof avatarReference === "string"
           ? avatarReference
           : null,
-      updatedAt: new Date(),
-    };
-
-    await database
-      .insert(profiles)
-      .values({
-        userId: session.user.id,
-        ...values,
-      })
-      .onConflictDoUpdate({
-        target: profiles.userId,
-        set: values,
-      });
+      ],
+    );
 
     respond(response, 200, {
       success: true,
@@ -164,7 +171,7 @@ export async function handleProfileRequest(
   } catch (error) {
     console.error("WASLA profile API error:", error);
 
-    respond(response, 400, {
+    respond(response, 500, {
       success: false,
       error: "Could not process profile request",
     });
