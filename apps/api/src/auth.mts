@@ -1,15 +1,16 @@
+
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 
-import { getDrizzleDatabase } from "./database.js";
+import { getDrizzleDatabase, getDatabasePool } from "./database.js";
 import * as schema from "./db/schema.js";
 
 const secret = process.env.BETTER_AUTH_SECRET;
+const resendApiKey = process.env.RESEND_API_KEY;
+const testRecipient = process.env.RESEND_TEST_RECIPIENT;
 
 if (process.env.NODE_ENV === "production" && !secret) {
-  throw new Error(
-    "BETTER_AUTH_SECRET is required in production",
-  );
+  throw new Error("BETTER_AUTH_SECRET is required in production");
 }
 
 const trustedOrigins = (
@@ -19,6 +20,52 @@ const trustedOrigins = (
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
+
+async function sendVerificationEmail(
+  email: string,
+  url: string,
+): Promise<void> {
+  if (!resendApiKey) {
+    throw new Error("RESEND_API_KEY is not configured");
+  }
+
+  if (!testRecipient) {
+    throw new Error("RESEND_TEST_RECIPIENT is not configured");
+  }
+
+  if (email.toLowerCase() !== testRecipient.toLowerCase()) {
+    throw new Error(
+      "Resend test mode only allows the configured test recipient",
+    );
+  }
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${resendApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: "WASLA <onboarding@resend.dev>",
+      to: [testRecipient],
+      subject: "Verify your WASLA account",
+      text: [
+        "Welcome to WASLA.",
+        "",
+        "Please verify your email address using this link:",
+        url,
+        "",
+        "This link expires in one hour.",
+      ].join("\n"),
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Resend email delivery failed:", errorText);
+    throw new Error("Could not send verification email");
+  }
+}
 
 export const auth = betterAuth({
   appName: "WASLA",
@@ -54,7 +101,30 @@ export const auth = betterAuth({
 
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: false,
+    requireEmailVerification: true,
+  },
+
+  emailVerification: {
+    sendOnSignUp: true,
+    sendOnSignIn: true,
+    autoSignInAfterVerification: true,
+    expiresIn: 3600,
+
+    sendVerificationEmail: async ({ user, url }) => {
+      await sendVerificationEmail(user.email, url);
+    },
+
+    afterEmailVerification: async (user) => {
+      const database = getDatabasePool();
+
+      await database.query(
+        `UPDATE users
+         SET status = 'active',
+             updated_at = NOW()
+         WHERE id = $1`,
+        [user.id],
+      );
+    },
   },
 
   advanced: {
