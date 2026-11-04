@@ -4,9 +4,14 @@ import type { Server } from "node:http";
 import { createWaslaServer } from "./server";
 import { checkDatabaseConnection } from "./database.js";
 
-vi.mock("./database.js", () => ({
-  checkDatabaseConnection: vi.fn(),
-}));
+vi.mock("./database.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./database.js")>();
+
+  return {
+    ...actual,
+    checkDatabaseConnection: vi.fn(),
+  };
+});
 
 let server: Server | undefined;
 
