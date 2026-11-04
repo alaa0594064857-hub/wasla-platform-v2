@@ -8,7 +8,7 @@ import { fromNodeHeaders } from "better-auth/node";
 import { auth } from "./auth.mjs";
 import { getDatabasePool } from "./database.js";
 
-type Action = "accept" | "revoke";
+type Action = "accept" | "revoke" | "decline";
 
 function respond(
   response: ServerResponse,
@@ -107,25 +107,37 @@ export async function handleMemberAction(
         return;
       }
 
-      if (action === "accept") {
+      if (action === "accept" || action === "decline") {
         if (membership.user_id !== session.user.id) {
           await client.query("ROLLBACK");
 
           respond(response, 403, {
             success: false,
-            error: "Only the invited user can accept this invitation",
+            error: action === "accept"
+              ? "Only the invited user can accept this invitation"
+              : "Only the invited user can decline this invitation",
           });
           return;
         }
 
-        await client.query(
-          `UPDATE account_members
-           SET status = 'active',
-               joined_at = NOW(),
-               updated_at = NOW()
-           WHERE id = $1`,
-          [membershipId],
-        );
+        if (action === "accept") {
+          await client.query(
+            `UPDATE account_members
+             SET status = 'active',
+                 joined_at = NOW(),
+                 updated_at = NOW()
+             WHERE id = $1`,
+            [membershipId],
+          );
+        } else {
+          await client.query(
+            `UPDATE account_members
+             SET status = 'revoked',
+                 updated_at = NOW()
+             WHERE id = $1`,
+            [membershipId],
+          );
+        }
       } else {
         const permission = await client.query<{
           role: string;
@@ -173,6 +185,13 @@ export async function handleMemberAction(
         );
       }
 
+      const auditAction =
+        action === "accept"
+          ? "account.member.accepted"
+          : action === "decline"
+            ? "account.member.invitation_declined"
+            : "account.member.invitation_revoked";
+
       await client.query(
         `INSERT INTO audit_logs (
            actor_user_id,
@@ -185,9 +204,7 @@ export async function handleMemberAction(
          VALUES ($1, $2, $3, $4, $5, $6)`,
         [
           session.user.id,
-          action === "accept"
-            ? "account.member.accepted"
-            : "account.member.invitation_revoked",
+          auditAction,
           "account_member",
           membershipId,
           accountId,
@@ -199,13 +216,18 @@ export async function handleMemberAction(
 
       await client.query("COMMIT");
 
+      const status = action === "accept" ? "active" : "revoked";
+
       respond(response, 200, {
         success: true,
-        message: action === "accept"
-          ? "Invitation accepted successfully"
-          : "Invitation revoked successfully",
+        message:
+          action === "accept"
+            ? "Invitation accepted successfully"
+            : action === "decline"
+              ? "Invitation declined successfully"
+              : "Invitation revoked successfully",
         membershipId,
-        status: action === "accept" ? "active" : "revoked",
+        status,
       });
     } catch (error) {
       await client.query("ROLLBACK");
