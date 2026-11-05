@@ -2171,3 +2171,14 @@ html[data-wasla-theme="light"] .wasla-workspace-nav a,html[data-wasla-theme="lig
 .wasla-brand-card>button{width:100%;padding:14px;border:0;border-radius:10px;background:#14243a;color:#fff;font-size:12px;font-weight:800}.wasla-brand-card>button:disabled{opacity:.6;cursor:wait}.wasla-brand-card>button span{margin-inline-start:12px;color:#dfc58f}
 .wasla-brands-notice{padding:12px 15px;border-radius:10px;background:#eaf6ee;color:#23633b;font-size:12px}
 @media(max-width:680px){.wasla-brands-wrap{width:calc(100% - 28px);padding:34px 0 60px}.wasla-brands-heading{align-items:flex-start}.wasla-brands-emblem{width:62px;height:62px;border-radius:18px;font-size:40px}.wasla-brands-grid{grid-template-columns:1fr}.wasla-brands-toolbar{align-items:flex-start;flex-direction:column}}
+
+.wasla-profile-public-preview{display:flex;align-items:center;gap:22px;margin:0 0 20px;padding:24px;border:1px solid rgba(198,161,91,.38);border-radius:18px;background:linear-gradient(120deg,#fff,#f6f1e5);box-shadow:0 15px 40px rgba(20,36,58,.05)}
+.wasla-profile-public-avatar{width:104px;height:104px;flex:none;overflow:hidden;display:grid;place-items:center;border:3px solid #dfc58f;border-radius:50%;background:#14243a;color:#fff;font-size:40px;font-weight:900}
+.wasla-profile-public-avatar img{width:100%;height:100%;object-fit:cover}
+.wasla-profile-public-copy>span{color:#a27c3f;font-size:10px;font-weight:900;letter-spacing:1.5px}
+.wasla-profile-public-copy h2{margin:6px 0;font-size:21px}
+.wasla-profile-public-copy p{margin:5px 0;color:#667487;font-size:13px;line-height:1.8;white-space:pre-wrap}
+.wasla-profile-public-copy>a{display:inline-block;margin-top:5px;color:#8d6a34;font-size:12px;overflow-wrap:anywhere}
+.wasla-profile-public-links{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.wasla-profile-public-links a{padding:7px 10px;border:1px solid rgba(20,36,58,.12);border-radius:20px;background:#fff;color:#526073;font-size:10px;font-weight:800}
+@media(max-width:600px){.wasla-profile-public-preview{align-items:flex-start;flex-direction:column}.wasla-profile-public-avatar{width:88px;height:88px}}
