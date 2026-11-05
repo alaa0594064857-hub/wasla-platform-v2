@@ -37,7 +37,7 @@ const labels = {
     supplier: "مورد",
     manufacturer: "مصنع",
     trader: "تاجر",
-    brand: "صاحب علامة تجارية / متجر",
+    brandOwner: "صاحب علامة تجارية / متجر",
   },
   en: {
     brand: "WASLA",
@@ -66,7 +66,7 @@ const labels = {
     supplier: "Supplier",
     manufacturer: "Factory / Manufacturer",
     trader: "Trader",
-    brand: "Brand / Store owner",
+    brandOwner: "Brand / Store owner",
   },
 };
 
@@ -173,7 +173,7 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
                   <option value="supplier">{t.supplier}</option>
                   <option value="manufacturer">{t.manufacturer}</option>
                   <option value="trader">{t.trader}</option>
-                  <option value="brand">{t.brand}</option>
+                  <option value="brand">{t.brandOwner}</option>
                 </select>
               </label>
             )}
