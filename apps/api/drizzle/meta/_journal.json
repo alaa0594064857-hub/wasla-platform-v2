@@ -22,6 +22,13 @@
       "when": 1793739604315,
       "tag": "0002_harsh_baron_zemo",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793895000000,
+      "tag": "0003_add_registration_type",
+      "breakpoints": true
     }
   ]
 }
