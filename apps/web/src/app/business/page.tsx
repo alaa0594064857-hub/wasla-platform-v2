@@ -369,7 +369,7 @@ export default function BusinessManagementPage() {
         <div className="business-heading">
           <div>
             <span className="business-eyebrow">
-              WASLA BUSINESS
+              {locale === "ar" ? "وصلة للأعمال" : "WASLA BUSINESS"}
             </span>
             <h1>{t.title}</h1>
             <p>{t.subtitle}</p>
@@ -646,7 +646,7 @@ export default function BusinessManagementPage() {
         )}
 
         <footer className="business-footer">
-          WASLA · A global platform for commerce and business
+          {locale === "ar" ? "وصلة · منصة عالمية للتجارة والأعمال" : "WASLA · A global platform for commerce and business"}
         </footer>
       </section>
     </main>
