@@ -143,10 +143,6 @@ export default function HomePage() {
   const signedIn = Boolean(session?.user);
   const t = copy[locale];
   const direction = locale === "ar" ? "rtl" : "ltr";
-  const accountName = session?.user?.name || (locale === "ar" ? "عضو وصلة" : "WASLA member");
-  const accountEmail = session?.user?.email || "";
-  const accountImage = session?.user?.image || "";
-  const accountInitial = accountName.trim().charAt(0).toUpperCase() || "W";
 
   return (
     <main className="worlds-page" lang={locale} dir={direction}>
@@ -157,7 +153,7 @@ export default function HomePage() {
         </a>
         <div className="worlds-header-actions">
           <button className="worlds-language" type="button" onClick={() => setLocale(locale === "ar" ? "en" : "ar")}>{t.language}</button>
-          <a className="worlds-account" href={signedIn ? "/profile" : "/login"}>{isPending ? t.signIn : signedIn ? t.account : t.signIn}</a>
+          <a className="worlds-account" href={signedIn ? "/account" : "/login"}>{isPending ? t.signIn : signedIn ? t.account : t.signIn}</a>
         </div>
       </header>
 
@@ -181,30 +177,6 @@ export default function HomePage() {
           <span className="orbit-caption caption-a">COMMERCE</span>
           <span className="orbit-caption caption-b">BUSINESS</span>
           <span className="orbit-caption caption-c">GLOBAL</span>
-        </div>
-      </section>
-
-      <section className="worlds-home-panel" aria-label={locale === "ar" ? "مساحة حسابك" : "Your account space"}>
-        <div className="worlds-profile-card">
-          <div className="worlds-profile-avatar">
-            {accountImage ? <img src={accountImage} alt="" /> : <span>{accountInitial}</span>}
-          </div>
-          <div className="worlds-profile-details">
-            <span className="worlds-panel-kicker">{locale === "ar" ? "ملفك الشخصي" : "YOUR PROFILE"}</span>
-            <strong>{signedIn ? accountName : (locale === "ar" ? "مرحباً بك في وصلة" : "Welcome to WASLA")}</strong>
-            <small>{signedIn ? accountEmail : (locale === "ar" ? "سجّل الدخول لعرض بيانات حسابك" : "Sign in to view your account details")}</small>
-            <a href={signedIn ? "/profile" : "/login"}>{locale === "ar" ? "عرض بيانات الحساب" : "View account details"} <span>↗</span></a>
-          </div>
-        </div>
-        <div className="worlds-quick-card">
-          <span className="worlds-quick-icon">✉</span>
-          <div><strong>{locale === "ar" ? "الرسائل" : "Messages"}</strong><small>{locale === "ar" ? "مساحة محادثاتك مع المتاجر والشركات" : "Your conversations with shops and businesses"}</small></div>
-          <b>{locale === "ar" ? "قريباً" : "Coming soon"}</b>
-        </div>
-        <div className="worlds-quick-card">
-          <span className="worlds-quick-icon">♧</span>
-          <div><strong>{locale === "ar" ? "الإشعارات" : "Notifications"}</strong><small>{locale === "ar" ? "تنبيهات الطلبات والأنشطة والتحديثات" : "Orders, activity and platform updates"}</small></div>
-          <b>{locale === "ar" ? "قريباً" : "Coming soon"}</b>
         </div>
       </section>
 
