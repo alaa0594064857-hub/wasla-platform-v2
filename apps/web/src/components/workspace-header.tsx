@@ -79,6 +79,9 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
         <Link href={messagesHref}>{pathname === "/messages" ? (ar ? "الرئيسية" : "Home") : (ar ? "الرسائل" : "Messages")}</Link>
       </nav>
       <div className="wasla-workspace-actions">
+        <button type="button" className="wasla-search-trigger" aria-label={ar ? "فتح البحث" : "Open search"} aria-expanded={searchOpen} title={ar ? "البحث الشامل" : "Universal search"} onClick={() => setSearchOpen(value => !value)}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
+        </button>
         <button type="button" className="wasla-workspace-language" onClick={() => setLocale(ar ? "en" : "ar")}>{ar ? "English" : "العربية"}</button>
         <Link href={pathname === "/profile" ? "/" : (session?.user ? "/profile" : "/login")} className="wasla-workspace-user" aria-label={ar ? "الملف الشخصي" : "Profile"}>
           <span className="wasla-workspace-avatar">{avatar ? <img src={avatar} alt="" referrerPolicy="no-referrer"/> : (name.trim().charAt(0) || "W")}</span>
@@ -86,6 +89,11 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
         </Link>
       </div>
     </header>
+    {searchOpen && <form className="wasla-global-search" role="search" onSubmit={submitSearch} dir={ar ? "rtl" : "ltr"}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
+      <input autoFocus type="search" value={searchText} onChange={event => setSearchText(event.target.value)} placeholder={ar ? "ابحث عن منتجات أو متاجر أو شركات أو أشخاص..." : "Search products, stores, businesses or people..."} aria-label={ar ? "البحث الشامل" : "Universal search"} />
+      <button type="submit" disabled={!searchText.trim()}>{ar ? "بحث" : "Search"}</button>
+    </form>}
     {menuOpen && <button className="wasla-menu-backdrop" aria-label={ar ? "إغلاق القائمة" : "Close menu"} onClick={() => setMenuOpen(false)} />}
     <aside className={`wasla-drawer ${menuOpen ? "is-open" : ""}`} dir={ar ? "rtl" : "ltr"} aria-hidden={!menuOpen}>
       <div className="wasla-drawer-head">
