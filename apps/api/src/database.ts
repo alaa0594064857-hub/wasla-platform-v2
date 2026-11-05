@@ -60,9 +60,9 @@ export async function ensureRegistrationTypeColumn(): Promise<void> {
 }
 
 /**
- * Bootstrap the minimum account-owner authorization records required
- * by business-account creation and account listing.
- * Every statement is idempotent so it is safe on every service start.
+ * Bootstrap the account-owner authorization records required
+ * for account listing, member listing, and team invitations.
+ * Every statement is idempotent and safe on every service start.
  */
 export async function ensureAccountOwnerRole(): Promise<void> {
   const client = await getDatabasePool().connect();
@@ -90,35 +90,49 @@ export async function ensureAccountOwnerRole(): Promise<void> {
        RETURNING id`,
     );
 
-    const permissionResult = await client.query<{ id: string }>(
-      `INSERT INTO permissions (
-         permission_key,
-         description,
-         scope_type
-       )
-       VALUES (
-         'account.read',
-         'View business account details',
-         'account'
-       )
-       ON CONFLICT (permission_key)
-       DO UPDATE SET
-         description = EXCLUDED.description,
-         scope_type = EXCLUDED.scope_type
-       RETURNING id`,
-    );
+    const permissions = [
+      {
+        key: "account.read",
+        description: "View business account details",
+      },
+      {
+        key: "account.member.read",
+        description: "View business account members",
+      },
+      {
+        key: "account.member.invite",
+        description: "Invite members to a business account",
+      },
+    ];
 
-    await client.query(
-      `INSERT INTO role_permissions (
-         role_id,
-         permission_id,
-         scope_type
-       )
-       VALUES ($1, $2, 'account')
-       ON CONFLICT (role_id, permission_id)
-       DO UPDATE SET scope_type = EXCLUDED.scope_type`,
-      [roleResult.rows[0].id, permissionResult.rows[0].id],
-    );
+    for (const permission of permissions) {
+      const permissionResult = await client.query<{ id: string }>(
+        `INSERT INTO permissions (
+           permission_key,
+           description,
+           scope_type
+         )
+         VALUES ($1, $2, 'account')
+         ON CONFLICT (permission_key)
+         DO UPDATE SET
+           description = EXCLUDED.description,
+           scope_type = EXCLUDED.scope_type
+         RETURNING id`,
+        [permission.key, permission.description],
+      );
+
+      await client.query(
+        `INSERT INTO role_permissions (
+           role_id,
+           permission_id,
+           scope_type
+         )
+         VALUES ($1, $2, 'account')
+         ON CONFLICT (role_id, permission_id)
+         DO UPDATE SET scope_type = EXCLUDED.scope_type`,
+        [roleResult.rows[0].id, permissionResult.rows[0].id],
+      );
+    }
 
     await client.query("COMMIT");
   } catch (error) {
