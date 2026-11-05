@@ -7,6 +7,7 @@ import { authClient } from "@/lib/auth-client";
 
 type AuthMode = "login" | "register";
 type Locale = "ar" | "en";
+type RegistrationType = "buyer" | "company" | "supplier" | "manufacturer" | "trader" | "brand";
 
 const labels = {
   ar: {
@@ -30,6 +31,13 @@ const labels = {
     registerError: "تعذر إنشاء الحساب. تحقق من البيانات وحاول مجدداً.",
     language: "English",
     passwordHint: "ثمانية أحرف على الأقل",
+    accountType: "نوع العضوية",
+    buyer: "مشتري (حساب شخصي)",
+    company: "شركة",
+    supplier: "مورد",
+    manufacturer: "مصنع",
+    trader: "تاجر",
+    brand: "صاحب علامة تجارية / متجر",
   },
   en: {
     brand: "WASLA",
@@ -52,6 +60,13 @@ const labels = {
     registerError: "Unable to create your account. Check your details and try again.",
     language: "العربية",
     passwordHint: "At least 8 characters",
+    accountType: "Membership type",
+    buyer: "Buyer (personal account)",
+    company: "Company",
+    supplier: "Supplier",
+    manufacturer: "Factory / Manufacturer",
+    trader: "Trader",
+    brand: "Brand / Store owner",
   },
 };
 
@@ -61,6 +76,7 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [registrationType, setRegistrationType] = useState<RegistrationType>("buyer");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const t = labels[locale];
@@ -77,7 +93,7 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
           name: name.trim(),
           email: email.trim(),
           password,
-          
+          registrationType,
         });
 
         if (result.error) {
@@ -144,6 +160,21 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
                   maxLength={160}
                   required
                 />
+              </label>
+            )}
+
+
+            {isRegister && (
+              <label className="auth-field">
+                <span>{t.accountType}</span>
+                <select value={registrationType} onChange={(event) => setRegistrationType(event.target.value as RegistrationType)} required>
+                  <option value="buyer">{t.buyer}</option>
+                  <option value="company">{t.company}</option>
+                  <option value="supplier">{t.supplier}</option>
+                  <option value="manufacturer">{t.manufacturer}</option>
+                  <option value="trader">{t.trader}</option>
+                  <option value="brand">{t.brand}</option>
+                </select>
               </label>
             )}
 
