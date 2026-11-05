@@ -169,7 +169,7 @@ export default function NetworkPage() {
             <div className="network-columns">
               <section className="network-section">
                 <header><div><span>04 / BUSINESS DIRECTORY</span><h2>{t.businesses}</h2></div><b>{data.businesses.length}</b></header>
-                {data.businesses.length ? data.businesses.map(business => businessCard(business)) : <p className="network-empty">{t.emptyBusinesses}</p>}
+                {data.businesses.length ? data.businesses.map(business => businessCard(business, Boolean(business.is_following))) : <p className="network-empty">{t.emptyBusinesses}</p>}
               </section>
               <section className="network-section">
                 <header><div><span>05 / YOUR BUSINESS CIRCLE</span><h2>{t.following}</h2></div><b>{data.followingAccounts.length}</b></header>
