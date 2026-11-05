@@ -235,7 +235,7 @@ async function handleRequest(
 
 
   const inventoryMovementsMatch = requestUrl.pathname.match(
-    /^\\/api\\/stores\\/([^/]+)\\/products\\/([0-9a-f-]{36})\\/inventory-movements$/,
+    /^\/api\/stores\/([^/]+)\/products\/([0-9a-f-]{36})\/inventory-movements$/,
   );
   if (inventoryMovementsMatch) {
     try {
