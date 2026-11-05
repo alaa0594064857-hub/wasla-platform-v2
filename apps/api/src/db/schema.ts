@@ -80,6 +80,7 @@ export const users = pgTable(
     preferredLocale: varchar("preferred_locale", { length: 5 })
       .default("ar")
       .notNull(),
+    registrationType: varchar("registration_type", { length: 32 }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
