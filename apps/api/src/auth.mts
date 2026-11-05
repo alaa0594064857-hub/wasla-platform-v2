@@ -1,5 +1,6 @@
 
 import { betterAuth } from "better-auth";
+import { APIError } from "better-auth/api";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 
 import { getDrizzleDatabase, getDatabasePool } from "./database.js";
@@ -95,6 +96,37 @@ export const auth = betterAuth({
         required: false,
         defaultValue: "ar",
         input: true,
+      },
+      registrationType: {
+        type: "string",
+        required: true,
+        input: true,
+      },
+    },
+  },
+
+  databaseHooks: {
+    user: {
+      create: {
+        before: async (user) => {
+          const allowedTypes = [
+            "buyer",
+            "company",
+            "supplier",
+            "manufacturer",
+            "trader",
+            "brand",
+          ];
+          if (
+            typeof user.registrationType !== "string" ||
+            !allowedTypes.includes(user.registrationType)
+          ) {
+            throw new APIError("BAD_REQUEST", {
+              message: "A valid registration type is required.",
+            });
+          }
+          return { data: user };
+        },
       },
     },
   },
