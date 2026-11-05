@@ -259,7 +259,7 @@ export async function handleStoreProductDetailRequest(
       }
       product = result.rows[0];
       const changedFields = Object.keys(body).filter((key) =>
-        ["title", "description", "price", "currency", "stockQuantity", "imageUrl", "videoUrl", "status"].includes(key),
+        ["title", "description", "sku", "price", "currency", "stockQuantity", "imageUrl", "videoUrl", "status"].includes(key),
       );
       await client.query(
         `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, account_id, store_id, metadata)
