@@ -198,6 +198,36 @@ async function handleRequest(
 
 
 
+  const storeProductDetailMatch = requestUrl.pathname.match(
+    /^\\/api\\/stores\\/([^/]+)\\/products\\/([0-9a-f-]{36})$/,
+  );
+  if (storeProductDetailMatch) {
+    try {
+      const { handleStoreProductDetailRequest } = await import("./store-products.mjs");
+      await handleStoreProductDetailRequest(
+        request, response, decodeURIComponent(storeProductDetailMatch[1]), storeProductDetailMatch[2],
+      );
+    } catch (error) {
+      console.error("WASLA product detail route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Product service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const storeProductsMatch = requestUrl.pathname.match(/^\\/api\\/stores\\/([^/]+)\\/products$/);
+  if (storeProductsMatch) {
+    try {
+      const { handleStoreProductsRequest } = await import("./store-products.mjs");
+      await handleStoreProductsRequest(request, response, decodeURIComponent(storeProductsMatch[1]));
+    } catch (error) {
+      console.error("WASLA products route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Products service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const storeDetailPrefix = "/api/stores/";
   if (requestUrl.pathname.startsWith(storeDetailPrefix)) {
     const storeSlug = requestUrl.pathname.slice(storeDetailPrefix.length);
@@ -333,11 +363,12 @@ if (process.env.NODE_ENV !== "test") {
   const server = createWaslaServer();
 
   void import("./database.js")
-    .then(async ({ ensureRegistrationTypeColumn, ensureAccountOwnerRole, ensureStoreOwnerRole, ensurePersonalThemesTable }) => {
+    .then(async ({ ensureRegistrationTypeColumn, ensureAccountOwnerRole, ensureStoreOwnerRole, ensurePersonalThemesTable, ensureStoreProductsTable }) => {
       await ensureRegistrationTypeColumn();
       await ensureAccountOwnerRole();
       await ensureStoreOwnerRole();
       await ensurePersonalThemesTable();
+      await ensureStoreProductsTable();
     })
     .then(() => {
       server.listen(port, "0.0.0.0", () => {
