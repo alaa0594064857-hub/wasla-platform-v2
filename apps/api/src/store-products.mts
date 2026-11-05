@@ -172,7 +172,7 @@ export async function handleStoreProductDetailRequest(
     const values: unknown[] = [];
     const add = (column: string, value: unknown) => {
       values.push(value);
-      fields.push(`${column} = $${values.length + 2}`);
+      fields.push(`${column} = ${values.length + 3}`);
     };
     if (body.title !== undefined) {
       if (typeof body.title !== "string" || body.title.trim().length < 2 || body.title.trim().length > 180) {
