@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 import { useLocale } from "./locale-provider";
 import { authClient } from "@/lib/auth-client";
@@ -11,9 +12,12 @@ type Profile = { displayName?: string; avatarReference?: string | null; email?: 
 export default function WorkspaceHeader({ section = "account" }: { section?: "account" | "shops" | "business" | "network" }) {
   const { locale, setLocale } = useLocale();
   const pathname = usePathname();
+  const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchText, setSearchText] = useState("");
   const { data: session, isPending } = authClient.useSession();
   const ar = locale === "ar";
   const inAccountSpace = pathname === "/account" || pathname === "/profile";
@@ -49,7 +53,7 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
     { href: "/settings", label: ar ? "الإعدادات والخصوصية" : "Settings & privacy", icon: "⚙" },
   ];
 
-  async function logout() {
+  function submitSearch(event: React.FormEvent<HTMLFormElement>) {\n    event.preventDefault();\n    const query = searchText.trim();\n    if (query) router.push(`/search?q=${encodeURIComponent(query)}`);\n  }\n\n  async function logout() {
     setSigningOut(true);
     try { await authClient.signOut(); window.location.assign("/login"); }
     catch { setSigningOut(false); }
@@ -58,7 +62,7 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
   return <>
     <header className="wasla-workspace-header" data-section={section} dir={ar ? "rtl" : "ltr"}>
       <button type="button" className="wasla-menu-trigger" aria-label={ar ? "فتح القائمة" : "Open menu"} aria-expanded={menuOpen} onClick={() => setMenuOpen(value => !value)}>
-        <span/><span/><span/>
+        <span></span><span></span><span></span>
       </button>
       <Link href="/" className="wasla-workspace-brand"><span>W</span><strong>{ar ? "وصلة" : "WASLA"}</strong></Link>
       <nav className="wasla-workspace-nav" aria-label={ar ? "التنقل الرئيسي" : "Main navigation"}>
@@ -90,7 +94,7 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
         {items.map(item => <Link href={item.href} key={item.href} aria-current={pathname === item.href ? "page" : undefined}><span>{item.icon}</span>{item.label}<b>↗</b></Link>)}
       </nav>
       <div className="wasla-drawer-bottom">
-        <button type="button" className="wasla-drawer-language" onClick={() => setLocale(ar ? "en" : "ar")}>{ar ? "🌐 Switch to English" : "🌐 التبديل إلى العربية"}</button>
+        <button type="button" className="wasla-drawer-language" onClick={() => setLocale(ar ? "en" : "ar")}>{ar ? "🌐 التبديل إلى الإنجليزية" : "🌐 Switch to Arabic"}</button>
         {session?.user ? <button type="button" className="wasla-drawer-logout" disabled={signingOut} onClick={logout}>{signingOut ? (ar ? "جارٍ الخروج..." : "Signing out...") : (ar ? "تسجيل الخروج" : "Sign out")} <span>↗</span></button> : <Link className="wasla-drawer-logout" href="/login">{ar ? "تسجيل الدخول" : "Sign in"} <span>↗</span></Link>}
       </div>
     </aside>
