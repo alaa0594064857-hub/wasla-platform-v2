@@ -143,6 +143,28 @@ export async function ensureAccountOwnerRole(): Promise<void> {
   }
 }
 
+/** Persist each signed-in user's appearance choice independently for every WASLA world. */
+export async function ensurePersonalThemesTable(): Promise<void> {
+  const client = await getDatabasePool().connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_world_themes (
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        world_key varchar(50) NOT NULL,
+        theme_key varchar(32) NOT NULL,
+        updated_at timestamptz NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (user_id, world_key),
+        CONSTRAINT user_world_themes_world_check
+          CHECK (world_key IN ('global', 'store', 'shops', 'business', 'trade', 'messages', 'ai', 'command', 'profile')),
+        CONSTRAINT user_world_themes_theme_check
+          CHECK (theme_key IN ('default', 'midnight', 'ocean', 'gold', 'light', 'graphite'))
+      )
+    `);
+  } finally {
+    client.release();
+  }
+}
+
 export async function checkDatabaseConnection(): Promise<boolean> {
   const client = await getDatabasePool().connect();
 
