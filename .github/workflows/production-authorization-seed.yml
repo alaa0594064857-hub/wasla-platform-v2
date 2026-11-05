@@ -49,4 +49,5 @@ jobs:
       - name: Run authorization seed once
         env:
           DATABASE_URL: ${{ secrets.WASLA_PRODUCTION_DATABASE_URL }}
+          DATABASE_SSL: "true"
         run: pnpm --filter @wasla/api db:seed
