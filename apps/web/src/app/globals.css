@@ -2308,3 +2308,23 @@ html[data-wasla-theme="light"] .wasla-workspace-nav a,html[data-wasla-theme="lig
 .wasla-search-destinations>a>b{color:#a17a3d}
 .wasla-search-hint{margin-top:18px;padding:14px;border-radius:11px;background:#ebe6da;color:#747f8d;font-size:11px;line-height:1.9}
 @media(max-width:560px){.wasla-menu-trigger{width:42px!important;height:42px!important;min-width:42px}.wasla-search-trigger{width:39px;height:39px}.wasla-global-search{gap:7px;padding:8px}.wasla-global-search button{padding:9px 12px}.wasla-global-search input{font-size:11px}}
+
+
+/* Homepage: prominent account creation beside the WASLA overview */
+.wasla-hero-join{width:min(1180px,calc(100% - 44px));margin:0 auto 18px;padding:27px;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);gap:24px;align-items:stretch;border:1px solid rgba(197,166,108,.25);border-radius:24px;background:linear-gradient(125deg,#14243a 0%,#1c3550 58%,#14243a 100%);color:#f7f2e8;box-shadow:0 22px 55px rgba(20,36,58,.13)}
+.wasla-hero-about{padding:16px 18px;align-self:center}
+.wasla-hero-about>span,.wasla-hero-signup>span{color:#d7b978;font-size:10px;font-weight:900;letter-spacing:1.8px}
+.wasla-hero-about h2{margin:12px 0 10px;font-size:clamp(25px,3vw,36px);letter-spacing:-.6px}
+.wasla-hero-about>p{max-width:650px;margin:0;color:#c0cad5;font-size:13px;line-height:2}
+.wasla-about-points{display:flex;flex-wrap:wrap;gap:9px;margin-top:20px}
+.wasla-about-points span{padding:8px 11px;border:1px solid rgba(218,190,135,.22);border-radius:30px;background:rgba(255,255,255,.045);color:#e8d6b2;font-size:10px;font-weight:700}
+.wasla-hero-signup{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:25px;border:1px solid rgba(218,190,135,.38);border-radius:18px;background:linear-gradient(150deg,#f9f6ef,#eee7d8);color:#14243a}
+.wasla-hero-signup:after{content:"";position:absolute;width:180px;height:180px;right:-95px;top:-105px;border:1px solid rgba(173,135,69,.25);border-radius:50%;box-shadow:0 0 0 22px rgba(173,135,69,.045),0 0 0 44px rgba(173,135,69,.035)}
+.wasla-signup-mark{width:42px;height:42px;display:grid;place-items:center;margin-bottom:17px;border-radius:13px;background:#14243a;color:#e7ca91;font-family:Georgia,serif;font-size:25px;font-weight:900}
+.wasla-hero-signup>span{color:#98713a}
+.wasla-hero-signup h2{margin:8px 0;font-size:clamp(22px,2.5vw,29px)}
+.wasla-hero-signup p{max-width:390px;margin:0 0 18px;color:#697587;font-size:12px;line-height:1.9}
+.wasla-signup-primary{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:20px;width:100%;padding:14px 17px;border-radius:11px;background:#14243a;color:#f4dfb4;font-size:12px;font-weight:900;text-decoration:none;box-shadow:0 8px 20px rgba(20,36,58,.16)}
+.wasla-signup-primary b{font-size:17px}
+.wasla-signup-login{margin-top:13px;color:#80643a;font-size:11px;font-weight:800;text-decoration:underline;text-underline-offset:3px}
+@media(max-width:760px){.wasla-hero-join{grid-template-columns:1fr;width:calc(100% - 28px);padding:15px;gap:12px;border-radius:19px}.wasla-hero-about{padding:13px 8px 18px}.wasla-hero-about h2{font-size:26px}.wasla-hero-about>p{font-size:12px}.wasla-about-points{gap:7px}.wasla-about-points span{font-size:9px}.wasla-hero-signup{padding:21px}.wasla-hero-signup h2{font-size:24px}}
