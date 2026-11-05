@@ -138,8 +138,24 @@ export async function handleStoreProductsRequest(
         `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, account_id, store_id, metadata)
          VALUES ($1, 'product.created', 'product', $2, $3, $4, $5)`,
         [session.user.id, product.id, store.account_id, store.id,
-         JSON.stringify({ title, status })],
+         JSON.stringify({ title, status, openingStock: stock })],
       );
+      if ((stock as number) > 0) {
+        const openingMovement = await client.query(
+          `INSERT INTO store_inventory_movements
+            (store_id, product_id, actor_user_id, movement_type, quantity_delta,
+             quantity_before, quantity_after, reason)
+           VALUES ($1, $2, $3, 'inbound', $4, 0, $4, 'Opening stock on product creation')
+           RETURNING id`,
+          [store.id, product.id, session.user.id, stock],
+        );
+        await client.query(
+          `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, account_id, store_id, metadata)
+           VALUES ($1, 'inventory.movement.created', 'inventory_movement', $2, $3, $4, $5)`,
+          [session.user.id, openingMovement.rows[0].id, store.account_id, store.id,
+           JSON.stringify({ productId: product.id, movementType: "inbound", quantityDelta: stock, quantityBefore: 0, quantityAfter: stock, reason: "Opening stock on product creation" })],
+        );
+      }
       await client.query("COMMIT");
     } catch (error) {
       await client.query("ROLLBACK");
