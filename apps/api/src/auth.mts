@@ -134,6 +134,38 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,
+    sendResetPassword: async ({ user, url }) => {
+      if (!resendApiKey) throw new Error("RESEND_API_KEY is not configured");
+      if (!testRecipient) throw new Error("RESEND_TEST_RECIPIENT is not configured");
+      if (user.email.toLowerCase() !== testRecipient.toLowerCase()) {
+        throw new Error("Resend test mode only allows the configured test recipient");
+      }
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${resendApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: "WASLA <onboarding@resend.dev>",
+          to: [testRecipient],
+          subject: "Reset your WASLA password",
+          text: [
+            "A password reset was requested for your WASLA account.",
+            "",
+            "Use this link to choose a new password:",
+            url,
+            "",
+            "If you did not request this, you can ignore this email.",
+          ].join("\\n"),
+        }),
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Resend password reset email failed:", errorText);
+        throw new Error("Could not send password reset email");
+      }
+    },
   },
 
   emailVerification: {
