@@ -23,7 +23,7 @@ const words = {
   workspaceBoth:"اختر النشاط الذي تريد إدارته.", workspaceStores:"هذه متاجرك. اختر المتجر الذي تريد إدارته.", workspaceBusiness:"هذه حسابات أعمالك. اختر الحساب الذي تريد إدارته.",
   workspaceStart:"ابدأ باستكشاف المنتجات أو أنشئ حساب أعمال لإطلاق نشاطك.", explore:"استكشاف المنتجات", createBusiness:"إنشاء حساب أعمال",
   storeType:"متجر", businessType:"حساب أعمال", networkInfo:"الأصدقاء والشركات التي تتابعها",
-  company:"شركة", supplier:"مورد", manufacturer:"مصنع", trader:"تاجر", brand:"علامة تجارية", active:"نشط", inactive:"غير نشط"
+  company:"شركة", supplier:"مورد", manufacturer:"مصنع", trader:"تاجر", brandTypeLabel:"علامة تجارية", active:"نشط", inactive:"غير نشط"
  },
  en: {
   brand:"WASLA", eyebrow:"YOUR ACCOUNT SPACE", title:"Welcome back", subtitle:"Your starting point to manage your identity and worlds across WASLA.",
@@ -37,7 +37,7 @@ const words = {
   workspaceBoth:"Choose the activity you want to manage.", workspaceStores:"These are your shops. Choose one to manage.", workspaceBusiness:"These are your business accounts. Choose one to manage.",
   workspaceStart:"Explore products or create a business account to launch your activity.", explore:"Explore products", createBusiness:"Create a business account",
   storeType:"Shop", businessType:"Business account", networkInfo:"Friends and businesses you follow",
-  company:"Company", supplier:"Supplier", manufacturer:"Manufacturer", trader:"Trader", brand:"Brand", active:"Active", inactive:"Inactive"
+  company:"Company", supplier:"Supplier", manufacturer:"Manufacturer", trader:"Trader", brandTypeLabel:"Brand", active:"Active", inactive:"Inactive"
  }
 };
 
@@ -85,7 +85,7 @@ export default function AccountHomePage() {
  const hasStores=stores.length>0, hasAccounts=accounts.length>0;
  const workspaceSubtitle=hasStores && hasAccounts ? t.workspaceBoth : hasStores ? t.workspaceStores : hasAccounts ? t.workspaceBusiness : t.workspaceStart;
  const accountTypeLabel=(type:string)=>({
-  company:t.company, supplier:t.supplier, manufacturer:t.manufacturer, trader:t.trader, brand:t.brand
+  company:t.company, supplier:t.supplier, manufacturer:t.manufacturer, trader:t.trader, brand:t.brandTypeLabel
  } as Record<string,string>)[type] || t.businessType;
 
  return <main className="account-home" lang={locale} dir={dir}>
