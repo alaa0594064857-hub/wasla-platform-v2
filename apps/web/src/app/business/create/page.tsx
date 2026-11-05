@@ -3,8 +3,9 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useLocale } from "../../../components/locale-provider";
+import WorkspaceHeader from "../../../components/workspace-header";
 
-type Locale = "ar" | "en";
 type AccountType = "company" | "supplier" | "manufacturer" | "trader" | "brand";
 
 const labels = {
@@ -58,7 +59,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 export default function CreateBusinessAccountPage() {
   const router = useRouter();
-  const [locale, setLocale] = useState<Locale>("ar");
+  const { locale } = useLocale();
   const [accountType, setAccountType] = useState<AccountType>("company");
   const [legalName, setLegalName] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -108,16 +109,15 @@ export default function CreateBusinessAccountPage() {
 
   return (
     <main className="business-page" lang={locale} dir={locale === "ar" ? "rtl" : "ltr"}>
-      <header className="business-header">
+      <WorkspaceHeader section="business" />
+      <header className="business-header" style={{ display: "none" }}>
         <Link href="/" className="business-brand">
           <span className="business-logo">W</span>
           <span>{t.brand}</span>
         </Link>
         <div className="business-header-actions">
           <Link href="/" className="business-home">{t.home}</Link>
-          <button type="button" className="business-language" onClick={() => setLocale(locale === "ar" ? "en" : "ar")}>
-            {locale === "ar" ? "English" : "العربية"}
-          </button>
+
         </div>
       </header>
 
