@@ -166,6 +166,11 @@ export async function ensurePersonalThemesTable(): Promise<void> {
 }
 
 
+export async function ensureNetworkTables(): Promise<void> {
+  const { ensureNetworkTables: createTables } = await import("./network.mjs");
+  await createTables();
+}
+
 export async function checkDatabaseConnection(): Promise<boolean> {
   const client = await getDatabasePool().connect();
 
