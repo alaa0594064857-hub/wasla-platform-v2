@@ -16,7 +16,7 @@ const words = {
   profile:"ملفك الشخصي", edit:"تعديل الملف الشخصي", email:"البريد الإلكتروني", member:"عضو وصلة",
   messages:"الرسائل", notifications:"الإشعارات", unavailable:"قريباً", messagesInfo:"ستظهر هنا محادثاتك مع المتاجر والشركات عند إطلاق نظام الرسائل.",
   notificationsInfo:"ستظهر هنا تنبيهات الحساب والطلبات والأنشطة عند تفعيل الإشعارات.",
-  worlds:"عوالمك", shops:"متاجري", business:"حسابات الأعمال", open:"فتح", storesCount:"متجر", accountsCount:"حساب أعمال",
+  worlds:"عوالمك", shops:"متاجري", business:"حسابات الأعمال", network:"شبكتي", open:"فتح", storesCount:"متجر", accountsCount:"حساب أعمال",
   loading:"جارٍ تحميل بيانات الحساب...", error:"تعذر تحميل بعض بيانات الحساب. يمكنك المحاولة مجدداً.",
   retry:"إعادة المحاولة", publicHome:"بوابة وصلة", signOut:"تسجيل الخروج", signingOut:"جارٍ تسجيل الخروج...",
   noStores:"لا توجد متاجر مرتبطة بحسابك حتى الآن.", noAccounts:"لا توجد حسابات أعمال ظاهرة لهذا الحساب.",
@@ -27,7 +27,7 @@ const words = {
   profile:"Your profile", edit:"Edit profile", email:"Email address", member:"WASLA member",
   messages:"Messages", notifications:"Notifications", unavailable:"Coming soon", messagesInfo:"Your conversations with shops and businesses will appear here when messaging launches.",
   notificationsInfo:"Account, order and activity alerts will appear here when notifications are enabled.",
-  worlds:"Your worlds", shops:"My shops", business:"Business accounts", open:"Open", storesCount:"shops", accountsCount:"business accounts",
+  worlds:"Your worlds", shops:"My shops", business:"Business accounts", network:"My network", open:"Open", storesCount:"shops", accountsCount:"business accounts",
   loading:"Loading your account...", error:"Some account information could not be loaded. You can try again.",
   retry:"Try again", publicHome:"WASLA gateway", signOut:"Sign out", signingOut:"Signing out...",
   noStores:"No shops are linked to your account yet.", noAccounts:"No business accounts are available for this account.",
@@ -106,6 +106,7 @@ export default function AccountHomePage() {
     <div className="account-world-grid">
      <Link href="/shops" className="account-world-card"><span className="account-world-symbol">✳</span><div><h3>{t.shops}</h3><p>{loading?t.loading:stores.length===0?t.noStores:stores.length+" "+t.storesCount}</p></div><strong>{t.open} ↗</strong></Link>
      <Link href="/business" className="account-world-card"><span className="account-world-symbol">B</span><div><h3>{t.business}</h3><p>{loading?t.loading:accounts.length===0?t.noAccounts:accounts.length+" "+t.accountsCount}</p></div><strong>{t.open} ↗</strong></Link>
+     <Link href="/network" className="account-world-card"><span className="account-world-symbol">◎</span><div><h3>{t.network}</h3><p>{locale === "ar" ? "الأصدقاء والشركات التي تتابعها" : "Friends and businesses you follow"}</p></div><strong>{t.open} ↗</strong></Link>
     </div>
     {loading && <p className="account-loading">{t.loading}</p>}
    </section>
