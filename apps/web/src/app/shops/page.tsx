@@ -112,7 +112,7 @@ export default function ShopsPage() {
                 {stores.map(store => (
                   <article className="shops-card" key={store.id}>
                     <div className="shops-card-top"><span className="shops-card-mark">W</span><span className={`shops-status ${store.status === "active" ? "is-active" : ""}`}>{store.status === "active" ? t.active : t.suspended}</span></div>
-                    <h3>{store.name}</h3><p>{t.owner}: {store.account_name}</p>
+                    <h3><Link href={`/shops/${store.slug}`}>{store.name}</Link></h3><p>{t.owner}: {store.account_name}</p>
                     <div className="shops-slug"><small>{t.slug}</small><strong dir="ltr">/shops/{store.slug}</strong></div>
                   </article>
                 ))}
