@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
+import { useLocale } from "./locale-provider";
 
 type ThemeKey = "default" | "midnight" | "ocean" | "gold" | "light" | "graphite";
 type WorldKey = "global" | "store" | "shops" | "business" | "trade" | "messages" | "ai" | "command" | "profile";
@@ -36,7 +37,8 @@ export default function WorldThemeProvider({ children }: { children: React.React
   const [saving, setSaving] = useState(false);
   const [ready, setReady] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
-  const isEnglish = typeof document !== "undefined" && document.documentElement.lang === "en";
+  const { locale } = useLocale();
+  const isEnglish = locale === "en";
   const activeTheme = saved[worldKey] ?? "default";
 
   useEffect(() => {
