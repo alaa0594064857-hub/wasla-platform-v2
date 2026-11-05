@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useLocale } from "../components/locale-provider";
+import WorkspaceHeader from "../components/workspace-header";
 import { authClient } from "@/lib/auth-client";
-
-type Locale = "ar" | "en";
 
 const worlds = [
   {
@@ -138,7 +137,7 @@ const copy = {
 };
 
 export default function HomePage() {
-  const [locale, setLocale] = useState<Locale>("ar");
+  const { locale } = useLocale();
   const { data: session, isPending } = authClient.useSession();
   const signedIn = Boolean(session?.user);
   const t = copy[locale];
@@ -146,14 +145,15 @@ export default function HomePage() {
 
   return (
     <main className="worlds-page" lang={locale} dir={direction}>
-      <header className="worlds-header">
+      <WorkspaceHeader section="account" />
+      <header className="worlds-header" style={{ display: "none" }}>
         <a className="worlds-brand" href="/" aria-label="WASLA home">
           <span className="worlds-brand-symbol">W</span>
           <span className="worlds-brand-word">{locale === "ar" ? "وصلة" : "WASLA"}<small>{locale === "ar" ? "منظومة عالمية" : "GLOBAL ECOSYSTEM"}</small></span>
         </a>
         <div className="worlds-header-actions">
-          <button className="worlds-language" type="button" onClick={() => setLocale(locale === "ar" ? "en" : "ar")}>{t.language}</button>
-          <a className="worlds-account" href={signedIn ? "/account" : "/login"}>{isPending ? t.signIn : signedIn ? t.account : t.signIn}</a>
+          
+          
         </div>
       </header>
 
