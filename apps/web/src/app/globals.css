@@ -2255,3 +2255,26 @@ html[data-wasla-theme="light"] .wasla-workspace-nav a,html[data-wasla-theme="lig
 .wasla-settings-row>b{color:#a17a3d}.wasla-settings-row button{padding:8px 13px;border:1px solid #e0d7c5;border-radius:9px;background:#faf8f2;color:#876532;font-weight:800;font-size:10px}
 .wasla-settings-note{margin-top:17px;padding:14px;border-radius:10px;background:#f8f5ee;color:#818a96;font-size:11px;line-height:1.8}
 @media(min-width:900px){.wasla-drawer{inset-inline-start:0}.wasla-drawer:not([dir=rtl]){transform:translateX(-105%)}.wasla-drawer[dir=rtl]{transform:translateX(105%)}.wasla-drawer.is-open{transform:translateX(0)}}
+
+
+/* Public gateway: role-based entry and membership preview */
+.wasla-entry-paths,.wasla-memberships{width:min(1180px,calc(100% - 44px));margin:0 auto;padding:54px 0 26px}
+.wasla-entry-heading{max-width:740px;margin-bottom:24px}.wasla-entry-heading>span{color:#b08a4c;font-size:10px;font-weight:900;letter-spacing:2px}.wasla-entry-heading h2{margin:9px 0;font-size:clamp(25px,4vw,37px);letter-spacing:-.8px}.wasla-entry-heading p{margin:0;color:#a8b2bf;font-size:13px;line-height:1.9}
+.wasla-entry-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.wasla-entry-card{overflow:hidden;border:1px solid rgba(197,166,108,.18);border-radius:18px;background:linear-gradient(145deg,#172b43,#101d2e);color:#f4efe5;box-shadow:0 18px 45px rgba(0,0,0,.12)}
+.wasla-entry-art{position:relative;height:145px;display:grid;place-items:center;overflow:hidden;background:radial-gradient(circle at 50% 50%,rgba(195,161,98,.23),transparent 58%),linear-gradient(120deg,#203c58,#14243a)}
+.wasla-entry-art:before,.wasla-entry-art:after{content:"";position:absolute;width:175px;height:175px;border:1px solid rgba(218,190,135,.35);border-radius:50%;transform:rotate(-24deg) scaleX(1.4)}
+.wasla-entry-art:after{width:115px;height:115px;transform:rotate(45deg) scaleX(1.5)}
+.wasla-entry-art>span{position:absolute;top:15px;inset-inline-start:17px;color:rgba(244,230,199,.65);font-size:10px;letter-spacing:2px}
+.wasla-entry-art>b{z-index:1;color:#e5c98f;font-size:48px;font-weight:500;text-shadow:0 8px 25px rgba(0,0,0,.2)}
+.wasla-entry-art>i{position:absolute;inset-inline-end:22%;top:26%;color:#f5e4bd;font-size:15px;font-style:normal}
+.wasla-entry-card>div:last-child{padding:19px 20px 21px}.wasla-entry-card small{color:#c5a66c;font-size:9px;font-weight:900;letter-spacing:1.2px}.wasla-entry-card h3{margin:9px 0;font-size:19px}.wasla-entry-card p{min-height:52px;margin:0 0 17px;color:#b5c0cd;font-size:11px;line-height:1.9}.wasla-entry-card a{display:inline-flex;align-items:center;gap:10px;color:#f0d69f;font-size:11px;font-weight:900;text-decoration:none}
+.wasla-memberships{padding-top:55px;padding-bottom:65px}
+.wasla-plan-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.wasla-plan-card{position:relative;display:flex;min-height:245px;flex-direction:column;align-items:flex-start;padding:21px;border:1px solid rgba(197,166,108,.2);border-radius:16px;background:#14243a;color:#f2eee6}
+.wasla-plan-card.featured{border-color:#c5a66c;background:linear-gradient(150deg,#203a55,#13243a);box-shadow:0 14px 35px rgba(0,0,0,.16)}
+.wasla-plan-mark{position:absolute;top:17px;inset-inline-end:18px;color:rgba(211,183,128,.5);font-size:10px}
+.wasla-plan-card>small{color:#c5a66c;font-size:9px;font-weight:900;letter-spacing:2px}.wasla-plan-card h3{margin:12px 0 7px;font-size:22px}.wasla-plan-card p{min-height:54px;margin:0;color:#b5c0cd;font-size:11px;line-height:1.8}.wasla-plan-card>b{margin-top:auto;padding-top:17px;color:#e2c68f;font-size:10px}.wasla-plan-card>a,.wasla-plan-disabled{margin-top:12px;padding:9px 12px;border:1px solid rgba(218,190,135,.35);border-radius:8px;color:#f0d69f;font-size:10px;font-weight:900;text-decoration:none}.wasla-plan-disabled{color:#aab4c0;border-color:rgba(255,255,255,.12)}
+.wasla-membership-note{margin:18px 0 0;color:#929eac;font-size:10px;line-height:1.8}
+@media(max-width:900px){.wasla-entry-grid{grid-template-columns:1fr 1fr}.wasla-plan-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.wasla-entry-paths,.wasla-memberships{width:calc(100% - 28px);padding-top:37px}.wasla-entry-grid,.wasla-plan-grid{grid-template-columns:1fr}.wasla-entry-art{height:125px}.wasla-entry-card p,.wasla-plan-card p{min-height:0}.wasla-plan-card{min-height:210px}}
