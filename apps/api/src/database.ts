@@ -47,6 +47,18 @@ export function getDrizzleDatabase() {
   });
 }
 
+export async function ensureRegistrationTypeColumn(): Promise<void> {
+  const client = await getDatabasePool().connect();
+
+  try {
+    await client.query(
+      'ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "registration_type" varchar(32)',
+    );
+  } finally {
+    client.release();
+  }
+}
+
 export async function checkDatabaseConnection(): Promise<boolean> {
   const client = await getDatabasePool().connect();
 
