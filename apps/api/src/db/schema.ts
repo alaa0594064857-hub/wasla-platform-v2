@@ -495,6 +495,33 @@ export const storeProducts = pgTable(
   ],
 );
 
+export const storeInventoryMovements = pgTable(
+  "store_inventory_movements",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    storeId: uuid("store_id").notNull().references(() => stores.id, { onDelete: "cascade" }),
+    productId: uuid("product_id").notNull().references(() => storeProducts.id, { onDelete: "cascade" }),
+    actorUserId: uuid("actor_user_id").references(() => users.id, { onDelete: "set null" }),
+    movementType: varchar("movement_type", { length: 16 }).notNull(),
+    quantityDelta: integer("quantity_delta").notNull(),
+    quantityBefore: integer("quantity_before").notNull(),
+    quantityAfter: integer("quantity_after").notNull(),
+    reason: varchar("reason", { length: 500 }).notNull(),
+    referenceCode: varchar("reference_code", { length: 120 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("store_inventory_movements_store_created_idx").on(table.storeId, table.createdAt.desc()),
+    index("store_inventory_movements_product_created_idx").on(table.productId, table.createdAt.desc()),
+    check("store_inventory_movements_type_check", sql`${table.movementType} IN ('inbound', 'outbound', 'adjustment')`),
+    check("store_inventory_movements_delta_check", sql`${table.quantityDelta} <> 0`),
+    check("store_inventory_movements_before_check", sql`${table.quantityBefore} >= 0`),
+    check("store_inventory_movements_after_check", sql`${table.quantityAfter} >= 0`),
+    check("store_inventory_movements_balance_check", sql`${table.quantityAfter} - ${table.quantityBefore} = ${table.quantityDelta}`),
+    check("store_inventory_movements_direction_check", sql`(${table.movementType} = 'inbound' AND ${table.quantityDelta} > 0) OR (${table.movementType} = 'outbound' AND ${table.quantityDelta} < 0) OR ${table.movementType} = 'adjustment'`),
+  ],
+);
+
 export const auditLogs = pgTable(
   "audit_logs",
   {
