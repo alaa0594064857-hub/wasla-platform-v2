@@ -128,6 +128,33 @@ describe("WASLA API", () => {
     expect(response.status).toBe(200);
   });
 
+  it("requires authentication for inventory movement history", async () => {
+    const baseUrl = await startTestServer();
+    const response = await fetch(
+      `${baseUrl}/api/stores/sample-shop/products/00000000-0000-4000-8000-000000000001/inventory-movements`,
+    );
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({
+      success: false,
+      error: "Authentication required",
+    });
+  });
+
+  it("rejects unsupported methods on inventory movement routes", async () => {
+    const baseUrl = await startTestServer();
+    const response = await fetch(
+      `${baseUrl}/api/stores/sample-shop/products/00000000-0000-4000-8000-000000000001/inventory-movements`,
+      { method: "PATCH" },
+    );
+
+    expect(response.status).toBe(405);
+    expect(await response.json()).toEqual({
+      success: false,
+      error: "Method not allowed",
+    });
+  });
+
   it("returns 404 for unknown routes", async () => {
     const baseUrl = await startTestServer();
     const response = await fetch(`${baseUrl}/unknown`);
