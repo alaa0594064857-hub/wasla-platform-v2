@@ -71,6 +71,18 @@ async function handleRequest(
     return;
   }
 
+  if (requestUrl.pathname === "/api/brands") {
+    try {
+      const { handleBrandsRequest } = await import("./brands.mjs");
+      await handleBrandsRequest(request, response);
+    } catch (error) {
+      console.error("WASLA brands route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Brands service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/profile") {
     try {
       const { handleProfileRequest } = await import("./profile.mjs");
