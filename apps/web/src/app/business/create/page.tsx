@@ -124,7 +124,7 @@ export default function CreateBusinessAccountPage() {
       <section className="business-container">
         <div className="business-heading">
           <div>
-            <span className="business-eyebrow">WASLA BUSINESS</span>
+            <span className="business-eyebrow">{locale === "ar" ? "وصلة للأعمال" : "WASLA BUSINESS"}</span>
             <h1>{t.title}</h1>
             <p>{t.subtitle}</p>
           </div>
@@ -176,7 +176,7 @@ export default function CreateBusinessAccountPage() {
         </form>
 
         <p><Link href="/business" className="business-primary-link">{t.back}</Link></p>
-        <footer className="business-footer">WASLA · A global platform for commerce and business</footer>
+        <footer className="business-footer">{locale === "ar" ? "وصلة · منصة عالمية للتجارة والأعمال" : "WASLA · A global platform for commerce and business"}</footer>
       </section>
     </main>
   );
