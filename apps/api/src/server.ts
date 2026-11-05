@@ -234,6 +234,23 @@ async function handleRequest(
 
 
 
+  const inventoryMovementsMatch = requestUrl.pathname.match(
+    /^\\/api\\/stores\\/([^/]+)\\/products\\/([0-9a-f-]{36})\\/inventory-movements$/,
+  );
+  if (inventoryMovementsMatch) {
+    try {
+      const { handleInventoryMovementsRequest } = await import("./inventory-movements.mjs");
+      await handleInventoryMovementsRequest(
+        request, response, decodeURIComponent(inventoryMovementsMatch[1]), inventoryMovementsMatch[2],
+      );
+    } catch (error) {
+      console.error("WASLA inventory movements route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Inventory service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const storeProductDetailMatch = requestUrl.pathname.match(
     /^\/api\/stores\/([^/]+)\/products\/([0-9a-f-]{36})$/,
   );
