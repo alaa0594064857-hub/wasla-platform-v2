@@ -2328,3 +2328,28 @@ html[data-wasla-theme="light"] .wasla-workspace-nav a,html[data-wasla-theme="lig
 .wasla-signup-primary b{font-size:17px}
 .wasla-signup-login{margin-top:13px;color:#80643a;font-size:11px;font-weight:800;text-decoration:underline;text-underline-offset:3px}
 @media(max-width:760px){.wasla-hero-join{grid-template-columns:1fr;width:calc(100% - 28px);padding:15px;gap:12px;border-radius:19px}.wasla-hero-about{padding:13px 8px 18px}.wasla-hero-about h2{font-size:26px}.wasla-hero-about>p{font-size:12px}.wasla-about-points{gap:7px}.wasla-about-points span{font-size:9px}.wasla-hero-signup{padding:21px}.wasla-hero-signup h2{font-size:24px}}
+
+
+/* WASLA unified discovery search */
+.wasla-search-form{display:flex;gap:9px;margin:25px 0 18px;padding:8px;border:1px solid rgba(20,36,58,.12);border-radius:15px;background:#fff;box-shadow:0 12px 35px rgba(20,36,58,.06)}
+.wasla-search-form input{flex:1;min-width:0;border:0;outline:0;padding:12px 13px;background:transparent;color:#192b42;font:inherit;font-size:14px}
+.wasla-search-form button{border:0;border-radius:10px;padding:0 20px;background:#14243a;color:#f2dfb8;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+.wasla-search-form button:disabled{opacity:.45;cursor:not-allowed}
+.wasla-search-status{padding:18px;color:#7b8795;font-size:13px}
+.wasla-search-summary{margin:25px 0 15px;color:#7b8795;font-size:12px}
+.wasla-search-group{margin:24px 0}
+.wasla-search-group>header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.wasla-search-group>header h2{display:flex;align-items:center;gap:9px;margin:0;font-size:17px;color:#192b42}
+.wasla-search-group>header h2 span{color:#a17a3d}
+.wasla-search-group>header>b{color:#a17a3d;font-size:12px}
+.wasla-search-result-grid{display:grid;gap:9px}
+.wasla-search-result{display:flex;align-items:center;gap:12px;padding:13px;border:1px solid rgba(20,36,58,.09);border-radius:13px;background:#fff}
+.wasla-search-result-icon{width:40px;height:40px;flex:0 0 40px;display:grid;place-items:center;overflow:hidden;border-radius:11px;background:#f5f0e5;color:#a17a3d;font-size:18px}
+.wasla-search-result-icon img{width:100%;height:100%;object-fit:cover}
+.wasla-search-result>div{flex:1;min-width:0}
+.wasla-search-result strong,.wasla-search-result small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wasla-search-result strong{color:#192b42;font-size:13px}
+.wasla-search-result small{margin-top:4px;color:#87919e;font-size:10px}
+.wasla-search-result em{display:block;margin-top:4px;color:#98713a;font-size:11px;font-style:normal;font-weight:800}
+.wasla-search-result>a{color:#98713a;font-size:10px;font-weight:800;text-decoration:none;white-space:nowrap}
+@media(max-width:560px){.wasla-search-form{gap:5px}.wasla-search-form button{padding:0 13px}.wasla-search-result{gap:8px;padding:10px}.wasla-search-result>a{font-size:9px}}
