@@ -413,9 +413,12 @@ export default function BusinessManagementPage() {
             <div className="business-empty-icon">⌂</div>
             <h2>{t.accounts}</h2>
             <p>{t.noAccounts}</p>
-            <Link href="/" className="business-primary-link">
-              {t.back}
+            <Link href="/business/create" className="business-primary-link">
+              {locale === "ar" ? "إنشاء حساب تجاري" : "Create a business account"}
             </Link>
+            <p>
+              <Link href="/" className="business-home">{t.back}</Link>
+            </p>
           </section>
         ) : (
           <>
