@@ -6,7 +6,9 @@ import {
   check,
   foreignKey,
   index,
+  integer,
   jsonb,
+  numeric,
   pgEnum,
   pgTable,
   primaryKey,
@@ -459,6 +461,34 @@ export const platformRoleAssignments = pgTable(
       "platform_role_scope_check",
       sql`${table.roleScope} = 'platform'`,
     ),
+  ],
+);
+
+export const storeProducts = pgTable(
+  "store_products",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    storeId: uuid("store_id")
+      .notNull()
+      .references(() => stores.id, { onDelete: "cascade" }),
+    title: varchar("title", { length: 180 }).notNull(),
+    description: text("description"),
+    sku: varchar("sku", { length: 80 }),
+    price: numeric("price", { precision: 12, scale: 2 }).notNull(),
+    currency: varchar("currency", { length: 3 }).default("USD").notNull(),
+    stockQuantity: integer("stock_quantity").default(0).notNull(),
+    imageUrl: text("image_url"),
+    videoUrl: text("video_url"),
+    status: varchar("status", { length: 16 }).default("draft").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("store_products_store_sku_unique").on(table.storeId, table.sku),
+    index("store_products_store_status_created_idx").on(table.storeId, table.status, table.createdAt),
+    check("store_products_price_check", sql`${table.price} >= 0`),
+    check("store_products_stock_quantity_check", sql`${table.stockQuantity} >= 0`),
+    check("store_products_status_check", sql`${table.status} IN ('draft', 'active', 'archived')`),
   ],
 );
 
