@@ -2,6 +2,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "../styles/design-system.css";
+import WorldThemeProvider from "../components/world-theme-provider";
 
 export const metadata: Metadata = {
   title: "WASLA | وصلة",
@@ -15,7 +16,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ar" dir="rtl">
-      <body>{children}</body>
+      <body><WorldThemeProvider>{children}</WorldThemeProvider></body>
     </html>
   );
 }
