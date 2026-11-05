@@ -89,7 +89,13 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
 
     try {
       if (isRegister) {
-        const result = await authClient.signUp.email({
+        const signUpWithRegistrationType = authClient.signUp.email as unknown as (data: {
+          name: string;
+          email: string;
+          password: string;
+          registrationType: RegistrationType;
+        }) => Promise<{ error?: unknown }>;
+        const result = await signUpWithRegistrationType({
           name: name.trim(),
           email: email.trim(),
           password,
