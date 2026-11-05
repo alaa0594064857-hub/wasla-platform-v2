@@ -56,6 +56,21 @@ async function handleRequest(
     return;
   }
 
+  if (requestUrl.pathname === "/api/preferences/themes") {
+    try {
+      const { handleWorldThemesRequest } = await import("./world-themes.mjs");
+      await handleWorldThemesRequest(request, response);
+    } catch (error) {
+      console.error("WASLA world themes route error:", error);
+      if (!response.headersSent) {
+        sendJson(response, 500, { success: false, error: "Theme preferences service error" });
+      } else {
+        response.destroy(error instanceof Error ? error : undefined);
+      }
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/profile") {
     try {
       const { handleProfileRequest } = await import("./profile.mjs");
@@ -318,10 +333,11 @@ if (process.env.NODE_ENV !== "test") {
   const server = createWaslaServer();
 
   void import("./database.js")
-    .then(async ({ ensureRegistrationTypeColumn, ensureAccountOwnerRole, ensureStoreOwnerRole }) => {
+    .then(async ({ ensureRegistrationTypeColumn, ensureAccountOwnerRole, ensureStoreOwnerRole, ensurePersonalThemesTable }) => {
       await ensureRegistrationTypeColumn();
       await ensureAccountOwnerRole();
       await ensureStoreOwnerRole();
+      await ensurePersonalThemesTable();
     })
     .then(() => {
       server.listen(port, "0.0.0.0", () => {
