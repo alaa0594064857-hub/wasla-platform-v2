@@ -1904,3 +1904,95 @@ a:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .worlds-page *, .worlds-page *::before, .worlds-page *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+
+/* WASLA Personal Themes — page chrome only; product media remains untouched. */
+.wasla-theme-control {
+  position: fixed;
+  z-index: 1000;
+  inset-inline-end: 18px;
+  bottom: 18px;
+  font-family: Arial, Helvetica, sans-serif;
+}
+.wasla-theme-trigger {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 16px;
+  border: 1px solid rgba(216,189,132,.65);
+  border-radius: 999px;
+  color: #f7f2e8;
+  background: #111a2a;
+  box-shadow: 0 12px 35px rgba(0,0,0,.22);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.wasla-theme-trigger span { color: #d8bd84; font-size: 19px; }
+.wasla-theme-panel {
+  position: absolute;
+  inset-inline-end: 0;
+  bottom: 55px;
+  width: min(290px, calc(100vw - 36px));
+  padding: 17px;
+  border: 1px solid rgba(216,189,132,.3);
+  border-radius: 15px;
+  color: #f4f2ed;
+  background: #111a2a;
+  box-shadow: 0 20px 65px rgba(0,0,0,.35);
+}
+.wasla-theme-panel-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.wasla-theme-panel-heading strong { font-size: 13px; }
+.wasla-theme-panel-heading button { border:0; color:#c9d1dc; background:transparent; font-size:23px; cursor:pointer; }
+.wasla-theme-panel > p { margin:8px 0 13px; color:#aab4c2; font-size:10px; line-height:1.7; }
+.wasla-theme-options { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.wasla-theme-options button {
+  min-height:42px; display:flex; align-items:center; gap:8px; padding:0 9px;
+  border:1px solid rgba(255,255,255,.12); border-radius:8px; color:#e9edf3;
+  background:#192538; font-size:10px; font-weight:700; cursor:pointer;
+}
+.wasla-theme-options button.is-selected { border-color:#d8bd84; background:#25334a; }
+.wasla-theme-options button:disabled { opacity:.6; cursor:wait; }
+.wasla-theme-options i { width:15px; height:15px; flex:0 0 15px; border:1px solid rgba(255,255,255,.35); border-radius:50%; }
+.wasla-theme-options b { margin-inline-start:auto; color:#e4c98f; }
+.wasla-theme-panel > small { display:block; margin-top:12px; color:#91a0b3; font-size:9px; }
+
+/* Themes affect page surfaces, never product images, videos, or seller media. */
+html[data-wasla-theme="midnight"] .worlds-page,
+html[data-wasla-theme="midnight"] .shops-page,
+html[data-wasla-theme="midnight"] .business-page { background:#080b12 !important; }
+html[data-wasla-theme="ocean"] .worlds-page,
+html[data-wasla-theme="ocean"] .shops-page,
+html[data-wasla-theme="ocean"] .business-page { background:#103b60 !important; }
+html[data-wasla-theme="gold"] .worlds-page,
+html[data-wasla-theme="gold"] .shops-page,
+html[data-wasla-theme="gold"] .business-page { background:#4a3818 !important; }
+html[data-wasla-theme="graphite"] .worlds-page,
+html[data-wasla-theme="graphite"] .shops-page,
+html[data-wasla-theme="graphite"] .business-page { background:#343b46 !important; }
+html[data-wasla-theme="light"] .worlds-page,
+html[data-wasla-theme="light"] .shops-page,
+html[data-wasla-theme="light"] .business-page { background:#eeeae1 !important; color:#202733 !important; }
+html[data-wasla-theme="ocean"] .shops-header,
+html[data-wasla-theme="gold"] .shops-header,
+html[data-wasla-theme="graphite"] .shops-header,
+html[data-wasla-theme="midnight"] .shops-header { background:rgba(5,12,22,.72); }
+html[data-wasla-theme="ocean"] .shops-main,
+html[data-wasla-theme="gold"] .shops-main,
+html[data-wasla-theme="graphite"] .shops-main,
+html[data-wasla-theme="midnight"] .shops-main { background:transparent; }
+html[data-wasla-theme="light"] .worlds-directory { background:#e5e0d5; }
+html[data-wasla-theme="light"] .world-card { background:#fffdf8; border-color:#d8d0c1; }
+html[data-wasla-theme="light"] .world-card h3 { color:#202733; }
+html[data-wasla-theme="light"] .world-card p { color:#5e6875; }
+html[data-wasla-theme="light"] .worlds-hero h1,
+html[data-wasla-theme="light"] .worlds-section-heading h2 { color:#202733; }
+html[data-wasla-theme="light"] .worlds-hero-copy > p,
+html[data-wasla-theme="light"] .worlds-section-heading p { color:#586474; }
+html[data-wasla-theme="light"] .worlds-footer-brand { color:#202733; }
+html[data-wasla-theme="light"] .wasla-theme-trigger { color:#202733; background:#fffdf8; }
+@media (max-width: 600px) {
+  .wasla-theme-control { inset-inline-end:12px; bottom:12px; }
+  .wasla-theme-trigger { min-height:41px; padding:0 13px; }
+}
