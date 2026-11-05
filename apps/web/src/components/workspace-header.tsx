@@ -21,7 +21,8 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
   const { data: session, isPending } = authClient.useSession();
   const ar = locale === "ar";
   const inAccountSpace = pathname === "/account" || pathname === "/profile";
-  const accountHref = inAccountSpace ? "/" : "/account";
+  // Signed-in users stay inside their WASLA workspace; the public gateway is for visitors.
+  const accountHref = session?.user ? "/account" : "/";
   const messagesHref = pathname === "/messages" ? "/" : "/messages";
 
   useEffect(() => {
@@ -72,7 +73,7 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
       </button>
       <Link href="/" className="wasla-workspace-brand"><span>W</span><strong>{ar ? "وصلة" : "WASLA"}</strong></Link>
       <nav className="wasla-workspace-nav" aria-label={ar ? "التنقل الرئيسي" : "Main navigation"}>
-        <Link href={accountHref} aria-current={inAccountSpace ? "page" : undefined}>{isPending ? "..." : session?.user ? (inAccountSpace ? (ar ? "الرئيسية" : "Home") : (ar ? "حسابي" : "My account")) : (ar ? "تسجيل الدخول" : "Sign in")}</Link>
+        <Link href={accountHref} aria-current={inAccountSpace ? "page" : undefined}>{isPending ? "..." : session?.user ? (ar ? "مساحة عملي" : "My workspace") : (ar ? "الرئيسية" : "Home")}</Link>
         <Link href="/shops">{ar ? "المتاجر" : "Shops"}</Link>
         <Link href="/business">{ar ? "الأعمال" : "Business"}</Link>
         <Link href="/network" aria-current={pathname === "/network" ? "page" : undefined}>{ar ? "شبكتي" : "My network"}</Link>
