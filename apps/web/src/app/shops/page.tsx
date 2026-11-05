@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useLocale } from "../../components/locale-provider";
+import WorkspaceHeader from "../../components/workspace-header";
 
-type Locale = "ar" | "en";
 type Account = { id: string; display_name: string; legal_name: string; role: string };
 type Store = {
   id: string; account_id: string; name: string; slug: string; status: string;
@@ -52,7 +53,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export default function ShopsPage() {
-  const [locale, setLocale] = useState<Locale>("ar");
+  const { locale } = useLocale();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
   const [accountId, setAccountId] = useState("");
@@ -96,10 +97,11 @@ export default function ShopsPage() {
 
   return (
     <main className="shops-page" lang={locale} dir={dir}>
-      <header className="shops-header">
+      <WorkspaceHeader section="shops" />
+      <header className="shops-header" style={{ display: "none" }}>
         <Link href="/" className="shops-brand"><span className="shops-mark">W</span><span>WASLA <small>وصلة</small></span></Link>
         <nav><Link href="/">{t.home}</Link><Link href="/business">{t.business}</Link></nav>
-        <button type="button" className="shops-language" onClick={() => setLocale(locale === "ar" ? "en" : "ar")}>{locale === "ar" ? "English" : "العربية"}</button>
+        
       </header>
 
       <section className="shops-main">
