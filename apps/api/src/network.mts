@@ -86,7 +86,6 @@ export async function handleNetworkRequest(request: IncomingMessage, response: S
       return;
     }
 
-    await ensureNetworkTables();
     const db = getDatabasePool();
     const userId = session.user.id;
 
@@ -195,6 +194,11 @@ export async function handleNetworkRequest(request: IncomingMessage, response: S
         return;
       }
       const target = body.userId;
+      const targetMember = await db.query("SELECT id FROM users WHERE id = $1 AND status = 'active'", [target]);
+      if (!targetMember.rowCount) {
+        respond(response, 404, { success: false, error: "Member not found" });
+        return;
+      }
       const client = await db.connect();
       try {
         await client.query("BEGIN");
