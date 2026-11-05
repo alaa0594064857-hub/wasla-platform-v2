@@ -51,7 +51,7 @@ export default function ShopManagementPage(){
   <WorkspaceHeader section="shops" />
  <header className="shops-header" style={{ display: "none" }}><Link href="/" className="shops-brand"><span className="shops-mark">W</span><span>WASLA <small>وصلة</small></span></Link><nav><Link href="/">{t.home}</Link><Link href="/shops">{t.shops}</Link></nav></header>
   <section className="shops-main">
-   <div className="shops-heading"><div><span className="shops-eyebrow">WASLA SHOPS / MANAGEMENT</span><h1>{t.title}</h1><p>{t.subtitle}</p></div><div className="shops-heading-icon">W</div></div>
+   <div className="shops-heading"><div><span className="shops-eyebrow">{locale === "ar" ? "وصلة للمتاجر / الإدارة" : "WASLA SHOPS / MANAGEMENT"}</span><h1>{t.title}</h1><p>{t.subtitle}</p></div><div className="shops-heading-icon">W</div></div>
    {error&&<div className="shops-alert" role="alert">{error}<button type="button" onClick={()=>void load()}>{locale==="ar"?"إعادة المحاولة":"Try again"}</button></div>}
    {message&&<div className="shops-success" role="status">{message}</div>}
    {loading?<div className="shops-empty">{t.loading}</div>:store&&<div className="shops-detail-layout">
@@ -101,7 +101,7 @@ export default function ShopManagementPage(){
     </div>
    </section>}
    <p className="shops-back"><Link href="/shops">← {t.back}</Link></p>
-   <footer className="shops-footer">WASLA · A global platform for commerce and business</footer>
+   <footer className="shops-footer">{locale === "ar" ? "وصلة · منصة عالمية للتجارة والأعمال" : "WASLA · A global platform for commerce and business"}</footer>
   </section>
  </main>;
 }
