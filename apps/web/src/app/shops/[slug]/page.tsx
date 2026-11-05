@@ -5,20 +5,23 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 
 type Locale = "ar" | "en";
-type Store = { id: string; name: string; slug: string; status: string; account_name: string; business_description: string | null; website: string | null; country_code: string | null };\ntype Product = { id: string; title: string; description: string | null; sku: string | null; price: string; currency: string; stockQuantity: number; imageUrl: string | null; videoUrl: string | null; status: "draft" | "active" | "archived" };
+type Store = { id: string; name: string; slug: string; status: string; account_name: string; business_description: string | null; website: string | null; country_code: string | null };
+type Product = { id: string; title: string; description: string | null; sku: string | null; price: string; currency: string; stockQuantity: number; imageUrl: string | null; videoUrl: string | null; status: "draft" | "active" | "archived" };
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 const labels = {
   ar: { title:"إدارة المتجر", subtitle:"هذه مساحة إدارة متجرك المرتبط بحسابك التجاري.", home:"الرئيسية", shops:"متاجري", name:"اسم المتجر", save:"حفظ التغييرات", saving:"جارٍ الحفظ...", account:"الحساب التجاري", address:"معرّف المتجر", loading:"جارٍ تحميل بيانات المتجر...", error:"تعذر تحميل المتجر أو لا تملك صلاحية الوصول.", saved:"تم حفظ التغييرات.", back:"العودة إلى المتاجر", status:"حالة المتجر", active:"نشط", products:"المنتجات", addProduct:"إضافة منتج", productName:"اسم المنتج", description:"الوصف", sku:"رمز المنتج (اختياري)", price:"السعر", currency:"العملة", stock:"الكمية في المخزون", imageUrl:"رابط صورة المنتج (HTTPS)", videoUrl:"رابط فيديو المنتج (HTTPS)", add:"إضافة المنتج", adding:"جارٍ الإضافة...", noProducts:"لا توجد منتجات بعد. أضف أول منتج.", draft:"مسودة", published:"منشور", archived:"مؤرشف", saveProduct:"حفظ", savedProduct:"تم تحديث المنتج." },
   en: { title:"Shop management", subtitle:"Manage your shop connected to your business account.", home:"Home", shops:"My shops", name:"Shop name", save:"Save changes", saving:"Saving...", account:"Business account", address:"Shop identifier", loading:"Loading shop details...", error:"Could not load this shop or you do not have access.", saved:"Changes saved.", back:"Back to shops", status:"Shop status", active:"Active", products:"Products", addProduct:"Add a product", productName:"Product name", description:"Description", sku:"SKU (optional)", price:"Price", currency:"Currency", stock:"Stock quantity", imageUrl:"Product image URL (HTTPS)", videoUrl:"Product video URL (HTTPS)", add:"Add product", adding:"Adding...", noProducts:"No products yet. Add your first product.", draft:"Draft", published:"Published", archived:"Archived", saveProduct:"Save", savedProduct:"Product updated." },
 };
-async function api<T>(slug:string, options?:RequestInit):Promise<T>{
- const response=await fetch(`${API_BASE}/api/stores/${encodeURIComponent(slug)}`,{...options,credentials:"include",headers:{"Content-Type":"application/json",...options?.headers}});
+async function api<T>(slug:string, options?:RequestInit, suffix=""):Promise<T>{
+ const response=await fetch(`${API_BASE}/api/stores/${encodeURIComponent(slug)}${suffix}`,{...options,credentials:"include",headers:{"Content-Type":"application/json",...options?.headers}});
  const data=await response.json(); if(!response.ok||data.success!==true) throw new Error(data.error||"Request failed"); return data as T;
 }
 export default function ShopManagementPage(){
  const params=useParams<{slug:string}>(); const slug=params.slug;
  const [locale,setLocale]=useState<Locale>("ar"); const [store,setStore]=useState<Store|null>(null);
- const [name,setName]=useState(""); const [loading,setLoading]=useState(true); const [saving,setSaving]=useState(false); const [error,setError]=useState(""); const [message,setMessage]=useState("");\n const [products,setProducts]=useState<Product[]>([]); const [addingProduct,setAddingProduct]=useState(false);\n const [productForm,setProductForm]=useState({title:"",description:"",sku:"",price:"",currency:"USD",stockQuantity:"0",imageUrl:"",videoUrl:""});
+ const [name,setName]=useState(""); const [loading,setLoading]=useState(true); const [saving,setSaving]=useState(false); const [error,setError]=useState(""); const [message,setMessage]=useState("");
+ const [products,setProducts]=useState<Product[]>([]); const [addingProduct,setAddingProduct]=useState(false);
+ const [productForm,setProductForm]=useState({title:"",description:"",sku:"",price:"",currency:"USD",stockQuantity:"0",imageUrl:"",videoUrl:""});
  const t=labels[locale]; const dir=locale==="ar"?"rtl":"ltr";
  const load=useCallback(async()=>{setLoading(true);setError("");try{const result=await api<{store:Store}>(slug);setStore(result.store);setName(result.store.name);const catalog=await api<{products:Product[]}>(slug,undefined,"/products");setProducts(catalog.products);}catch{setError(t.error);}finally{setLoading(false);}},[slug,t.error]);
  useEffect(()=>{void load();},[load]);
