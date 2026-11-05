@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useLocale } from "../../../components/locale-provider";
+import WorkspaceHeader from "../../../components/workspace-header";
 
-type Locale = "ar" | "en";
 type Store = { id: string; name: string; slug: string; status: string; account_name: string; business_description: string | null; website: string | null; country_code: string | null };
 type Product = { id: string; title: string; description: string | null; sku: string | null; price: string; currency: string; stockQuantity: number; imageUrl: string | null; videoUrl: string | null; status: "draft" | "active" | "archived" };
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
@@ -18,7 +19,7 @@ async function api<T>(slug:string, options?:RequestInit, suffix=""):Promise<T>{
 }
 export default function ShopManagementPage(){
  const params=useParams<{slug:string}>(); const slug=params.slug;
- const [locale,setLocale]=useState<Locale>("ar"); const [store,setStore]=useState<Store|null>(null);
+ const { locale } = useLocale(); const [store,setStore]=useState<Store|null>(null);
  const [name,setName]=useState(""); const [loading,setLoading]=useState(true); const [saving,setSaving]=useState(false); const [error,setError]=useState(""); const [message,setMessage]=useState("");
  const [products,setProducts]=useState<Product[]>([]); const [addingProduct,setAddingProduct]=useState(false);
  const [productForm,setProductForm]=useState({title:"",description:"",sku:"",price:"",currency:"USD",stockQuantity:"0",imageUrl:"",videoUrl:""});
@@ -47,7 +48,8 @@ export default function ShopManagementPage(){
  }
 
  return <main className="shops-page" lang={locale} dir={dir}>
-  <header className="shops-header"><Link href="/" className="shops-brand"><span className="shops-mark">W</span><span>WASLA <small>وصلة</small></span></Link><nav><Link href="/">{t.home}</Link><Link href="/shops">{t.shops}</Link></nav><button type="button" className="shops-language" onClick={()=>setLocale(locale==="ar"?"en":"ar")}>{locale==="ar"?"English":"العربية"}</button></header>
+  <WorkspaceHeader section="shops" />
+ <header className="shops-header" style={{ display: "none" }}><Link href="/" className="shops-brand"><span className="shops-mark">W</span><span>WASLA <small>وصلة</small></span></Link><nav><Link href="/">{t.home}</Link><Link href="/shops">{t.shops}</Link></nav></header>
   <section className="shops-main">
    <div className="shops-heading"><div><span className="shops-eyebrow">WASLA SHOPS / MANAGEMENT</span><h1>{t.title}</h1><p>{t.subtitle}</p></div><div className="shops-heading-icon">W</div></div>
    {error&&<div className="shops-alert" role="alert">{error}<button type="button" onClick={()=>void load()}>{locale==="ar"?"إعادة المحاولة":"Try again"}</button></div>}
