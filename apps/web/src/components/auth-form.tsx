@@ -29,6 +29,7 @@ const labels = {
     loading: "جارٍ المعالجة...",
     loginError: "تعذر تسجيل الدخول. تحقق من بياناتك وحاول مجدداً.",
     registerError: "تعذر إنشاء الحساب. تحقق من البيانات وحاول مجدداً.",
+    verificationSent: "تم إنشاء طلب التسجيل. افحص بريدك الإلكتروني واضغط رابط التحقق لإكمال إنشاء الحساب.",
     language: "English",
     passwordHint: "ثمانية أحرف على الأقل",
     accountType: "نوع العضوية",
@@ -58,6 +59,7 @@ const labels = {
     loading: "Please wait...",
     loginError: "Unable to sign in. Check your details and try again.",
     registerError: "Unable to create your account. Check your details and try again.",
+    verificationSent: "Your registration request was submitted. Check your email and open the verification link to complete your account.",
     language: "العربية",
     passwordHint: "At least 8 characters",
     accountType: "Membership type",
@@ -78,6 +80,7 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
   const [password, setPassword] = useState("");
   const [registrationType, setRegistrationType] = useState<RegistrationType>("buyer");
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const t = labels[locale];
   const isRegister = mode === "register";
@@ -85,6 +88,7 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    setSuccessMessage("");
     setLoading(true);
 
     try {
@@ -106,6 +110,8 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
           setError(t.registerError);
           return;
         }
+        setSuccessMessage(t.verificationSent);
+        return;
       } else {
         const result = await authClient.signIn.email({
           email: email.trim(),
@@ -214,6 +220,12 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
             {error && (
               <p className="auth-error" role="alert">
                 {error}
+              </p>
+            )}
+
+            {successMessage && (
+              <p className="auth-success" role="status">
+                {successMessage}
               </p>
             )}
 
