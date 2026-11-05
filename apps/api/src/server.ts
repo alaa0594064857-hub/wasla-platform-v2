@@ -182,6 +182,23 @@ async function handleRequest(
   }
 
 
+
+  const storeDetailMatch = requestUrl.pathname.match(/^\\/api\\/stores\\/([a-z0-9-]{1,180})$/i);
+  if (storeDetailMatch) {
+    try {
+      const { handleStoreDetailRequest } = await import("./stores.mjs");
+      await handleStoreDetailRequest(request, response, storeDetailMatch[1]);
+    } catch (error) {
+      console.error("WASLA store detail route error:", error);
+      if (!response.headersSent) {
+        sendJson(response, 500, { success: false, error: "Store service error" });
+      } else {
+        response.destroy(error instanceof Error ? error : undefined);
+      }
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/stores") {
     try {
       const { handleStoresRequest } = await import("./stores.mjs");
