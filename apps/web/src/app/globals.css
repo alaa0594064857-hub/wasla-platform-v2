@@ -2278,3 +2278,33 @@ html[data-wasla-theme="light"] .wasla-workspace-nav a,html[data-wasla-theme="lig
 .wasla-membership-note{margin:18px 0 0;color:#929eac;font-size:10px;line-height:1.8}
 @media(max-width:900px){.wasla-entry-grid{grid-template-columns:1fr 1fr}.wasla-plan-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:560px){.wasla-entry-paths,.wasla-memberships{width:calc(100% - 28px);padding-top:37px}.wasla-entry-grid,.wasla-plan-grid{grid-template-columns:1fr}.wasla-entry-art{height:125px}.wasla-entry-card p,.wasla-plan-card p{min-height:0}.wasla-plan-card{min-height:210px}}
+
+
+/* Clear, high-contrast menu and universal search */
+.wasla-menu-trigger{position:relative;z-index:52;display:flex!important;width:44px!important;height:44px!important;min-width:44px;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:5px!important;padding:0!important;border:1.5px solid #c5a66c!important;border-radius:12px!important;background:#14243a!important;box-shadow:0 3px 12px rgba(10,20,35,.18)}
+.wasla-menu-trigger span{display:block!important;width:21px!important;height:2.5px!important;min-height:2.5px;background:#f3d79e!important;border-radius:4px!important;opacity:1!important;transform:none!important}
+.wasla-search-trigger{display:grid!important;place-items:center;width:42px;height:42px;flex:none;padding:0;border:1px solid rgba(197,166,108,.55);border-radius:12px;background:#14243a;color:#f0d69f;cursor:pointer}
+.wasla-search-trigger svg,.wasla-global-search svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.wasla-global-search{position:relative;z-index:49;display:flex;align-items:center;gap:11px;width:min(900px,calc(100% - 30px));margin:12px auto;padding:10px 13px;border:1px solid rgba(197,166,108,.45);border-radius:14px;background:#fff;color:#17283e;box-shadow:0 12px 35px rgba(10,20,35,.12)}
+.wasla-global-search svg{flex:none;color:#a27b40}
+.wasla-global-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#17283e;font:inherit;font-size:13px}
+.wasla-global-search input::placeholder{color:#929ba6}
+.wasla-global-search button{flex:none;padding:10px 17px;border:0;border-radius:9px;background:#172b43;color:#f5dfb1;font:inherit;font-size:11px;font-weight:800;cursor:pointer}
+.wasla-drawer{z-index:101!important}
+.wasla-menu-backdrop{z-index:100!important}
+.wasla-drawer-bottom{position:sticky;bottom:0;flex:none;padding-top:13px;padding-bottom:max(5px,env(safe-area-inset-bottom));background:#101f32}
+.wasla-drawer-logout{min-height:46px;justify-content:center;gap:10px;background:rgba(190,91,77,.12);font-size:12px!important;font-weight:900!important}
+.wasla-drawer-logout span{margin-inline-start:auto}
+.wasla-search-page{min-height:100vh;background:#f4f1e9;color:#14243a}
+.wasla-search-shell{width:min(900px,calc(100% - 34px));margin:0 auto;padding:55px 0 80px}
+.wasla-search-eyebrow{color:#a17a3d;font-size:10px;font-weight:900;letter-spacing:2px}
+.wasla-search-shell h1{margin:12px 0;font-size:clamp(30px,5vw,46px);letter-spacing:-1px}
+.wasla-search-shell>p{color:#7b8795;font-size:13px;line-height:1.8}
+.wasla-search-shell>p strong{color:#9a733b}
+.wasla-search-destinations{display:grid;gap:10px;margin-top:27px}
+.wasla-search-destinations>a{display:flex;align-items:center;gap:14px;padding:17px;border:1px solid rgba(20,36,58,.09);border-radius:14px;background:#fff;color:#192b42;text-decoration:none}
+.wasla-search-destinations>a>span{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;background:#f5f0e5;color:#a17a3d;font-size:19px}
+.wasla-search-destinations>a>div{flex:1}.wasla-search-destinations strong,.wasla-search-destinations small{display:block}.wasla-search-destinations strong{font-size:13px}.wasla-search-destinations small{margin-top:4px;color:#87919e;font-size:10px}
+.wasla-search-destinations>a>b{color:#a17a3d}
+.wasla-search-hint{margin-top:18px;padding:14px;border-radius:11px;background:#ebe6da;color:#747f8d;font-size:11px;line-height:1.9}
+@media(max-width:560px){.wasla-menu-trigger{width:42px!important;height:42px!important;min-width:42px}.wasla-search-trigger{width:39px;height:39px}.wasla-global-search{gap:7px;padding:8px}.wasla-global-search button{padding:9px 12px}.wasla-global-search input{font-size:11px}}
