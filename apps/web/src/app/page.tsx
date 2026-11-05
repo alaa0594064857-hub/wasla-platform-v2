@@ -94,9 +94,9 @@ const copy = {
   ar: {
     language: "English",
     eyebrow: "منظومة عالمية متعددة العوالم",
-    headline: "كل عالم له",
-    highlight: "قواعده الخاصة.",
-    intro: "بوابة واحدة تربط التجارة والتسوق والشركات والصفقات. اختر مساحة عملك، وانتقل إلى تجربة صُممت لمهمتك.",
+    headline: "ست تجارب.",
+    highlight: "منظومة واحدة.",
+    intro: "وصلة منظومة عالمية تجمع التسوق والمتاجر والشركات والتجارة والتواصل والذكاء في مكان واحد؛ لكل تجربة عالمها وأدواتها، وحساب واحد يربطها جميعًا.",
     identity: "هوية واحدة",
     access: "دخول موحد",
     connected: "أنظمة مترابطة",
@@ -115,9 +115,9 @@ const copy = {
   en: {
     language: "العربية",
     eyebrow: "A global multi-world ecosystem",
-    headline: "Every world has",
-    highlight: "its own rules.",
-    intro: "One gateway connecting commerce, shopping, companies and trade. Choose your workspace and enter an experience built for your mission.",
+    headline: "Six experiences.",
+    highlight: "One ecosystem.",
+    intro: "WASLA brings shopping, storefronts, businesses, trade, communication and intelligence together. Each experience has its own tools, connected through one account.",
     identity: "One identity",
     access: "Unified access",
     connected: "Connected systems",
@@ -174,6 +174,27 @@ export default function HomePage() {
           <span className="orbit-caption caption-a">{locale === "ar" ? "التجارة" : "COMMERCE"}</span>
           <span className="orbit-caption caption-b">{locale === "ar" ? "الأعمال" : "BUSINESS"}</span>
           <span className="orbit-caption caption-c">{locale === "ar" ? "عالمي" : "GLOBAL"}</span>
+        </div>
+      </section>
+
+      <section className="wasla-hero-join" id="create-account">
+        <div className="wasla-hero-about">
+          <span>{locale === "ar" ? "منصة واحدة لفرص بلا حدود" : "ONE PLATFORM. MORE POSSIBILITIES."}</span>
+          <h2>{locale === "ar" ? "ما هي وصلة؟" : "What is WASLA?"}</h2>
+          <p>{locale === "ar" ? "وصلة منظومة رقمية عالمية تربط الأفراد والمتاجر والشركات والموردين. تجمع التسوق وبناء العلامات التجارية والأعمال والصفقات والتواصل والأدوات الذكية ضمن تجربة مترابطة، مع مساحة مستقلة لكل احتياج." : "WASLA is a global digital ecosystem connecting people, shops, companies and suppliers. It brings shopping, brand building, business, trade, communication and intelligent tools into one connected experience, with a dedicated space for every need."}</p>
+          <div className="wasla-about-points">
+            <span>01 · {locale === "ar" ? "ست تجارب متخصصة" : "Six dedicated experiences"}</span>
+            <span>02 · {locale === "ar" ? "حساب وهوية موحدة" : "One account and identity"}</span>
+            <span>03 · {locale === "ar" ? "من الأفراد إلى المؤسسات" : "From individuals to enterprises"}</span>
+          </div>
+        </div>
+        <div className="wasla-hero-signup">
+          <div className="wasla-signup-mark">W</div>
+          <span>{locale === "ar" ? "ابدأ رحلتك مع وصلة" : "YOUR JOURNEY STARTS HERE"}</span>
+          <h2>{locale === "ar" ? "أنشئ حسابك الآن" : "Create your account"}</h2>
+          <p>{locale === "ar" ? "حساب واحد يفتح لك أبواب العوالم الستة. انضم مجانًا وابدأ باختيار المساحة المناسبة لك." : "One account opens the door to all six experiences. Join for free and choose the space that fits you."}</p>
+          <a className="wasla-signup-primary" href="/register">{locale === "ar" ? "إنشاء حساب جديد" : "Create a new account"} <b>↗</b></a>
+          <a className="wasla-signup-login" href="/login">{locale === "ar" ? "لديك حساب بالفعل؟ تسجيل الدخول" : "Already have an account? Sign in"}</a>
         </div>
       </section>
 
