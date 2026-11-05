@@ -131,18 +131,20 @@ export default function ShopsPage() {
             )}
           </section>
 
-          <aside className="shops-create-card">
-            <span className="shops-eyebrow">{locale === "ar" ? "02 / إنشاء متجر" : "02 / CREATE"}</span><h2>{t.create}</h2>
-            <form onSubmit={createStore}>
-              <label>{t.storeName}<input value={name} onChange={e => setName(e.target.value)} minLength={2} maxLength={120} required placeholder={locale === "ar" ? "مثال: متجر الأناقة" : "e.g. Elegance Store"} /></label>
-              <label>{t.account}<select value={accountId} onChange={e => setAccountId(e.target.value)} required>
-                <option value="">{t.choose}</option>
-                {accounts.map(account => <option key={account.id} value={account.id}>{account.display_name}</option>)}
-              </select></label>
-              {accounts.length === 0 && !loading && <p className="shops-note">{t.noAccounts}</p>}
-              <button type="submit" disabled={creating || !accountId}>{creating ? t.creating : t.submit}<span>↗</span></button>
-            </form>
-          </aside>
+          {stores.length === 0 && !loading && (
+            <aside className="shops-create-card">
+              <span className="shops-eyebrow">{locale === "ar" ? "02 / ابدأ رحلتك" : "02 / GET STARTED"}</span><h2>{t.create}</h2>
+              <form onSubmit={createStore}>
+                <label>{t.storeName}<input value={name} onChange={e => setName(e.target.value)} minLength={2} maxLength={120} required placeholder={locale === "ar" ? "مثال: متجر الأناقة" : "e.g. Elegance Store"} /></label>
+                <label>{t.account}<select value={accountId} onChange={e => setAccountId(e.target.value)} required>
+                  <option value="">{t.choose}</option>
+                  {accounts.map(account => <option key={account.id} value={account.id}>{account.display_name}</option>)}
+                </select></label>
+                {accounts.length === 0 && <p className="shops-note">{t.noAccounts}</p>}
+                <button type="submit" disabled={creating || !accountId}>{creating ? t.creating : t.submit}<span>↗</span></button>
+              </form>
+            </aside>
+          )}
         </div>
         <footer className="shops-footer">{locale === "ar" ? "وصلة · منصة عالمية للتجارة والأعمال" : "WASLA · A global platform for commerce and business"}</footer>
       </section>
