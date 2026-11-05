@@ -2059,3 +2059,22 @@ html[data-wasla-theme="light"] .shops-product-form textarea { background:#fff; b
 .account-footer{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-top:50px;padding-top:20px;border-top:1px solid rgba(255,255,255,.08);color:#748092;font-size:9px;letter-spacing:1px}.account-footer button{border:0;background:none;color:#b8a98b;font-size:10px;cursor:pointer}.account-footer button:disabled{opacity:.5}
 html[data-wasla-theme="light"] .account-home{background:#f0ede6;color:#222a34}html[data-wasla-theme="light"] .account-topbar{background:#fffdf8;border-color:#ddd5c7}html[data-wasla-theme="light"] .account-brand{color:#222a34}html[data-wasla-theme="light"] .account-profile-card,html[data-wasla-theme="light"] .account-notice-card,html[data-wasla-theme="light"] .account-world-card{background:#fffdf8;border-color:#ddd5c7}html[data-wasla-theme="light"] .account-welcome p,html[data-wasla-theme="light"] .account-profile-info p,html[data-wasla-theme="light"] .account-notice-card p,html[data-wasla-theme="light"] .account-world-card p{color:#657080}html[data-wasla-theme="light"] .account-top-actions a,html[data-wasla-theme="light"] .account-language{color:#4e5968}html[data-wasla-theme="light"] .account-world-card h3{color:#222a34}
 @media(max-width:650px){.account-shell{width:calc(100% - 32px);padding-top:34px}.account-topbar{height:64px;padding:0 16px}.account-welcome-mark{width:55px;height:55px;font-size:27px;border-radius:16px}.account-profile-card{padding:16px;gap:12px;flex-wrap:wrap}.account-avatar{width:60px;height:60px;flex-basis:60px}.account-profile-info h2{font-size:16px}.account-edit{width:100%;justify-content:center}.account-notice-grid,.account-world-grid{grid-template-columns:1fr}.account-notice-card{min-height:130px;padding:16px}.account-footer{margin-top:35px;flex-wrap:wrap}.account-top-actions{gap:12px}.account-top-actions a{font-size:10px}}
+
+
+/* Shared WASLA workspace navigation */
+.wasla-workspace-header{position:relative;z-index:20;min-height:72px;width:100%;padding:10px max(22px,calc((100% - 1240px)/2));display:flex;align-items:center;justify-content:space-between;gap:18px;background:rgba(9,15,25,.96);border-bottom:1px solid rgba(197,166,108,.18);color:#f4efe5}
+.wasla-workspace-brand{display:flex;align-items:center;gap:10px;flex:0 0 auto;text-decoration:none;color:inherit}
+.wasla-workspace-brand>span{width:38px;height:38px;display:grid;place-items:center;border:1px solid #c5a66c;border-radius:11px;color:#e2c991;font-weight:900}
+.wasla-workspace-brand strong{font-size:15px;letter-spacing:1px}
+.wasla-workspace-nav{display:flex;align-items:center;justify-content:center;gap:clamp(10px,1.8vw,25px);flex:1}
+.wasla-workspace-nav a{color:#c8c5bd;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap}
+.wasla-workspace-nav a:hover{color:#e5c98f}
+.wasla-workspace-actions{display:flex;align-items:center;gap:12px;flex:0 0 auto}
+.wasla-workspace-language{min-height:36px;padding:0 12px;border:1px solid rgba(197,166,108,.4);border-radius:8px;color:#e6d4ae;background:transparent;font-size:11px;font-weight:800;cursor:pointer}
+.wasla-workspace-user{display:flex;align-items:center;gap:8px;color:#f1eee7;text-decoration:none;max-width:180px}
+.wasla-workspace-avatar{width:37px;height:37px;display:grid;place-items:center;overflow:hidden;flex:0 0 37px;border:1px solid rgba(197,166,108,.65);border-radius:50%;color:#e4ce9e;background:#263246;font-weight:800}
+.wasla-workspace-avatar img{width:100%;height:100%;object-fit:cover}
+.wasla-workspace-name{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;font-weight:700}
+html[data-wasla-theme="light"] .wasla-workspace-header{background:#fffdf8;color:#202733;border-color:#ddd5c7}
+html[data-wasla-theme="light"] .wasla-workspace-nav a,html[data-wasla-theme="light"] .wasla-workspace-user{color:#465263}
+@media(max-width:760px){.wasla-workspace-header{min-height:62px;padding:8px 12px;gap:8px;flex-wrap:wrap}.wasla-workspace-brand>span{width:32px;height:32px}.wasla-workspace-brand strong{font-size:12px}.wasla-workspace-nav{order:3;width:100%;flex-basis:100%;justify-content:space-between;gap:6px;padding:7px 2px 2px;border-top:1px solid rgba(255,255,255,.08)}.wasla-workspace-nav a{font-size:10px}.wasla-workspace-nav a span{display:none}.wasla-workspace-actions{gap:7px}.wasla-workspace-language{min-height:32px;padding:0 9px;font-size:10px}.wasla-workspace-avatar{width:32px;height:32px;flex-basis:32px}.wasla-workspace-name{max-width:72px;font-size:9px}}
