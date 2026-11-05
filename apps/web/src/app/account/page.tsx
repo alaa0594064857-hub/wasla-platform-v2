@@ -98,7 +98,7 @@ export default function AccountHomePage() {
     <Link className="account-edit" href="/profile">{t.edit}<span>↗</span></Link>
    </section>
    <section className="account-notice-grid">
-    <article id="messages" className="account-notice-card"><div className="account-notice-icon">✉</div><div><span className="account-eyebrow">01 / {t.messages}</span><h2>{t.messages}</h2><p>{t.messagesInfo}</p></div><b>{t.unavailable}</b></article>
+    <Link href="/messages" id="messages" className="account-notice-card"><div className="account-notice-icon">✉</div><div><span className="account-eyebrow">01 / {t.messages}</span><h2>{t.messages}</h2><p>{t.messagesInfo}</p></div><b>{locale === "ar" ? "فتح الرسائل ↗" : "Open messages ↗"}</b></Link>
     <article id="notifications" className="account-notice-card"><div className="account-notice-icon">♧</div><div><span className="account-eyebrow">02 / {t.notifications}</span><h2>{t.notifications}</h2><p>{t.notificationsInfo}</p></div><b>{t.unavailable}</b></article>
    </section>
    <section className="account-worlds">
