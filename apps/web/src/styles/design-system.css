@@ -1,0 +1,66 @@
+/* WASLA V2 shared design foundation. Keep visual decisions centralized here. */
+:root {
+  color-scheme: light;
+  --wasla-brand-name: "WASLA";
+  --wasla-color-navy-950: #101e30;
+  --wasla-color-navy-900: #14243a;
+  --wasla-color-navy-800: #203b59;
+  --wasla-color-gold-700: #9b783d;
+  --wasla-color-gold-600: #b18d4d;
+  --wasla-color-gold-500: #c6a15b;
+  --wasla-color-gold-300: #dfc58f;
+  --wasla-color-cream-100: #f7f4ed;
+  --wasla-color-white: #fff;
+  --wasla-color-ink: #263448;
+  --wasla-color-muted: #738092;
+  --wasla-color-border: rgba(20, 36, 58, .12);
+  --wasla-color-success: #26734a;
+  --wasla-color-danger: #a33d3d;
+  --wasla-surface: var(--wasla-color-white);
+  --wasla-page: var(--wasla-color-cream-100);
+  --wasla-text: var(--wasla-color-navy-900);
+  --wasla-radius-sm: 8px;
+  --wasla-radius-md: 12px;
+  --wasla-radius-lg: 18px;
+  --wasla-radius-xl: 24px;
+  --wasla-space-1: 4px;
+  --wasla-space-2: 8px;
+  --wasla-space-3: 12px;
+  --wasla-space-4: 16px;
+  --wasla-space-5: 20px;
+  --wasla-space-6: 24px;
+  --wasla-space-8: 32px;
+  --wasla-space-10: 40px;
+  --wasla-space-12: 48px;
+  --wasla-content-width: 1240px;
+  --wasla-shadow-sm: 0 5px 18px rgba(20,36,58,.06);
+  --wasla-shadow-md: 0 14px 38px rgba(20,36,58,.09);
+  --wasla-shadow-lg: 0 24px 70px rgba(20,36,58,.12);
+  --wasla-motion-fast: 140ms ease;
+  --wasla-motion-standard: 200ms ease;
+  --wasla-font-ar: "Noto Sans Arabic", Tahoma, Arial, sans-serif;
+  --wasla-font-en: Inter, "Segoe UI", Arial, sans-serif;
+}
+html { scroll-behavior: smooth; }
+body { color: var(--wasla-text); }
+:lang(ar) { font-family: var(--wasla-font-ar); }
+:lang(en) { font-family: var(--wasla-font-en); }
+.wasla-container { width: min(var(--wasla-content-width), calc(100% - 48px)); margin-inline: auto; }
+.wasla-surface { background: var(--wasla-surface); border: 1px solid var(--wasla-color-border); border-radius: var(--wasla-radius-lg); box-shadow: var(--wasla-shadow-sm); }
+.wasla-button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: var(--wasla-space-2); padding: 0 var(--wasla-space-5); border: 1px solid transparent; border-radius: var(--wasla-radius-sm); font: inherit; font-weight: 700; cursor: pointer; transition: transform var(--wasla-motion-standard), background var(--wasla-motion-standard), border-color var(--wasla-motion-standard); }
+.wasla-button:active { transform: translateY(1px); }
+.wasla-button-primary { color: #fff; background: var(--wasla-color-navy-900); }
+.wasla-button-primary:hover { background: var(--wasla-color-navy-800); }
+.wasla-button-secondary { color: var(--wasla-color-navy-900); background: #fff; border-color: var(--wasla-color-border); }
+.wasla-button-secondary:hover { border-color: var(--wasla-color-gold-500); }
+.wasla-field { width: 100%; min-height: 46px; padding: 0 var(--wasla-space-3); border: 1px solid var(--wasla-color-border); border-radius: var(--wasla-radius-sm); color: var(--wasla-text); background: #fff; font: inherit; }
+.wasla-field:focus-visible, .wasla-button:focus-visible { outline: 3px solid rgba(198,161,91,.5); outline-offset: 3px; }
+.wasla-muted { color: var(--wasla-color-muted); }
+@media (max-width: 640px) {
+  .wasla-container { width: min(100% - 32px, var(--wasla-content-width)); }
+  .wasla-button { min-height: 46px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
