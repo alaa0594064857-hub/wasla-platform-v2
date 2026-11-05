@@ -2,7 +2,6 @@
 
 import { useLocale } from "../components/locale-provider";
 import WorkspaceHeader from "../components/workspace-header";
-import { authClient } from "@/lib/auth-client";
 
 const worlds = [
   {
@@ -12,7 +11,7 @@ const worlds = [
     en: "The shopping universe",
     descriptionAr: "اكتشف منتجات وعلامات تجارية من أسواق متعددة حول العالم.",
     descriptionEn: "Discover products and brands across markets around the world.",
-    category: "COMMERCE",
+    category: "COMMERCE", categoryAr: "التجارة والتسوق", nameAr: "وصلة للتسوق",
     href: null,
     statusAr: "قريبًا",
     statusEn: "Coming soon",
@@ -26,7 +25,7 @@ const worlds = [
     en: "The brand universe",
     descriptionAr: "أنشئ متجرك، اعرض منتجاتك، وامتلك تجربة بيع تحمل هويتك.",
     descriptionEn: "Build your storefront, showcase products and own your brand experience.",
-    category: "SELLER STUDIO",
+    category: "SELLER STUDIO", categoryAr: "مساحة المتاجر", nameAr: "وصلة للمتاجر",
     href: "/shops",
     statusAr: "متاح",
     statusEn: "Available",
@@ -40,7 +39,7 @@ const worlds = [
     en: "The enterprise universe",
     descriptionAr: "ملفات الشركات والموردين والمصانع وشبكات الأعمال.",
     descriptionEn: "Company profiles, suppliers, manufacturers and business networks.",
-    category: "ENTERPRISE",
+    category: "ENTERPRISE", categoryAr: "عالم الشركات", nameAr: "وصلة للأعمال",
     href: "/business",
     statusAr: "متاح",
     statusEn: "Available",
@@ -54,7 +53,7 @@ const worlds = [
     en: "The trade universe",
     descriptionAr: "مساحة متخصصة للعروض والتفاوض وإدارة الصفقات التجارية.",
     descriptionEn: "A dedicated space for offers, negotiation and commercial deals.",
-    category: "GLOBAL TRADE",
+    category: "GLOBAL TRADE", categoryAr: "التجارة العالمية", nameAr: "وصلة للتجارة",
     href: null,
     statusAr: "قريبًا",
     statusEn: "Coming soon",
@@ -68,7 +67,7 @@ const worlds = [
     en: "The communication universe",
     descriptionAr: "محادثات الأعمال والملفات والتواصل بين أطراف التجارة.",
     descriptionEn: "Business conversations, files and communication between trading partners.",
-    category: "CONNECT",
+    category: "CONNECT", categoryAr: "التواصل", nameAr: "وصلة للرسائل",
     href: null,
     statusAr: "قريبًا",
     statusEn: "Coming soon",
@@ -82,7 +81,7 @@ const worlds = [
     en: "The intelligence universe",
     descriptionAr: "مساعد ذكي لدعم القرارات وتبسيط العمليات التجارية.",
     descriptionEn: "Intelligent assistance for better decisions and simpler operations.",
-    category: "INTELLIGENCE",
+    category: "INTELLIGENCE", categoryAr: "الذكاء", nameAr: "وصلة للذكاء",
     href: null,
     statusAr: "قريبًا",
     statusEn: "Coming soon",
@@ -138,8 +137,6 @@ const copy = {
 
 export default function HomePage() {
   const { locale } = useLocale();
-  const { data: session, isPending } = authClient.useSession();
-  const signedIn = Boolean(session?.user);
   const t = copy[locale];
   const direction = locale === "ar" ? "rtl" : "ltr";
 
@@ -174,9 +171,9 @@ export default function HomePage() {
           <div className="worlds-orbit-ring ring-c" />
           <div className="worlds-orbit-core"><b>W</b><span>{locale === "ar" ? "وصلة" : "WASLA"}</span></div>
           <i className="orbit-point point-a" /><i className="orbit-point point-b" /><i className="orbit-point point-c" /><i className="orbit-point point-d" />
-          <span className="orbit-caption caption-a">COMMERCE</span>
-          <span className="orbit-caption caption-b">BUSINESS</span>
-          <span className="orbit-caption caption-c">GLOBAL</span>
+          <span className="orbit-caption caption-a">{locale === "ar" ? "التجارة" : "COMMERCE"}</span>
+          <span className="orbit-caption caption-b">{locale === "ar" ? "الأعمال" : "BUSINESS"}</span>
+          <span className="orbit-caption caption-c">{locale === "ar" ? "عالمي" : "GLOBAL"}</span>
         </div>
       </section>
 
@@ -200,8 +197,8 @@ export default function HomePage() {
                   <span className="world-art-orbit orbit-three" />
                 </div>
                 <div className="world-card-content">
-                  <div className="world-card-meta"><span>{world.category}</span><b>{status}</b></div>
-                  <h3>{world.name}</h3>
+                  <div className="world-card-meta"><span>{locale === "ar" ? world.categoryAr : world.category}</span><b>{status}</b></div>
+                  <h3>{locale === "ar" ? world.nameAr : world.name}</h3>
                   <h4>{title}</h4>
                   <p>{description}</p>
                   {world.href ? (
