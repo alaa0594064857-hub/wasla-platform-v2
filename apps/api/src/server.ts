@@ -298,9 +298,10 @@ if (process.env.NODE_ENV !== "test") {
   const server = createWaslaServer();
 
   void import("./database.js")
-    .then(async ({ ensureRegistrationTypeColumn, ensureAccountOwnerRole }) => {
+    .then(async ({ ensureRegistrationTypeColumn, ensureAccountOwnerRole, ensureStoreOwnerRole }) => {
       await ensureRegistrationTypeColumn();
       await ensureAccountOwnerRole();
+      await ensureStoreOwnerRole();
     })
     .then(() => {
       server.listen(port, "0.0.0.0", () => {
