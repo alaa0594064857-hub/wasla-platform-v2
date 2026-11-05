@@ -2216,3 +2216,42 @@ html[data-wasla-theme="light"] .wasla-workspace-nav a,html[data-wasla-theme="lig
 .network-privacy{display:flex;align-items:flex-start;gap:10px;margin-top:18px;padding:15px 17px;border:1px solid rgba(197,166,108,.25);border-radius:12px;background:#f9f6ef;color:#7b8491;font-size:10px;line-height:1.8}.network-privacy span{color:#a17a3d;font-size:17px}
 @media(max-width:820px){.network-search-panel{grid-template-columns:1fr;gap:14px}.network-columns{grid-template-columns:1fr}.network-card-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:560px){.network-shell{width:calc(100% - 26px);padding:30px 0 50px}.network-hero-symbol{width:65px;height:65px;border-radius:19px}.network-hero-symbol span{font-size:30px}.network-hero h1{font-size:31px}.network-search-panel{padding:18px}.network-search-panel form{flex-direction:column}.network-search-panel form button{width:100%}.network-stats{gap:7px}.network-stats>div{align-items:flex-start;flex-direction:column;gap:3px;padding:12px}.network-stats strong{font-size:22px}.network-stats span{font-size:9px}.network-section{padding:16px}.network-card-grid{grid-template-columns:1fr}.network-person-card,.network-business-card{gap:8px}.network-card-actions{flex-wrap:wrap;justify-content:flex-end}.network-person-copy strong,.network-business-copy strong{font-size:11px}.network-button{padding:8px 9px;font-size:9px}}
+
+
+/* Unified WASLA account drawer */
+.wasla-workspace-header{position:relative;z-index:50}
+.wasla-menu-trigger{width:40px;height:40px;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;border:1px solid rgba(196,165,105,.32);border-radius:11px;background:transparent;cursor:pointer}
+.wasla-menu-trigger span{width:17px;height:2px;border-radius:3px;background:currentColor}
+.wasla-menu-backdrop{position:fixed;inset:0;z-index:80;border:0;background:rgba(8,17,29,.52);backdrop-filter:blur(3px)}
+.wasla-drawer{position:fixed;z-index:81;top:0;bottom:0;inset-inline-start:0;width:min(390px,88vw);display:flex;flex-direction:column;padding:23px 20px 18px;background:#101f32;color:#f6f0e5;box-shadow:0 20px 70px rgba(0,0,0,.3);transform:translateX(-105%);transition:transform .24s ease;visibility:hidden}
+.wasla-drawer[dir="rtl"]{transform:translateX(105%)}
+.wasla-drawer.is-open{transform:translateX(0);visibility:visible}
+.wasla-drawer-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:20px;border-bottom:1px solid rgba(255,255,255,.12)}
+.wasla-drawer-head>button{width:34px;height:34px;border:1px solid rgba(255,255,255,.18);border-radius:10px;background:transparent;color:#fff;font-size:22px;cursor:pointer}
+.wasla-drawer-identity{display:flex;align-items:center;gap:11px;min-width:0}
+.wasla-drawer-identity>div{min-width:0}.wasla-drawer-identity strong,.wasla-drawer-identity small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.wasla-drawer-identity strong{font-size:13px}.wasla-drawer-identity small{max-width:230px;margin-top:4px;color:#aeb9c6;font-size:10px}
+.wasla-drawer-label{padding:21px 4px 9px;color:#c5a66c;font-size:9px;font-weight:900;letter-spacing:1.8px}
+.wasla-drawer-links{display:grid;gap:4px;overflow-y:auto}
+.wasla-drawer-links a{display:flex;align-items:center;gap:12px;padding:11px 10px;border:1px solid transparent;border-radius:10px;color:#e8edf2;text-decoration:none;font-size:12px}
+.wasla-drawer-links a>span{width:22px;color:#d7b978;font-size:17px;text-align:center}
+.wasla-drawer-links a>b{margin-inline-start:auto;color:#9ca9b8;font-size:11px}
+.wasla-drawer-links a:hover,.wasla-drawer-links a[aria-current=page]{border-color:rgba(207,177,119,.22);background:rgba(207,177,119,.1);color:#f2dba9}
+.wasla-drawer-bottom{display:grid;gap:10px;margin-top:auto;padding-top:15px;border-top:1px solid rgba(255,255,255,.12)}
+.wasla-drawer-language,.wasla-drawer-logout{display:flex;align-items:center;justify-content:space-between;width:100%;padding:12px 13px;border:1px solid rgba(255,255,255,.13);border-radius:10px;background:transparent;color:#dce4ed;text-decoration:none;font:inherit;font-size:11px;cursor:pointer}
+.wasla-drawer-logout{border-color:rgba(220,139,126,.25);color:#efb3a8}
+.wasla-notifications-page,.wasla-settings-page{min-height:100vh;background:#f4f1e9;color:#14243a}
+.wasla-notifications-shell,.wasla-settings-shell{width:min(900px,calc(100% - 34px));margin:0 auto;padding:55px 0 80px}
+.wasla-notifications-eyebrow,.wasla-settings-eyebrow{color:#a17a3d;font-size:10px;font-weight:900;letter-spacing:2px}
+.wasla-notifications-shell h1,.wasla-settings-shell h1{margin:12px 0;font-size:clamp(30px,5vw,46px);letter-spacing:-1px}
+.wasla-notifications-intro,.wasla-settings-shell>p{max-width:650px;color:#758091;font-size:13px;line-height:1.9}
+.wasla-notifications-empty{margin-top:28px;padding:55px 25px;border:1px solid rgba(20,36,58,.09);border-radius:20px;background:#fff;text-align:center;box-shadow:0 15px 40px rgba(20,36,58,.05)}
+.wasla-notifications-symbol{width:68px;height:68px;display:grid;place-items:center;margin:0 auto 18px;border:1px solid #d9c49c;border-radius:22px;background:#f8f4eb;color:#a17a3d;font-size:30px}
+.wasla-notifications-empty h2{margin:0 0 10px;font-size:21px}.wasla-notifications-empty p{max-width:540px;margin:0 auto 20px;color:#7b8593;font-size:12px;line-height:1.9}
+.wasla-notifications-empty a{color:#99713a;font-size:12px;font-weight:800;text-decoration:none}
+.wasla-settings-list{display:grid;gap:9px;margin-top:27px}
+.wasla-settings-row{display:flex;align-items:center;gap:14px;padding:17px;border:1px solid rgba(20,36,58,.08);border-radius:13px;background:#fff;color:#1b2c42;text-decoration:none}
+.wasla-settings-row>span{width:39px;height:39px;display:grid;place-items:center;border-radius:12px;background:#f4f0e7;color:#a17a3d;font-size:18px}
+.wasla-settings-row>div{flex:1}.wasla-settings-row strong,.wasla-settings-row small{display:block}.wasla-settings-row strong{font-size:12px}.wasla-settings-row small{margin-top:4px;color:#87909d;font-size:10px}
+.wasla-settings-row>b{color:#a17a3d}.wasla-settings-row button{padding:8px 13px;border:1px solid #e0d7c5;border-radius:9px;background:#faf8f2;color:#876532;font-weight:800;font-size:10px}
+.wasla-settings-note{margin-top:17px;padding:14px;border-radius:10px;background:#f8f5ee;color:#818a96;font-size:11px;line-height:1.8}
+@media(min-width:900px){.wasla-drawer{inset-inline-start:0}.wasla-drawer:not([dir=rtl]){transform:translateX(-105%)}.wasla-drawer[dir=rtl]{transform:translateX(105%)}.wasla-drawer.is-open{transform:translateX(0)}}
