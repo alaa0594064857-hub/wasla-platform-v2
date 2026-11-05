@@ -399,12 +399,11 @@ if (process.env.NODE_ENV !== "test") {
   const server = createWaslaServer();
 
   void import("./database.js")
-    .then(async ({ ensureRegistrationTypeColumn, ensureAccountOwnerRole, ensureStoreOwnerRole, ensurePersonalThemesTable, ensureStoreProductsTable, ensureNetworkTables }) => {
+    .then(async ({ ensureRegistrationTypeColumn, ensureAccountOwnerRole, ensureStoreOwnerRole, ensurePersonalThemesTable, ensureNetworkTables }) => {
       await ensureRegistrationTypeColumn();
       await ensureAccountOwnerRole();
       await ensureStoreOwnerRole();
       await ensurePersonalThemesTable();
-      await ensureStoreProductsTable();
       await ensureNetworkTables();
     })
     .then(() => {
