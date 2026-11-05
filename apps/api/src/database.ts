@@ -198,6 +198,12 @@ export async function ensureStoreProductsTable(): Promise<void> {
   }
 }
 
+/** Create private member relationships and business follows for WASLA Network. */
+export async function ensureNetworkTables(): Promise<void> {
+  const { ensureNetworkTables: createTables } = await import("./network.mjs");
+  await createTables();
+}
+
 export async function checkDatabaseConnection(): Promise<boolean> {
   const client = await getDatabasePool().connect();
 
