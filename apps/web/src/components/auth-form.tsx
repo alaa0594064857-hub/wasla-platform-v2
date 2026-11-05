@@ -124,7 +124,7 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
         }
       }
 
-      router.replace("/");
+      router.replace("/account");
       router.refresh();
     } catch {
       setError(isRegister ? t.registerError : t.loginError);
