@@ -1,6 +1,7 @@
 
 import type { Metadata } from "next";
 import "./globals.css";
+import "../styles/design-system.css";
 
 export const metadata: Metadata = {
   title: "WASLA | وصلة",
