@@ -181,6 +181,25 @@ async function handleRequest(
     return;
   }
 
+
+  if (requestUrl.pathname === "/api/stores") {
+    try {
+      const { handleStoresRequest } = await import("./stores.mjs");
+      await handleStoresRequest(request, response);
+    } catch (error) {
+      console.error("WASLA stores route error:", error);
+      if (!response.headersSent) {
+        sendJson(response, 500, {
+          success: false,
+          error: "Stores service error",
+        });
+      } else {
+        response.destroy(error instanceof Error ? error : undefined);
+      }
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/accounts") {
     try {
       const { handleAccountsRequest } = await import("./accounts.mjs");
