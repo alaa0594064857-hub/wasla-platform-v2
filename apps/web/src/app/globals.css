@@ -2103,3 +2103,44 @@ html[data-wasla-theme="light"] .wasla-workspace-nav a,html[data-wasla-theme="lig
 .wasla-chat-empty h2{margin:0;font-size:21px}
 .wasla-chat-empty small{margin-top:10px;color:#c7a96e;font-size:11px}
 @media(max-width:700px){.wasla-messages-shell{width:calc(100% - 24px);margin:26px auto 48px}.wasla-messages-workspace{grid-template-columns:1fr;min-height:0}.wasla-conversations-panel{border-inline-end:0;border-bottom:1px solid rgba(197,166,108,.16)}.wasla-conversations-empty{min-height:190px}.wasla-chat-panel{min-height:300px;padding:22px}.wasla-messages-heading p{max-width:270px}}
+
+/* WASLA profile workspace */
+.wasla-profile-page{min-height:100vh;background:radial-gradient(ellipse at 88% 8%,rgba(198,161,91,.12),transparent 30%),#f5f3ed;color:#14243a}
+.wasla-profile-wrap{width:min(1040px,calc(100% - 40px));margin:0 auto;padding:54px 0 90px}
+.wasla-profile-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:30px}
+.wasla-profile-heading>div>span{color:#a27c3f;font-size:11px;font-weight:800;letter-spacing:1.5px}
+.wasla-profile-heading h1{margin:10px 0;font-size:clamp(32px,5vw,48px);letter-spacing:-1px}
+.wasla-profile-heading p{margin:0;color:#748092;line-height:1.9;font-size:14px}
+.wasla-profile-heading>a{border:1px solid rgba(20,36,58,.15);border-radius:10px;padding:12px 17px;font-size:12px;font-weight:800;white-space:nowrap}
+.wasla-profile-form{display:grid;gap:18px}
+.wasla-profile-card{padding:28px;border:1px solid rgba(20,36,58,.1);border-radius:18px;background:rgba(255,255,255,.9);box-shadow:0 16px 45px rgba(20,36,58,.045)}
+.wasla-profile-section-title{display:flex;align-items:center;gap:15px;margin-bottom:24px}
+.wasla-profile-section-title>span{width:42px;height:42px;display:grid;place-items:center;border-radius:13px;background:#14243a;color:#dfc58f;font:700 15px Georgia,serif}
+.wasla-profile-section-title h2{margin:0 0 5px;font-size:18px}
+.wasla-profile-section-title p{margin:0;color:#8791a0;font-size:12px;line-height:1.7}
+.wasla-profile-photo-row{display:flex;align-items:center;gap:24px}
+.wasla-profile-photo-preview{width:116px;height:116px;flex:none;overflow:hidden;border:3px solid #dfc58f;border-radius:50%;display:grid;place-items:center;background:linear-gradient(145deg,#203b59,#102036);color:#f7f4ed;font-size:42px;font-weight:800}
+.wasla-profile-photo-preview img{width:100%;height:100%;object-fit:cover}
+.wasla-profile-photo-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.wasla-profile-upload,.wasla-profile-remove{display:inline-flex;align-items:center;justify-content:center;border-radius:10px;padding:13px 17px;font-size:12px;font-weight:800;cursor:pointer}
+.wasla-profile-upload{background:#14243a;color:#fff}
+.wasla-profile-upload input{display:none}
+.wasla-profile-remove{border:1px solid rgba(20,36,58,.15);background:white;color:#6c7480}
+.wasla-profile-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.wasla-profile-fields label{display:flex;flex-direction:column;gap:8px;color:#526073;font-size:12px;font-weight:800}
+.wasla-profile-fields input,.wasla-profile-fields textarea{width:100%;min-width:0;border:1px solid rgba(20,36,58,.14);border-radius:10px;padding:13px 14px;background:#fbfaf7;color:#14243a;font:inherit;font-size:13px;outline:none}
+.wasla-profile-fields input:focus,.wasla-profile-fields textarea:focus{border-color:#c6a15b;box-shadow:0 0 0 3px rgba(198,161,91,.12)}
+.wasla-profile-fields input:disabled{color:#8791a0;background:#f0efeb}
+.wasla-profile-fields textarea{resize:vertical;line-height:1.8}
+.wasla-profile-fields small{align-self:flex-end;color:#9aa2ad;font-weight:500}
+.wasla-profile-full{grid-column:1/-1}
+.wasla-profile-social-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.wasla-profile-error,.wasla-profile-success{margin:0;padding:13px 16px;border-radius:10px;font-size:13px}
+.wasla-profile-error{background:#fff0ed;color:#a13e31}
+.wasla-profile-success{background:#eaf6ee;color:#23633b}
+.wasla-profile-submit-row{display:flex;justify-content:flex-end}
+.wasla-profile-submit-row button{min-width:190px;border:0;border-radius:11px;padding:16px 20px;background:#14243a;color:#fff;font-size:13px;font-weight:800}
+.wasla-profile-submit-row button:disabled{opacity:.6;cursor:wait}
+.wasla-profile-submit-row button span{margin-inline-start:18px;color:#dfc58f}
+.wasla-profile-loading{padding:35px;border:1px solid rgba(20,36,58,.1);border-radius:15px;background:white;color:#738092;text-align:center}
+@media(max-width:650px){.wasla-profile-wrap{width:calc(100% - 28px);padding:34px 0 60px}.wasla-profile-heading{align-items:flex-start;flex-direction:column}.wasla-profile-heading>a{align-self:flex-start}.wasla-profile-card{padding:20px}.wasla-profile-photo-row{align-items:flex-start;flex-direction:column}.wasla-profile-fields,.wasla-profile-social-grid{grid-template-columns:1fr}.wasla-profile-full{grid-column:auto}.wasla-profile-submit-row button{width:100%}}
