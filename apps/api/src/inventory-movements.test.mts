@@ -201,4 +201,38 @@ describe("inventory movement transactions", () => {
     expect(statements).not.toContain("COMMIT");
     expect(mocks.release).toHaveBeenCalledOnce();
   });
+
+  it("rejects unauthenticated requests before opening a database transaction", async () => {
+    mocks.getSession.mockResolvedValue(null);
+    const response = makeResponse();
+
+    await handleInventoryMovementsRequest(
+      makeRequest({ movementType: "inbound", quantityDelta: 2, reason: "Restock" }),
+      response as unknown as ServerResponse,
+      "sample-shop",
+      productId,
+    );
+
+    expect(response.statusCode).toBe(401);
+    expect(JSON.parse(response.body)).toMatchObject({ success: false });
+    expect(mocks.connect).not.toHaveBeenCalled();
+    expect(mocks.clientQuery).not.toHaveBeenCalled();
+  });
+
+  it("rejects invalid movement quantities before opening a database transaction", async () => {
+    const response = makeResponse();
+
+    await handleInventoryMovementsRequest(
+      makeRequest({ movementType: "outbound", quantityDelta: 0, reason: "No change" }),
+      response as unknown as ServerResponse,
+      "sample-shop",
+      productId,
+    );
+
+    expect(response.statusCode).toBe(400);
+    expect(JSON.parse(response.body)).toMatchObject({ success: false });
+    expect(mocks.connect).not.toHaveBeenCalled();
+    expect(mocks.clientQuery).not.toHaveBeenCalled();
+  });
+
 });
