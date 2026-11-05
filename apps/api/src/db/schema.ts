@@ -392,9 +392,7 @@ export const storeMembers = pgTable(
   "store_members",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    storeId: uuid("store_id")
-      .notNull()
-      .references(() => stores.id, { onDelete: "cascade" }),
+    storeId: uuid("store_id").notNull(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -485,6 +483,11 @@ export const storeProducts = pgTable(
   },
   (table) => [
     uniqueIndex("store_products_store_sku_unique").on(table.storeId, table.sku),
+    foreignKey({
+      name: "store_products_store_id_fkey",
+      columns: [table.storeId],
+      foreignColumns: [stores.id],
+    }).onDelete("cascade"),
     index("store_products_store_status_created_idx").on(table.storeId, table.status, table.createdAt),
     check("store_products_price_check", sql`${table.price} >= 0`),
     check("store_products_stock_quantity_check", sql`${table.stockQuantity} >= 0`),
