@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "registration_type" varchar(32);
