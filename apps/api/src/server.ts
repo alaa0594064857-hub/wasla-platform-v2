@@ -278,7 +278,17 @@ if (process.env.NODE_ENV !== "test") {
   const port = Number(process.env.PORT ?? 4000);
   const server = createWaslaServer();
 
-  server.listen(port, "0.0.0.0", () => {
-    console.log(`WASLA API listening on port ${port}`);
-  });
+  void import("./database.js")
+    .then(({ ensureRegistrationTypeColumn }) =>
+      ensureRegistrationTypeColumn(),
+    )
+    .then(() => {
+      server.listen(port, "0.0.0.0", () => {
+        console.log(`WASLA API listening on port ${port}`);
+      });
+    })
+    .catch((error: unknown) => {
+      console.error("WASLA database schema initialization failed:", error);
+      process.exit(1);
+    });
 }
