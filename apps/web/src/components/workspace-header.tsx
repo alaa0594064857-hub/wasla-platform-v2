@@ -53,7 +53,13 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
     { href: "/settings", label: ar ? "الإعدادات والخصوصية" : "Settings & privacy", icon: "⚙" },
   ];
 
-  function submitSearch(event: FormEvent<HTMLFormElement>) {\n    event.preventDefault();\n    const query = searchText.trim();\n    if (query) router.push(`/search?q=${encodeURIComponent(query)}`);\n  }\n\n  async function logout() {
+  function submitSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const query = searchText.trim();
+    if (query) router.push(`/search?q=${encodeURIComponent(query)}`);
+  }
+
+  async function logout() {
     setSigningOut(true);
     try { await authClient.signOut(); window.location.assign("/login"); }
     catch { setSigningOut(false); }
