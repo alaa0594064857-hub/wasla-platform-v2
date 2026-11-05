@@ -3,6 +3,8 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { authClient } from "@/lib/auth-client";
+import { useLocale } from "../../components/locale-provider";
+import WorkspaceHeader from "../../components/workspace-header";
 
 type Profile = {
   userId: string;
@@ -14,7 +16,7 @@ type Profile = {
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 export default function ProfilePage() {
-  const [locale, setLocale] = useState<"ar" | "en">("ar");
+  const { locale } = useLocale();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [avatarReference, setAvatarReference] = useState("");
@@ -163,7 +165,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <main className="auth-page" dir={isArabic ? "rtl" : "ltr"}>
+    <><WorkspaceHeader section="account" /><main className="auth-page" dir={isArabic ? "rtl" : "ltr"}>
       <section className="auth-panel">
         <header className="auth-header">
           <a href="/" className="auth-brand">
@@ -171,15 +173,7 @@ export default function ProfilePage() {
             WASLA
           </a>
 
-          <button
-            type="button"
-            className="auth-language"
-            onClick={() =>
-              setLocale((current) => (current === "ar" ? "en" : "ar"))
-            }
-          >
-            {t.language}
-          </button>
+
         </header>
 
         <div className="auth-content">
@@ -320,6 +314,6 @@ export default function ProfilePage() {
           <small>GLOBAL BUSINESS PLATFORM</small>
         </div>
       </aside>
-    </main>
+    </main></>
   );
 }
