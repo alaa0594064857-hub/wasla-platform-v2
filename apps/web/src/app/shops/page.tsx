@@ -115,7 +115,7 @@ export default function ShopsPage() {
 
         <div className="shops-layout">
           <section className="shops-list-section">
-            <div className="shops-section-title"><div><span>01 / WASLA SHOPS</span><h2>{t.title}</h2></div><b>{stores.length}</b></div>
+            <div className="shops-section-title"><div><span>{locale === "ar" ? "01 / عالم المتاجر" : "01 / WASLA SHOPS"}</span><h2>{t.title}</h2></div><b>{stores.length}</b></div>
             {loading ? <div className="shops-empty">{t.loading}</div> : stores.length === 0 ? (
               <div className="shops-empty"><span className="shops-empty-mark">W</span><p>{t.empty}</p></div>
             ) : (
@@ -132,7 +132,7 @@ export default function ShopsPage() {
           </section>
 
           <aside className="shops-create-card">
-            <span className="shops-eyebrow">02 / CREATE</span><h2>{t.create}</h2>
+            <span className="shops-eyebrow">{locale === "ar" ? "02 / إنشاء متجر" : "02 / CREATE"}</span><h2>{t.create}</h2>
             <form onSubmit={createStore}>
               <label>{t.storeName}<input value={name} onChange={e => setName(e.target.value)} minLength={2} maxLength={120} required placeholder={locale === "ar" ? "مثال: متجر الأناقة" : "e.g. Elegance Store"} /></label>
               <label>{t.account}<select value={accountId} onChange={e => setAccountId(e.target.value)} required>
@@ -144,7 +144,7 @@ export default function ShopsPage() {
             </form>
           </aside>
         </div>
-        <footer className="shops-footer">WASLA · A global platform for commerce and business</footer>
+        <footer className="shops-footer">{locale === "ar" ? "وصلة · منصة عالمية للتجارة والأعمال" : "WASLA · A global platform for commerce and business"}</footer>
       </section>
     </main>
   );
