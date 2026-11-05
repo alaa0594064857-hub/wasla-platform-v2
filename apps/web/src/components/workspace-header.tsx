@@ -12,11 +12,17 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
   const { locale, setLocale } = useLocale();
   const pathname = usePathname();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const { data: session, isPending } = authClient.useSession();
   const ar = locale === "ar";
   const inAccountSpace = pathname === "/account" || pathname === "/profile";
   const accountHref = inAccountSpace ? "/" : "/account";
   const messagesHref = pathname === "/messages" ? "/" : "/messages";
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     if (!session?.user) { setProfile(null); return; }
@@ -30,23 +36,63 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
 
   const name = profile?.displayName || session?.user?.name || (ar ? "حسابي" : "My account");
   const avatar = profile?.avatarReference || session?.user?.image || "";
-  return <header className="wasla-workspace-header" data-section={section} dir={ar ? "rtl" : "ltr"}>
-    <Link href="/" className="wasla-workspace-brand"><span>W</span><strong>{ar ? "وصلة" : "WASLA"}</strong></Link>
-    <nav className="wasla-workspace-nav" aria-label={ar ? "التنقل الرئيسي" : "Main navigation"}>
-      <Link href={accountHref} aria-current={inAccountSpace ? "page" : undefined}>{isPending ? "..." : session?.user ? (inAccountSpace ? (ar ? "الرئيسية" : "Home") : (ar ? "حسابي" : "My account")) : (ar ? "تسجيل الدخول" : "Sign in")}</Link>
-      <Link href="/shops">{ar ? "المتاجر" : "Shops"}</Link>
-      <Link href="/business">{ar ? "الأعمال" : "Business"}</Link>
-      <Link href="/network" aria-current={pathname === "/network" ? "page" : undefined}>{ar ? "شبكتي" : "My network"}</Link>
-      <Link href={messagesHref} aria-label={ar ? (pathname === "/messages" ? "الرئيسية" : "الرسائل") : (pathname === "/messages" ? "Home" : "Messages")} aria-current={pathname === "/messages" ? "page" : undefined}>{pathname === "/messages" ? "⌂" : "✉"} <span>{pathname === "/messages" ? (ar ? "الرئيسية" : "Home") : (ar ? "الرسائل" : "Messages")}</span></Link>
-      <Link href="/account#notifications" aria-label={ar ? "الإشعارات" : "Notifications"}>♧ <span>{ar ? "الإشعارات" : "Notifications"}</span></Link>
-      <Link href="/brands">{ar ? "العلامات والشعارات" : "Brands & logos"}</Link>
-    </nav>
-    <div className="wasla-workspace-actions">
-      <button type="button" className="wasla-workspace-language" onClick={() => setLocale(ar ? "en" : "ar")}>{ar ? "English" : "العربية"}</button>
-      <Link href={pathname === "/profile" ? "/" : (session?.user ? "/profile" : "/login")} className="wasla-workspace-user" aria-label={ar ? "الملف الشخصي" : "Profile"}>
-        <span className="wasla-workspace-avatar">{avatar ? <img src={avatar} alt="" referrerPolicy="no-referrer"/> : (name.trim().charAt(0) || "W")}</span>
-        <span className="wasla-workspace-name">{name}</span>
-      </Link>
-    </div>
-  </header>;
+  const items = [
+    { href: "/", label: ar ? "الرئيسية واكتشاف العوالم" : "Home & discover worlds", icon: "⌂" },
+    { href: "/account", label: ar ? "حسابي وهويتي" : "My account & identity", icon: "◉" },
+    { href: "/profile", label: ar ? "ملفي الشخصي" : "My profile", icon: "◎" },
+    { href: "/shops", label: ar ? "متاجري" : "My shops", icon: "✳" },
+    { href: "/business", label: ar ? "شركتي وحسابات الأعمال" : "My company & business", icon: "▦" },
+    { href: "/network", label: ar ? "شبكتي وأصدقائي" : "My network & friends", icon: "♧" },
+    { href: "/messages", label: ar ? "الرسائل" : "Messages", icon: "✉" },
+    { href: "/notifications", label: ar ? "الإشعارات" : "Notifications", icon: "♢" },
+    { href: "/brands", label: ar ? "العلامات والشعارات" : "Brands & logos", icon: "✧" },
+    { href: "/settings", label: ar ? "الإعدادات والخصوصية" : "Settings & privacy", icon: "⚙" },
+  ];
+
+  async function logout() {
+    setSigningOut(true);
+    try { await authClient.signOut(); window.location.assign("/login"); }
+    catch { setSigningOut(false); }
+  }
+
+  return <>
+    <header className="wasla-workspace-header" data-section={section} dir={ar ? "rtl" : "ltr"}>
+      <button type="button" className="wasla-menu-trigger" aria-label={ar ? "فتح القائمة" : "Open menu"} aria-expanded={menuOpen} onClick={() => setMenuOpen(value => !value)}>
+        <span/><span/><span/>
+      </button>
+      <Link href="/" className="wasla-workspace-brand"><span>W</span><strong>{ar ? "وصلة" : "WASLA"}</strong></Link>
+      <nav className="wasla-workspace-nav" aria-label={ar ? "التنقل الرئيسي" : "Main navigation"}>
+        <Link href={accountHref} aria-current={inAccountSpace ? "page" : undefined}>{isPending ? "..." : session?.user ? (inAccountSpace ? (ar ? "الرئيسية" : "Home") : (ar ? "حسابي" : "My account")) : (ar ? "تسجيل الدخول" : "Sign in")}</Link>
+        <Link href="/shops">{ar ? "المتاجر" : "Shops"}</Link>
+        <Link href="/business">{ar ? "الأعمال" : "Business"}</Link>
+        <Link href="/network" aria-current={pathname === "/network" ? "page" : undefined}>{ar ? "شبكتي" : "My network"}</Link>
+        <Link href={messagesHref}>{pathname === "/messages" ? (ar ? "الرئيسية" : "Home") : (ar ? "الرسائل" : "Messages")}</Link>
+      </nav>
+      <div className="wasla-workspace-actions">
+        <button type="button" className="wasla-workspace-language" onClick={() => setLocale(ar ? "en" : "ar")}>{ar ? "English" : "العربية"}</button>
+        <Link href={pathname === "/profile" ? "/" : (session?.user ? "/profile" : "/login")} className="wasla-workspace-user" aria-label={ar ? "الملف الشخصي" : "Profile"}>
+          <span className="wasla-workspace-avatar">{avatar ? <img src={avatar} alt="" referrerPolicy="no-referrer"/> : (name.trim().charAt(0) || "W")}</span>
+          <span className="wasla-workspace-name">{name}</span>
+        </Link>
+      </div>
+    </header>
+    {menuOpen && <button className="wasla-menu-backdrop" aria-label={ar ? "إغلاق القائمة" : "Close menu"} onClick={() => setMenuOpen(false)} />}
+    <aside className={`wasla-drawer ${menuOpen ? "is-open" : ""}`} dir={ar ? "rtl" : "ltr"} aria-hidden={!menuOpen}>
+      <div className="wasla-drawer-head">
+        <div className="wasla-drawer-identity">
+          <span className="wasla-workspace-avatar">{avatar ? <img src={avatar} alt="" referrerPolicy="no-referrer"/> : (name.trim().charAt(0) || "W")}</span>
+          <div><strong>{name}</strong><small>{session?.user?.email || (ar ? "هوية وصلة الموحدة" : "WASLA unified identity")}</small></div>
+        </div>
+        <button type="button" onClick={() => setMenuOpen(false)} aria-label={ar ? "إغلاق" : "Close"}>×</button>
+      </div>
+      <div className="wasla-drawer-label">{ar ? "مساحتك في وصلة" : "YOUR WASLA SPACE"}</div>
+      <nav className="wasla-drawer-links">
+        {items.map(item => <Link href={item.href} key={item.href} aria-current={pathname === item.href ? "page" : undefined}><span>{item.icon}</span>{item.label}<b>↗</b></Link>)}
+      </nav>
+      <div className="wasla-drawer-bottom">
+        <button type="button" className="wasla-drawer-language" onClick={() => setLocale(ar ? "en" : "ar")}>{ar ? "🌐 Switch to English" : "🌐 التبديل إلى العربية"}</button>
+        {session?.user ? <button type="button" className="wasla-drawer-logout" disabled={signingOut} onClick={logout}>{signingOut ? (ar ? "جارٍ الخروج..." : "Signing out...") : (ar ? "تسجيل الخروج" : "Sign out")} <span>↗</span></button> : <Link className="wasla-drawer-logout" href="/login">{ar ? "تسجيل الدخول" : "Sign in"} <span>↗</span></Link>}
+      </div>
+    </aside>
+  </>;
 }
