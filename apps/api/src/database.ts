@@ -161,3 +161,18 @@ export async function closeDatabaseConnection(): Promise<void> {
     await currentPool.end();
   }
 }
+
+/** Ensure the store-owner role exists before store endpoints accept requests. */
+export async function ensureStoreOwnerRole(): Promise<void> {
+  const client = await getDatabasePool().connect();
+  try {
+    await client.query(
+      `INSERT INTO roles (name, scope_type, description, is_system_role)
+       VALUES ('store_owner', 'store', 'Owner of a member store', TRUE)
+       ON CONFLICT (scope_type, name)
+       DO UPDATE SET description = EXCLUDED.description, is_system_role = TRUE`,
+    );
+  } finally {
+    client.release();
+  }
+}
