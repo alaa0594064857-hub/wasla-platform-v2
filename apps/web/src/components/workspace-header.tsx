@@ -8,7 +8,7 @@ import { authClient } from "@/lib/auth-client";
 
 type Profile = { displayName?: string; avatarReference?: string | null; email?: string };
 
-export default function WorkspaceHeader({ section = "account" }: { section?: "account" | "shops" | "business" }) {
+export default function WorkspaceHeader({ section = "account" }: { section?: "account" | "shops" | "business" | "network" }) {
   const { locale, setLocale } = useLocale();
   const pathname = usePathname();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -36,6 +36,7 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
       <Link href={accountHref} aria-current={inAccountSpace ? "page" : undefined}>{isPending ? "..." : session?.user ? (inAccountSpace ? (ar ? "الرئيسية" : "Home") : (ar ? "حسابي" : "My account")) : (ar ? "تسجيل الدخول" : "Sign in")}</Link>
       <Link href="/shops">{ar ? "المتاجر" : "Shops"}</Link>
       <Link href="/business">{ar ? "الأعمال" : "Business"}</Link>
+      <Link href="/network" aria-current={pathname === "/network" ? "page" : undefined}>{ar ? "شبكتي" : "My network"}</Link>
       <Link href={messagesHref} aria-label={ar ? (pathname === "/messages" ? "الرئيسية" : "الرسائل") : (pathname === "/messages" ? "Home" : "Messages")} aria-current={pathname === "/messages" ? "page" : undefined}>{pathname === "/messages" ? "⌂" : "✉"} <span>{pathname === "/messages" ? (ar ? "الرئيسية" : "Home") : (ar ? "الرسائل" : "Messages")}</span></Link>
       <Link href="/account#notifications" aria-label={ar ? "الإشعارات" : "Notifications"}>♧ <span>{ar ? "الإشعارات" : "Notifications"}</span></Link>
       <Link href="/brands">{ar ? "العلامات والشعارات" : "Brands & logos"}</Link>
