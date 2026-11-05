@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-
-type Locale = "ar" | "en";
+import { useLocale } from "../../components/locale-provider";
+import WorkspaceHeader from "../../components/workspace-header";
 
 type Invitation = {
   membership_id: string;
@@ -120,7 +120,7 @@ async function apiRequest<T>(
 }
 
 export default function InvitationsPage() {
-  const [locale, setLocale] = useState<Locale>("ar");
+  const { locale } = useLocale();
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [pendingId, setPendingId] = useState("");
@@ -239,7 +239,8 @@ export default function InvitationsPage() {
       lang={locale}
       dir={direction}
     >
-      <header className="business-header">
+      <WorkspaceHeader section="business" />
+      <header className="business-header" style={{ display: "none" }}>
         <Link href="/" className="business-brand">
           <span className="business-logo">W</span>
           <span>{t.brand}</span>
@@ -254,17 +255,7 @@ export default function InvitationsPage() {
             {t.business}
           </Link>
 
-          <button
-            type="button"
-            className="business-language"
-            onClick={() =>
-              setLocale((current) =>
-                current === "ar" ? "en" : "ar",
-              )
-            }
-          >
-            {locale === "ar" ? "English" : "العربية"}
-          </button>
+
         </div>
       </header>
 
