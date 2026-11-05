@@ -1,8 +1,6 @@
-
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
-import { authClient } from "@/lib/auth-client";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { useLocale } from "../../components/locale-provider";
 import WorkspaceHeader from "../../components/workspace-header";
 
@@ -11,309 +9,163 @@ type Profile = {
   displayName: string;
   avatarReference: string | null;
   email: string;
+  bio: string;
+  website: string;
+  socialLinks: Record<string, string>;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
+const emptyLinks = { instagram: "", facebook: "", linkedin: "", x: "", youtube: "", tiktok: "" };
+const labels = {
+  ar: {
+    eyebrow: "WASLA ID · هويتك الرقمية", title: "ملفي الشخصي", subtitle: "أنشئ حضورك الشخصي على وصلة. معلوماتك وروابطك تظهر ضمن هويتك الموحدة.",
+    photo: "الصورة الشخصية", upload: "اختيار صورة من الهاتف", photoHint: "PNG أو JPG أو WEBP أو GIF — حتى 3 ميغابايت",
+    name: "الاسم الظاهر", email: "البريد الإلكتروني", bio: "نبذة عنك", bioHint: "اكتب نبذة قصيرة تعرّف الآخرين بك...", website: "موقعك الإلكتروني",
+    socials: "روابطك وحساباتك", save: "حفظ الملف الشخصي", saving: "جارٍ الحفظ...", loading: "جارٍ تحميل ملفك...", saved: "تم حفظ ملفك الشخصي.", error: "تعذر حفظ التغييرات. تحقق من البيانات وحاول مجدداً.",
+    home: "الرئيسية", remove: "إزالة الصورة", preview: "معاينة الصورة", invalid: "اختر صورة صالحة أصغر من 3 ميغابايت."
+  },
+  en: {
+    eyebrow: "WASLA ID · YOUR DIGITAL IDENTITY", title: "My profile", subtitle: "Build your personal presence on WASLA. Your details and links belong to your unified identity.",
+    photo: "Profile photo", upload: "Choose a photo from your device", photoHint: "PNG, JPG, WEBP or GIF — up to 3 MB",
+    name: "Display name", email: "Email address", bio: "About you", bioHint: "Write a short introduction...", website: "Your website",
+    socials: "Your links & social accounts", save: "Save profile", saving: "Saving...", loading: "Loading your profile...", saved: "Your profile has been saved.", error: "Could not save changes. Check the details and try again.",
+    home: "Home", remove: "Remove photo", preview: "Photo preview", invalid: "Choose a valid image smaller than 3 MB."
+  }
+};
 
 export default function ProfilePage() {
   const { locale } = useLocale();
+  const t = labels[locale];
+  const ar = locale === "ar";
   const [profile, setProfile] = useState<Profile | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [avatarReference, setAvatarReference] = useState("");
+  const [bio, setBio] = useState("");
+  const [website, setWebsite] = useState("");
+  const [socialLinks, setSocialLinks] = useState({ ...emptyLinks });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [loggingOut, setLoggingOut] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const isArabic = locale === "ar";
-
-  const t = {
-    language: isArabic ? "English" : "العربية",
-    eyebrow: isArabic ? "إعدادات الحساب" : "ACCOUNT SETTINGS",
-    title: isArabic ? "الملف الشخصي" : "My Profile",
-    description: isArabic
-      ? "اعرض معلوماتك الشخصية وحدّث بيانات ملفك الشخصي."
-      : "View your personal information and update your profile.",
-    email: isArabic ? "البريد الإلكتروني" : "Email address",
-    name: isArabic ? "الاسم المعروض" : "Display name",
-    avatar: isArabic ? "رابط الصورة المرجعية" : "Avatar reference URL",
-    avatarHint: isArabic
-      ? "أدخل رابط صورة متاحاً عبر الإنترنت."
-      : "Enter an image URL available online.",
-    save: isArabic ? "حفظ التغييرات" : "Save changes",
-    saving: isArabic ? "جارٍ الحفظ..." : "Saving...",
-    loading: isArabic ? "جارٍ تحميل الملف الشخصي..." : "Loading profile...",
-    home: isArabic ? "الرئيسية" : "Home",
-    business: isArabic ? "حسابات الأعمال" : "Business",
-    invitations: isArabic ? "الدعوات" : "Invitations",
-    required: isArabic
-      ? "يرجى إدخال اسم صحيح."
-      : "Please enter a valid name.",
-    loadError: isArabic
-      ? "تعذر تحميل الملف الشخصي. يرجى تسجيل الدخول والمحاولة مجدداً."
-      : "Could not load your profile. Please sign in and try again.",
-    saveError: isArabic
-      ? "تعذر حفظ التغييرات. حاول مرة أخرى."
-      : "Could not save changes. Please try again.",
-    saved: isArabic
-      ? "تم حفظ التغييرات بنجاح."
-      : "Your changes have been saved.",
-    signIn: isArabic ? "تسجيل الدخول" : "Sign in",
-    signOut: isArabic ? "تسجيل الخروج" : "Sign out",
-    signingOut: isArabic ? "جارٍ تسجيل الخروج..." : "Signing out...",
-    signOutError: isArabic
-      ? "تعذر تسجيل الخروج. يرجى المحاولة مرة أخرى."
-      : "Could not sign out. Please try again.",
-  };
-
-  async function profileRequest(
-    method: "GET" | "PATCH",
-    body?: {
-      displayName: string;
-      avatarReference: string | null;
-    },
-  ) {
-    const response = await fetch(`${API_BASE}/api/profile`, {
-      method,
-      credentials: "include",
-      headers:
-        method === "PATCH"
-          ? { "Content-Type": "application/json" }
-          : undefined,
-      body: body ? JSON.stringify(body) : undefined,
-      cache: "no-store",
-    });
-
-    const contentType = response.headers.get("content-type") ?? "";
-    const result = contentType.includes("application/json")
-      ? await response.json()
-      : {};
-
-    if (!response.ok || result.success === false) {
-      throw new Error(result.error || "Request failed");
-    }
-
-    return result;
-  }
-
   async function loadProfile() {
     setLoading(true);
-    setError("");
-
     try {
-      const result = await profileRequest("GET");
+      const response = await fetch("/api/profile", { credentials: "include", cache: "no-store" });
+      const result = await response.json();
+      if (!response.ok || !result.success || !result.profile) throw new Error("profile");
       const data = result.profile as Profile;
-
-      if (!data || typeof data.email !== "string") {
-        throw new Error("Invalid profile response");
-      }
-
       setProfile(data);
-      setDisplayName(data.displayName ?? "");
-      setAvatarReference(data.avatarReference ?? "");
+      setDisplayName(data.displayName || "");
+      setAvatarReference(data.avatarReference || "");
+      setBio(data.bio || "");
+      setWebsite(data.website || "");
+      setSocialLinks({ ...emptyLinks, ...(data.socialLinks || {}) });
+      setError("");
     } catch {
-      setError(t.loadError);
+      setError(t.error);
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => {
-    void loadProfile();
-  }, []);
+  useEffect(() => { void loadProfile(); }, []);
 
-  async function handleSave(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError("");
-    setSuccess("");
-
-    if (displayName.trim().length < 2 || displayName.trim().length > 160) {
-      setError(t.required);
+  async function choosePhoto(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/") || file.size > 3 * 1024 * 1024) {
+      setError(t.invalid);
+      event.target.value = "";
       return;
     }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setAvatarReference(reader.result);
+        setError("");
+      }
+    };
+    reader.onerror = () => setError(t.invalid);
+    reader.readAsDataURL(file);
+  }
 
-    setSaving(true);
-
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true); setError(""); setSuccess("");
     try {
-      await profileRequest("PATCH", {
-        displayName: displayName.trim(),
-        avatarReference: avatarReference.trim() || null,
+      const response = await fetch("/api/profile", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ displayName, avatarReference: avatarReference || null, bio, website, socialLinks })
       });
-
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error("save");
       await loadProfile();
       setSuccess(t.saved);
     } catch {
-      setError(t.saveError);
+      setError(t.error);
     } finally {
       setSaving(false);
     }
   }
 
-  async function handleSignOut() {
-    setError("");
-    setSuccess("");
-    setLoggingOut(true);
-
-    try {
-      await authClient.signOut();
-      window.location.assign("/login");
-    } catch {
-      setError(t.signOutError);
-      setLoggingOut(false);
-    }
+  function updateLink(key: keyof typeof emptyLinks, value: string) {
+    setSocialLinks(current => ({ ...current, [key]: value }));
   }
 
   return (
-    <><WorkspaceHeader section="account" /><main className="auth-page" dir={isArabic ? "rtl" : "ltr"}>
-      <section className="auth-panel">
-        <header className="auth-header">
-          <a href="/" className="auth-brand">
-            <span className="auth-brand-symbol">W</span>
-            WASLA
-          </a>
-
-
+    <main className="wasla-profile-page" lang={locale} dir={ar ? "rtl" : "ltr"}>
+      <WorkspaceHeader section="account" />
+      <div className="wasla-profile-wrap">
+        <header className="wasla-profile-heading">
+          <div><span>{t.eyebrow}</span><h1>{t.title}</h1><p>{t.subtitle}</p></div>
+          <a href="/account">{t.home} ↗</a>
         </header>
 
-        <div className="auth-content">
-          <span className="auth-eyebrow">{t.eyebrow}</span>
-          <h1>{t.title}</h1>
-          <p className="auth-description">{t.description}</p>
+        {loading ? <div className="wasla-profile-loading">{t.loading}</div> : (
+          <form className="wasla-profile-form" onSubmit={save}>
+            <section className="wasla-profile-card wasla-profile-photo-card">
+              <div className="wasla-profile-section-title"><span>01</span><div><h2>{t.photo}</h2><p>{t.photoHint}</p></div></div>
+              <div className="wasla-profile-photo-row">
+                <div className="wasla-profile-photo-preview">
+                  {avatarReference ? <img src={avatarReference} alt={t.preview} /> : <span>{(displayName.trim().charAt(0) || "W").toUpperCase()}</span>}
+                </div>
+                <div className="wasla-profile-photo-actions">
+                  <label className="wasla-profile-upload">{t.upload}<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={choosePhoto} /></label>
+                  {avatarReference && <button type="button" className="wasla-profile-remove" onClick={() => setAvatarReference("")}>{t.remove}</button>}
+                </div>
+              </div>
+            </section>
 
-          {loading ? (
-            <p className="business-loading">{t.loading}</p>
-          ) : error && !profile ? (
-            <>
-              <p className="auth-error">{error}</p>
-              <a href="/login" className="auth-home">
-                {t.signIn}
-              </a>
-            </>
-          ) : profile ? (
-            <>
-              <form className="auth-form" onSubmit={handleSave}>
-                <label className="auth-field">
-                  {t.email}
-                  <input
-                    type="email"
-                    value={profile.email}
-                    readOnly
-                    disabled
-                  />
-                </label>
+            <section className="wasla-profile-card">
+              <div className="wasla-profile-section-title"><span>02</span><div><h2>{ar ? "معلوماتك الأساسية" : "Basic information"}</h2><p>{ar ? "المعلومات التي تعرّف بك داخل منظومة وصلة." : "The details that identify you across WASLA."}</p></div></div>
+              <div className="wasla-profile-fields">
+                <label>{t.name}<input value={displayName} onChange={e => setDisplayName(e.target.value)} minLength={2} maxLength={160} required /></label>
+                <label>{t.email}<input value={profile?.email || ""} readOnly disabled /></label>
+                <label className="wasla-profile-full">{t.bio}<textarea value={bio} onChange={e => setBio(e.target.value)} maxLength={500} rows={4} placeholder={t.bioHint} /><small>{bio.length}/500</small></label>
+                <label className="wasla-profile-full">{t.website}<input type="url" value={website} onChange={e => setWebsite(e.target.value)} placeholder="https://example.com" /></label>
+              </div>
+            </section>
 
-                <label className="auth-field">
-                  {t.name}
-                  <input
-                    type="text"
-                    value={displayName}
-                    onChange={(event) => setDisplayName(event.target.value)}
-                    minLength={2}
-                    maxLength={160}
-                    required
-                  />
-                </label>
+            <section className="wasla-profile-card">
+              <div className="wasla-profile-section-title"><span>03</span><div><h2>{t.socials}</h2><p>{ar ? "أضف الروابط التي تريد أن يراها الآخرون في ملفك." : "Add the links you want people to find on your profile."}</p></div></div>
+              <div className="wasla-profile-fields wasla-profile-social-grid">
+                <label>Instagram<input type="url" value={socialLinks.instagram} onChange={e => updateLink("instagram", e.target.value)} placeholder="https://instagram.com/..." /></label>
+                <label>Facebook<input type="url" value={socialLinks.facebook} onChange={e => updateLink("facebook", e.target.value)} placeholder="https://facebook.com/..." /></label>
+                <label>LinkedIn<input type="url" value={socialLinks.linkedin} onChange={e => updateLink("linkedin", e.target.value)} placeholder="https://linkedin.com/in/..." /></label>
+                <label>X<input type="url" value={socialLinks.x} onChange={e => updateLink("x", e.target.value)} placeholder="https://x.com/..." /></label>
+                <label>YouTube<input type="url" value={socialLinks.youtube} onChange={e => updateLink("youtube", e.target.value)} placeholder="https://youtube.com/..." /></label>
+                <label>TikTok<input type="url" value={socialLinks.tiktok} onChange={e => updateLink("tiktok", e.target.value)} placeholder="https://tiktok.com/@..." /></label>
+              </div>
+            </section>
 
-                <label className="auth-field">
-                  {t.avatar}
-                  <input
-                    type="url"
-                    value={avatarReference}
-                    onChange={(event) =>
-                      setAvatarReference(event.target.value)
-                    }
-                    maxLength={2048}
-                    placeholder="https://example.com/image.jpg"
-                  />
-                  <span className="auth-hint">{t.avatarHint}</span>
-                </label>
-
-                {avatarReference.trim() && (
-                  <div style={{ textAlign: "center" }}>
-                    <img
-                      src={avatarReference}
-                      alt="Profile preview"
-                      referrerPolicy="no-referrer"
-                      style={{
-                        width: 100,
-                        height: 100,
-                        borderRadius: "50%",
-                        objectFit: "cover",
-                        border: "2px solid #c6a15b",
-                      }}
-                    />
-                  </div>
-                )}
-
-                {error && <p className="auth-error">{error}</p>}
-
-                {success && (
-                  <p className="business-alert business-alert-success">
-                    {success}
-                  </p>
-                )}
-
-                <button
-                  type="submit"
-                  className="auth-submit"
-                  disabled={saving || loggingOut}
-                >
-                  {saving ? t.saving : t.save}
-                  <span>→</span>
-                </button>
-              </form>
-
-              <button
-                type="button"
-                className="auth-submit"
-                onClick={handleSignOut}
-                disabled={loggingOut || saving}
-                style={{ marginTop: 14 }}
-              >
-                {loggingOut ? t.signingOut : t.signOut}
-              </button>
-
-              {error && <p className="auth-error">{error}</p>}
-            </>
-          ) : null}
-
-          <nav
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              justifyContent: "center",
-              gap: 18,
-              marginTop: 28,
-              fontSize: 12,
-            }}
-          >
-            <a href="/" className="auth-home">
-              {t.home}
-            </a>
-            <a href="/business" className="auth-home">
-              {t.business}
-            </a>
-            <a href="/invitations" className="auth-home">
-              {t.invitations}
-            </a>
-          </nav>
-        </div>
-
-        <footer className="auth-footer">
-          {locale === "ar" ? "وصلة — منصة عالمية للأعمال" : "WASLA — Global Business Platform"}
-        </footer>
-      </section>
-
-      <aside className="auth-aside">
-        <div className="auth-aside-orbit auth-aside-orbit-one" />
-        <div className="auth-aside-orbit auth-aside-orbit-two" />
-        <div className="auth-aside-center">
-          <span>W</span>
-          <strong>WASLA</strong>
-          <small>{locale === "ar" ? "منصة عالمية للأعمال" : "GLOBAL BUSINESS PLATFORM"}</small>
-        </div>
-      </aside>
-    </main></>
+            {error && <p className="wasla-profile-error" role="alert">{error}</p>}
+            {success && <p className="wasla-profile-success" role="status">{success}</p>}
+            <div className="wasla-profile-submit-row"><button type="submit" disabled={saving}>{saving ? t.saving : t.save} <span>↗</span></button></div>
+          </form>
+        )}
+      </div>
+    </main>
   );
 }
