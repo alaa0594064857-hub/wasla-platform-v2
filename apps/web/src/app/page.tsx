@@ -116,7 +116,9 @@ export default function HomePage() {
               href={
                 index === 0
                   ? "/"
-                  : index === 5
+                  : index === 1
+                    ? "/shops"
+                    : index === 5
                     ? "/invitations"
                     : index === 6
                       ? "/profile"
