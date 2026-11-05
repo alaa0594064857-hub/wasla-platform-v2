@@ -3,237 +3,224 @@
 import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
 
-const content = {
+type Locale = "ar" | "en";
+
+const worlds = [
+  {
+    number: "01",
+    name: "WASLA Store",
+    ar: "عالم التسوق",
+    en: "The shopping universe",
+    descriptionAr: "اكتشف منتجات وعلامات تجارية من أسواق متعددة حول العالم.",
+    descriptionEn: "Discover products and brands across markets around the world.",
+    category: "COMMERCE",
+    href: null,
+    statusAr: "قريبًا",
+    statusEn: "Coming soon",
+    theme: "store",
+    symbol: "S",
+  },
+  {
+    number: "02",
+    name: "WASLA Shops",
+    ar: "عالم المتاجر",
+    en: "The brand universe",
+    descriptionAr: "أنشئ متجرك، اعرض منتجاتك، وامتلك تجربة بيع تحمل هويتك.",
+    descriptionEn: "Build your storefront, showcase products and own your brand experience.",
+    category: "SELLER STUDIO",
+    href: "/shops",
+    statusAr: "متاح",
+    statusEn: "Available",
+    theme: "shops",
+    symbol: "✳",
+  },
+  {
+    number: "03",
+    name: "WASLA Business",
+    ar: "عالم الشركات",
+    en: "The enterprise universe",
+    descriptionAr: "ملفات الشركات والموردين والمصانع وشبكات الأعمال.",
+    descriptionEn: "Company profiles, suppliers, manufacturers and business networks.",
+    category: "ENTERPRISE",
+    href: "/business",
+    statusAr: "متاح",
+    statusEn: "Available",
+    theme: "business",
+    symbol: "B",
+  },
+  {
+    number: "04",
+    name: "WASLA Trade",
+    ar: "عالم الصفقات",
+    en: "The trade universe",
+    descriptionAr: "مساحة متخصصة للعروض والتفاوض وإدارة الصفقات التجارية.",
+    descriptionEn: "A dedicated space for offers, negotiation and commercial deals.",
+    category: "GLOBAL TRADE",
+    href: null,
+    statusAr: "قريبًا",
+    statusEn: "Coming soon",
+    theme: "trade",
+    symbol: "↗",
+  },
+  {
+    number: "05",
+    name: "WASLA Messages",
+    ar: "عالم التواصل",
+    en: "The communication universe",
+    descriptionAr: "محادثات الأعمال والملفات والتواصل بين أطراف التجارة.",
+    descriptionEn: "Business conversations, files and communication between trading partners.",
+    category: "CONNECT",
+    href: null,
+    statusAr: "قريبًا",
+    statusEn: "Coming soon",
+    theme: "messages",
+    symbol: "•••",
+  },
+  {
+    number: "06",
+    name: "WASLA AI",
+    ar: "عالم الذكاء",
+    en: "The intelligence universe",
+    descriptionAr: "مساعد ذكي لدعم القرارات وتبسيط العمليات التجارية.",
+    descriptionEn: "Intelligent assistance for better decisions and simpler operations.",
+    category: "INTELLIGENCE",
+    href: null,
+    statusAr: "قريبًا",
+    statusEn: "Coming soon",
+    theme: "ai",
+    symbol: "✧",
+  },
+];
+
+const copy = {
   ar: {
-    direction: "rtl" as const,
-    language: "EN",
-    nav: [
-      "الرئيسية",
-      "المتاجر",
-      "الأعمال",
-      "التجارة",
-      "عن وصلة",
-      "الدعوات",
-      "الملف الشخصي",
-    ],
+    language: "English",
+    eyebrow: "منظومة عالمية متعددة العوالم",
+    headline: "كل عالم له",
+    highlight: "قواعده الخاصة.",
+    intro: "بوابة واحدة تربط التجارة والتسوق والشركات والصفقات. اختر مساحة عملك، وانتقل إلى تجربة صُممت لمهمتك.",
+    identity: "هوية واحدة",
+    access: "دخول موحد",
+    connected: "أنظمة مترابطة",
+    worldsLabel: "استكشف عوالم WASLA",
+    worldsTitle: "ست تجارب. منظومة واحدة.",
+    worldsIntro: "كل عالم بهويته البصرية وأدواته ومساراته الخاصة، مع بقاء حسابك وبياناتك مترابطة.",
+    available: "متاح الآن",
+    soon: "قيد التطوير",
+    enter: "ادخل العالم",
+    account: "حسابي",
     signIn: "تسجيل الدخول",
-    myAccount: "حسابي",
-    eyebrow: "منصة واحدة. فرص بلا حدود.",
-    title: "العالم التجاري",
-    highlight: "أصبح أقرب.",
-    description:
-      "وصلة تجمع التجار والشركات والمصنّعين والموردين والمشترين في منصة عالمية واحدة، لتبني علاقات تجارية وتنمّي أعمالك بثقة.",
-    explore: "اكتشف المنصة",
-    join: "ابدأ رحلتك",
-    stats: [
-      ["01", "هوية موحدة"],
-      ["02", "تجارة عالمية"],
-      ["03", "أعمال مترابطة"],
-    ],
-    sectionLabel: "منظومة وصلة",
-    sectionTitle: "كل ما تحتاجه تجارتك، في مكان واحد.",
-    sectionDescription:
-      "من اكتشاف المنتجات إلى بناء الشراكات وإدارة عملياتك التجارية.",
-    modules: [
-      ["01", "WASLA Store", "اكتشف المنتجات وتسوق من المتاجر."],
-      ["02", "WASLA Shops", "أنشئ متجرك وأدر منتجاتك ومبيعاتك."],
-      ["03", "WASLA Business", "اعرض شركتك وابنِ شبكة أعمالك."],
-      ["04", "WASLA Trade", "اكتشف الفرص والصفقات التجارية."],
-      ["05", "WASLA Messages", "تواصل مباشرة مع شركائك وعملائك."],
-      ["06", "WASLA AI", "أدوات ذكية تساعدك على تطوير أعمالك."],
-    ],
-    bannerTitle: "فرصتك التجارية القادمة تبدأ من هنا.",
-    bannerText: "انضم إلى منظومة تربط التجارة والأعمال حول العالم.",
-    footer: "منصة عالمية للتجارة والأعمال.",
-    rights: "جميع الحقوق محفوظة.",
+    join: "انضم إلى WASLA",
+    footer: "منظومة عالمية للتجارة والأعمال.",
+    note: "يتم إطلاق العوالم تدريجيًا بعد اكتمال وظائفها واختبارها.",
   },
   en: {
-    direction: "ltr" as const,
-    language: "عربي",
-    nav: [
-      "Home",
-      "Stores",
-      "Business",
-      "Trade",
-      "About",
-      "Invitations",
-      "Profile",
-    ],
+    language: "العربية",
+    eyebrow: "A global multi-world ecosystem",
+    headline: "Every world has",
+    highlight: "its own rules.",
+    intro: "One gateway connecting commerce, shopping, companies and trade. Choose your workspace and enter an experience built for your mission.",
+    identity: "One identity",
+    access: "Unified access",
+    connected: "Connected systems",
+    worldsLabel: "EXPLORE WASLA WORLDS",
+    worldsTitle: "Six experiences. One ecosystem.",
+    worldsIntro: "Every world has its own visual identity, tools and journeys, while your account and data stay connected.",
+    available: "Available now",
+    soon: "In development",
+    enter: "Enter world",
+    account: "My account",
     signIn: "Sign in",
-    myAccount: "My account",
-    eyebrow: "One platform. Limitless possibilities.",
-    title: "Global commerce",
-    highlight: "closer than ever.",
-    description:
-      "WASLA brings businesses, manufacturers, suppliers, traders and buyers together in one global platform to build relationships and grow with confidence.",
-    explore: "Explore platform",
-    join: "Get started",
-    stats: [
-      ["01", "One identity"],
-      ["02", "Global commerce"],
-      ["03", "Connected business"],
-    ],
-    sectionLabel: "THE WASLA ECOSYSTEM",
-    sectionTitle: "Everything your business needs. All in one place.",
-    sectionDescription:
-      "From discovering products to building partnerships and managing commerce.",
-    modules: [
-      ["01", "WASLA Store", "Discover products and shop across stores."],
-      ["02", "WASLA Shops", "Create your store and manage products and sales."],
-      ["03", "WASLA Business", "Showcase your company and build your network."],
-      ["04", "WASLA Trade", "Discover opportunities and trade deals."],
-      ["05", "WASLA Messages", "Connect directly with customers and partners."],
-      ["06", "WASLA AI", "Intelligent tools to help grow your business."],
-    ],
-    bannerTitle: "Your next business opportunity starts here.",
-    bannerText: "Join an ecosystem connecting commerce around the world.",
-    footer: "A global platform for commerce and business.",
-    rights: "All rights reserved.",
+    join: "Join WASLA",
+    footer: "A global ecosystem for commerce and business.",
+    note: "Worlds are released progressively after their core features are complete and tested.",
   },
 };
 
 export default function HomePage() {
-  const [locale, setLocale] = useState<"ar" | "en">("ar");
+  const [locale, setLocale] = useState<Locale>("ar");
   const { data: session, isPending } = authClient.useSession();
-  const isSignedIn = Boolean(session?.user);
-  const t = content[locale];
+  const signedIn = Boolean(session?.user);
+  const t = copy[locale];
+  const direction = locale === "ar" ? "rtl" : "ltr";
 
   return (
-    <main className="wasla-page" lang={locale} dir={t.direction}>
-      <header className="site-header">
-        <a className="brand" href="/" aria-label="WASLA home">
-          <span className="brand-symbol">W</span>
-          <span className="brand-name">
-            WASLA
-            <small>وصلة</small>
-          </span>
+    <main className="worlds-page" lang={locale} dir={direction}>
+      <header className="worlds-header">
+        <a className="worlds-brand" href="/" aria-label="WASLA home">
+          <span className="worlds-brand-symbol">W</span>
+          <span className="worlds-brand-word">WASLA<small>GLOBAL ECOSYSTEM</small></span>
         </a>
-
-        <nav className="main-nav" aria-label="Main navigation">
-          {t.nav.map((item, index) => (
-            <a
-              key={item}
-              href={
-                index === 0
-                  ? "/"
-                  : index === 1
-                    ? "/shops"
-                    : index === 5
-                    ? "/invitations"
-                    : index === 6
-                      ? "/profile"
-                      : "#modules"
-              }
-            >
-              {item}
-            </a>
-          ))}
-        </nav>
-
-        <div className="header-actions">
-          <button
-            className="language-button"
-            onClick={() => setLocale(locale === "ar" ? "en" : "ar")}
-            type="button"
-          >
-            {t.language}
-          </button>
-          <a className="sign-in-button" href={isSignedIn ? "/profile" : "/login"}>
-            {isPending ? t.signIn : isSignedIn ? t.myAccount : t.signIn}
-          </a>
+        <div className="worlds-header-actions">
+          <button className="worlds-language" type="button" onClick={() => setLocale(locale === "ar" ? "en" : "ar")}>{t.language}</button>
+          <a className="worlds-account" href={signedIn ? "/profile" : "/login"}>{isPending ? t.signIn : signedIn ? t.account : t.signIn}</a>
         </div>
       </header>
 
-      <section className="hero-section">
-        <div className="hero-content">
-          <div className="eyebrow">
-            <span className="eyebrow-dot" />
-            {t.eyebrow}
-          </div>
-
-          <h1>
-            {t.title}
-            <br />
-            <span>{t.highlight}</span>
-          </h1>
-
-          <p className="hero-description">{t.description}</p>
-
-          <div className="hero-actions">
-            <a className="primary-button" href="#modules">
-              {t.explore}
-              <span aria-hidden="true">↗</span>
-            </a>
-            <a className="secondary-button" href="/register">
-              {t.join}
-            </a>
-          </div>
-
-          <div className="hero-stats">
-            {t.stats.map(([number, label]) => (
-              <div className="stat-item" key={number}>
-                <strong>{number}</strong>
-                <span>{label}</span>
-              </div>
-            ))}
+      <section className="worlds-hero">
+        <div className="worlds-hero-copy">
+          <div className="worlds-eyebrow"><span />{t.eyebrow}</div>
+          <h1>{t.headline}<br /><em>{t.highlight}</em></h1>
+          <p>{t.intro}</p>
+          <div className="worlds-proof">
+            <div><strong>01</strong><span>{t.identity}</span></div>
+            <div><strong>02</strong><span>{t.access}</span></div>
+            <div><strong>03</strong><span>{t.connected}</span></div>
           </div>
         </div>
-
-        <div className="hero-visual" aria-hidden="true">
-          <div className="visual-orbit orbit-one" />
-          <div className="visual-orbit orbit-two" />
-          <div className="visual-core">
-            <span>W</span>
-            <small>WASLA</small>
-          </div>
-          <div className="visual-node node-top">BUSINESS</div>
-          <div className="visual-node node-right">TRADE</div>
-          <div className="visual-node node-bottom">STORE</div>
-          <div className="visual-node node-left">GLOBAL</div>
-          <div className="visual-cross">✦</div>
+        <div className="worlds-orbit" aria-hidden="true">
+          <div className="worlds-orbit-ring ring-a" />
+          <div className="worlds-orbit-ring ring-b" />
+          <div className="worlds-orbit-ring ring-c" />
+          <div className="worlds-orbit-core"><b>W</b><span>WASLA</span></div>
+          <i className="orbit-point point-a" /><i className="orbit-point point-b" /><i className="orbit-point point-c" /><i className="orbit-point point-d" />
+          <span className="orbit-caption caption-a">COMMERCE</span>
+          <span className="orbit-caption caption-b">BUSINESS</span>
+          <span className="orbit-caption caption-c">GLOBAL</span>
         </div>
       </section>
 
-      <section className="modules-section" id="modules">
-        <div className="section-heading">
-          <span className="section-label">{t.sectionLabel}</span>
-          <h2>{t.sectionTitle}</h2>
-          <p>{t.sectionDescription}</p>
+      <section className="worlds-directory" id="worlds">
+        <div className="worlds-section-heading">
+          <div><span>{t.worldsLabel}</span><h2>{t.worldsTitle}</h2></div>
+          <p>{t.worldsIntro}</p>
         </div>
-
-        <div className="modules-grid">
-          {t.modules.map(([number, name, description]) => (
-            <article className="module-card" key={number}>
-              <div className="module-card-top">
-                <span className="module-number">{number}</span>
-                <span className="module-arrow">↗</span>
-              </div>
-              <h3>{name}</h3>
-              <p>{description}</p>
-              <div className="module-line" />
-            </article>
-          ))}
+        <div className="worlds-grid">
+          {worlds.map((world) => {
+            const title = locale === "ar" ? world.ar : world.en;
+            const description = locale === "ar" ? world.descriptionAr : world.descriptionEn;
+            const status = world.href ? t.available : t.soon;
+            return (
+              <article className={`world-card world-${world.theme} ${world.href ? "is-live" : "is-soon"}`} key={world.number}>
+                <div className="world-card-art" aria-hidden="true">
+                  <span className="world-card-number">{world.number}</span>
+                  <span className="world-card-symbol">{world.symbol}</span>
+                  <span className="world-art-orbit orbit-one" />
+                  <span className="world-art-orbit orbit-two" />
+                  <span className="world-art-orbit orbit-three" />
+                </div>
+                <div className="world-card-content">
+                  <div className="world-card-meta"><span>{world.category}</span><b>{status}</b></div>
+                  <h3>{world.name}</h3>
+                  <h4>{title}</h4>
+                  <p>{description}</p>
+                  {world.href ? (
+                    <a className="world-enter" href={world.href}>{t.enter}<span>↗</span></a>
+                  ) : (
+                    <span className="world-enter world-enter-disabled" aria-disabled="true">{status}<span>◌</span></span>
+                  )}
+                </div>
+              </article>
+            );
+          })}
         </div>
+        <p className="worlds-release-note">{t.note}</p>
       </section>
 
-      <section className="start-section" id="get-started">
-        <div>
-          <span className="section-label">WASLA</span>
-          <h2>{t.bannerTitle}</h2>
-          <p>{t.bannerText}</p>
-        </div>
-        <a className="primary-button" href="/register">
-          {t.join}
-          <span aria-hidden="true">↗</span>
-        </a>
-      </section>
-
-      <footer className="site-footer">
-        <a className="footer-brand" href="/">
-          WASLA <span>وصلة</span>
-        </a>
+      <footer className="worlds-footer">
+        <a className="worlds-footer-brand" href="/">WASLA<span>®</span></a>
         <p>{t.footer}</p>
-        <small>© 2026 WASLA. {t.rights}</small>
+        <a href="/register">{t.join} ↗</a>
       </footer>
     </main>
   );
