@@ -488,7 +488,7 @@ export const storeProducts = pgTable(
       columns: [table.storeId],
       foreignColumns: [stores.id],
     }).onDelete("cascade"),
-    index("store_products_store_status_created_idx").on(table.storeId, table.status, table.createdAt),
+    index("store_products_store_status_created_idx").on(table.storeId, table.status, table.createdAt.desc()),
     check("store_products_price_check", sql`${table.price} >= 0`),
     check("store_products_stock_quantity_check", sql`${table.stockQuantity} >= 0`),
     check("store_products_status_check", sql`${table.status} IN ('draft', 'active', 'archived')`),
