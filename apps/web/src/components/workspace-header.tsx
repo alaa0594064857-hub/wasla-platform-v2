@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useLocale } from "./locale-provider";
 import { authClient } from "@/lib/auth-client";
 
 type Profile = { displayName?: string; avatarReference?: string | null; email?: string };
 export default function WorkspaceHeader({ section = "account" }: { section?: "account" | "shops" | "business" }) {
   const { locale, setLocale } = useLocale();
+  const pathname = usePathname();
   const [profile, setProfile] = useState<Profile | null>(null);
   const { data: session, isPending } = authClient.useSession();
   const ar = locale === "ar";
@@ -20,15 +22,15 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
       .catch(() => undefined);
     return () => { active = false; };
   }, [session?.user?.id]);
-  const name = profile?.displayName || (ar ? "حسابي" : "My account");
-  const avatar = profile?.avatarReference || "";
+  const name = profile?.displayName || session?.user?.name || (ar ? "حسابي" : "My account");
+  const avatar = profile?.avatarReference || session?.user?.image || "";
   return <header className="wasla-workspace-header" data-section={section} dir={ar ? "rtl" : "ltr"}>
     <Link href="/" className="wasla-workspace-brand"><span>W</span><strong>{ar ? "وصلة" : "WASLA"}</strong></Link>
     <nav className="wasla-workspace-nav" aria-label={ar ? "التنقل الرئيسي" : "Main navigation"}>
-      <Link href={session?.user ? "/account" : "/login"}>{isPending ? (ar ? "..." : "...") : session?.user ? (ar ? "حسابي" : "My account") : (ar ? "تسجيل الدخول" : "Sign in")}</Link>
+      <Link href={session?.user ? (pathname === "/account" ? "/" : "/account") : "/login"}>{isPending ? (ar ? "..." : "...") : session?.user ? (pathname === "/account" ? (ar ? "الرئيسية" : "Home") : (ar ? "حسابي" : "My account")) : (ar ? "تسجيل الدخول" : "Sign in")}</Link>
       <Link href="/shops">{ar ? "المتاجر" : "Shops"}</Link>
       <Link href="/business">{ar ? "الأعمال" : "Business"}</Link>
-      <Link href="/account#messages" aria-label={ar ? "الرسائل" : "Messages"}>✉ <span>{ar ? "الرسائل" : "Messages"}</span></Link>
+      <Link href="/messages" aria-label={ar ? "الرسائل" : "Messages"}>✉ <span>{ar ? "الرسائل" : "Messages"}</span></Link>
       <Link href="/account#notifications" aria-label={ar ? "الإشعارات" : "Notifications"}>♧ <span>{ar ? "الإشعارات" : "Notifications"}</span></Link>
     </nav>
     <div className="wasla-workspace-actions">
