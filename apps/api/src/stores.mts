@@ -48,8 +48,15 @@ export async function handleStoresRequest(
   }
 
   try {
+    const cookieHeader = request.headers.cookie ?? "";
+    const cookieNames = cookieHeader.split(";").map((part) => part.trim().split("=")[0]).filter(Boolean);
     const session = await auth.api.getSession({
       headers: fromNodeHeaders(request.headers),
+    });
+    console.info("[WASLA auth diagnostic] stores request", {
+      hasCookieHeader: Boolean(cookieHeader),
+      cookieNames,
+      sessionFound: Boolean(session),
     });
     if (!session) {
       respond(response, 401, { success: false, error: "Authentication required" });
