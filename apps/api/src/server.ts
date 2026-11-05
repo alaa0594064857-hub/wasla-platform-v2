@@ -183,20 +183,23 @@ async function handleRequest(
 
 
 
-  const storeDetailMatch = requestUrl.pathname.match(/^\\/api\\/stores\\/([a-z0-9-]{1,180})$/i);
-  if (storeDetailMatch) {
-    try {
-      const { handleStoreDetailRequest } = await import("./stores.mjs");
-      await handleStoreDetailRequest(request, response, storeDetailMatch[1]);
-    } catch (error) {
-      console.error("WASLA store detail route error:", error);
-      if (!response.headersSent) {
-        sendJson(response, 500, { success: false, error: "Store service error" });
-      } else {
-        response.destroy(error instanceof Error ? error : undefined);
+  const storeDetailPrefix = "/api/stores/";
+  if (requestUrl.pathname.startsWith(storeDetailPrefix)) {
+    const storeSlug = requestUrl.pathname.slice(storeDetailPrefix.length);
+    if (storeSlug && !storeSlug.includes("/")) {
+      try {
+        const { handleStoreDetailRequest } = await import("./stores.mjs");
+        await handleStoreDetailRequest(request, response, storeSlug);
+      } catch (error) {
+        console.error("WASLA store detail route error:", error);
+        if (!response.headersSent) {
+          sendJson(response, 500, { success: false, error: "Store service error" });
+        } else {
+          response.destroy(error instanceof Error ? error : undefined);
+        }
       }
+      return;
     }
-    return;
   }
 
   if (requestUrl.pathname === "/api/stores") {
