@@ -214,6 +214,43 @@ export default function HomePage() {
         <p className="worlds-release-note">{t.note}</p>
       </section>
 
+      <section className="wasla-entry-paths" id="join">
+        <div className="wasla-entry-heading">
+          <span>{locale === "ar" ? "ابدأ من هنا" : "START HERE"}</span>
+          <h2>{locale === "ar" ? "وصلة تبدأ من احتياجك" : "WASLA starts with your ambition"}</h2>
+          <p>{locale === "ar" ? "اختر صفتك، وسنرشدك إلى المساحة المناسبة لك. حساب واحد يفتح لك أبواب المنظومة." : "Choose your role and find the right space. One identity opens the entire ecosystem."}</p>
+        </div>
+        <div className="wasla-entry-grid">
+          <article className="wasla-entry-card buyer">
+            <div className="wasla-entry-art"><span>01</span><b>◈</b><i>✦</i></div>
+            <div><small>{locale === "ar" ? "للمتسوقين والأفراد" : "FOR PEOPLE & SHOPPERS"}</small><h3>{locale === "ar" ? "أنا مشتري" : "I’m a buyer"}</h3><p>{locale === "ar" ? "اكتشف المنتجات والمتاجر، تابع علاماتك المفضلة، وابنِ شبكة علاقاتك." : "Discover products and shops, follow your favorite brands and grow your network."}</p><a href="/register">{locale === "ar" ? "أنشئ حسابك المجاني" : "Create a free account"} ↗</a></div>
+          </article>
+          <article className="wasla-entry-card seller">
+            <div className="wasla-entry-art"><span>02</span><b>✳</b><i>◌</i></div>
+            <div><small>{locale === "ar" ? "لأصحاب المتاجر والعلامات" : "FOR SELLERS & BRANDS"}</small><h3>{locale === "ar" ? "أريد إنشاء متجر" : "I want to open a shop"}</h3><p>{locale === "ar" ? "أنشئ حضور علامتك، اعرض منتجاتك، وابدأ الوصول إلى عملاء جدد." : "Build your brand presence, showcase products and reach new customers."}</p><a href="/register">{locale === "ar" ? "ابدأ كصاحب متجر" : "Join as a seller"} ↗</a></div>
+          </article>
+          <article className="wasla-entry-card company">
+            <div className="wasla-entry-art"><span>03</span><b>▦</b><i>✧</i></div>
+            <div><small>{locale === "ar" ? "للشركات والموردين والمصانع" : "FOR COMPANIES & SUPPLIERS"}</small><h3>{locale === "ar" ? "أمثل شركة أو موردًا" : "I represent a business"}</h3><p>{locale === "ar" ? "اعرض نشاطك، وسّع شبكة شركائك، واكتشف فرصًا تجارية جديدة." : "Showcase your business, expand partner relationships and discover opportunities."}</p><a href="/register">{locale === "ar" ? "انضم كحساب أعمال" : "Join as a business"} ↗</a></div>
+          </article>
+        </div>
+      </section>
+
+      <section className="wasla-memberships" id="memberships">
+        <div className="wasla-entry-heading">
+          <span>{locale === "ar" ? "عضوية تناسب طموحك" : "MEMBERSHIPS THAT GROW WITH YOU"}</span>
+          <h2>{locale === "ar" ? "ابدأ مجانًا. وتوسّع عندما تكون جاهزًا." : "Start free. Scale when you’re ready."}</h2>
+          <p>{locale === "ar" ? "خطط العضوية قيد التصميم. سنوضح المزايا والحدود قبل إطلاق أي اشتراك مدفوع." : "Membership plans are being designed. Features and limits will be clear before any paid plan launches."}</p>
+        </div>
+        <div className="wasla-plan-grid">
+          <article className="wasla-plan-card"><span className="wasla-plan-mark">01</span><small>FREE</small><h3>{locale === "ar" ? "الأساسية" : "Free"}</h3><p>{locale === "ar" ? "للتعرّف على وصلة والبدء بهوية موحدة." : "Explore WASLA and get started with one identity."}</p><b>{locale === "ar" ? "بداية مجانية" : "Free to start"}</b><a href="/register">{locale === "ar" ? "ابدأ الآن" : "Get started"} ↗</a></article>
+          <article className="wasla-plan-card featured"><span className="wasla-plan-mark">02</span><small>PLUS</small><h3>{locale === "ar" ? "بلس" : "Plus"}</h3><p>{locale === "ar" ? "للأفراد والمتاجر الصغيرة التي تريد أدوات أوسع." : "For individuals and growing shops that need more tools."}</p><b>{locale === "ar" ? "قريبًا · المزايا قيد التحديد" : "Coming soon · Features in design"}</b><span className="wasla-plan-disabled">{locale === "ar" ? "سيُعلن لاحقًا" : "Launching later"}</span></article>
+          <article className="wasla-plan-card"><span className="wasla-plan-mark">03</span><small>BUSINESS</small><h3>{locale === "ar" ? "الأعمال" : "Business"}</h3><p>{locale === "ar" ? "للشركات والفرق والشبكات التجارية." : "For companies, teams and business networks."}</p><b>{locale === "ar" ? "قريبًا · المزايا قيد التحديد" : "Coming soon · Features in design"}</b><span className="wasla-plan-disabled">{locale === "ar" ? "سيُعلن لاحقًا" : "Launching later"}</span></article>
+          <article className="wasla-plan-card"><span className="wasla-plan-mark">04</span><small>ENTERPRISE</small><h3>{locale === "ar" ? "المؤسسات" : "Enterprise"}</h3><p>{locale === "ar" ? "للمؤسسات الكبيرة والاحتياجات المتقدمة." : "For large organizations and advanced needs."}</p><b>{locale === "ar" ? "حسب الاحتياج" : "Tailored needs"}</b><span className="wasla-plan-disabled">{locale === "ar" ? "سيُعلن لاحقًا" : "Launching later"}</span></article>
+        </div>
+        <p className="wasla-membership-note">{locale === "ar" ? "لن تُفرض ترقية مدفوعة على الحساب الأساسي، وستظهر حدود كل باقة بوضوح قبل الاشتراك." : "The basic account won’t require a paid upgrade. Every plan limit will be clear before subscribing."}</p>
+      </section>
+
       <footer className="worlds-footer">
         <a className="worlds-footer-brand" href="/">{locale === "ar" ? "وصلة" : "WASLA"}<span>®</span></a>
         <p>{t.footer}</p>
