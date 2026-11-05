@@ -35,6 +35,7 @@ export default function WorldThemeProvider({ children }: { children: React.React
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [ready, setReady] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
   const isEnglish = typeof document !== "undefined" && document.documentElement.lang === "en";
   const activeTheme = saved[worldKey] ?? "default";
 
@@ -47,6 +48,7 @@ export default function WorldThemeProvider({ children }: { children: React.React
       })
       .then(data => {
         if (cancelled || !data?.success || !Array.isArray(data.themes)) return;
+        setAuthenticated(true);
         const next: Partial<Record<WorldKey, ThemeKey>> = {};
         for (const item of data.themes) {
           if (choices.some(choice => choice.key === item.themeKey)) next[item.worldKey] = item.themeKey;
@@ -92,7 +94,7 @@ export default function WorldThemeProvider({ children }: { children: React.React
   return (
     <>
       {children}
-      <div className="wasla-theme-control" dir="rtl">
+      {authenticated && <div className="wasla-theme-control" dir="rtl">
         <button
           type="button"
           className="wasla-theme-trigger"
@@ -129,7 +131,7 @@ export default function WorldThemeProvider({ children }: { children: React.React
             <small>{saving ? (isEnglish ? "Saving…" : "جارٍ الحفظ…") : (isEnglish ? "Saved to your account" : "يُحفظ في حسابك")}</small>
           </section>
         )}
-      </div>
+      </div>}
     </>
   );
 }
