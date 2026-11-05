@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
@@ -53,7 +53,7 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
     { href: "/settings", label: ar ? "الإعدادات والخصوصية" : "Settings & privacy", icon: "⚙" },
   ];
 
-  function submitSearch(event: React.FormEvent<HTMLFormElement>) {\n    event.preventDefault();\n    const query = searchText.trim();\n    if (query) router.push(`/search?q=${encodeURIComponent(query)}`);\n  }\n\n  async function logout() {
+  function submitSearch(event: FormEvent<HTMLFormElement>) {\n    event.preventDefault();\n    const query = searchText.trim();\n    if (query) router.push(`/search?q=${encodeURIComponent(query)}`);\n  }\n\n  async function logout() {
     setSigningOut(true);
     try { await authClient.signOut(); window.location.assign("/login"); }
     catch { setSigningOut(false); }
