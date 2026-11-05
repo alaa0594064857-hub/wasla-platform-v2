@@ -217,6 +217,12 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
               )}
             </label>
 
+            {!isRegister && (
+              <p className="auth-switch">
+                <Link href="/forgot-password">{locale === "ar" ? "نسيت كلمة المرور؟" : "Forgot password?"}</Link>
+              </p>
+            )}
+
             {error && (
               <p className="auth-error" role="alert">
                 {error}
