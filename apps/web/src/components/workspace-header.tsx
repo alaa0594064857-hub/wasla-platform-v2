@@ -7,12 +7,17 @@ import { useLocale } from "./locale-provider";
 import { authClient } from "@/lib/auth-client";
 
 type Profile = { displayName?: string; avatarReference?: string | null; email?: string };
+
 export default function WorkspaceHeader({ section = "account" }: { section?: "account" | "shops" | "business" }) {
   const { locale, setLocale } = useLocale();
   const pathname = usePathname();
   const [profile, setProfile] = useState<Profile | null>(null);
   const { data: session, isPending } = authClient.useSession();
   const ar = locale === "ar";
+  const inAccountSpace = pathname === "/account" || pathname === "/profile";
+  const accountHref = inAccountSpace ? "/" : "/account";
+  const messagesHref = pathname === "/messages" ? "/" : "/messages";
+
   useEffect(() => {
     if (!session?.user) { setProfile(null); return; }
     let active = true;
@@ -21,21 +26,23 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
       .then(data => { if (active && data?.success && data.profile) setProfile(data.profile as Profile); })
       .catch(() => undefined);
     return () => { active = false; };
-  }, [session?.user?.id]);
+  }, [session?.user?.id, pathname]);
+
   const name = profile?.displayName || session?.user?.name || (ar ? "حسابي" : "My account");
   const avatar = profile?.avatarReference || session?.user?.image || "";
   return <header className="wasla-workspace-header" data-section={section} dir={ar ? "rtl" : "ltr"}>
     <Link href="/" className="wasla-workspace-brand"><span>W</span><strong>{ar ? "وصلة" : "WASLA"}</strong></Link>
     <nav className="wasla-workspace-nav" aria-label={ar ? "التنقل الرئيسي" : "Main navigation"}>
-      <Link href={session?.user ? (pathname === "/account" ? "/" : "/account") : "/login"}>{isPending ? (ar ? "..." : "...") : session?.user ? (pathname === "/account" ? (ar ? "الرئيسية" : "Home") : (ar ? "حسابي" : "My account")) : (ar ? "تسجيل الدخول" : "Sign in")}</Link>
+      <Link href={accountHref} aria-current={inAccountSpace ? "page" : undefined}>{isPending ? "..." : session?.user ? (inAccountSpace ? (ar ? "الرئيسية" : "Home") : (ar ? "حسابي" : "My account")) : (ar ? "تسجيل الدخول" : "Sign in")}</Link>
       <Link href="/shops">{ar ? "المتاجر" : "Shops"}</Link>
       <Link href="/business">{ar ? "الأعمال" : "Business"}</Link>
-      <Link href="/messages" aria-label={ar ? "الرسائل" : "Messages"}>✉ <span>{ar ? "الرسائل" : "Messages"}</span></Link>
+      <Link href={messagesHref} aria-label={ar ? "الرسائل" : "Messages"} aria-current={pathname === "/messages" ? "page" : undefined}>✉ <span>{ar ? "الرسائل" : "Messages"}</span></Link>
       <Link href="/account#notifications" aria-label={ar ? "الإشعارات" : "Notifications"}>♧ <span>{ar ? "الإشعارات" : "Notifications"}</span></Link>
+      <Link href="/brands">{ar ? "العلامات والشعارات" : "Brands & logos"}</Link>
     </nav>
     <div className="wasla-workspace-actions">
       <button type="button" className="wasla-workspace-language" onClick={() => setLocale(ar ? "en" : "ar")}>{ar ? "English" : "العربية"}</button>
-      <Link href={session?.user ? "/profile" : "/login"} className="wasla-workspace-user" aria-label={ar ? "الملف الشخصي" : "Profile"}>
+      <Link href={pathname === "/profile" ? "/" : (session?.user ? "/profile" : "/login")} className="wasla-workspace-user" aria-label={ar ? "الملف الشخصي" : "Profile"}>
         <span className="wasla-workspace-avatar">{avatar ? <img src={avatar} alt="" referrerPolicy="no-referrer"/> : (name.trim().charAt(0) || "W")}</span>
         <span className="wasla-workspace-name">{name}</span>
       </Link>
