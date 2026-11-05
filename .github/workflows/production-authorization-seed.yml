@@ -1,0 +1,53 @@
+name: WASLA Production Authorization Seed
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type SEED_WASLA_AUTHORIZATION to confirm the one-time production seed'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  authorization-seed:
+    name: Seed production authorization roles and permissions
+    if: github.ref == 'refs/heads/main' && inputs.confirmation == 'SEED_WASLA_AUTHORIZATION'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout reviewed application source
+        uses: actions/checkout@v4
+        with:
+          ref: work/phase-1-foundation
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Verify production database secret is configured
+        env:
+          DATABASE_URL: ${{ secrets.WASLA_PRODUCTION_DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "Required GitHub Actions secret WASLA_PRODUCTION_DATABASE_URL is missing."
+            exit 1
+          fi
+
+      - name: Run authorization seed once
+        env:
+          DATABASE_URL: ${{ secrets.WASLA_PRODUCTION_DATABASE_URL }}
+          DATABASE_SSL: "true"
+        run: pnpm --filter @wasla/api db:seed
