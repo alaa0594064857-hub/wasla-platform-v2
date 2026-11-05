@@ -83,6 +83,18 @@ async function handleRequest(
     return;
   }
 
+  if (requestUrl.pathname === "/api/search") {
+    try {
+      const { handleSearchRequest } = await import("./search.mjs");
+      await handleSearchRequest(request, response);
+    } catch (error) {
+      console.error("WASLA search route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Search service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/network") {
     try {
       const { handleNetworkRequest } = await import("./network.mjs");
