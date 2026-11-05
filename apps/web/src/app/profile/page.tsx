@@ -301,7 +301,7 @@ export default function ProfilePage() {
         </div>
 
         <footer className="auth-footer">
-          WASLA — Global Business Platform
+          {locale === "ar" ? "وصلة — منصة عالمية للأعمال" : "WASLA — Global Business Platform"}
         </footer>
       </section>
 
@@ -311,7 +311,7 @@ export default function ProfilePage() {
         <div className="auth-aside-center">
           <span>W</span>
           <strong>WASLA</strong>
-          <small>GLOBAL BUSINESS PLATFORM</small>
+          <small>{locale === "ar" ? "منصة عالمية للأعمال" : "GLOBAL BUSINESS PLATFORM"}</small>
         </div>
       </aside>
     </main></>
