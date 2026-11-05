@@ -211,11 +211,9 @@ export async function handleStoreProductDetailRequest(
       }
       add("currency", body.currency.toUpperCase());
     }
-    if (body.stockQuantity !== undefined) {
-      if (!Number.isSafeInteger(body.stockQuantity) || (body.stockQuantity as number) < 0) {
-        respond(response, 400, { success: false, error: "Invalid stock quantity" }); return;
-      }
-      add("stock_quantity", body.stockQuantity);
+    if (Object.prototype.hasOwnProperty.call(body, "stockQuantity")) {
+      respond(response, 400, { success: false, error: "Use inventory movements to change stock quantity" });
+      return;
     }
     for (const [key, column] of [["imageUrl", "image_url"], ["videoUrl", "video_url"]] as const) {
       if (body[key] !== undefined) {
@@ -259,7 +257,7 @@ export async function handleStoreProductDetailRequest(
       }
       product = result.rows[0];
       const changedFields = Object.keys(body).filter((key) =>
-        ["title", "description", "sku", "price", "currency", "stockQuantity", "imageUrl", "videoUrl", "status"].includes(key),
+        ["title", "description", "sku", "price", "currency", "imageUrl", "videoUrl", "status"].includes(key),
       );
       await client.query(
         `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, account_id, store_id, metadata)
