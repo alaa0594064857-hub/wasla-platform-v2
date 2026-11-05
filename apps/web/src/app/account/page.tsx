@@ -109,7 +109,7 @@ export default function AccountHomePage() {
     </div>
     {loading && <p className="account-loading">{t.loading}</p>}
    </section>
-   <footer className="account-footer"><span>WASLA · ONE IDENTITY. GLOBAL OPPORTUNITIES.</span><button type="button" onClick={logout} disabled={signingOut}>{signingOut?t.signingOut:t.signOut}</button></footer>
+   <footer className="account-footer"><span>{locale === "ar" ? "وصلة · هوية واحدة وفرص عالمية" : "WASLA · ONE IDENTITY. GLOBAL OPPORTUNITIES."}</span><button type="button" onClick={logout} disabled={signingOut}>{signingOut?t.signingOut:t.signOut}</button></footer>
   </div>
  </main>;
 }
