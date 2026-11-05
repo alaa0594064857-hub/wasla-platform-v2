@@ -27,7 +27,7 @@ async function ensureProfileColumns(): Promise<void> {
   const db = getDatabasePool();
   await db.query('ALTER TABLE "profiles" ADD COLUMN IF NOT EXISTS "bio" text');
   await db.query('ALTER TABLE "profiles" ADD COLUMN IF NOT EXISTS "website" text');
-  await db.query('ALTER TABLE "profiles" ADD COLUMN IF NOT EXISTS "social_links" jsonb NOT NULL DEFAULT '{}'::jsonb');
+  await db.query(`ALTER TABLE "profiles" ADD COLUMN IF NOT EXISTS "social_links" jsonb NOT NULL DEFAULT '{}'::jsonb`);
 }
 
 function safeOptionalUrl(value: unknown, max = 2048): string | null | undefined {
