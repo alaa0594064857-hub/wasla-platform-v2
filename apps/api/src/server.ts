@@ -83,6 +83,18 @@ async function handleRequest(
     return;
   }
 
+  if (requestUrl.pathname === "/api/network") {
+    try {
+      const { handleNetworkRequest } = await import("./network.mjs");
+      await handleNetworkRequest(request, response);
+    } catch (error) {
+      console.error("WASLA network route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Network service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/profile") {
     try {
       const { handleProfileRequest } = await import("./profile.mjs");
@@ -375,12 +387,13 @@ if (process.env.NODE_ENV !== "test") {
   const server = createWaslaServer();
 
   void import("./database.js")
-    .then(async ({ ensureRegistrationTypeColumn, ensureAccountOwnerRole, ensureStoreOwnerRole, ensurePersonalThemesTable, ensureStoreProductsTable }) => {
+    .then(async ({ ensureRegistrationTypeColumn, ensureAccountOwnerRole, ensureStoreOwnerRole, ensurePersonalThemesTable, ensureStoreProductsTable, ensureNetworkTables }) => {
       await ensureRegistrationTypeColumn();
       await ensureAccountOwnerRole();
       await ensureStoreOwnerRole();
       await ensurePersonalThemesTable();
       await ensureStoreProductsTable();
+      await ensureNetworkTables();
     })
     .then(() => {
       server.listen(port, "0.0.0.0", () => {
