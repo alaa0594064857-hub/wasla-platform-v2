@@ -4,9 +4,9 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import { useLocale } from "./locale-provider";
 
 type AuthMode = "login" | "register";
-type Locale = "ar" | "en";
 type RegistrationType = "buyer" | "company" | "supplier" | "manufacturer" | "trader" | "brand";
 
 const labels = {
@@ -74,7 +74,7 @@ const labels = {
 
 export default function AuthForm({ mode }: { mode: AuthMode }) {
   const router = useRouter();
-  const [locale, setLocale] = useState<Locale>("ar");
+  const { locale, setLocale } = useLocale();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
