@@ -39,8 +39,16 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     ...options, credentials: "include",
     headers: { "Content-Type": "application/json", ...options?.headers },
   });
-  const data = await response.json();
-  if (!response.ok || data.success !== true) throw new Error(data.error || "Request failed");
+  let data: Record<string, unknown>;
+  try {
+    data = await response.json() as Record<string, unknown>;
+  } catch {
+    throw new Error(`${path}: server returned a non-JSON response (HTTP ${response.status})`);
+  }
+  if (!response.ok || data.success !== true) {
+    const detail = typeof data.error === "string" ? data.error : "Request failed";
+    throw new Error(`${path}: HTTP ${response.status} — ${detail}`);
+  }
   return data as T;
 }
 
@@ -68,8 +76,9 @@ export default function ShopsPage() {
       setStores(storeData.stores);
       setAccountId(current => current && accountData.accounts.some(a => a.id === current)
         ? current : accountData.accounts[0]?.id ?? "");
-    } catch { setError(t.error); }
-    finally { setLoading(false); }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t.error);
+    } finally { setLoading(false); }
   }, [t.error]);
 
   useEffect(() => { void load(); }, [load]);
@@ -81,8 +90,9 @@ export default function ShopsPage() {
         method: "POST", body: JSON.stringify({ accountId, name: name.trim() }),
       });
       setName(""); setMessage(t.success); await load();
-    } catch { setError(t.error); }
-    finally { setCreating(false); }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t.error);
+    } finally { setCreating(false); }
   }
 
   return (
