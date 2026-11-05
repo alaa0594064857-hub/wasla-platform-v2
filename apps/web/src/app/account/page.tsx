@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
+import { useLocale } from "../../components/locale-provider";
+import WorkspaceHeader from "../../components/workspace-header";
 
-type Locale = "ar" | "en";
 type Profile = { userId: string; displayName: string; avatarReference: string | null; email: string };
 type Store = { id: string; name: string; slug: string; status: string };
 type Account = { id: string; display_name: string; legal_name: string; role: string };
@@ -35,7 +36,7 @@ const words = {
 };
 
 export default function AccountHomePage() {
- const [locale,setLocale]=useState<Locale>("ar");
+ const { locale } = useLocale();
  const [profile,setProfile]=useState<Profile|null>(null);
  const [stores,setStores]=useState<Store[]>([]);
  const [accounts,setAccounts]=useState<Account[]>([]);
@@ -77,10 +78,11 @@ export default function AccountHomePage() {
  const initial=name.trim().charAt(0).toUpperCase() || "W";
 
  return <main className="account-home" lang={locale} dir={dir}>
-  <header className="account-topbar">
+  <WorkspaceHeader section="account" />
+  <header className="account-topbar" style={{ display: "none" }}>
    <Link href="/" className="account-brand"><span>W</span><strong>{t.brand}</strong></Link>
    <div className="account-top-actions">
-    <button type="button" onClick={()=>setLocale(locale==="ar"?"en":"ar")} className="account-language">{locale==="ar"?"English":"العربية"}</button>
+    
     <Link href="/">{t.publicHome}</Link>
    </div>
   </header>
@@ -96,8 +98,8 @@ export default function AccountHomePage() {
     <Link className="account-edit" href="/profile">{t.edit}<span>↗</span></Link>
    </section>
    <section className="account-notice-grid">
-    <article className="account-notice-card"><div className="account-notice-icon">✉</div><div><span className="account-eyebrow">01 / {t.messages}</span><h2>{t.messages}</h2><p>{t.messagesInfo}</p></div><b>{t.unavailable}</b></article>
-    <article className="account-notice-card"><div className="account-notice-icon">♧</div><div><span className="account-eyebrow">02 / {t.notifications}</span><h2>{t.notifications}</h2><p>{t.notificationsInfo}</p></div><b>{t.unavailable}</b></article>
+    <article id="messages" className="account-notice-card"><div className="account-notice-icon">✉</div><div><span className="account-eyebrow">01 / {t.messages}</span><h2>{t.messages}</h2><p>{t.messagesInfo}</p></div><b>{t.unavailable}</b></article>
+    <article id="notifications" className="account-notice-card"><div className="account-notice-icon">♧</div><div><span className="account-eyebrow">02 / {t.notifications}</span><h2>{t.notifications}</h2><p>{t.notificationsInfo}</p></div><b>{t.unavailable}</b></article>
    </section>
    <section className="account-worlds">
     <div className="account-section-heading"><div><span className="account-eyebrow">WASLA ID</span><h2>{t.worlds}</h2></div><span className="account-live-dot">●</span></div>
