@@ -199,7 +199,7 @@ async function handleRequest(
 
 
   const storeProductDetailMatch = requestUrl.pathname.match(
-    /^\\/api\\/stores\\/([^/]+)\\/products\\/([0-9a-f-]{36})$/,
+    /^\/api\/stores\/([^/]+)\/products\/([0-9a-f-]{36})$/,
   );
   if (storeProductDetailMatch) {
     try {
@@ -215,7 +215,7 @@ async function handleRequest(
     return;
   }
 
-  const storeProductsMatch = requestUrl.pathname.match(/^\\/api\\/stores\\/([^/]+)\\/products$/);
+  const storeProductsMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/products$/);
   if (storeProductsMatch) {
     try {
       const { handleStoreProductsRequest } = await import("./store-products.mjs");
