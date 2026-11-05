@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-
-type Locale = "ar" | "en";
+import { useLocale } from "../../components/locale-provider";
+import WorkspaceHeader from "../../components/workspace-header";
 
 type Account = {
   id: string;
@@ -144,7 +144,7 @@ async function apiRequest<T>(
 }
 
 export default function BusinessManagementPage() {
-  const [locale, setLocale] = useState<Locale>("ar");
+  const { locale } = useLocale();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [selectedAccount, setSelectedAccount] = useState("");
@@ -349,7 +349,8 @@ export default function BusinessManagementPage() {
       lang={locale}
       dir={direction}
     >
-      <header className="business-header">
+      <WorkspaceHeader section="business" />
+      <header className="business-header" style={{ display: "none" }}>
         <Link href="/" className="business-brand">
           <span className="business-logo">W</span>
           <span>{t.brand}</span>
@@ -360,17 +361,7 @@ export default function BusinessManagementPage() {
             {t.home}
           </Link>
 
-          <button
-            type="button"
-            className="business-language"
-            onClick={() =>
-              setLocale((current) =>
-                current === "ar" ? "en" : "ar",
-              )
-            }
-          >
-            {locale === "ar" ? "English" : "العربية"}
-          </button>
+
         </div>
       </header>
 
