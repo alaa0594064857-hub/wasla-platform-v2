@@ -167,3 +167,99 @@ export async function handleStoresRequest(
     respond(response, 500, { success: false, error: "Could not process store request" });
   }
 }
+
+export async function handleStoreDetailRequest(
+  request: IncomingMessage,
+  response: ServerResponse,
+  slug: string,
+): Promise<void> {
+  if (request.method !== "GET" && request.method !== "PATCH") {
+    respond(response, 405, { success: false, error: "Method not allowed" });
+    return;
+  }
+  try {
+    const session = await auth.api.getSession({
+      headers: fromNodeHeaders(request.headers),
+    });
+    if (!session) {
+      respond(response, 401, { success: false, error: "Authentication required" });
+      return;
+    }
+    const pool = getDatabasePool();
+    if (request.method === "GET") {
+      const result = await pool.query(
+        `SELECT s.id, s.account_id, s.name, s.slug, s.status, s.created_at,
+                a.display_name AS account_name, a.country_code,
+                bp.description AS business_description, bp.website,
+                r.name AS account_role, sr.name AS store_role
+         FROM stores s
+         INNER JOIN accounts a ON a.id = s.account_id
+         LEFT JOIN business_profiles bp ON bp.account_id = a.id
+         LEFT JOIN account_members am ON am.account_id = a.id
+           AND am.user_id = $2 AND am.status = 'active'
+         LEFT JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
+         LEFT JOIN store_members sm ON sm.store_id = s.id
+           AND sm.user_id = $2 AND sm.status = 'active'
+         LEFT JOIN roles sr ON sr.id = sm.role_id AND sr.scope_type = sm.role_scope
+         WHERE s.slug = $1 AND s.status <> 'deactivated'
+           AND (r.name IN ('account_owner', 'account_manager') OR sm.id IS NOT NULL)
+         LIMIT 1`,
+        [slug, session.user.id],
+      );
+      if (result.rowCount !== 1) {
+        respond(response, 404, { success: false, error: "Store not found" });
+        return;
+      }
+      respond(response, 200, { success: true, store: result.rows[0] });
+      return;
+    }
+
+    let body: unknown;
+    try { body = await readBody(request); }
+    catch {
+      respond(response, 400, { success: false, error: "Invalid request body" });
+      return;
+    }
+    if (!isObject(body) || typeof body.name !== "string" ||
+        body.name.trim().length < 2 || body.name.trim().length > 120) {
+      respond(response, 400, { success: false, error: "Store name must be between 2 and 120 characters" });
+      return;
+    }
+    const updated = await pool.query(
+      `UPDATE stores s
+       SET name = $1, updated_at = NOW()
+       WHERE s.slug = $2 AND s.status = 'active'
+         AND (
+           EXISTS (
+             SELECT 1 FROM account_members am
+             INNER JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
+             WHERE am.account_id = s.account_id AND am.user_id = $3
+               AND am.status = 'active'
+               AND r.name IN ('account_owner', 'account_manager')
+           )
+           OR EXISTS (
+             SELECT 1 FROM store_members sm
+             INNER JOIN roles sr ON sr.id = sm.role_id AND sr.scope_type = sm.role_scope
+             WHERE sm.store_id = s.id AND sm.user_id = $3
+               AND sm.status = 'active' AND sr.name = 'store_owner'
+           )
+         )
+       RETURNING id, account_id, name, slug, status, created_at, updated_at`,
+      [body.name.trim(), slug, session.user.id],
+    );
+    if (updated.rowCount !== 1) {
+      respond(response, 403, { success: false, error: "You cannot manage this store" });
+      return;
+    }
+    await pool.query(
+      `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, account_id, store_id, metadata)
+       VALUES ($1, 'store.updated', 'store', $2, $3, $2, $4)`,
+      [session.user.id, updated.rows[0].id, updated.rows[0].account_id,
+       JSON.stringify({ name: updated.rows[0].name })],
+    );
+    respond(response, 200, { success: true, store: updated.rows[0] });
+  } catch (error) {
+    console.error("WASLA store detail API error:", error);
+    respond(response, 500, { success: false, error: "Could not process store request" });
+  }
+}
