@@ -1,6 +1,8 @@
+
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { authClient } from "@/lib/auth-client";
 
 type Profile = {
   userId: string;
@@ -18,13 +20,13 @@ export default function ProfilePage() {
   const [avatarReference, setAvatarReference] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   const isArabic = locale === "ar";
 
   const t = {
-    brand: "WASLA",
     language: isArabic ? "English" : "العربية",
     eyebrow: isArabic ? "إعدادات الحساب" : "ACCOUNT SETTINGS",
     title: isArabic ? "الملف الشخصي" : "My Profile",
@@ -56,6 +58,11 @@ export default function ProfilePage() {
       ? "تم حفظ التغييرات بنجاح."
       : "Your changes have been saved.",
     signIn: isArabic ? "تسجيل الدخول" : "Sign in",
+    signOut: isArabic ? "تسجيل الخروج" : "Sign out",
+    signingOut: isArabic ? "جارٍ تسجيل الخروج..." : "Signing out...",
+    signOutError: isArabic
+      ? "تعذر تسجيل الخروج. يرجى المحاولة مرة أخرى."
+      : "Could not sign out. Please try again.",
   };
 
   async function profileRequest(
@@ -141,6 +148,20 @@ export default function ProfilePage() {
     }
   }
 
+  async function handleSignOut() {
+    setError("");
+    setSuccess("");
+    setLoggingOut(true);
+
+    try {
+      await authClient.signOut();
+      window.location.assign("/login");
+    } catch {
+      setError(t.signOutError);
+      setLoggingOut(false);
+    }
+  }
+
   return (
     <main className="auth-page" dir={isArabic ? "rtl" : "ltr"}>
       <section className="auth-panel">
@@ -176,77 +197,91 @@ export default function ProfilePage() {
               </a>
             </>
           ) : profile ? (
-            <form className="auth-form" onSubmit={handleSave}>
-              <label className="auth-field">
-                {t.email}
-                <input
-                  type="email"
-                  value={profile.email}
-                  readOnly
-                  disabled
-                />
-              </label>
-
-              <label className="auth-field">
-                {t.name}
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={(event) => setDisplayName(event.target.value)}
-                  minLength={2}
-                  maxLength={160}
-                  required
-                />
-              </label>
-
-              <label className="auth-field">
-                {t.avatar}
-                <input
-                  type="url"
-                  value={avatarReference}
-                  onChange={(event) =>
-                    setAvatarReference(event.target.value)
-                  }
-                  maxLength={2048}
-                  placeholder="https://example.com/image.jpg"
-                />
-                <span className="auth-hint">{t.avatarHint}</span>
-              </label>
-
-              {avatarReference.trim() && (
-                <div style={{ textAlign: "center" }}>
-                  <img
-                    src={avatarReference}
-                    alt="Profile preview"
-                    referrerPolicy="no-referrer"
-                    style={{
-                      width: 100,
-                      height: 100,
-                      borderRadius: "50%",
-                      objectFit: "cover",
-                      border: "2px solid #c6a15b",
-                    }}
+            <>
+              <form className="auth-form" onSubmit={handleSave}>
+                <label className="auth-field">
+                  {t.email}
+                  <input
+                    type="email"
+                    value={profile.email}
+                    readOnly
+                    disabled
                   />
-                </div>
-              )}
+                </label>
 
-              {error && <p className="auth-error">{error}</p>}
+                <label className="auth-field">
+                  {t.name}
+                  <input
+                    type="text"
+                    value={displayName}
+                    onChange={(event) => setDisplayName(event.target.value)}
+                    minLength={2}
+                    maxLength={160}
+                    required
+                  />
+                </label>
 
-              {success && (
-                <p className="business-alert business-alert-success">
-                  {success}
-                </p>
-              )}
+                <label className="auth-field">
+                  {t.avatar}
+                  <input
+                    type="url"
+                    value={avatarReference}
+                    onChange={(event) =>
+                      setAvatarReference(event.target.value)
+                    }
+                    maxLength={2048}
+                    placeholder="https://example.com/image.jpg"
+                  />
+                  <span className="auth-hint">{t.avatarHint}</span>
+                </label>
+
+                {avatarReference.trim() && (
+                  <div style={{ textAlign: "center" }}>
+                    <img
+                      src={avatarReference}
+                      alt="Profile preview"
+                      referrerPolicy="no-referrer"
+                      style={{
+                        width: 100,
+                        height: 100,
+                        borderRadius: "50%",
+                        objectFit: "cover",
+                        border: "2px solid #c6a15b",
+                      }}
+                    />
+                  </div>
+                )}
+
+                {error && <p className="auth-error">{error}</p>}
+
+                {success && (
+                  <p className="business-alert business-alert-success">
+                    {success}
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  className="auth-submit"
+                  disabled={saving || loggingOut}
+                >
+                  {saving ? t.saving : t.save}
+                  <span>→</span>
+                </button>
+              </form>
 
               <button
-                type="submit"
+                type="button"
                 className="auth-submit"
-                disabled={saving}
+                onClick={handleSignOut}
+                disabled={loggingOut || saving}
+                style={{ marginTop: 14 }}
               >
-                {saving ? t.saving : t.save}
-                <span>→</span>
+                {loggingOut ? t.signingOut : t.signOut}
               </button>
-            </form>
+
+              {error && <p className="auth-error">{error}</p>}
+            </>
           ) : null}
 
           <nav
