@@ -59,6 +59,76 @@ export async function ensureRegistrationTypeColumn(): Promise<void> {
   }
 }
 
+/**
+ * Bootstrap the minimum account-owner authorization records required
+ * by business-account creation and account listing.
+ * Every statement is idempotent so it is safe on every service start.
+ */
+export async function ensureAccountOwnerRole(): Promise<void> {
+  const client = await getDatabasePool().connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const roleResult = await client.query<{ id: string }>(
+      `INSERT INTO roles (
+         name,
+         scope_type,
+         description,
+         is_system_role
+       )
+       VALUES (
+         'account_owner',
+         'account',
+         'Owner of a business account',
+         TRUE
+       )
+       ON CONFLICT (scope_type, name)
+       DO UPDATE SET
+         description = EXCLUDED.description,
+         is_system_role = TRUE
+       RETURNING id`,
+    );
+
+    const permissionResult = await client.query<{ id: string }>(
+      `INSERT INTO permissions (
+         permission_key,
+         description,
+         scope_type
+       )
+       VALUES (
+         'account.read',
+         'View business account details',
+         'account'
+       )
+       ON CONFLICT (permission_key)
+       DO UPDATE SET
+         description = EXCLUDED.description,
+         scope_type = EXCLUDED.scope_type
+       RETURNING id`,
+    );
+
+    await client.query(
+      `INSERT INTO role_permissions (
+         role_id,
+         permission_id,
+         scope_type
+       )
+       VALUES ($1, $2, 'account')
+       ON CONFLICT (role_id, permission_id)
+       DO UPDATE SET scope_type = EXCLUDED.scope_type`,
+      [roleResult.rows[0].id, permissionResult.rows[0].id],
+    );
+
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 export async function checkDatabaseConnection(): Promise<boolean> {
   const client = await getDatabasePool().connect();
 
