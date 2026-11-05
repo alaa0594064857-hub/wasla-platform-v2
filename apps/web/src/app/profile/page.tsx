@@ -123,6 +123,18 @@ export default function ProfilePage() {
           <a href="/account">{t.home} ↗</a>
         </header>
 
+        {!loading && <section className="wasla-profile-public-preview">
+          <div className="wasla-profile-public-avatar">{avatarReference ? <img src={avatarReference} alt={t.preview} /> : <span>{(displayName.trim().charAt(0) || "W").toUpperCase()}</span>}</div>
+          <div className="wasla-profile-public-copy">
+            <span>{ar ? "معاينة هويتك" : "PROFILE PREVIEW"}</span>
+            <h2>{displayName || (ar ? "اسمك سيظهر هنا" : "Your name will appear here")}</h2>
+            {bio && <p>{bio}</p>}
+            {website && <a href={website} target="_blank" rel="noreferrer">{website}</a>}
+            <div className="wasla-profile-public-links">
+              {Object.entries(socialLinks).filter(([, value]) => Boolean(value)).map(([key, value]) => <a key={key} href={value} target="_blank" rel="noreferrer">{key === "x" ? "X" : key[0].toUpperCase() + key.slice(1)} ↗</a>)}
+            </div>
+          </div>
+        </section>}
         {loading ? <div className="wasla-profile-loading">{t.loading}</div> : (
           <form className="wasla-profile-form" onSubmit={save}>
             <section className="wasla-profile-card wasla-profile-photo-card">
