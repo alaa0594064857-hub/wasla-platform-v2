@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { authClient } from "@/lib/auth-client";
 
 const content = {
   ar: {
@@ -16,6 +17,7 @@ const content = {
       "الملف الشخصي",
     ],
     signIn: "تسجيل الدخول",
+    myAccount: "حسابي",
     eyebrow: "منصة واحدة. فرص بلا حدود.",
     title: "العالم التجاري",
     highlight: "أصبح أقرب.",
@@ -58,6 +60,7 @@ const content = {
       "Profile",
     ],
     signIn: "Sign in",
+    myAccount: "My account",
     eyebrow: "One platform. Limitless possibilities.",
     title: "Global commerce",
     highlight: "closer than ever.",
@@ -91,6 +94,8 @@ const content = {
 
 export default function HomePage() {
   const [locale, setLocale] = useState<"ar" | "en">("ar");
+  const { data: session, isPending } = authClient.useSession();
+  const isSignedIn = Boolean(session?.user);
   const t = content[locale];
 
   return (
@@ -131,8 +136,8 @@ export default function HomePage() {
           >
             {t.language}
           </button>
-          <a className="sign-in-button" href="/login">
-            {t.signIn}
+          <a className="sign-in-button" href={isSignedIn ? "/profile" : "/login"}>
+            {isPending ? t.signIn : isSignedIn ? t.myAccount : t.signIn}
           </a>
         </div>
       </header>
