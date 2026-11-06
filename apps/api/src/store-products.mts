@@ -83,7 +83,7 @@ export async function handleStoreProductsRequest(
       const result = await pool.query(
         `SELECT id, store_id AS "storeId", title, description, sku,
                 price::text AS price, currency, stock_quantity AS "stockQuantity",
-                image_url AS "imageUrl", video_url AS "videoUrl", status,
+                image_url AS "imageUrl", video_url AS "videoUrl", seller_checkout_url AS "sellerCheckoutUrl", status,
                 created_at AS "createdAt", updated_at AS "updatedAt"
          FROM store_products WHERE store_id = $1
          ORDER BY created_at DESC`,
@@ -114,20 +114,20 @@ export async function handleStoreProductsRequest(
         sku.length > 80 || !/^\d{1,10}(\.\d{1,2})?$/.test(price) ||
         !/^[A-Z]{3}$/.test(currency) || !Number.isSafeInteger(stock) ||
         (stock as number) < 0 || !statuses.has(status as ProductStatus) ||
-        !validOptionalUrl(body.imageUrl) || !validOptionalUrl(body.videoUrl)) {
+        !validOptionalUrl(body.imageUrl) || !validOptionalUrl(body.videoUrl) || !validOptionalUrl(body.sellerCheckoutUrl)) {
       respond(response, 400, { success: false, error: "Check product name, price, currency, stock, status, and secure media URLs" });
       return;
     }
     const result = await pool.query(
       `INSERT INTO store_products
-        (store_id, title, description, sku, price, currency, stock_quantity, image_url, video_url, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+        (store_id, title, description, sku, price, currency, stock_quantity, image_url, video_url, seller_checkout_url, status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
        RETURNING id, store_id AS "storeId", title, description, sku,
          price::text AS price, currency, stock_quantity AS "stockQuantity",
-         image_url AS "imageUrl", video_url AS "videoUrl", status,
+         image_url AS "imageUrl", video_url AS "videoUrl", seller_checkout_url AS "sellerCheckoutUrl", status,
          created_at AS "createdAt", updated_at AS "updatedAt"`,
       [store.id, title, description || null, sku || null, price, currency,
-       stock, body.imageUrl || null, body.videoUrl || null, status],
+       stock, body.imageUrl || null, body.videoUrl || null, body.sellerCheckoutUrl || null, status],
     );
     await pool.query(
       `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, account_id, store_id, metadata)
@@ -205,7 +205,7 @@ export async function handleStoreProductDetailRequest(
       }
       add("stock_quantity", body.stockQuantity);
     }
-    for (const [key, column] of [["imageUrl", "image_url"], ["videoUrl", "video_url"]] as const) {
+    for (const [key, column] of [["imageUrl", "image_url"], ["videoUrl", "video_url"], ["sellerCheckoutUrl", "seller_checkout_url"]] as const) {
       if (body[key] !== undefined) {
         if (!validOptionalUrl(body[key])) {
           respond(response, 400, { success: false, error: "Media must use a secure HTTPS URL" }); return;
@@ -231,7 +231,7 @@ export async function handleStoreProductDetailRequest(
          AND s.status = 'active' AND ${canManageSql()}
        RETURNING p.id, p.store_id AS "storeId", p.title, p.description, p.sku,
          p.price::text AS price, p.currency, p.stock_quantity AS "stockQuantity",
-         p.image_url AS "imageUrl", p.video_url AS "videoUrl", p.status,
+         p.image_url AS "imageUrl", p.video_url AS "videoUrl", p.seller_checkout_url AS "sellerCheckoutUrl", p.status,
          p.created_at AS "createdAt", p.updated_at AS "updatedAt"`,
       queryValues,
     );
