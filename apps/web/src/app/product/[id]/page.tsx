@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { authClient } from "../../lib/auth-client";
-import { useLocale } from "../../components/locale-provider";
+import { authClient } from "@/lib/auth-client";
+import { useLocale } from "@/components/locale-provider";
 
 type Product = { id: string; title: string; description?: string; price: string; currency: string; imageUrl?: string; videoUrl?: string; storeName: string; storeSlug: string; sellerUserId: string | null };
 
