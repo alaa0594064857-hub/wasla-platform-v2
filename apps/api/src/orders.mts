@@ -119,6 +119,14 @@ export async function handleOrdersRequest(request: IncomingMessage, response: Se
       respond(response, 401, { success: false, error: "Authentication required" });
       return;
     }
+    if (request.method === "POST") {
+      respond(response, 409, {
+        success: false,
+        code: "SOURCING_REQUIRED",
+        error: "Direct catalog checkout is retired. Submit a sourcing request and accept a supplier-confirmed offer to create an order.",
+      });
+      return;
+    }
     const pool = getDatabasePool();
 
     if (request.method === "GET") {
