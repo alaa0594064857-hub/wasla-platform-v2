@@ -477,7 +477,13 @@ export async function handleAcceptSupplierOffer(req: IncomingMessage, res: Serve
       await client.query("ROLLBACK"); reply(res, 403, { success: false, error: "Only the buyer can accept an offer" }); return;
     }
 
-    // Recheck after locking the request so concurrent retries with the same key replay safely.
+    // Serialize the buyer-wide idempotency key, including attempts targeting different requests.
+    await client.query(
+      "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
+      [`${userId}:${idempotencyKey}`],
+    );
+
+    // Recheck after locking the request and idempotency key so concurrent retries replay safely.
     const prior = await client.query(
       `SELECT id, order_number, request_id, accepted_offer_id, status, currency,
               subtotal, shipping_total, grand_total, commercial_snapshot, created_at
