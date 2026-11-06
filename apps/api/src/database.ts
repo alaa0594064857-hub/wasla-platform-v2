@@ -182,6 +182,7 @@ export async function ensureStoreProductsTable(): Promise<void> {
         stock_quantity integer NOT NULL DEFAULT 0 CHECK (stock_quantity >= 0),
         image_url text,
         video_url text,
+        seller_checkout_url text,
         status varchar(16) NOT NULL DEFAULT 'draft'
           CHECK (status IN ('draft', 'active', 'archived')),
         created_at timestamptz NOT NULL DEFAULT NOW(),
@@ -189,6 +190,7 @@ export async function ensureStoreProductsTable(): Promise<void> {
         CONSTRAINT store_products_store_sku_unique UNIQUE (store_id, sku)
       )
     `);
+    await client.query(`ALTER TABLE store_products ADD COLUMN IF NOT EXISTS seller_checkout_url text`);
     await client.query(`
       CREATE INDEX IF NOT EXISTS store_products_store_status_created_idx
       ON store_products (store_id, status, created_at DESC)
