@@ -18,7 +18,7 @@ const words = {
   ar: {
     title: "طلباتي", subtitle: "تابع مشترياتك وحالة كل طلب من متاجر وصلة.",
     loading: "جارٍ تحميل طلباتك...", empty: "لم تنفذ أي طلب بعد. ابدأ استكشاف المتاجر والمنتجات.",
-    explore: "استكشاف المتاجر", error: "تعذر تحميل الطلبات.", retry: "إعادة المحاولة",
+    explore: "استكشاف المنتجات", error: "تعذر تحميل الطلبات.", retry: "إعادة المحاولة",
     order: "طلب", date: "التاريخ", total: "الإجمالي", status: "الحالة", details: "تفاصيل الطلب",
     hide: "إخفاء التفاصيل", items: "المنتجات", address: "عنوان التوصيل", phone: "الهاتف",
     placed: "جديد", accepted: "مقبول", processing: "قيد التجهيز", shipped: "تم الشحن",
@@ -27,7 +27,7 @@ const words = {
   en: {
     title: "My orders", subtitle: "Track your purchases and the status of every order from WASLA shops.",
     loading: "Loading your orders...", empty: "You have not placed an order yet. Explore shops and products to get started.",
-    explore: "Explore shops", error: "Could not load your orders.", retry: "Try again",
+    explore: "Explore products", error: "Could not load your orders.", retry: "Try again",
     order: "Order", date: "Date", total: "Total", status: "Status", details: "Order details",
     hide: "Hide details", items: "Items", address: "Delivery address", phone: "Phone",
     placed: "New", accepted: "Accepted", processing: "Processing", shipped: "Shipped",
@@ -95,7 +95,7 @@ export default function BuyerOrdersPage() {
         </div>
         {error && <div className="shops-alert" role="alert">{error}<button type="button" onClick={() => void load()}>{t.retry}</button></div>}
         {loading ? <div className="shops-empty">{t.loading}</div> : orders.length === 0 ? (
-          <div className="shops-empty"><p>{t.empty}</p><Link href="/shops">{t.explore} ↗</Link></div>
+          <div className="shops-empty"><p>{t.empty}</p><Link href="/search">{t.explore} ↗</Link></div>
         ) : (
           <div className="shops-grid">
             {orders.map(order => (
