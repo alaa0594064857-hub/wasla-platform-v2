@@ -73,7 +73,7 @@ function cleanAddress(value: unknown): AddressSnapshot | null {
 
 function moneyToCents(value: unknown): bigint | null {
   const text = String(value);
-  if (!/^\\d{1,12}(?:\\.\\d{1,2})?$/.test(text)) return null;
+  if (!/^\d{1,12}(?:\.\d{1,2})?$/.test(text)) return null;
   const [whole, fraction = ""] = text.split(".");
   return BigInt(whole) * 100n + BigInt((fraction + "00").slice(0, 2));
 }
