@@ -75,6 +75,56 @@ export async function handleMessagesRequest(
     const userId = session.user.id;
 
     if (!conversationId && request.method === "GET") {
+      const url = new URL(request.url ?? "/api/messages", "http://localhost");
+      if (url.searchParams.has("recipients")) {
+        const query = (url.searchParams.get("recipients") ?? "").trim().slice(0, 80);
+        if (query.length < 2) {
+          respond(response, 200, { success: true, recipients: [] });
+          return;
+        }
+        const pattern = `%${query.replace(/[\\\\%_]/g, "\\\\    const db = getDatabasePool();
+    const userId = session.user.id;
+
+    if (!conversationId && request.method === "GET") {
+")}%`;
+        const matches = await db.query(
+          `WITH candidates AS (
+             SELECT u.id AS recipient_id, COALESCE(p.display_name, u.name) AS display_name,
+                    'person'::text AS entity_type, NULL::text AS category
+             FROM users u
+             LEFT JOIN profiles p ON p.user_id = u.id
+             WHERE u.status = 'active' AND u.email_verified = TRUE
+               AND COALESCE(p.display_name, u.name) ILIKE $1 ESCAPE E'\\\\\\\\'
+             UNION ALL
+             SELECT DISTINCT ON (a.id) u.id AS recipient_id, a.display_name,
+                    'business'::text AS entity_type, a.account_type::text AS category
+             FROM accounts a
+             INNER JOIN account_members am ON am.account_id = a.id AND am.status = 'active'
+             INNER JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
+             INNER JOIN users u ON u.id = am.user_id AND u.status = 'active' AND u.email_verified = TRUE
+             WHERE a.status = 'active' AND r.name IN ('account_owner', 'account_manager')
+               AND a.display_name ILIKE $1 ESCAPE E'\\\\\\\\'
+             ORDER BY a.id, CASE WHEN r.name = 'account_owner' THEN 0 ELSE 1 END
+             UNION ALL
+             SELECT DISTINCT ON (s.id) u.id AS recipient_id, s.name AS display_name,
+                    'store'::text AS entity_type, 'store'::text AS category
+             FROM stores s
+             INNER JOIN accounts a ON a.id = s.account_id AND a.status = 'active'
+             INNER JOIN account_members am ON am.account_id = a.id AND am.status = 'active'
+             INNER JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
+             INNER JOIN users u ON u.id = am.user_id AND u.status = 'active' AND u.email_verified = TRUE
+             WHERE s.status = 'active' AND r.name IN ('account_owner', 'account_manager')
+               AND s.name ILIKE $1 ESCAPE E'\\\\\\\\'
+             ORDER BY s.id, CASE WHEN r.name = 'account_owner' THEN 0 ELSE 1 END
+           )
+           SELECT recipient_id, display_name, entity_type, category
+           FROM candidates WHERE recipient_id <> $2
+           ORDER BY display_name ASC LIMIT 30`,
+          [pattern, userId],
+        );
+        respond(response, 200, { success: true, recipients: matches.rows });
+        return;
+      }
       const result = await db.query(
         `SELECT c.id, c.updated_at,
           peer.id AS peer_id, peer.name AS peer_name, peer.image AS peer_image,
