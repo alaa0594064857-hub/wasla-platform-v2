@@ -29,7 +29,7 @@ const words = {
     order: "طلب", date: "التاريخ", total: "الإجمالي", status: "الحالة", details: "تفاصيل الطلب",
     hide: "إخفاء التفاصيل", items: "المنتجات", address: "عنوان التوصيل", phone: "الهاتف", history: "سجل حركة الطلب", showHistory: "عرض سجل الحركة", hideHistory: "إخفاء السجل", noHistory: "لا توجد تحديثات مسجلة بعد.",
     placed: "جديد", accepted: "مقبول", processing: "قيد التجهيز", shipped: "تم الشحن",
-    completed: "مكتمل", cancelled: "ملغي", quantity: "الكمية", sourcingTitle: "طلبات التوريد المعتمدة", supplier: "المورد", destination: "التسليم", shipping: "الشحن", awaiting_payment: "بانتظار الدفع", payment_pending: "الدفع قيد المعالجة", paid: "مدفوع", fulfilment_pending: "بانتظار تجهيز المورد", tracking: "رقم التتبع", carrier: "شركة الشحن",
+    completed: "مكتمل", cancelled: "ملغي", quantity: "الكمية", sourcingTitle: "طلبات التوريد المعتمدة", supplier: "المورد", destination: "التسليم", shipping: "الشحن", awaiting_payment: "بانتظار الدفع", payment_pending: "الدفع قيد المعالجة", paid: "مدفوع", fulfilment_pending: "بانتظار تجهيز المورد", tracking: "رقم التتبع", carrier: "شركة الشحن", confirmDelivery: "تأكيد استلام الطلب", confirmingDelivery: "جارٍ تأكيد الاستلام...", deliveryNote: "أكد الاستلام فقط بعد وصول الطلب إليك فعلياً.",
   },
   en: {
     title: "My orders", subtitle: "Track shop purchases and supplier-sourced orders in one place.",
@@ -38,7 +38,7 @@ const words = {
     order: "Order", date: "Date", total: "Total", status: "Status", details: "Order details",
     hide: "Hide details", items: "Items", address: "Delivery address", phone: "Phone", history: "Order activity", showHistory: "View activity", hideHistory: "Hide activity", noHistory: "No activity has been recorded yet.",
     placed: "New", accepted: "Accepted", processing: "Processing", shipped: "Shipped",
-    completed: "Completed", cancelled: "Cancelled", quantity: "Quantity", sourcingTitle: "Accepted sourcing orders", supplier: "Supplier", destination: "Delivery", shipping: "Shipping", awaiting_payment: "Awaiting payment", payment_pending: "Payment pending", paid: "Paid", fulfilment_pending: "Awaiting supplier fulfilment", tracking: "Tracking reference", carrier: "Carrier",
+    completed: "Completed", cancelled: "Cancelled", quantity: "Quantity", sourcingTitle: "Accepted sourcing orders", supplier: "Supplier", destination: "Delivery", shipping: "Shipping", awaiting_payment: "Awaiting payment", payment_pending: "Payment pending", paid: "Paid", fulfilment_pending: "Awaiting supplier fulfilment", tracking: "Tracking reference", carrier: "Carrier", confirmDelivery: "Confirm delivery received", confirmingDelivery: "Confirming receipt...", deliveryNote: "Confirm receipt only after the order has physically arrived.",
   },
 };
 
@@ -55,6 +55,7 @@ export default function BuyerOrdersPage() {
   const [loadingDetails, setLoadingDetails] = useState<string | null>(null);
   const [eventHistory, setEventHistory] = useState<Record<string, OrderEvent[]>>({});
   const [loadingHistory, setLoadingHistory] = useState<string | null>(null);
+  const [confirmingDelivery, setConfirmingDelivery] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const dir = locale === "ar" ? "rtl" : "ltr";
@@ -76,6 +77,19 @@ export default function BuyerOrdersPage() {
   }, [t.error]);
 
   useEffect(() => { void load(); }, [load]);
+
+  async function confirmSourcingDelivery(orderId: string) {
+    setConfirmingDelivery(orderId); setError("");
+    try {
+      const response = await fetch(`/api/sourcing-orders/${encodeURIComponent(orderId)}/confirm-delivery`, { method: "POST", credentials: "include" });
+      const data = await response.json();
+      if (!response.ok || data.success !== true) throw new Error(data.error || t.error);
+      await load();
+      setEventHistory(current => { const next = { ...current }; delete next[orderId]; return next; });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t.error);
+    } finally { setConfirmingDelivery(null); }
+  }
 
   async function toggleSourcingHistory(orderId: string) {
     if (eventHistory[orderId]) {
@@ -140,6 +154,7 @@ export default function BuyerOrdersPage() {
                   <div className="shops-info-row"><small>{t.date}</small><strong>{dateLabel(order.createdAt, locale)}</strong></div>
                   {order.trackingReference && <div className="shops-info-row"><small>{t.tracking}</small><strong dir="ltr">{order.trackingReference}</strong></div>}
                   {order.carrier && <div className="shops-info-row"><small>{t.carrier}</small><strong>{order.carrier}</strong></div>}
+                  {order.status === "shipped" && <div><p>{t.deliveryNote}</p><button type="button" className="shops-primary-button" disabled={confirmingDelivery !== null} onClick={() => void confirmSourcingDelivery(order.id)}>{confirmingDelivery === order.id ? t.confirmingDelivery : t.confirmDelivery}</button></div>}
                   <button type="button" className="shops-order-details-toggle" disabled={loadingHistory !== null} onClick={() => void toggleSourcingHistory(order.id)}>{loadingHistory === order.id ? t.loading : eventHistory[order.id] ? t.hideHistory : t.showHistory}</button>
                   {eventHistory[order.id] && <div className="shops-order-detail-body"><h3>{t.history}</h3>{eventHistory[order.id].length === 0 ? <p>{t.noHistory}</p> : eventHistory[order.id].map(event => <div className="shops-info-row" key={event.id}><span>{event.toStatus ? (t[event.toStatus as keyof typeof t] ?? event.toStatus) : event.eventType}</span><strong>{dateLabel(event.createdAt, locale)}</strong></div>)}</div>}
                 </article>
