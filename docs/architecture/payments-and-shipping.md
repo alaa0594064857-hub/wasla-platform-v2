@@ -42,6 +42,10 @@ No provider is selected in this phase. Selection must account for WASLA's actual
 
 ### 2.3 Payment state and order state
 
+**Authority rule:** only a verified server-side payment integration may transition a sourcing order into `paid`. Buyers, suppliers, browser redirects, client-submitted status values, and manual tracking updates are never payment evidence. Supplier endpoints accept only `paid → fulfilment_pending` and `fulfilment_pending → shipped` as fulfillment transitions; they cannot set `paid`. Until a provider-backed payment verification flow exists, accepted sourcing orders remain `awaiting_payment` and fulfillment stays blocked.
+
+
+
 Payment status is not order status. A placed order is not automatically paid. Store workflow actions must not imply payment completion.
 
 Before enabling real checkout, define the fulfillment policy explicitly:
