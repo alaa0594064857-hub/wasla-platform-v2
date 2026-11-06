@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, useRef, type FormEvent } from "react";
 import Link from "next/link";
 import { useLocale } from "../../components/locale-provider";
 import WorkspaceHeader from "../../components/workspace-header";
@@ -57,6 +57,7 @@ export default function SourcingPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [form, setForm] = useState({ itemName: "", quantity: "1", unit: "piece", destinationCountryCode: "", destinationCity: "", requestedCurrency: "", description: "" });
+  const requestIdempotencyKey = useRef<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -81,10 +82,12 @@ export default function SourcingPage() {
     setError("");
     setMessage("");
     try {
+      const idempotencyKey = requestIdempotencyKey.current ?? crypto.randomUUID();
+      requestIdempotencyKey.current = idempotencyKey;
       const response = await fetch("/api/sourcing-requests", {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() },
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
         body: JSON.stringify({
           itemName: form.itemName.trim(),
           quantity: Number(form.quantity),
@@ -93,11 +96,12 @@ export default function SourcingPage() {
           destinationCity: form.destinationCity.trim(),
           requestedCurrency: form.requestedCurrency.trim() || undefined,
           description: form.description.trim() || undefined,
-          idempotencyKey: crypto.randomUUID(),
+          idempotencyKey,
         }),
       });
       const data = await response.json();
       if (!response.ok || data.success !== true) throw new Error(data.error || t.error);
+      requestIdempotencyKey.current = null;
       setForm({ itemName: "", quantity: "1", unit: "piece", destinationCountryCode: "", destinationCity: "", requestedCurrency: "", description: "" });
       setMessage(t.sent);
       await load();
