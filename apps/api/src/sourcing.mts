@@ -83,7 +83,7 @@ export async function handleSourcingCollection(req: IncomingMessage, res: Server
       : typeof body.requestedCurrency === "string" ? body.requestedCurrency.toUpperCase() : "";
     const idempotencyKey = req.headers["idempotency-key"] ??
       (typeof body.idempotencyKey === "string" ? body.idempotencyKey : "");
-    if (!validText(itemName, 2, 180) || typeof quantity !== "number" || !Number.isSafeInteger(quantity) || quantity <= 0 ||
+    if (!validText(itemName, 2, 180) || typeof quantity !== "number" || !Number.isSafeInteger(quantity) || quantity <= 0 || quantity > 2_147_483_647 ||
         !validText(unit, 1, 40) || !COUNTRY.test(country) || !validText(city, 2, 120) ||
         (currency !== null && (typeof currency !== "string" || !CURRENCY.test(currency))) ||
         typeof idempotencyKey !== "string" || idempotencyKey.length < 8 || idempotencyKey.length > 128) {
@@ -195,11 +195,11 @@ export async function handleSupplierOffer(req: IncomingMessage, res: ServerRespo
     const shipping = body.shippingAmount ?? 0;
     const leadTime = body.leadTimeDays ?? null;
     if (typeof accountId !== "string" || !UUID.test(accountId) || !CURRENCY.test(currency) ||
-        typeof quantity !== "number" || !Number.isSafeInteger(quantity) || quantity <= 0 ||
+        typeof quantity !== "number" || !Number.isSafeInteger(quantity) || quantity <= 0 || quantity > 2_147_483_647 ||
         typeof unitPrice !== "number" && typeof unitPrice !== "string" ||
-        !Number.isFinite(Number(unitPrice)) || Number(unitPrice) < 0 ||
+        !/^\\d{1,10}(?:\\.\\d{1,4})?$/.test(String(unitPrice)) ||
         typeof shipping !== "number" && typeof shipping !== "string" ||
-        !Number.isFinite(Number(shipping)) || Number(shipping) < 0 ||
+        !/^\\d{1,12}(?:\\.\\d{1,2})?$/.test(String(shipping)) ||
         (leadTime !== null && (typeof leadTime !== "number" || !Number.isSafeInteger(leadTime) || leadTime < 0))) {
       reply(res, 400, { success: false, error: "Invalid supplier offer details" }); return;
     }
@@ -371,7 +371,7 @@ export async function handleAcceptSupplierOffer(req: IncomingMessage, res: Serve
     const requestResult = await client.query(
       `SELECT id, buyer_user_id, item_name, description, specifications, quantity,
               unit, destination_country_code, destination_city, delivery_location_snapshot,
-              status
+              requested_currency, status
        FROM sourcing_requests WHERE id = $1 FOR UPDATE`,
       [requestId],
     );
@@ -432,6 +432,7 @@ export async function handleAcceptSupplierOffer(req: IncomingMessage, res: Serve
     const validQuote = offer.quote_valid_until === null || new Date(offer.quote_valid_until).getTime() > now;
     if (offer.status !== "available" || !offer.availability_confirmed_at || !validAvailability || !validQuote ||
         Number(offer.offered_quantity) < Number(sourcingRequest.quantity) ||
+        (sourcingRequest.requested_currency && offer.currency !== sourcingRequest.requested_currency) ||
         offer.supplier_account_status !== "active" ||
         !["supplier", "manufacturer"].includes(offer.supplier_account_type)) {
       await client.query("ROLLBACK");
