@@ -324,3 +324,10 @@ export async function ensureStoreOwnerRole(): Promise<void> {
     client.release();
   }
 }
+
+
+/** Separate inquiry records from private direct-message conversations. */
+export async function ensureProductInquiryTables(): Promise<void> {
+  const { ensureProductInquiryTables: createTables } = await import("./product-inquiries.mjs");
+  await createTables();
+}
