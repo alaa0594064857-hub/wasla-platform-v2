@@ -13,25 +13,31 @@ type Order = {
   shippingAddress?: { fullName?: string; addressLine1?: string; addressLine2?: string; city?: string; region?: string; postalCode?: string; countryCode?: string; phone?: string };
   items?: OrderItem[];
 };
+type SourcingOrder = {
+  id: string; orderNumber: string; status: string; currency: string;
+  subtotal: string; shippingTotal: string; grandTotal: string; createdAt: string;
+  itemName: string; quantity: number; unit: string; destinationCity: string;
+  destinationCountryCode: string; supplierName: string;
+};
 
 const words = {
   ar: {
-    title: "طلباتي", subtitle: "تابع مشترياتك وحالة كل طلب من متاجر وصلة.",
+    title: "طلباتي", subtitle: "تابع طلبات المتاجر وطلبات التوريد وعروض الموردين.",
     loading: "جارٍ تحميل طلباتك...", empty: "لم تنفذ أي طلب بعد. ابدأ استكشاف المتاجر والمنتجات.",
     explore: "استكشاف المنتجات", error: "تعذر تحميل الطلبات.", retry: "إعادة المحاولة",
     order: "طلب", date: "التاريخ", total: "الإجمالي", status: "الحالة", details: "تفاصيل الطلب",
     hide: "إخفاء التفاصيل", items: "المنتجات", address: "عنوان التوصيل", phone: "الهاتف",
     placed: "جديد", accepted: "مقبول", processing: "قيد التجهيز", shipped: "تم الشحن",
-    completed: "مكتمل", cancelled: "ملغي", quantity: "الكمية",
+    completed: "مكتمل", cancelled: "ملغي", quantity: "الكمية", sourcingTitle: "طلبات التوريد المعتمدة", supplier: "المورد", destination: "التسليم", shipping: "الشحن",
   },
   en: {
-    title: "My orders", subtitle: "Track your purchases and the status of every order from WASLA shops.",
+    title: "My orders", subtitle: "Track shop purchases and supplier-sourced orders in one place.",
     loading: "Loading your orders...", empty: "You have not placed an order yet. Explore shops and products to get started.",
     explore: "Explore products", error: "Could not load your orders.", retry: "Try again",
     order: "Order", date: "Date", total: "Total", status: "Status", details: "Order details",
     hide: "Hide details", items: "Items", address: "Delivery address", phone: "Phone",
     placed: "New", accepted: "Accepted", processing: "Processing", shipped: "Shipped",
-    completed: "Completed", cancelled: "Cancelled", quantity: "Quantity",
+    completed: "Completed", cancelled: "Cancelled", quantity: "Quantity", sourcingTitle: "Accepted sourcing orders", supplier: "Supplier", destination: "Delivery", shipping: "Shipping",
   },
 };
 
@@ -43,6 +49,7 @@ export default function BuyerOrdersPage() {
   const { locale } = useLocale();
   const t = words[locale];
   const [orders, setOrders] = useState<Order[]>([]);
+  const [sourcingOrders, setSourcingOrders] = useState<SourcingOrder[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [loadingDetails, setLoadingDetails] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,6 +64,7 @@ export default function BuyerOrdersPage() {
       const data = await response.json();
       if (!response.ok || data.success !== true) throw new Error(data.error || t.error);
       setOrders(data.orders as Order[]);
+      setSourcingOrders((data.sourcingOrders ?? []) as SourcingOrder[]);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t.error);
     } finally {
@@ -94,6 +102,28 @@ export default function BuyerOrdersPage() {
           <div className="shops-heading-icon" aria-hidden="true">W</div>
         </div>
         {error && <div className="shops-alert" role="alert">{error}<button type="button" onClick={() => void load()}>{t.retry}</button></div>}
+        {!loading && sourcingOrders.length > 0 && (
+          <section style={{ marginBottom: 28 }}>
+            <div className="shops-heading"><div><h2>{t.sourcingTitle}</h2></div></div>
+            <div className="shops-grid">
+              {sourcingOrders.map(order => (
+                <article className="shops-create-card" key={order.id}>
+                  <div className="shops-card-top">
+                    <span className="shops-eyebrow">{t.order} · {order.orderNumber}</span>
+                    <span className="shops-status">{order.status}</span>
+                  </div>
+                  <h3>{order.itemName}</h3>
+                  <div className="shops-info-row"><small>{t.supplier}</small><strong>{order.supplierName}</strong></div>
+                  <div className="shops-info-row"><small>{t.quantity}</small><strong>{order.quantity} {order.unit}</strong></div>
+                  <div className="shops-info-row"><small>{t.destination}</small><strong>{order.destinationCity}, {order.destinationCountryCode}</strong></div>
+                  <div className="shops-info-row"><small>{t.shipping}</small><strong>{order.shippingTotal} {order.currency}</strong></div>
+                  <div className="shops-info-row"><small>{t.total}</small><strong>{order.grandTotal} {order.currency}</strong></div>
+                  <div className="shops-info-row"><small>{t.date}</small><strong>{dateLabel(order.createdAt, locale)}</strong></div>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
         {loading ? <div className="shops-empty">{t.loading}</div> : orders.length === 0 ? (
           <div className="shops-empty"><p>{t.empty}</p><Link href="/search">{t.explore} ↗</Link></div>
         ) : (
