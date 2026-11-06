@@ -30,8 +30,8 @@ export async function handlePlatformUsersRequest(
     const url = new URL(request.url ?? "/api/platform/users", "http://localhost");
     const rawPage = url.searchParams.get("page") ?? "1";
     const rawLimit = url.searchParams.get("limit") ?? "25";
-    const page = /^\\d+$/.test(rawPage) ? Number(rawPage) : 0;
-    const limit = /^\\d+$/.test(rawLimit) ? Number(rawLimit) : 0;
+    const page = /^\d+$/.test(rawPage) ? Number(rawPage) : 0;
+    const limit = /^\d+$/.test(rawLimit) ? Number(rawLimit) : 0;
     const search = (url.searchParams.get("search") ?? "").trim().slice(0, 120);
 
     if (!Number.isSafeInteger(page) || page < 1 || page > 100000 ||
