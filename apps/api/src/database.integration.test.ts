@@ -193,6 +193,42 @@ describe("WASLA sourcing PostgreSQL concurrency constraints", () => {
     await pool.query("DELETE FROM users WHERE id IN ($1,$2)", [fixture.buyerId, fixture.supplierUserId]);
   });
 
+  it("serializes two buyer acceptance transactions on the sourcing request row", async () => {
+    const first = await pool.connect();
+    const second = await pool.connect();
+    try {
+      await first.query("UPDATE sourcing_requests SET status = 'offers_available' WHERE id = $1", [fixture.requestId]);
+      await first.query("BEGIN");
+      await second.query("BEGIN");
+      const locked = await first.query(
+        "SELECT id, status FROM sourcing_requests WHERE id = $1 FOR UPDATE",
+        [fixture.requestId],
+      );
+      expect(locked.rows[0].status).toBe("offers_available");
+
+      const competingLock = second.query(
+        "SELECT id, status FROM sourcing_requests WHERE id = $1 FOR UPDATE",
+        [fixture.requestId],
+      );
+      await first.query(
+        "UPDATE sourcing_requests SET status = 'buyer_selected' WHERE id = $1",
+        [fixture.requestId],
+      );
+      await first.query("COMMIT");
+
+      const secondView = await competingLock;
+      expect(secondView.rows[0].status).toBe("buyer_selected");
+      await second.query("ROLLBACK");
+    } catch (error) {
+      await first.query("ROLLBACK").catch(() => undefined);
+      await second.query("ROLLBACK").catch(() => undefined);
+      throw error;
+    } finally {
+      first.release();
+      second.release();
+    }
+  });
+
   it("serializes competing order inserts and allows only one order per sourcing request", async () => {
     const first = await pool.connect();
     const second = await pool.connect();
