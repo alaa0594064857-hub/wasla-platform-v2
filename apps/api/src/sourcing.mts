@@ -352,12 +352,30 @@ export async function handleSupplierAvailability(req: IncomingMessage, res: Serv
     const db = getDatabasePool();
     client = await db.connect();
     await client.query("BEGIN");
+    const authorizedOffer = await client.query(
+      `SELECT o.id
+       FROM supplier_offers o
+       INNER JOIN account_members am ON am.account_id = o.supplier_account_id
+       INNER JOIN accounts a ON a.id = am.account_id
+       INNER JOIN sourcing_requests sr ON sr.id = o.request_id
+       WHERE o.id = $1 AND o.submitted_by_user_id = $2
+         AND am.user_id = $2 AND am.status = 'active'
+         AND a.status = 'active' AND a.account_type IN ('supplier','manufacturer')
+         AND sr.status IN ('submitted','searching','offers_available')
+       FOR UPDATE OF o FOR SHARE OF am, a, sr`,
+      [offerId, userId],
+    );
+    if (!authorizedOffer.rows.length) {
+      await client.query("ROLLBACK");
+      reply(res, 404, { success: false, error: "Offer not found or supplier access revoked" });
+      return;
+    }
     const updated = await client.query(
       `UPDATE supplier_offers o
        SET status = $1,
            availability_confirmed_at = CASE WHEN $1 = 'available' THEN NOW() ELSE NULL END,
-           availability_valid_until = $2,
-           quote_valid_until = $3,
+           availability_valid_until = CASE WHEN $6 THEN $2 ELSE o.availability_valid_until END,
+           quote_valid_until = CASE WHEN $7 THEN $3 ELSE o.quote_valid_until END,
            updated_at = NOW()
        WHERE o.id = $4 AND o.submitted_by_user_id = $5
          AND o.status IN ('availability_pending','available','unavailable')
@@ -374,7 +392,8 @@ export async function handleSupplierAvailability(req: IncomingMessage, res: Serv
          )
        RETURNING o.id, o.request_id, o.status, o.availability_confirmed_at,
                  o.availability_valid_until, o.quote_valid_until`,
-      [body.availability, availabilityUntil ?? null, quoteUntil ?? null, offerId, userId],
+      [body.availability, availabilityUntil ?? null, quoteUntil ?? null, offerId, userId,
+        availabilityUntil !== undefined, quoteUntil !== undefined],
     );
     if (!updated.rows.length) {
       await client.query("ROLLBACK");
