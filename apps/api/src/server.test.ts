@@ -165,6 +165,16 @@ describe("WASLA API", () => {
     });
   });
 
+  it("requires authentication to discover supplier opportunities", async () => {
+    const baseUrl = await startTestServer();
+    const response = await fetch(`${baseUrl}/api/sourcing-opportunities`);
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({
+      success: false,
+      error: "Authentication required",
+    });
+  });
+
   it("validates sourcing request identifiers before loading details", async () => {
     const baseUrl = await startTestServer();
     const response = await fetch(`${baseUrl}/api/sourcing-requests/not-a-uuid`);
