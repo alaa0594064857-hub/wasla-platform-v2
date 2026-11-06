@@ -597,9 +597,9 @@ describe("WASLA deterministic sourcing match eligibility and ranking", () => {
       await pool.query(
         "INSERT INTO supplier_offers (id,request_id,supplier_account_id,submitted_by_user_id,origin_country_code,offered_quantity,unit_price,currency,shipping_amount,status,availability_confirmed_at,availability_valid_until,quote_valid_until) VALUES ($1,$2,$3,$4,$5,$6,$7,'USD',$8,'available',$9,$10,$11)",
         [offerIds[index], requestId, supplier.id, supplier.userId, supplier.origin, supplier.quantity, supplier.price, supplier.shipping,
-          supplier.confirmed ? new Date() : null,
-          supplier.valid ? new Date(Date.now() + 86_400_000) : new Date(Date.now() - 86_400_000),
-          supplier.valid ? new Date(Date.now() + 86_400_000) : new Date(Date.now() - 86_400_000)],
+          supplier.confirmed ? new Date(supplier.valid ? Date.now() : Date.now() - 172_800_000) : null,
+          new Date(supplier.valid ? Date.now() + 86_400_000 : Date.now() - 86_400_000),
+          new Date(supplier.valid ? Date.now() + 86_400_000 : Date.now() - 86_400_000)],
       );
     }
   });
