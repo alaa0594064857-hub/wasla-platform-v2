@@ -147,7 +147,25 @@ An order status history table records previous status, new status, actor, reason
 6. Add bilingual buyer and store interfaces.
 7. Keep payment and shipping integrations deferred until the order foundation is stable.
 
-## 11. Production boundary
+
+## 11. Implemented API foundation
+
+The feature branch now includes these API operations:
+
+- `POST /api/orders`: buyer checkout for one store, multiple unique product lines, and a required buyer-scoped idempotency key.
+- `GET /api/orders`: the authenticated buyer's recent orders.
+- `GET /api/orders/:orderId`: one order and its immutable line snapshots, visible only to its buyer.
+- `GET /api/stores/:slug/orders`: recent orders for store owners and store managers with active membership in that exact store.
+- `PATCH /api/stores/:slug/orders/:orderId/status`: guarded store workflow transitions.
+
+Checkout recalculates catalog prices using integer minor-unit arithmetic, requires one currency across the order, locks product rows in sorted ID order, and commits order, order items, stock deductions, inventory movements, status history, and audit entries together. Replayed idempotency keys return the original order without a second stock deduction.
+
+Store cancellation is allowed only from placed, accepted, or processing. It locks the order and affected product rows, restores available product stock, writes inbound inventory movements, and records the status/audit event in the same transaction. Shipped, completed, and cancelled orders cannot be cancelled or reopened through this endpoint.
+
+Automated API unit tests cover authentication, checkout validation, successful stock deduction, insufficient stock rollback, idempotent replay, cancellation restoration, and invalid status transitions. These are mocked transaction tests; dedicated PostgreSQL concurrency/integration tests for checkout and cancellation remain a required next validation step.
+
+## 12. Production boundary
+
 
 All implementation work is developed on the feature branch and validated in CI.
 No production migration, deployment, merge to main, payment integration, or paid service change is authorized by this specification.
