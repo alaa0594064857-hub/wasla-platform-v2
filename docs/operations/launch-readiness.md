@@ -29,6 +29,13 @@ Configure secrets in Render Environment / the private environment group. Never c
 
 The API now allows production verification and password-reset emails to the actual account recipient only when a custom sender is configured. Outside production, the single-recipient Resend test-mode restriction remains in place.
 
+## Latest automated verification — 2026-11-06
+
+- GitHub Actions workflow run **#410** passed on candidate commit `d86996f33ba8087541703c73cc0f51451f3f202c`.
+- Passed steps: dependency installation, shared-package tests and TypeScript, API tests, database migrations and authorization seeding on the CI PostgreSQL service, database constraint/integration tests, API TypeScript/build, and web build.
+- This is automated CI evidence only. It does **not** verify the deployed Render services, live email delivery, real browser journeys, or production data.
+- PR #2 remains open and draft. The candidate has not been merged or deployed; production migrations remain gated on explicit release approval.
+
 ## Technical launch gates
 
 - [ ] Set and verify the production environment variables above without exposing secrets.
