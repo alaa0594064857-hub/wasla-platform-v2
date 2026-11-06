@@ -376,6 +376,18 @@ async function handleRequest(
     return;
   }
 
+  if (requestUrl.pathname === "/api/ai/sourcing/matches") {
+    try {
+      const { handleSourcingMatches } = await import("./ai-sourcing.mjs");
+      await handleSourcingMatches(request, response);
+    } catch (error) {
+      console.error("WASLA sourcing matches route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Sourcing matches service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/profile") {
     try {
       const { handleProfileRequest } = await import("./profile.mjs");
