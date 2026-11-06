@@ -303,3 +303,75 @@ This is an approved architecture decision.
 The official WASLA Store, AI inbox, AI service identity,
 and AI response workflow are not yet implemented.
 Existing member-store inquiry routing remains separate.
+
+
+## 18. Revenue Model and Merchant Payment Separation
+
+Decision:
+
+WASLA is a commerce platform and official-store operator.
+It is not the payment intermediary for transactions
+between independent member merchants and their customers.
+
+Platform revenue is limited to the platform's own
+commercial activities, including:
+
+- Membership and subscription fees charged by WASLA
+  for platform access or optional services.
+- Sales made through the official, platform-owned
+  WASLA Store.
+
+Member merchant transactions remain independent:
+
+- The customer pays the relevant merchant or business
+  directly using that merchant's own payment method.
+- The merchant is responsible for receiving payment,
+  issuing any required sales documents, fulfilling
+  the order, shipping, returns, and customer obligations.
+- WASLA does not collect, hold, split, or transfer
+  the merchant's transaction funds and does not deduct
+  a transaction commission under this model.
+- WASLA may provide discovery, messaging, inquiry,
+  and order-coordination tools without becoming the
+  merchant's payment processor or seller of record.
+
+Official WASLA Store transactions are separate from
+member commerce. WASLA is responsible for the official
+store's own sales workflow, supplier coordination,
+customer service, and applicable commercial obligations.
+The platform must not assume that official-store products
+are held in centralized inventory.
+
+Product and system boundaries:
+
+- Subscription billing must be modeled separately
+  from merchant-to-customer payments.
+- Official-store payments must use a dedicated
+  platform-owned payment configuration.
+- Member-store product pages must clearly identify
+  the responsible seller and provide that seller's
+  own payment/ordering instructions or approved
+  external checkout path.
+- No merchant payout, split-payment, escrow, or
+  platform-held merchant balance feature is included
+  in this business model unless explicitly approved
+  through a future architecture decision.
+
+Compliance boundary:
+
+This architecture decision describes the intended
+commercial and technical model; it does not itself
+determine whether a business registration, tax
+registration, invoicing, consumer-protection, or
+e-commerce authorization is required. Those obligations
+must be checked for the jurisdiction and actual operating
+arrangement before commercial launch.
+
+Implementation status:
+
+Approved business-model decision.
+Payment collection for subscriptions and the official
+WASLA Store, seller disclosures, and production billing
+flows still require implementation and jurisdictional
+review. No claim is made that these payment flows
+are currently live.
