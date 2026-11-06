@@ -193,7 +193,7 @@ describe("store order workflow", () => {
     expect(statements.some((sql) => sql.includes("UPDATE store_products"))).toBe(true);
     expect(statements.some((sql) => sql.includes("'inbound'"))).toBe(true);
     expect(statements.some((sql) => sql.includes("INSERT INTO order_status_history"))).toBe(true);
-    expect(statements.some((sql) => sql.includes("'order.cancelled'"))).toBe(true);
+    expect(mocks.clientQuery.mock.calls.some(([sql, values]) => String(sql).includes("INSERT INTO audit_logs") && (values as unknown[])[1] === "order.cancelled")).toBe(true);
     expect(statements.at(-1)).toBe("COMMIT");
     expect(mocks.release).toHaveBeenCalledOnce();
   });
