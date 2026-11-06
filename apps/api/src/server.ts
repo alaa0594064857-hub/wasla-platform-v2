@@ -247,6 +247,20 @@ async function handleRequest(
     return;
   }
 
+
+  const tradeStatusMatch = requestUrl.pathname.match(/^\/api\/trade-deals\/([^/]+)\/status$/);
+  if (tradeStatusMatch) {
+    try {
+      const { handleTradeDealStatus } = await import("./trade-deals.mjs");
+      await handleTradeDealStatus(request, response, tradeStatusMatch[1]);
+    } catch (error) {
+      console.error("WASLA trade status route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Trade status service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const tradeAmendmentResponseMatch = requestUrl.pathname.match(/^\/api\/trade-deals\/([^/]+)\/amendments\/([^/]+)\/respond$/);
   if (tradeAmendmentResponseMatch) {
     try {
