@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
@@ -144,15 +144,15 @@ export default function OwnerSubscriptionsPage() {
     <section style={styles.panel}>
       <h2>{copy.create}</h2>
       <form onSubmit={createPlan} style={styles.form}>
-        <label>{copy.code}<input required minLength={2} maxLength={80} pattern="[a-z0-9][a-z0-9_-]+" value={code} onChange={e => setCode(e.target.value)} placeholder="starter_monthly" /></label>
-        <label>{copy.nameAr}<input required maxLength={160} value={nameAr} onChange={e => setNameAr(e.target.value)} /></label>
+        <label>{copy.code}<input style={styles.input} required minLength={2} maxLength={80} pattern="[a-z0-9][a-z0-9_-]+" value={code} onChange={e => setCode(e.target.value)} placeholder="starter_monthly" /></label>
+        <label>{copy.nameAr}<input style={styles.input} required maxLength={160} value={nameAr} onChange={e => setNameAr(e.target.value)} /></label>
         <label>{copy.nameEn}<input required maxLength={160} value={nameEn} onChange={e => setNameEn(e.target.value)} /></label>
-        <label>{copy.amount}<input required type="number" min="0" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} /></label>
-        <label>{copy.currency}<input required minLength={3} maxLength={3} pattern="[A-Za-z]{3}" value={currency} onChange={e => setCurrency(e.target.value.toUpperCase())} /></label>
-        <label>{copy.interval}<select value={interval} onChange={e => setInterval(e.target.value as typeof interval)}><option value="month">{copy.month}</option><option value="year">{copy.year}</option><option value="one_time">{copy.one_time}</option></select></label>
-        <label>{copy.descriptionAr}<textarea rows={3} maxLength={5000} value={descriptionAr} onChange={e => setDescriptionAr(e.target.value)} /></label>
+        <label>{copy.amount}<input style={styles.input} required type="number" min="0" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} /></label>
+        <label>{copy.currency}<input style={styles.input} required minLength={3} maxLength={3} pattern="[A-Za-z]{3}" value={currency} onChange={e => setCurrency(e.target.value.toUpperCase())} /></label>
+        <label>{copy.interval}<select style={styles.input} value={interval} onChange={e => setInterval(e.target.value as typeof interval)}><option value="month">{copy.month}</option><option value="year">{copy.year}</option><option value="one_time">{copy.one_time}</option></select></label>
+        <label>{copy.descriptionAr}<textarea style={styles.input} rows={3} maxLength={5000} value={descriptionAr} onChange={e => setDescriptionAr(e.target.value)} /></label>
         <label>{copy.descriptionEn}<textarea rows={3} maxLength={5000} value={descriptionEn} onChange={e => setDescriptionEn(e.target.value)} /></label>
-        <button type="submit" disabled={saving}>{saving ? copy.saving : copy.create}</button>
+        <button type="submit" style={styles.button} disabled={saving}>{saving ? copy.saving : copy.create}</button>
       </form>
       <p style={styles.hint}>{copy.amountNote}</p>
       {error && <p role="status" style={styles.feedback}>{error}</p>}
@@ -161,7 +161,7 @@ export default function OwnerSubscriptionsPage() {
       <h2>{copy.plans}</h2>
       {loading ? <p>…</p> : plans.length === 0 ? <p>{copy.empty}</p> : <div style={styles.list}>{plans.map(plan => <article key={plan.id} style={styles.plan}>
         <div><strong>{ar ? plan.name_ar : plan.name_en}</strong><small>{plan.code} · {plan.amount} {plan.currency} / {plan.billing_interval}</small><p>{ar ? plan.description_ar : plan.description_en}</p></div>
-        <div style={styles.planSide}><span>{plan.is_active ? (ar ? "مفعّلة" : "ACTIVE") : copy.inactive}</span><span>{plan.is_public ? copy.public : copy.private}</span><button type="button" onClick={() => void togglePlan(plan)}>{plan.is_active && plan.is_public ? copy.deactivate : copy.activate}</button></div>
+        <div style={styles.planSide}><span>{plan.is_active ? (ar ? "مفعّلة" : "ACTIVE") : copy.inactive}</span><span>{plan.is_public ? copy.public : copy.private}</span><button type="button" style={styles.button} onClick={() => void togglePlan(plan)}>{plan.is_active && plan.is_public ? copy.deactivate : copy.activate}</button></div>
       </article>)}</div>}
     </section>
   </main>;
@@ -176,7 +176,6 @@ const styles: Record<string, React.CSSProperties> = {
   panel: { background: "#fff", border: "1px solid #e4dfd4", borderRadius: 16, padding: 22, marginBottom: 20, boxShadow: "0 8px 24px rgba(23,37,58,.04)" },
   form: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 14 },
   label: { display: "grid", gap: 7, fontSize: 13, fontWeight: 700 },
-  input: { border: "1px solid #d8d5cd", borderRadius: 9, padding: 11, font: "inherit", minWidth: 0 },
   hint: { color: "#6b7280", fontSize: 13 },
   feedback: { fontWeight: 700, color: "#8a5b1b" },
   list: { display: "grid", gap: 12 },
