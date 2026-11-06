@@ -27,6 +27,7 @@ const copy = {
     login: "سجّل الدخول لإتمام الشراء", success: "تم تسجيل طلبك بنجاح", order: "رقم الطلب",
     viewOrders: "عرض طلباتي", continue: "متابعة التسوق", error: "تعذر إتمام الطلب. تحقق من المخزون وتسجيل الدخول ثم حاول مجدداً.",
     mixedCurrency: "لا يمكن جمع منتجات بعملات مختلفة في طلب واحد.", secure: "السعر النهائي والمخزون يتم التحقق منهما عند تأكيد الطلب.",
+    paymentNotice: "تنبيه: هذا الطلب لا يتضمن دفعاً إلكترونياً حالياً، ورسوم التوصيل غير محسوبة ضمن المجموع وقد يحددها المتجر قبل التسليم.",
     business: "من", emptyName: "المتجر", currency: "العملة",
   },
   en: {
@@ -41,6 +42,7 @@ const copy = {
     login: "Sign in to checkout", success: "Your order was placed successfully", order: "Order number",
     viewOrders: "View my orders", continue: "Continue shopping", error: "Could not place your order. Check stock and sign-in, then try again.",
     mixedCurrency: "A single order cannot contain products in different currencies.", secure: "Final prices and stock are verified when you place the order.",
+    paymentNotice: "Notice: No online payment is collected at this stage. Delivery fees are not included in this total and may be confirmed by the shop before delivery.",
     business: "By", emptyName: "Shop", currency: "Currency",
   },
 };
@@ -238,6 +240,7 @@ export default function PublicStorefrontPage() {
                       ))}
                       <div className="shops-info-row"><strong>{t.subtotal}</strong><strong>{subtotal.toFixed(2)} {currency}</strong></div>
                       <p className="wasla-store-security-note">{t.secure}</p>
+                      <p className="wasla-store-security-note">{t.paymentNotice}</p>
                       {mixedCurrency && <div className="shops-alert" role="alert">{t.mixedCurrency}</div>}
                       <form className="wasla-checkout-form" onSubmit={checkout}>
                         <h3>{t.address}</h3>
