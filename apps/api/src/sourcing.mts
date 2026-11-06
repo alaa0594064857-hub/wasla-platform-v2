@@ -281,6 +281,11 @@ export async function handleSupplierOffer(req: IncomingMessage, res: ServerRespo
     if (typeof terms !== "object" || terms === null || Array.isArray(terms)) {
       reply(res, 400, { success: false, error: "Offer terms must be an object" }); return;
     }
+    const headerKey = req.headers["idempotency-key"];
+    const idempotencyKey = typeof headerKey === "string" ? headerKey : body.idempotencyKey;
+    if (typeof idempotencyKey !== "string" || idempotencyKey.length < 8 || idempotencyKey.length > 128) {
+      reply(res, 400, { success: false, error: "A valid idempotency key is required" }); return;
+    }
     const db = getDatabasePool();
     client = await db.connect();
     await client.query("BEGIN");
@@ -313,6 +318,54 @@ export async function handleSupplierOffer(req: IncomingMessage, res: ServerRespo
     if (target.rows[0].buyer_user_id === userId) {
       await client.query("ROLLBACK"); reply(res, 403, { success: false, error: "Buyers cannot submit supplier offers to their own request" }); return;
     }
+
+    // Serialize retries for the same supplier user/key even when they target different requests.
+    await client.query(
+      "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
+      [`${userId}:${idempotencyKey}`],
+    );
+    const prior = await client.query(
+      `SELECT e.request_id, o.id, o.supplier_account_id, o.offered_quantity,
+              o.unit_price, o.currency, o.shipping_amount, o.lead_time_days,
+              o.terms_snapshot,
+              (e.request_id = $3
+               AND o.supplier_account_id = $4
+               AND o.offered_quantity = $5
+               AND o.unit_price = $6::numeric
+               AND o.currency = $7
+               AND o.shipping_amount = $8::numeric
+               AND o.lead_time_days IS NOT DISTINCT FROM $9
+               AND o.terms_snapshot = $10::jsonb) AS payload_matches
+       FROM sourcing_request_events e
+       INNER JOIN supplier_offers o ON o.id::text = e.metadata->>'offerId'
+       WHERE e.actor_user_id = $1 AND e.event_type = 'supplier.offer_submitted'
+         AND e.metadata->>'idempotencyKey' = $2
+       LIMIT 1`,
+      [userId, idempotencyKey, requestId, accountId, quantity, String(unitPrice),
+       currency, String(shipping), leadTime, JSON.stringify(terms)],
+    );
+    if (prior.rows.length) {
+      if (!prior.rows[0].payload_matches) {
+        await client.query("ROLLBACK");
+        reply(res, 409, { success: false, error: "Idempotency key was already used for a different supplier offer" });
+        return;
+      }
+      await client.query("COMMIT");
+      reply(res, 200, {
+        success: true, replayed: true,
+        offer: {
+          id: prior.rows[0].id, request_id: prior.rows[0].request_id,
+          supplier_account_id: prior.rows[0].supplier_account_id,
+          offered_quantity: prior.rows[0].offered_quantity,
+          unit_price: prior.rows[0].unit_price, currency: prior.rows[0].currency,
+          shipping_amount: prior.rows[0].shipping_amount, lead_time_days: prior.rows[0].lead_time_days,
+          status: "availability_pending",
+        },
+        availability: "pending_supplier_confirmation",
+      });
+      return;
+    }
+
     const inserted = await client.query(
       `INSERT INTO supplier_offers
        (request_id, supplier_account_id, submitted_by_user_id, origin_country_code,
@@ -327,7 +380,7 @@ export async function handleSupplierOffer(req: IncomingMessage, res: ServerRespo
     await client.query(
       `INSERT INTO sourcing_request_events (request_id, actor_user_id, event_type, metadata)
        VALUES ($1,$2,'supplier.offer_submitted',$3::jsonb)`,
-      [requestId, userId, JSON.stringify({ offerId: inserted.rows[0].id, supplierAccountId: accountId })],
+      [requestId, userId, JSON.stringify({ offerId: inserted.rows[0].id, supplierAccountId: accountId, idempotencyKey })],
     );
     await client.query("COMMIT");
     reply(res, 201, { success: true, offer: inserted.rows[0], availability: "pending_supplier_confirmation" });

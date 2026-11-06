@@ -353,6 +353,69 @@ describe("buyer offer acceptance idempotency scope", () => {
 });
 
 
+describe("supplier offer submission idempotency", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.getSession.mockResolvedValue({ user: { id: supplierUserId } });
+    mocks.connect.mockResolvedValue({ query: mocks.clientQuery, release: mocks.release });
+  });
+
+  function offerRequest(overrides: Record<string, unknown> = {}, key = "supplier-offer-key-0001"): IncomingMessage {
+    const request = Readable.from([JSON.stringify({
+      supplierAccountId, offeredQuantity: 2, unitPrice: "10.00",
+      currency: "USD", shippingAmount: "2.00", leadTimeDays: 3,
+      termsSnapshot: { description: "Standard terms" }, ...overrides,
+    })]) as IncomingMessage;
+    Object.assign(request, { method: "POST", headers: { "idempotency-key": key } });
+    return request;
+  }
+
+  function setupPrior(payloadMatches: boolean) {
+    mocks.clientQuery.mockImplementation(async (sql: string) => {
+      if (sql === "BEGIN" || sql === "ROLLBACK" || sql === "COMMIT") return { rowCount: 0, rows: [] };
+      if (sql.includes("FROM account_members am")) return { rowCount: 1, rows: [{
+        id: supplierAccountId, account_type: "supplier", status: "active", country_code: "TR",
+      }] };
+      if (sql.includes("FROM sourcing_requests WHERE id = $1 FOR UPDATE")) return { rowCount: 1, rows: [{
+        id: requestId, buyer_user_id: buyerId, quantity: 2, unit: "pieces",
+        status: "submitted", destination_country_code: "TR",
+      }] };
+      if (sql.includes("FROM sourcing_request_events e")) return { rowCount: 1, rows: [{
+        id: offerId, request_id: requestId, supplier_account_id: supplierAccountId,
+        offered_quantity: 2, unit_price: "10.00", currency: "USD",
+        shipping_amount: "2.00", lead_time_days: 3, payload_matches: payloadMatches,
+      }] };
+      return { rowCount: 0, rows: [] };
+    });
+  }
+
+  it("replays a matching supplier offer submission after a network retry", async () => {
+    setupPrior(true);
+    const response = makeResponse();
+    await handleSupplierOffer(offerRequest(), response as unknown as ServerResponse, requestId);
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body)).toMatchObject({ success: true, replayed: true, offer: { id: offerId } });
+    const statements = mocks.clientQuery.mock.calls.map(([sql]) => String(sql));
+    expect(statements.findIndex(sql => sql.includes("pg_advisory_xact_lock"))).toBeLessThan(
+      statements.findIndex(sql => sql.includes("FROM sourcing_request_events e")),
+    );
+    expect(statements.some(sql => sql.includes("INSERT INTO supplier_offers"))).toBe(false);
+    expect(statements.at(-1)).toBe("COMMIT");
+  });
+
+  it("rejects reuse of a supplier idempotency key with a different payload", async () => {
+    setupPrior(false);
+    const response = makeResponse();
+    await handleSupplierOffer(offerRequest({ unitPrice: "11.00" }), response as unknown as ServerResponse, requestId);
+    expect(response.statusCode).toBe(409);
+    expect(JSON.parse(response.body)).toMatchObject({
+      success: false, error: "Idempotency key was already used for a different supplier offer",
+    });
+    expect(mocks.clientQuery.mock.calls.at(-1)?.[0]).toBe("ROLLBACK");
+    expect(mocks.clientQuery.mock.calls.some(([sql]) => String(sql).includes("INSERT INTO supplier_offers"))).toBe(false);
+  });
+});
+
 describe("supplier offer submission membership locking", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -382,7 +445,7 @@ describe("supplier offer submission membership locking", () => {
       supplierAccountId, offeredQuantity: 2, unitPrice: "10.00",
       currency: "USD", shippingAmount: "2.00", leadTimeDays: 3,
     })]) as IncomingMessage;
-    Object.assign(request, { method: "POST", headers: {} });
+    Object.assign(request, { method: "POST", headers: { "idempotency-key": "supplier-offer-key-0001" } });
     const response = makeResponse();
 
     await handleSupplierOffer(request, response as unknown as ServerResponse, requestId);
