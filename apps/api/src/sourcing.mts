@@ -117,15 +117,30 @@ export async function handleSourcingCollection(req: IncomingMessage, res: Server
       if (inserted.rows.length === 0) {
         await client.query("ROLLBACK");
         const existing = await db.query(
-          `SELECT id, item_name, quantity, unit, destination_country_code, destination_city, status, created_at
+          `SELECT id, item_name, quantity, unit, destination_country_code, destination_city, status, created_at,
+                  (item_name = $3
+                   AND description IS NOT DISTINCT FROM $4
+                   AND specifications = $5::jsonb
+                   AND quantity = $6
+                   AND unit = $7
+                   AND destination_country_code = $8
+                   AND destination_city = $9
+                   AND requested_currency IS NOT DISTINCT FROM $10
+                   AND delivery_location_snapshot = $11::jsonb) AS payload_matches
            FROM sourcing_requests WHERE buyer_user_id = $1 AND idempotency_key = $2 LIMIT 1`,
-          [userId, idempotencyKey],
+          [userId, idempotencyKey, itemName.trim(), description, JSON.stringify(specifications),
+           quantity, unit.trim(), country, city.trim(), currency, JSON.stringify(deliveryLocation)],
         );
         if (!existing.rows.length) {
           reply(res, 409, { success: false, error: "Idempotency key could not be resolved" });
           return;
         }
-        reply(res, 200, { success: true, replayed: true, request: existing.rows[0] });
+        if (!existing.rows[0].payload_matches) {
+          reply(res, 409, { success: false, error: "Idempotency key was already used for a different sourcing request" });
+          return;
+        }
+        const { payload_matches: _payloadMatches, ...existingRequest } = existing.rows[0];
+        reply(res, 200, { success: true, replayed: true, request: existingRequest });
         return;
       }
       const created = inserted.rows[0];
