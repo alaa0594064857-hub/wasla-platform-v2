@@ -234,7 +234,7 @@ async function handleRequest(
 
 
 
-  const orderDetailMatch = requestUrl.pathname.match(/^\\/api\\/orders\\/([0-9a-f-]{36})$/);
+  const orderDetailMatch = requestUrl.pathname.match(/^\/api\/orders\/([0-9a-f-]{36})$/);
   if (orderDetailMatch) {
     try {
       const { handleOrderDetailRequest } = await import("./orders.mjs");
