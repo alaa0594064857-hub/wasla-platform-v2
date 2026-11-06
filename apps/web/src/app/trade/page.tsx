@@ -118,6 +118,9 @@ export default function TradePage() {
           </div>
           <p className="mt-3 text-sm">{t.version}: {selected.deal.terms_version}</p>
           <pre className="mt-3 overflow-x-auto rounded-lg bg-slate-50 p-3 text-xs">{JSON.stringify(selected.deal.terms_snapshot, null, 2)}</pre>
+          {selected.deal.status === "agreed" && <button disabled={busy} className="mt-4 rounded-lg bg-[#17243a] px-4 py-2 text-white" onClick={() => void action("/api/trade-deals/" + selected.deal.id + "/status", "PATCH", { status: "in_progress" })}>{locale === "ar" ? "بدء التنفيذ" : "Start execution"}</button>}
+          {selected.deal.status === "in_progress" && selected.deal.can_complete && <button disabled={busy} className="mt-4 rounded-lg bg-[#17243a] px-4 py-2 text-white" onClick={() => void action("/api/trade-deals/" + selected.deal.id + "/status", "PATCH", { status: "completed" })}>{locale === "ar" ? "تأكيد اكتمال الصفقة" : "Confirm completion"}</button>}
+          {["agreed", "in_progress"].includes(selected.deal.status) && <button disabled={busy} className="mt-4 rounded-lg border px-4 py-2" onClick={() => void action("/api/trade-deals/" + selected.deal.id + "/status", "PATCH", { status: "disputed" })}>{locale === "ar" ? "فتح نزاع" : "Raise a dispute"}</button>}
           {selected.deal.status === "proposed" && selected.deal.can_respond && <div className="mt-4 flex gap-2">
             <button disabled={busy} className="rounded-lg bg-[#17243a] px-4 py-2 text-white disabled:opacity-50" onClick={() => void action(`/api/trade-deals/${selected.deal.id}/respond`, "POST", { decision: "accept" })}>{t.accept}</button>
             <button disabled={busy} className="rounded-lg border px-4 py-2 disabled:opacity-50" onClick={() => void action(`/api/trade-deals/${selected.deal.id}/respond`, "POST", { decision: "decline" })}>{t.decline}</button>
