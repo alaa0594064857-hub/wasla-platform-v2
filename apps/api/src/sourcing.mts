@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { fromNodeHeaders } from "better-auth/node";
+import type { PoolClient } from "pg";
 import { auth } from "./auth.mjs";
 import { getDatabasePool } from "./database.js";
 
@@ -76,7 +77,7 @@ export async function handleSourcingCollection(req: IncomingMessage, res: Server
       : typeof body.requestedCurrency === "string" ? body.requestedCurrency.toUpperCase() : "";
     const idempotencyKey = req.headers["idempotency-key"] ??
       (typeof body.idempotencyKey === "string" ? body.idempotencyKey : "");
-    if (!validText(itemName, 2, 180) || !Number.isSafeInteger(quantity) || Number(quantity) <= 0 ||
+    if (!validText(itemName, 2, 180) || typeof quantity !== "number" || !Number.isSafeInteger(quantity) || quantity <= 0 ||
         !validText(unit, 1, 40) || !COUNTRY.test(country) || !validText(city, 2, 120) ||
         (currency !== null && (typeof currency !== "string" || !CURRENCY.test(currency))) ||
         typeof idempotencyKey !== "string" || idempotencyKey.length < 8 || idempotencyKey.length > 128) {
@@ -160,7 +161,7 @@ export async function handleSourcingRequestDetail(req: IncomingMessage, res: Ser
 export async function handleSupplierOffer(req: IncomingMessage, res: ServerResponse, requestId: string): Promise<void> {
   if (req.method !== "POST") { reply(res, 405, { success: false, error: "Method not allowed" }); return; }
   if (!UUID.test(requestId)) { reply(res, 400, { success: false, error: "Invalid request ID" }); return; }
-  let client;
+  let client: PoolClient | undefined;
   try {
     const userId = await sessionUser(req);
     if (!userId) { reply(res, 401, { success: false, error: "Authentication required" }); return; }
@@ -174,12 +175,12 @@ export async function handleSupplierOffer(req: IncomingMessage, res: ServerRespo
     const shipping = body.shippingAmount ?? 0;
     const leadTime = body.leadTimeDays ?? null;
     if (typeof accountId !== "string" || !UUID.test(accountId) || !COUNTRY.test(origin) || !CURRENCY.test(currency) ||
-        !Number.isSafeInteger(quantity) || Number(quantity) <= 0 ||
+        typeof quantity !== "number" || !Number.isSafeInteger(quantity) || quantity <= 0 ||
         typeof unitPrice !== "number" && typeof unitPrice !== "string" ||
         !Number.isFinite(Number(unitPrice)) || Number(unitPrice) < 0 ||
         typeof shipping !== "number" && typeof shipping !== "string" ||
         !Number.isFinite(Number(shipping)) || Number(shipping) < 0 ||
-        (leadTime !== null && (!Number.isSafeInteger(leadTime) || Number(leadTime) < 0))) {
+        (leadTime !== null && (typeof leadTime !== "number" || !Number.isSafeInteger(leadTime) || leadTime < 0))) {
       reply(res, 400, { success: false, error: "Invalid supplier offer details" }); return;
     }
     const terms = body.termsSnapshot ?? {};
@@ -223,11 +224,6 @@ export async function handleSupplierOffer(req: IncomingMessage, res: ServerRespo
                  offered_quantity, unit_price, currency, shipping_amount, lead_time_days, status, created_at`,
       [requestId, accountId, userId, origin, quantity, String(unitPrice), currency,
        String(shipping), leadTime, JSON.stringify(terms)],
-    );
-    await client.query(
-      `UPDATE sourcing_requests SET status = 'offers_available', updated_at = NOW()
-       WHERE id = $1 AND status IN ('submitted','searching')`,
-      [requestId],
     );
     await client.query(
       `INSERT INTO sourcing_request_events (request_id, actor_user_id, event_type, metadata)
@@ -280,8 +276,14 @@ export async function handleSupplierAvailability(req: IncomingMessage, res: Serv
          AND o.status IN ('availability_pending','available','unavailable')
          AND EXISTS (
            SELECT 1 FROM account_members am
+           INNER JOIN accounts a ON a.id = am.account_id
            WHERE am.account_id = o.supplier_account_id
              AND am.user_id = $5 AND am.status = 'active'
+             AND a.status = 'active' AND a.account_type IN ('supplier','manufacturer')
+         )
+         AND EXISTS (
+           SELECT 1 FROM sourcing_requests sr
+           WHERE sr.id = o.request_id AND sr.status IN ('submitted','searching','offers_available')
          )
        RETURNING o.id, o.request_id, o.status, o.availability_confirmed_at,
                  o.availability_valid_until, o.quote_valid_until`,
@@ -289,6 +291,13 @@ export async function handleSupplierAvailability(req: IncomingMessage, res: Serv
     );
     if (!updated.rows.length) { reply(res, 404, { success: false, error: "Offer not found or supplier access revoked" }); return; }
     const row = updated.rows[0];
+    if (row.status === 'available') {
+      await db.query(
+        `UPDATE sourcing_requests SET status = 'offers_available', updated_at = NOW()
+         WHERE id = $1 AND status IN ('submitted','searching')`,
+        [row.request_id],
+      );
+    }
     await db.query(
       `INSERT INTO sourcing_request_events (request_id, actor_user_id, event_type, to_status, metadata)
        VALUES ($1,$2,'supplier.availability_confirmed',$3,$4::jsonb)`,
