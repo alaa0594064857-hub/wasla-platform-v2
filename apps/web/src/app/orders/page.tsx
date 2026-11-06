@@ -13,7 +13,7 @@ type Order = {
   shippingAddress?: { fullName?: string; addressLine1?: string; addressLine2?: string; city?: string; region?: string; postalCode?: string; countryCode?: string; phone?: string };
   items?: OrderItem[];
 };
-type OrderEvent = { id: string; eventType: string; fromStatus: string | null; toStatus: string | null; metadata: Record<string, unknown>; createdAt: string; actorUserId: string | null };
+type OrderEvent = { id: string; eventType: string; fromStatus: string | null; toStatus: string | null; metadata: Record<string, unknown>; createdAt: string };
 type SourcingOrder = {
   id: string; orderNumber: string; status: string; currency: string;
   subtotal: string; shippingTotal: string; grandTotal: string; createdAt: string;
