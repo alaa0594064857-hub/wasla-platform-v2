@@ -149,24 +149,38 @@ export async function handleSubscriptionPlansRequest(
     }
 
     if (request.method === "POST") {
+      if (input.isPublic === true && input.isActive !== true) {
+        reply(response, 400, { success: false, error: "A public plan must be active" });
+        return;
+      }
       const keys = editableFields.filter((key) => Object.prototype.hasOwnProperty.call(input, key));
       const sqlColumns = keys.map((key) => columns[key]);
-      const placeholders = keys.map((key, index) => key === "entitlements" ? `$ ${index + 1}::jsonb`.replace("$ ", "$") : `$${index + 1}`);
-      const result = await db.query(
-        `INSERT INTO subscription_plans (${sqlColumns.join(", ")})
-         VALUES (${placeholders.join(", ")})
-         RETURNING id, code, name_ar, name_en, amount::text AS amount, currency,
-                   billing_interval, interval_count, trial_days, entitlements,
-                   is_active, is_public, sort_order, created_at, updated_at`,
-        valuesFor(input, keys),
-      );
-      const plan = result.rows[0] as { id: string; code: string };
-      await db.query(
-        `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, metadata)
-         VALUES ($1, 'subscription.plan.created', 'subscription_plan', $2, $3::jsonb)`,
-        [access.userId, plan.id, JSON.stringify({ code: plan.code })],
-      );
-      reply(response, 201, { success: true, plan, billingEnabled: false });
+      const placeholders = keys.map((key, index) => key === "entitlements" ? `${index + 1}::jsonb` : `${index + 1}`);
+      const client = await db.connect();
+      try {
+        await client.query("BEGIN");
+        const result = await client.query(
+          `INSERT INTO subscription_plans (${sqlColumns.join(", ")})
+           VALUES (${placeholders.join(", ")})
+           RETURNING id, code, name_ar, name_en, amount::text AS amount, currency,
+                     billing_interval, interval_count, trial_days, entitlements,
+                     is_active, is_public, sort_order, created_at, updated_at`,
+          valuesFor(input, keys),
+        );
+        const plan = result.rows[0] as { id: string; code: string };
+        await client.query(
+          `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, metadata)
+           VALUES ($1, 'subscription.plan.created', 'subscription_plan', $2, $3::jsonb)`,
+          [access.userId, plan.id, JSON.stringify({ code: plan.code })],
+        );
+        await client.query("COMMIT");
+        reply(response, 201, { success: true, plan, billingEnabled: false });
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        client.release();
+      }
       return;
     }
 
@@ -191,22 +205,32 @@ export async function handleSubscriptionPlansRequest(
       return;
     }
     const assignments = keys.map((key, index) => `${columns[key]} = $${index + 1}${key === "entitlements" ? "::jsonb" : ""}`);
-    const result = await db.query(
-      `UPDATE subscription_plans
-       SET ${assignments.join(", ")}, updated_at = NOW()
-       WHERE id = $${keys.length + 1}
-       RETURNING id, code, name_ar, name_en, description_ar, description_en,
-                 amount::text AS amount, currency, billing_interval, interval_count,
-                 trial_days, entitlements, is_active, is_public, sort_order,
-                 created_at, updated_at`,
-      [...valuesFor(input, keys), planId],
-    );
-    await db.query(
-      `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, metadata)
-       VALUES ($1, 'subscription.plan.updated', 'subscription_plan', $2, $3::jsonb)`,
-      [access.userId, planId, JSON.stringify({ changed_fields: keys })],
-    );
-    reply(response, 200, { success: true, plan: result.rows[0], billingEnabled: false });
+    const client = await db.connect();
+    try {
+      await client.query("BEGIN");
+      const result = await client.query(
+        `UPDATE subscription_plans
+         SET ${assignments.join(", ")}, updated_at = NOW()
+         WHERE id = ${keys.length + 1}
+         RETURNING id, code, name_ar, name_en, description_ar, description_en,
+                   amount::text AS amount, currency, billing_interval, interval_count,
+                   trial_days, entitlements, is_active, is_public, sort_order,
+                   created_at, updated_at`,
+        [...valuesFor(input, keys), planId],
+      );
+      await client.query(
+        `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, metadata)
+         VALUES ($1, 'subscription.plan.updated', 'subscription_plan', $2, $3::jsonb)`,
+        [access.userId, planId, JSON.stringify({ changed_fields: keys })],
+      );
+      await client.query("COMMIT");
+      reply(response, 200, { success: true, plan: result.rows[0], billingEnabled: false });
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
   } catch (error) {
     if ((error as { code?: string })?.code === "23505") {
       reply(response, 409, { success: false, error: "A plan with this code already exists" });
