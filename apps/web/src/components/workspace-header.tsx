@@ -46,6 +46,7 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
     { href: "/account", label: ar ? "حسابي وهويتي" : "My account & identity", icon: "◉" },
     { href: "/profile", label: ar ? "ملفي الشخصي" : "My profile", icon: "◎" },
     { href: "/shops", label: ar ? "متاجري" : "My shops", icon: "✳" },
+    { href: "/sourcing", label: ar ? "طلبات التوريد" : "Sourcing requests", icon: "↗" },
     { href: "/orders", label: ar ? "طلباتي" : "My orders", icon: "▤" },
     { href: "/business", label: ar ? "شركتي وحسابات الأعمال" : "My company & business", icon: "▦" },
     { href: "/network", label: ar ? "شبكتي وأصدقائي" : "My network & friends", icon: "♧" },
@@ -76,6 +77,7 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
       <nav className="wasla-workspace-nav" aria-label={ar ? "التنقل الرئيسي" : "Main navigation"}>
         <Link href={accountHref} aria-current={inAccountSpace ? "page" : undefined}>{isPending ? "..." : session?.user ? (ar ? "مساحة عملي" : "My workspace") : (ar ? "الرئيسية" : "Home")}</Link>
         <Link href="/shops">{ar ? "المتاجر" : "Shops"}</Link>
+        <Link href="/sourcing">{ar ? "التوريد" : "Sourcing"}</Link>
         <Link href="/business">{ar ? "الأعمال" : "Business"}</Link>
         <Link href="/network" aria-current={pathname === "/network" ? "page" : undefined}>{ar ? "شبكتي" : "My network"}</Link>
         <Link href={messagesHref}>{pathname === "/messages" ? (ar ? "الرئيسية" : "Home") : (ar ? "الرسائل" : "Messages")}</Link>
