@@ -750,3 +750,67 @@ export async function handleSourcingOrderEvents(req: IncomingMessage, res: Serve
     reply(res, 500, { success: false, error: "Could not load sourcing order history" });
   }
 }
+
+
+export async function handleBuyerConfirmSourcingDelivery(req: IncomingMessage, res: ServerResponse, orderId: string): Promise<void> {
+  if (req.method !== "POST") {
+    reply(res, 405, { success: false, error: "Method not allowed" }); return;
+  }
+  if (!UUID.test(orderId)) {
+    reply(res, 400, { success: false, error: "Invalid sourcing order ID" }); return;
+  }
+  try {
+    const userId = await sessionUser(req);
+    if (!userId) { reply(res, 401, { success: false, error: "Authentication required" }); return; }
+    const db = getDatabasePool();
+    const client = await db.connect();
+    try {
+      await client.query("BEGIN");
+      const result = await client.query(
+        `SELECT id, request_id, status, buyer_user_id
+         FROM sourcing_orders WHERE id = $1 FOR UPDATE`,
+        [orderId],
+      );
+      if (!result.rows.length || result.rows[0].buyer_user_id !== userId) {
+        await client.query("ROLLBACK");
+        reply(res, 404, { success: false, error: "Sourcing order not found" }); return;
+      }
+      const order = result.rows[0];
+      if (order.status === "completed") {
+        await client.query("COMMIT");
+        reply(res, 200, { success: true, replayed: true, order: { id: orderId, status: "completed" } });
+        return;
+      }
+      if (order.status !== "shipped") {
+        await client.query("ROLLBACK");
+        reply(res, 409, { success: false, error: "Only shipped orders can be confirmed as delivered" }); return;
+      }
+      await client.query(
+        "UPDATE sourcing_orders SET status = 'completed', updated_at = NOW() WHERE id = $1",
+        [orderId],
+      );
+      await client.query(
+        `INSERT INTO sourcing_order_events
+         (order_id, actor_user_id, event_type, from_status, to_status, metadata)
+         VALUES ($1,$2,'buyer.delivery_confirmed','shipped','completed',$3::jsonb)`,
+        [orderId, userId, JSON.stringify({ confirmation: "buyer_reported_received" })],
+      );
+      await client.query(
+        `INSERT INTO sourcing_request_events
+         (request_id, actor_user_id, event_type, from_status, to_status, metadata)
+         VALUES ($1,$2,'sourcing_order.delivery_confirmed','shipped','completed',$3::jsonb)`,
+        [order.request_id, userId, JSON.stringify({ orderId, confirmation: "buyer_reported_received" })],
+      );
+      await client.query("COMMIT");
+      reply(res, 200, { success: true, order: { id: orderId, status: "completed" } });
+    } catch (error) {
+      try { await client.query("ROLLBACK"); } catch {}
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error("WASLA buyer delivery confirmation API error:", error);
+    reply(res, 500, { success: false, error: "Could not confirm sourcing order delivery" });
+  }
+}
