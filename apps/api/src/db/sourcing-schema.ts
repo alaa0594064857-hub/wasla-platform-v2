@@ -91,3 +91,18 @@ export const sourcingOrders = pgTable("sourcing_orders", {
   check("sourcing_orders_total_check", sql`${t.grandTotal} = ${t.subtotal} + ${t.shippingTotal}`),
   check("sourcing_orders_status_check", sql`${t.status} IN ('awaiting_payment','payment_pending','paid','fulfilment_pending','shipped','completed','cancelled')`),
 ]);
+
+ 
+export const sourcingOrderEvents = pgTable("sourcing_order_events", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  orderId: uuid("order_id").notNull().references(() => sourcingOrders.id, { onDelete: "restrict" }),
+  actorUserId: uuid("actor_user_id").references(() => users.id, { onDelete: "set null" }),
+  eventType: varchar("event_type", { length: 80 }).notNull(),
+  fromStatus: varchar("from_status", { length: 24 }),
+  toStatus: varchar("to_status", { length: 24 }),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index("sourcing_order_events_order_created_idx").on(t.orderId, t.createdAt.desc()),
+  index("sourcing_order_events_actor_created_idx").on(t.actorUserId, t.createdAt.desc()),
+]);
