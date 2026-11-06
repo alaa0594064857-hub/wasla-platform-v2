@@ -247,6 +247,44 @@ async function handleRequest(
     return;
   }
 
+  const tradeDealResponseMatch = requestUrl.pathname.match(/^\/api\/trade-deals\/([^/]+)\/respond$/);
+  if (tradeDealResponseMatch) {
+    try {
+      const { handleTradeDealResponse } = await import("./trade-deals.mjs");
+      await handleTradeDealResponse(request, response, tradeDealResponseMatch[1]);
+    } catch (error) {
+      console.error("WASLA trade deal response route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Trade deal response service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const tradeDealDetailMatch = requestUrl.pathname.match(/^\/api\/trade-deals\/([^/]+)$/);
+  if (tradeDealDetailMatch) {
+    try {
+      const { handleTradeDeals } = await import("./trade-deals.mjs");
+      await handleTradeDeals(request, response, tradeDealDetailMatch[1]);
+    } catch (error) {
+      console.error("WASLA trade deal detail route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Trade deal service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/trade-deals") {
+    try {
+      const { handleTradeDeals } = await import("./trade-deals.mjs");
+      await handleTradeDeals(request, response);
+    } catch (error) {
+      console.error("WASLA trade deals route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Trade deals service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const conversationMessagesMatch = requestUrl.pathname.match(/^\/api\/messages\/([^/]+)$/);
   if (conversationMessagesMatch) {
     try {
