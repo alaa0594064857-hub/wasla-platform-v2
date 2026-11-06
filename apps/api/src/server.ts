@@ -56,6 +56,19 @@ async function handleRequest(
     return;
   }
 
+  const sourcingOrderEventsMatch = requestUrl.pathname.match(/^\/api\/sourcing-orders\/([^/]+)\/events$/);
+  if (sourcingOrderEventsMatch) {
+    try {
+      const { handleSourcingOrderEvents } = await import("./sourcing.mjs");
+      await handleSourcingOrderEvents(request, response, sourcingOrderEventsMatch[1]);
+    } catch (error) {
+      console.error("WASLA sourcing order events route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Sourcing order history service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const supplierSourcingOrderStatusMatch = requestUrl.pathname.match(/^\/api\/supplier\/sourcing-orders\/([^/]+)\/status$/);
   if (supplierSourcingOrderStatusMatch) {
     try {
