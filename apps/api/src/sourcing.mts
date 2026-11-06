@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { randomUUID } from "node:crypto";
 import { fromNodeHeaders } from "better-auth/node";
 import type { PoolClient } from "pg";
 import { auth } from "./auth.mjs";
@@ -311,5 +312,162 @@ export async function handleSupplierAvailability(req: IncomingMessage, res: Serv
     console.error("WASLA supplier availability API error:", error);
     const tooLarge = error instanceof Error && error.message === "BODY_TOO_LARGE";
     reply(res, tooLarge ? 413 : 500, { success: false, error: tooLarge ? "Request body is too large" : "Could not update supplier availability" });
+  }
+}
+
+
+export async function handleAcceptSupplierOffer(req: IncomingMessage, res: ServerResponse, requestId: string): Promise<void> {
+  if (req.method !== "POST") { reply(res, 405, { success: false, error: "Method not allowed" }); return; }
+  if (!UUID.test(requestId)) { reply(res, 400, { success: false, error: "Invalid request ID" }); return; }
+  let client: PoolClient | undefined;
+  try {
+    const userId = await sessionUser(req);
+    if (!userId) { reply(res, 401, { success: false, error: "Authentication required" }); return; }
+    const body = await readBody(req);
+    if (!body || typeof body.offerId !== "string" || !UUID.test(body.offerId)) {
+      reply(res, 400, { success: false, error: "A valid offer ID is required" }); return;
+    }
+    const headerKey = req.headers["idempotency-key"];
+    const idempotencyKey = typeof headerKey === "string" ? headerKey : body.idempotencyKey;
+    if (typeof idempotencyKey !== "string" || idempotencyKey.length < 8 || idempotencyKey.length > 128) {
+      reply(res, 400, { success: false, error: "A valid idempotency key is required" }); return;
+    }
+
+    const pool = getDatabasePool();
+    client = await pool.connect();
+    await client.query("BEGIN");
+
+    const prior = await client.query(
+      `SELECT id, order_number, request_id, accepted_offer_id, status, currency,
+              subtotal, shipping_total, grand_total, commercial_snapshot, created_at
+       FROM sourcing_orders WHERE buyer_user_id = $1 AND idempotency_key = $2 LIMIT 1`,
+      [userId, idempotencyKey],
+    );
+    if (prior.rows.length) {
+      await client.query("COMMIT");
+      reply(res, 200, { success: true, replayed: true, order: prior.rows[0], payment: "not_started" });
+      return;
+    }
+
+    const requestResult = await client.query(
+      `SELECT id, buyer_user_id, item_name, description, specifications, quantity,
+              unit, destination_country_code, destination_city, delivery_location_snapshot,
+              status
+       FROM sourcing_requests WHERE id = $1 FOR UPDATE`,
+      [requestId],
+    );
+    if (!requestResult.rows.length) {
+      await client.query("ROLLBACK"); reply(res, 404, { success: false, error: "Sourcing request not found" }); return;
+    }
+    const sourcingRequest = requestResult.rows[0];
+    if (sourcingRequest.buyer_user_id !== userId) {
+      await client.query("ROLLBACK"); reply(res, 403, { success: false, error: "Only the buyer can accept an offer" }); return;
+    }
+    if (!["submitted", "searching", "offers_available"].includes(sourcingRequest.status)) {
+      await client.query("ROLLBACK"); reply(res, 409, { success: false, error: "This sourcing request is no longer accepting offers" }); return;
+    }
+
+    const offerResult = await client.query(
+      `SELECT o.*, a.display_name AS supplier_name, a.status AS supplier_account_status,
+              a.account_type AS supplier_account_type
+       FROM supplier_offers o
+       INNER JOIN accounts a ON a.id = o.supplier_account_id
+       WHERE o.id = $1 AND o.request_id = $2
+       FOR UPDATE OF o`,
+      [body.offerId, requestId],
+    );
+    if (!offerResult.rows.length) {
+      await client.query("ROLLBACK"); reply(res, 404, { success: false, error: "Supplier offer not found" }); return;
+    }
+    const offer = offerResult.rows[0];
+    const now = Date.now();
+    const validAvailability = offer.availability_valid_until === null || new Date(offer.availability_valid_until).getTime() > now;
+    const validQuote = offer.quote_valid_until === null || new Date(offer.quote_valid_until).getTime() > now;
+    if (offer.status !== "available" || !offer.availability_confirmed_at || !validAvailability || !validQuote ||
+        Number(offer.offered_quantity) < Number(sourcingRequest.quantity) ||
+        offer.supplier_account_status !== "active" ||
+        !["supplier", "manufacturer"].includes(offer.supplier_account_type)) {
+      await client.query("ROLLBACK");
+      reply(res, 409, { success: false, error: "Offer is not currently eligible: supplier confirmation, quantity, account status or quote validity is insufficient" });
+      return;
+    }
+
+    const totals = await client.query(
+      `SELECT ROUND($1::numeric * $2::numeric, 2)::text AS subtotal,
+              $3::numeric(14,2)::text AS shipping_total,
+              ROUND(($1::numeric * $2::numeric) + $3::numeric, 2)::text AS grand_total`,
+      [offer.unit_price, sourcingRequest.quantity, offer.shipping_amount],
+    );
+    const amount = totals.rows[0];
+    const crossBorder = offer.origin_country_code !== sourcingRequest.destination_country_code;
+    const snapshot = {
+      itemName: sourcingRequest.item_name,
+      description: sourcingRequest.description,
+      specifications: sourcingRequest.specifications,
+      quantity: sourcingRequest.quantity,
+      unit: sourcingRequest.unit,
+      destination: {
+        countryCode: sourcingRequest.destination_country_code,
+        city: sourcingRequest.destination_city,
+        location: sourcingRequest.delivery_location_snapshot,
+      },
+      supplier: {
+        accountId: offer.supplier_account_id,
+        name: offer.supplier_name,
+        originCountryCode: offer.origin_country_code,
+      },
+      offer: {
+        offerId: offer.id,
+        offeredQuantity: offer.offered_quantity,
+        unitPrice: offer.unit_price,
+        currency: offer.currency,
+        shippingAmount: offer.shipping_amount,
+        leadTimeDays: offer.lead_time_days,
+        terms: offer.terms_snapshot,
+        availabilityConfirmedAt: offer.availability_confirmed_at,
+        availabilityValidUntil: offer.availability_valid_until,
+        quoteValidUntil: offer.quote_valid_until,
+      },
+      fulfilment: { crossBorder },
+      totals: amount,
+    };
+    const orderNumber = `WS-${randomUUID().replace(/-/g, "").slice(0, 16).toUpperCase()}`;
+    await client.query(
+      `UPDATE supplier_offers SET status = 'accepted', updated_at = NOW() WHERE id = $1`,
+      [offer.id],
+    );
+    await client.query(
+      `UPDATE supplier_offers SET status = 'rejected', updated_at = NOW()
+       WHERE request_id = $1 AND id <> $2
+         AND status IN ('draft','submitted','availability_pending','available')`,
+      [requestId, offer.id],
+    );
+    await client.query(
+      `UPDATE sourcing_requests SET status = 'buyer_selected', updated_at = NOW() WHERE id = $1`,
+      [requestId],
+    );
+    const created = await client.query(
+      `INSERT INTO sourcing_orders
+       (order_number, request_id, accepted_offer_id, buyer_user_id, supplier_account_id,
+        status, currency, subtotal, shipping_total, grand_total, commercial_snapshot, idempotency_key)
+       VALUES ($1,$2,$3,$4,$5,'awaiting_payment',$6,$7,$8,$9,$10::jsonb,$11)
+       RETURNING id, order_number, request_id, accepted_offer_id, status, currency,
+                 subtotal, shipping_total, grand_total, commercial_snapshot, created_at`,
+      [orderNumber, requestId, offer.id, userId, offer.supplier_account_id, offer.currency,
+       amount.subtotal, amount.shipping_total, amount.grand_total, JSON.stringify(snapshot), idempotencyKey],
+    );
+    await client.query(
+      `INSERT INTO sourcing_request_events (request_id, actor_user_id, event_type, from_status, to_status, metadata)
+       VALUES ($1,$2,'buyer.offer_accepted',$3,'buyer_selected',$4::jsonb)`,
+      [requestId, userId, sourcingRequest.status, JSON.stringify({ offerId: offer.id, orderId: created.rows[0].id })],
+    );
+    await client.query("COMMIT");
+    reply(res, 201, { success: true, order: created.rows[0], payment: "not_started" });
+  } catch (error) {
+    if (client) { try { await client.query("ROLLBACK"); } catch {} }
+    console.error("WASLA accept supplier offer API error:", error);
+    reply(res, 500, { success: false, error: "Could not accept supplier offer" });
+  } finally {
+    client?.release();
   }
 }
