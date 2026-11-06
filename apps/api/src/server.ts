@@ -56,6 +56,19 @@ async function handleRequest(
     return;
   }
 
+  const buyerDeliveryConfirmationMatch = requestUrl.pathname.match(/^\/api\/sourcing-orders\/([^/]+)\/confirm-delivery$/);
+  if (buyerDeliveryConfirmationMatch) {
+    try {
+      const { handleBuyerConfirmSourcingDelivery } = await import("./sourcing.mjs");
+      await handleBuyerConfirmSourcingDelivery(request, response, buyerDeliveryConfirmationMatch[1]);
+    } catch (error) {
+      console.error("WASLA buyer delivery confirmation route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Delivery confirmation service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const sourcingOrderEventsMatch = requestUrl.pathname.match(/^\/api\/sourcing-orders\/([^/]+)\/events$/);
   if (sourcingOrderEventsMatch) {
     try {
