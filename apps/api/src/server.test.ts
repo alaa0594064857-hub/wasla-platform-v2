@@ -306,6 +306,39 @@ describe("WASLA API", () => {
     expect(await response.json()).toEqual({ success: false, error: "Invalid conversation ID" });
   });
 
+  it("requires authentication to list or create Trade deals", async () => {
+    const baseUrl = await startTestServer();
+    const listResponse = await fetch(`${baseUrl}/api/trade-deals`);
+    expect(listResponse.status).toBe(401);
+    expect(await listResponse.json()).toEqual({ success: false, error: "Authentication required" });
+
+    const createResponse = await fetch(`${baseUrl}/api/trade-deals`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sourcingOrderId: "00000000-0000-4000-8000-000000000001",
+        termsSnapshot: { delivery: "Agreed separately" },
+      }),
+    });
+    expect(createResponse.status).toBe(401);
+    expect(await createResponse.json()).toEqual({ success: false, error: "Authentication required" });
+  });
+
+  it("validates Trade deal IDs and requires authentication for responses", async () => {
+    const baseUrl = await startTestServer();
+    const invalidDetail = await fetch(`${baseUrl}/api/trade-deals/not-a-uuid`);
+    expect(invalidDetail.status).toBe(400);
+    expect(await invalidDetail.json()).toEqual({ success: false, error: "Invalid deal ID" });
+
+    const response = await fetch(`${baseUrl}/api/trade-deals/00000000-0000-4000-8000-000000000001/respond`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ decision: "accept" }),
+    });
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ success: false, error: "Authentication required" });
+  });
+
   it("returns 404 for unknown routes", async () => {
     const baseUrl = await startTestServer();
     const response = await fetch(`${baseUrl}/unknown`);
