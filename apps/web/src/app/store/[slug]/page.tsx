@@ -95,6 +95,16 @@ export default function PublicStorefrontPage() {
     try { window.localStorage.setItem(storageKey, JSON.stringify(cart)); } catch { /* Storage may be unavailable. */ }
   }, [cart, storageKey]);
 
+  useEffect(() => {
+    if (products.length === 0) return;
+    setCart(current => current
+      .map(line => {
+        const product = products.find(item => item.id === line.productId);
+        return product ? { ...line, quantity: Math.min(line.quantity, product.stockQuantity) } : null;
+      })
+      .filter((line): line is CartLine => Boolean(line && line.quantity > 0)));
+  }, [products]);
+
   const cartProducts = useMemo(() => cart.map(line => ({
     line, product: products.find(product => product.id === line.productId),
   })).filter((entry): entry is { line: CartLine; product: Product } => Boolean(entry.product)), [cart, products]);
