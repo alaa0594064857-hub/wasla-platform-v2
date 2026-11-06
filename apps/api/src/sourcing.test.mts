@@ -429,6 +429,33 @@ describe("supplier availability update safeguards", () => {
     expect(mocks.release).toHaveBeenCalledOnce();
   });
 
+  it("allows an explicit null to clear previously stored validity dates", async () => {
+    mocks.clientQuery.mockImplementation(async (sql: string) => {
+      if (["BEGIN", "ROLLBACK", "COMMIT"].includes(sql)) return { rowCount: 0, rows: [] };
+      if (sql.includes("SELECT o.id") && sql.includes("FOR UPDATE OF o")) return { rowCount: 1, rows: [{ id: offerId }] };
+      if (sql.includes("UPDATE supplier_offers o")) return { rowCount: 1, rows: [{
+        id: offerId, request_id: requestId, status: "available",
+        availability_confirmed_at: new Date().toISOString(),
+        availability_valid_until: null, quote_valid_until: null,
+      }] };
+      return { rowCount: 1, rows: [] };
+    });
+    const response = makeResponse();
+
+    await handleSupplierAvailability(
+      availabilityRequest({ availability: "available", availabilityValidUntil: null, quoteValidUntil: null }),
+      response as unknown as ServerResponse,
+      offerId,
+    );
+
+    const updateCall = mocks.clientQuery.mock.calls.find(([sql]) => String(sql).includes("UPDATE supplier_offers o"));
+    expect(response.statusCode).toBe(200);
+    expect(updateCall?.[1]?.[5]).toBe(true);
+    expect(updateCall?.[1]?.[6]).toBe(true);
+    expect(updateCall?.[1]?.[1]).toBeNull();
+    expect(updateCall?.[1]?.[2]).toBeNull();
+  });
+
   it("rejects expired validity dates before opening a transaction", async () => {
     const response = makeResponse();
     await handleSupplierAvailability(
