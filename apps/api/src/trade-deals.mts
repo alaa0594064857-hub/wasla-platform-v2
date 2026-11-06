@@ -71,8 +71,8 @@ export async function handleTradeDeals(req: IncomingMessage, res: ServerResponse
         `SELECT d.id, d.deal_number, d.sourcing_order_id, d.buyer_user_id,
                 d.supplier_account_id, a.display_name AS supplier_name,
                 d.status, d.terms_version, d.terms_snapshot,
-                d.proposed_by_user_id, d.accepted_by_user_id, d.accepted_at,
-                d.created_at, d.updated_at
+                d.proposed_by_user_id, (d.proposed_by_user_id <> $1) AS can_respond,
+                d.accepted_by_user_id, d.accepted_at, d.created_at, d.updated_at
          FROM trade_deals d
          JOIN accounts a ON a.id = d.supplier_account_id
          WHERE (d.buyer_user_id = $1
@@ -92,7 +92,7 @@ export async function handleTradeDeals(req: IncomingMessage, res: ServerResponse
       }
       if (dealId) {
         const [amendments, milestones, events] = await Promise.all([
-          db.query(`SELECT id, version, proposed_by_user_id, responded_by_user_id, status, terms_snapshot, reason, responded_at, created_at FROM trade_deal_amendments WHERE deal_id = $1 ORDER BY version DESC`, [dealId]),
+          db.query(`SELECT id, version, proposed_by_user_id, (proposed_by_user_id <> $2) AS can_respond, responded_by_user_id, status, terms_snapshot, reason, responded_at, created_at FROM trade_deal_amendments WHERE deal_id = $1 ORDER BY version DESC`, [dealId, userId]),
           db.query(`SELECT id, title, description, due_at, status, completed_by_user_id, completed_at, created_by_user_id, created_at, updated_at FROM trade_deal_milestones WHERE deal_id = $1 ORDER BY due_at NULLS LAST, created_at`, [dealId]),
           db.query(`SELECT id, actor_user_id, event_type, from_status, to_status, metadata, created_at FROM trade_deal_events WHERE deal_id = $1 ORDER BY created_at DESC LIMIT 100`, [dealId]),
         ]);
