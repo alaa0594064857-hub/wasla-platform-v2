@@ -375,3 +375,72 @@ WASLA Store, seller disclosures, and production billing
 flows still require implementation and jurisdictional
 review. No claim is made that these payment flows
 are currently live.
+
+
+## 19. WASLA Subscription Billing Boundary
+
+Decision:
+
+WASLA membership subscriptions are a platform-owned
+service and must remain separate from both member-merchant
+transactions and official WASLA Store product orders.
+
+The subscription domain must support:
+
+- Versioned plans with a stable code, localized names
+  and descriptions, billing interval, currency, amount,
+  feature entitlements, publication state, and sort order.
+- A user or eligible business account as the subscription
+  customer, with an explicit owner responsible for billing.
+- Subscription states including pending, trialing, active,
+  past_due, paused, canceled, and expired.
+- Start, current-period start/end, trial end, cancellation
+  time, and renewal intent as separate fields.
+- Provider-neutral payment references. Payment provider
+  customer, checkout, invoice, and transaction identifiers
+  may be stored as references, but WASLA must not store
+  card numbers, security codes, or bank login credentials.
+- Immutable payment event records with provider event IDs
+  and idempotency protection to prevent duplicate processing.
+- Invoice/receipt records linked only to WASLA subscription
+  charges, with currency and amounts preserved exactly.
+- Auditable administrative changes and a clear reason
+  whenever a subscription is manually activated, paused,
+  canceled, or adjusted.
+
+Payment and activation rules:
+
+- A subscription must never become paid/active merely
+  because a browser returns from a checkout page.
+- Paid status must be confirmed by a trusted, verified
+  provider webhook or an explicitly audited owner action.
+- Webhook signature verification, idempotency, replay
+  protection, and reconciliation are required before
+  production billing is enabled.
+- No payment provider, merchant account, live checkout,
+  pricing, or tax treatment is selected by this decision.
+  Those remain deferred until the operating jurisdiction,
+  legal entity, provider eligibility, and actual prices
+  are confirmed.
+- Free access, trials, and paid plans must be represented
+  explicitly; do not invent prices or activate a trial
+  without a published policy.
+
+Separation requirements:
+
+- Subscription charges are WASLA revenue.
+- Official WASLA Store orders and payments are a separate
+  platform-owned commerce workflow.
+- Member-store customer payments remain directly between
+  the member merchant and customer. They must never be
+  recorded as WASLA subscription revenue or routed through
+  the subscription provider configuration.
+- No merchant balance, payout, escrow, split payment,
+  or sales commission is introduced by subscription work.
+
+Implementation status:
+
+Approved architecture boundary only.
+No subscription plans, subscriptions, invoices, payment
+events, provider integration, or live billing have been
+implemented by this decision.
