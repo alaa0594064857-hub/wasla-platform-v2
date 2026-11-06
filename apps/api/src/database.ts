@@ -293,7 +293,7 @@ export async function ensurePlatformOwnerRole(): Promise<void> {
         await client.query(
           `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, metadata)
            VALUES ($1, 'platform.owner.bootstrap', 'platform_role_assignment', $2,
-                   jsonb_build_object('owner_email', $3, 'role', 'platform_owner'))`,
+                   jsonb_build_object('owner_email', $3::text, 'role', 'platform_owner'))`,
           [ownerId, assignment.rows[0].id, ownerEmail],
         );
       }
