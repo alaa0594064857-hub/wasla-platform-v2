@@ -149,6 +149,55 @@ export async function handleSourcingCollection(req: IncomingMessage, res: Server
   }
 }
 
+export async function handleSupplierOpportunities(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  if (req.method !== "GET") { reply(res, 405, { success: false, error: "Method not allowed" }); return; }
+  try {
+    const userId = await sessionUser(req);
+    if (!userId) { reply(res, 401, { success: false, error: "Authentication required" }); return; }
+    const db = getDatabasePool();
+    const membership = await db.query(
+      `SELECT 1
+       FROM account_members am
+       INNER JOIN accounts a ON a.id = am.account_id
+       WHERE am.user_id = $1 AND am.status = 'active'
+         AND a.status = 'active' AND a.account_type IN ('supplier','manufacturer')
+       LIMIT 1`,
+      [userId],
+    );
+    if (!membership.rows.length) {
+      reply(res, 403, { success: false, error: "An active supplier or manufacturer account is required" });
+      return;
+    }
+    const result = await db.query(
+      `SELECT sr.id, sr.item_name, sr.description, sr.specifications, sr.quantity, sr.unit,
+              sr.destination_country_code, sr.destination_city, sr.requested_currency,
+              sr.status, sr.created_at,
+              EXISTS (
+                SELECT 1 FROM account_members am
+                INNER JOIN accounts a ON a.id = am.account_id
+                WHERE am.user_id = $1 AND am.status = 'active'
+                  AND a.status = 'active' AND a.account_type IN ('supplier','manufacturer')
+                  AND a.country_code = sr.destination_country_code
+              ) AS local_match
+       FROM sourcing_requests sr
+       WHERE sr.buyer_user_id <> $1
+         AND sr.status IN ('submitted','searching','offers_available')
+       ORDER BY local_match DESC, sr.created_at ASC
+       LIMIT 100`,
+      [userId],
+    );
+    const requests = result.rows;
+    reply(res, 200, {
+      success: true,
+      local: requests.filter((item: { local_match: boolean }) => item.local_match),
+      crossBorder: requests.filter((item: { local_match: boolean }) => !item.local_match),
+    });
+  } catch (error) {
+    console.error("WASLA supplier opportunities API error:", error);
+    reply(res, 500, { success: false, error: "Could not load supplier opportunities" });
+  }
+}
+
 export async function handleSourcingRequestDetail(req: IncomingMessage, res: ServerResponse, requestId: string): Promise<void> {
   if (req.method !== "GET") { reply(res, 405, { success: false, error: "Method not allowed" }); return; }
   if (!UUID.test(requestId)) { reply(res, 400, { success: false, error: "Invalid request ID" }); return; }
