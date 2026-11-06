@@ -509,7 +509,7 @@ export async function handleStoreOrdersRequest(
              ORDER BY id FOR UPDATE`,
             [productIds, order.storeId],
           )
-          : { rows: [] };
+          : { rowCount: 0, rows: [] };
         if (lockedProducts.rowCount !== productIds.length) {
           await client.query("ROLLBACK");
           respond(response, 409, { success: false, error: "One or more order products are no longer available in this store" });
@@ -529,7 +529,7 @@ export async function handleStoreOrdersRequest(
         }
         for (const line of lines.rows) {
           const product = products.get(line.productId);
-          if (!product) continue;
+          if (!product) throw new Error("Locked cancellation product is missing");
           const before = Number(product.stockQuantity);
           const after = before + Number(line.quantity);
           const updated = await client.query(
