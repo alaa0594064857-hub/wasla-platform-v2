@@ -56,7 +56,7 @@ async function handleRequest(
     return;
   }
 
-  const sourcingAcceptMatch = requestUrl.pathname.match(/^\\/api\\/sourcing-requests\\/([0-9a-f-]{36})\\/accept-offer$/);
+  const sourcingAcceptMatch = requestUrl.pathname.match(/^\/api\/sourcing-requests\/([0-9a-f-]{36})\/accept-offer$/);
   if (sourcingAcceptMatch) {
     try {
       const { handleAcceptSupplierOffer } = await import("./sourcing.mjs");
@@ -69,7 +69,7 @@ async function handleRequest(
     return;
   }
 
-  const sourcingOfferMatch = requestUrl.pathname.match(/^\\/api\\/sourcing-offers\\/([0-9a-f-]{36})\\/availability$/);
+  const sourcingOfferMatch = requestUrl.pathname.match(/^\/api\/sourcing-offers\/([0-9a-f-]{36})\/availability$/);
   if (sourcingOfferMatch) {
     try {
       const { handleSupplierAvailability } = await import("./sourcing.mjs");
@@ -82,7 +82,7 @@ async function handleRequest(
     return;
   }
 
-  const sourcingOfferCreateMatch = requestUrl.pathname.match(/^\\/api\\/sourcing-requests\\/([0-9a-f-]{36})\\/offers$/);
+  const sourcingOfferCreateMatch = requestUrl.pathname.match(/^\/api\/sourcing-requests\/([0-9a-f-]{36})\/offers$/);
   if (sourcingOfferCreateMatch) {
     try {
       const { handleSupplierOffer } = await import("./sourcing.mjs");
@@ -95,7 +95,7 @@ async function handleRequest(
     return;
   }
 
-  const sourcingRequestDetailMatch = requestUrl.pathname.match(/^\\/api\\/sourcing-requests\\/([0-9a-f-]{36})$/);
+  const sourcingRequestDetailMatch = requestUrl.pathname.match(/^\/api\/sourcing-requests\/([0-9a-f-]{36})$/);
   if (sourcingRequestDetailMatch) {
     try {
       const { handleSourcingRequestDetail } = await import("./sourcing.mjs");
