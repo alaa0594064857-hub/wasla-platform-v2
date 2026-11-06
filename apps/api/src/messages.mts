@@ -82,7 +82,7 @@ export async function handleMessagesRequest(
           respond(response, 200, { success: true, recipients: [] });
           return;
         }
-        const pattern = `%\${query.replace(/[\\\\%_]/g, (character) => "\\\\" + character)}%`;
+        const pattern = `%${query}%`;
         const matches = await db.query(
           `WITH account_contacts AS (
              SELECT u.id AS recipient_id, a.display_name,
@@ -96,7 +96,7 @@ export async function handleMessagesRequest(
              INNER JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
              INNER JOIN users u ON u.id = am.user_id AND u.status = 'active' AND u.email_verified = TRUE
              WHERE a.status = 'active' AND r.name IN ('account_owner', 'account_manager')
-               AND a.display_name ILIKE $1 ESCAPE E'\\\\\\\\'
+               AND a.display_name ILIKE $1
            ),
            store_contacts AS (
              SELECT u.id AS recipient_id, s.name AS display_name,
@@ -111,7 +111,7 @@ export async function handleMessagesRequest(
              INNER JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
              INNER JOIN users u ON u.id = am.user_id AND u.status = 'active' AND u.email_verified = TRUE
              WHERE s.status = 'active' AND r.name IN ('account_owner', 'account_manager')
-               AND s.name ILIKE $1 ESCAPE E'\\\\\\\\'
+               AND s.name ILIKE $1
            ),
            candidates AS (
              SELECT u.id AS recipient_id, COALESCE(p.display_name, u.name) AS display_name,
@@ -119,7 +119,7 @@ export async function handleMessagesRequest(
              FROM users u
              LEFT JOIN profiles p ON p.user_id = u.id
              WHERE u.status = 'active' AND u.email_verified = TRUE
-               AND COALESCE(p.display_name, u.name) ILIKE $1 ESCAPE E'\\\\\\\\'
+               AND COALESCE(p.display_name, u.name) ILIKE $1
              UNION ALL
              SELECT recipient_id, display_name, entity_type, category
              FROM account_contacts WHERE rn = 1
