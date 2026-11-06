@@ -510,10 +510,19 @@ export async function handleAcceptSupplierOffer(req: IncomingMessage, res: Serve
     const totals = await client.query(
       `SELECT ROUND($1::numeric * $2::numeric, 2)::text AS subtotal,
               $3::numeric(14,2)::text AS shipping_total,
-              ROUND(($1::numeric * $2::numeric) + $3::numeric, 2)::text AS grand_total`,
+              ROUND(($1::numeric * $2::numeric) + $3::numeric, 2)::text AS grand_total,
+              (ROUND($1::numeric * $2::numeric, 2) > 999999999999.99
+               OR $3::numeric > 999999999999.99
+               OR ROUND(($1::numeric * $2::numeric) + $3::numeric, 2) > 999999999999.99)
+                AS exceeds_order_amount_limit`,
       [offer.unit_price, sourcingRequest.quantity, offer.shipping_amount],
     );
     const amount = totals.rows[0];
+    if (amount.exceeds_order_amount_limit) {
+      await client.query("ROLLBACK");
+      reply(res, 422, { success: false, error: "Offer total exceeds the supported order amount limit" });
+      return;
+    }
     const crossBorder = offer.origin_country_code !== sourcingRequest.destination_country_code;
     const snapshot = {
       itemName: sourcingRequest.item_name,
