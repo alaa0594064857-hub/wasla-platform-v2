@@ -9,6 +9,7 @@ import { useLocale } from "../../components/locale-provider";
 type Access = { roles: string[]; permissions: string[] };
 type PlatformUser = { id: string; name: string; email: string; email_verified: boolean; status: string; registration_type: string | null; preferred_locale: string; created_at: string; is_platform_owner: boolean };
 type OwnerProfile = { name?: string | null; email?: string | null; image?: string | null };
+type Overview = { totals: { accounts: number; stores: number; users: number }; accountsByType: { account_type: string; status: string; total: number }[]; storesByStatus: { status: string; total: number }[]; businessVerification: { account_type: string; verification_status: string | null; total: number }[]; availableModules: Record<string, boolean>; notes: { stores: string; unavailable: string } };
 
 export default function PlatformOwnerPage() {
   const { locale } = useLocale();
@@ -20,7 +21,7 @@ export default function PlatformOwnerPage() {
   const [users, setUsers] = useState<PlatformUser[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [userSearch, setUserSearch] = useState("");
-  const [usersError, setUsersError] = useState(false);
+  const [usersError, setUsersError] = useState(false);\n  const [overview, setOverview] = useState<Overview | null>(null);\n  const [overviewError, setOverviewError] = useState(false);\n  const [selectedRoom, setSelectedRoom] = useState("overview");
   const ar = locale === "ar";
   const profile = (session?.user || {}) as OwnerProfile;
   const ownerName = profile.name || (ar ? "مالك المنصة" : "Platform Owner");
@@ -66,6 +67,19 @@ export default function PlatformOwnerPage() {
       .finally(() => { if (active) setUsersLoading(false); });
     return () => { active = false; };
   }, [access, userSearch]);
+
+  useEffect(() => {
+    if (!access?.permissions.includes("platform.reports.read")) return;
+    let active = true;
+    fetch("/api/platform/overview", { credentials: "include", cache: "no-store" })
+      .then(async response => {
+        if (!response.ok) throw new Error("overview-load-failed");
+        return response.json();
+      })
+      .then(data => { if (active && data?.success) setOverview(data); })
+      .catch(() => { if (active) setOverviewError(true); });
+    return () => { active = false; };
+  }, [access]);
 
   const copy = ar ? {
     title: "مركز قيادة المنصة", subtitle: "المكتب التنفيذي الخاص بإدارة WASLA",
@@ -114,6 +128,27 @@ export default function PlatformOwnerPage() {
     { id: "settings", label: copy.settings, icon: "⚙", href: "#settings" }
   ];
 
+  const roomDefs = [
+    { id: "stores", icon: "▣", ar: "المتاجر المشتركة", en: "Member stores", count: overview?.totals.stores, available: true },
+    { id: "company", icon: "▦", ar: "الشركات", en: "Companies", count: countType("company"), available: true },
+    { id: "manufacturer", icon: "⚙", ar: "المصانع", en: "Manufacturers", count: countType("manufacturer"), available: true },
+    { id: "supplier", icon: "⇄", ar: "الموردون", en: "Suppliers", count: countType("supplier"), available: true },
+    { id: "brand", icon: "✧", ar: "العلامات التجارية", en: "Brands", count: countType("brand"), available: true },
+    { id: "trader", icon: "◇", ar: "التجار", en: "Traders", count: countType("trader"), available: true },
+    { id: "ai", icon: "✳", ar: "غرفة الذكاء الاصطناعي", en: "AI operations room", available: false },
+    { id: "orders", icon: "▤", ar: "الطلبات والمبيعات", en: "Orders & sales", available: false },
+    { id: "ratings", icon: "☆", ar: "التقييمات", en: "Ratings & reviews", available: false },
+    { id: "inquiries", icon: "✉", ar: "الاستفسارات", en: "Inquiries", available: false },
+    { id: "complaints", icon: "⚑", ar: "الشكاوى والنزاعات", en: "Complaints & disputes", available: false }
+  ];
+  function countType(type: string): number {
+    return overview?.accountsByType.filter(row => row.account_type === type).reduce((total, row) => total + Number(row.total), 0) || 0;
+  }
+  function countTypeStatus(type: string, status: string): number {
+    return overview?.accountsByType.filter(row => row.account_type === type && row.status === status).reduce((total, row) => total + Number(row.total), 0) || 0;
+  }
+  const selectedRoomDef = roomDefs.find(room => room.id === selectedRoom);
+
   return <main dir={ar ? "rtl" : "ltr"} lang={locale} style={styles.shell}>
     <aside style={styles.sidebar}>
       <Link href="/owner" style={styles.brand}><span style={styles.brandMark}>W</span><span><strong>WASLA</strong><small>OWNER OFFICE</small></span></Link>
@@ -146,6 +181,22 @@ export default function PlatformOwnerPage() {
           <article style={styles.metric}><span style={styles.metricIcon}>◇</span><small>{copy.permissions}</small><strong>{access.permissions.length}</strong><span style={styles.metricFoot}>{ar ? "محمّلة من الخادم" : "Loaded from server"}</span></article>
           <article style={styles.metric}><span style={styles.metricIcon}>◈</span><small>{copy.access}</small><strong style={styles.metricWord}>{ar ? "نشط" : "ACTIVE"}</strong><span style={styles.metricFoot}>{ar ? "تم التحقق من الدور" : "Owner role verified"}</span></article>
         </div>
+
+        <section style={styles.roomSection}>
+          <div style={styles.roomHeading}><div><span style={styles.panelEyebrow}>PLATFORM DEPARTMENTS</span><h2>{ar ? "غرف إدارة المنصة" : "Platform management rooms"}</h2><p>{ar ? "كل قسم له غرفة مستقلة لعرض أرقامه ومتابعة أعماله." : "Each department has its own room for metrics and operational oversight."}</p></div><span style={styles.readOnly}>{ar ? "مركز المالك" : "OWNER CONTROL"}</span></div>
+          {overviewError ? <p style={styles.notice}>{ar ? "تعذر تحميل الإحصاءات المباشرة." : "Could not load live platform metrics."}</p> : null}
+          <div style={styles.roomGrid}>{roomDefs.map(room => <button key={room.id} type="button" onClick={() => setSelectedRoom(room.id)} style={{ ...styles.roomCard, ...(selectedRoom === room.id ? styles.roomCardSelected : {}) }}>
+            <span style={styles.roomIcon}>{room.icon}</span><strong>{ar ? room.ar : room.en}</strong><span style={styles.roomCount}>{room.available ? (room.count ?? "—") : (ar ? "قريباً" : "PLANNED")}</span><small>{room.available ? (ar ? "بيانات من قاعدة البيانات" : "Live database records") : (ar ? "بانتظار بناء وربط الوحدة" : "Module integration pending")}</small>
+          </button>)}</div>
+        </section>
+
+        <section style={styles.panel}>
+          <div style={styles.panelHead}><div><span style={styles.panelEyebrow}>ROOM / {selectedRoom.toUpperCase()}</span><h2>{selectedRoomDef ? (ar ? selectedRoomDef.ar : selectedRoomDef.en) : copy.overview}</h2></div><span style={styles.readOnly}>{selectedRoomDef?.available ? (ar ? "بيانات متاحة" : "DATA CONNECTED") : (ar ? "قيد التطوير" : "IN DEVELOPMENT")}</span></div>
+          {selectedRoom === "stores" ? <><p>{ar ? "عدد المتاجر التابعة للتجار والشركات، وليس المتجر الرسمي المستقل لـ WASLA." : "Member-owned stores only; this does not include the separate official WASLA Store."}</p><div style={styles.roomStats}>{(overview?.storesByStatus || []).map(row => <div key={row.status}><small>{row.status}</small><strong>{row.total}</strong></div>)}</div></> :
+          ["company","manufacturer","supplier","brand","trader"].includes(selectedRoom) ? <><p>{ar ? "ملخص الحسابات حسب حالة التسجيل. ستظهر ملفات كل جهة وتفاصيلها بعد بناء شاشة القائمة التفصيلية." : "Account totals by registration status. Individual organization profiles will appear after the detailed directory is built."}</p><div style={styles.roomStats}>{["active","pending_verification","suspended","deactivated"].map(status => <div key={status}><small>{status}</small><strong>{countTypeStatus(selectedRoom,status)}</strong></div>)}</div></> :
+          <div style={styles.futureRoom}><span style={styles.futureIcon}>✳</span><strong>{ar ? "هذه الغرفة لم تُربط ببيانات تشغيلية بعد" : "This room is not connected to operational data yet"}</strong><p>{ar ? "لن نعرض أرقاماً وهمية. نحتاج أولاً إلى بناء وحدة الطلبات/التقييمات/الاستفسارات أو سجل أعمال الذكاء الاصطناعي، ثم نربطها هنا." : "No fabricated metrics will be shown. The orders, reviews, inquiries, or AI activity module must be implemented before this room can show real data."}</p></div>}
+          {overview?.notes?.stores && selectedRoom === "stores" ? <small style={styles.roomFootnote}>{ar ? overview.notes.stores : overview.notes.stores}</small> : null}
+        </section>
 
         <section id="users" style={styles.panel}>
           <div style={styles.panelHead}><div><span style={styles.panelEyebrow}>01 / DIRECTORY</span><h2>{copy.directory}</h2><p>{copy.directoryNote}</p></div><span style={styles.readOnly}>{ar ? "قراءة فقط" : "READ ONLY"}</span></div>
@@ -203,6 +254,17 @@ const styles: Record<string, React.CSSProperties> = {
   metricIcon: { color: "#b38b3f", fontSize: 22 },
   metricFoot: { color: "#929dac", fontSize: 10 },
   metricWord: { color: "#278b68", fontSize: 19 },
+  roomSection: { marginBottom: 18 },
+  roomHeading: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap", marginBottom: 14 },
+  roomGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 },
+  roomCard: { display: "grid", justifyItems: "start", gap: 8, minHeight: 138, padding: 15, textAlign: "start", border: "1px solid #e1e6ed", borderRadius: 14, background: "#fff", color: "#172437", cursor: "pointer" },
+  roomCardSelected: { border: "1px solid #b18a43", background: "#fffaf0", boxShadow: "0 0 0 2px #d6b76b22" },
+  roomIcon: { color: "#b18a43", fontSize: 21 },
+  roomCount: { fontSize: 23, fontWeight: 800, color: "#172437" },
+  roomStats: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 10, marginTop: 18 },
+  roomFootnote: { display: "block", color: "#929dac", marginTop: 18 },
+  futureRoom: { display: "grid", justifyItems: "start", gap: 10, padding: "24px 0", color: "#596778" },
+  futureIcon: { color: "#b18a43", fontSize: 28 },
   panel: { padding: "22px clamp(16px,2.5vw,28px)", background: "#fff", border: "1px solid #e5e9ef", borderRadius: 16, marginBottom: 17, boxShadow: "0 4px 16px #17243707" },
   panelHead: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" },
   panelEyebrow: { color: "#b18a43", fontSize: 9, fontWeight: 800, letterSpacing: 1.8 },
