@@ -15,7 +15,11 @@ export default function PlatformOwnerPage() {
   const { data: session, isPending } = authClient.useSession();
   const [access, setAccess] = useState<Access | null>(null);
   const [loading, setLoading] = useState(true);
-  const [denied, setDenied] = useState(false);\n  const [users, setUsers] = useState<PlatformUser[]>([]);\n  const [usersLoading, setUsersLoading] = useState(false);\n  const [userSearch, setUserSearch] = useState("");\n  const [usersError, setUsersError] = useState(false);
+  const [denied, setDenied] = useState(false);
+  const [users, setUsers] = useState<PlatformUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [userSearch, setUserSearch] = useState("");
+  const [usersError, setUsersError] = useState(false);
   const ar = locale === "ar";
 
   useEffect(() => {
@@ -96,5 +100,7 @@ const styles: Record<string, React.CSSProperties> = {
   grid: { maxWidth: 1180, margin: "0 auto 28px", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 16 },
   tile: { padding: 22, borderRadius: 16, background: "#172437", border: "1px solid #34445a", minHeight: 190 },
   number: { color: "#d6b76b", fontSize: 12, letterSpacing: 2 },
-  permissions: { maxWidth: 1180, margin: "0 auto 22px", padding: 22, borderRadius: 16, background: "#121e2e", border: "1px solid #34445a" },\n  search: { width: "100%", maxWidth: 480, padding: "12px 14px", margin: "10px 0 18px", borderRadius: 10, border: "1px solid #52647b", background: "#0b1523", color: "#f6f0df", fontSize: 15 },\n  table: { width: "100%", borderCollapse: "collapse", textAlign: "start" as const, fontSize: 13 }
+  permissions: { maxWidth: 1180, margin: "0 auto 22px", padding: 22, borderRadius: 16, background: "#121e2e", border: "1px solid #34445a" },
+  search: { width: "100%", maxWidth: 480, padding: "12px 14px", margin: "10px 0 18px", borderRadius: 10, border: "1px solid #52647b", background: "#0b1523", color: "#f6f0df", fontSize: 15 },
+  table: { width: "100%", borderCollapse: "collapse", textAlign: "start" as const, fontSize: 13 }
 };
