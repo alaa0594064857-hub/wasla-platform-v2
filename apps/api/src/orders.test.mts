@@ -80,117 +80,39 @@ describe("buyer order checkout", () => {
     mocks.connect.mockResolvedValue({ query: mocks.clientQuery, release: mocks.release });
   });
 
-  it("requires authentication before opening a transaction", async () => {
+  it("requires authentication before handling a checkout request", async () => {
     mocks.getSession.mockResolvedValue(null);
     const response = makeResponse();
     await handleOrdersRequest(makeRequest(checkoutBody()), response as unknown as ServerResponse);
     expect(response.statusCode).toBe(401);
     expect(mocks.connect).not.toHaveBeenCalled();
+    expect(mocks.poolQuery).not.toHaveBeenCalled();
   });
 
-  it("rejects invalid quantities before opening a transaction", async () => {
-    const body = checkoutBody();
-    body.items[0].quantity = 0;
+  it("retires direct catalog checkout and directs buyers to supplier sourcing", async () => {
     const response = makeResponse();
-    await handleOrdersRequest(makeRequest(body), response as unknown as ServerResponse);
-    expect(response.statusCode).toBe(400);
+    await handleOrdersRequest(makeRequest(checkoutBody()), response as unknown as ServerResponse);
+    expect(response.statusCode).toBe(409);
+    expect(JSON.parse(response.body)).toMatchObject({
+      success: false,
+      code: "SOURCING_REQUIRED",
+    });
+    expect(mocks.connect).not.toHaveBeenCalled();
+    expect(mocks.poolQuery).not.toHaveBeenCalled();
+  });
+
+  it("continues to list the authenticated buyer's existing orders", async () => {
+    const request = Readable.from([]) as IncomingMessage;
+    Object.assign(request, { method: "GET", headers: {} });
+    mocks.poolQuery.mockResolvedValue({ rowCount: 0, rows: [] });
+    const response = makeResponse();
+    await handleOrdersRequest(request, response as unknown as ServerResponse);
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body)).toMatchObject({ success: true, orders: [] });
+    expect(mocks.poolQuery).toHaveBeenCalledOnce();
     expect(mocks.connect).not.toHaveBeenCalled();
   });
-
-  it("creates an order and deducts stock atomically using the catalog price", async () => {
-    setupSuccessfulCheckout();
-    const response = makeResponse();
-    await handleOrdersRequest(makeRequest(checkoutBody()), response as unknown as ServerResponse);
-    expect(response.statusCode).toBe(201);
-    expect(JSON.parse(response.body)).toMatchObject({
-      success: true,
-      replayed: false,
-      order: { id: orderId, subtotal: "25.00", currency: "USD" },
-    });
-    const statements = mocks.clientQuery.mock.calls.map(([sql]) => String(sql));
-    expect(statements[0]).toBe("BEGIN");
-    expect(statements.some((sql) => sql.includes("pg_advisory_xact_lock"))).toBe(true);
-    expect(statements.some((sql) => sql.includes("FOR UPDATE"))).toBe(true);
-    expect(statements.some((sql) => sql.includes("INSERT INTO order_items"))).toBe(true);
-    expect(statements.some((sql) => sql.includes("UPDATE store_products"))).toBe(true);
-    expect(statements.some((sql) => sql.includes("INSERT INTO store_inventory_movements"))).toBe(true);
-    expect(statements.some((sql) => sql.includes("'order.placed'"))).toBe(true);
-    expect(statements.at(-1)).toBe("COMMIT");
-    expect(mocks.release).toHaveBeenCalledOnce();
-  });
-
-  it("rolls back the entire checkout when stock is insufficient", async () => {
-    setupSuccessfulCheckout(1);
-    const response = makeResponse();
-    await handleOrdersRequest(makeRequest(checkoutBody()), response as unknown as ServerResponse);
-    expect(response.statusCode).toBe(409);
-    const statements = mocks.clientQuery.mock.calls.map(([sql]) => String(sql));
-    expect(statements.at(-1)).toBe("ROLLBACK");
-    expect(statements.some((sql) => sql.includes("INSERT INTO orders"))).toBe(false);
-    expect(statements.some((sql) => sql.includes("UPDATE store_products"))).toBe(false);
-    expect(mocks.release).toHaveBeenCalledOnce();
-  });
-
-  it("returns the original order for a repeated idempotency key without changing stock", async () => {
-    mocks.clientQuery.mockImplementation(async (sql: string) => {
-      if (sql.includes("SELECT id FROM orders WHERE buyer_user_id")) return { rowCount: 1, rows: [{ id: orderId }] };
-      if (sql.includes("SELECT id, order_number")) return {
-        rowCount: 1,
-        rows: [{ id: orderId, orderNumber: "WSL-TEST", currency: "USD", subtotal: "25.00", grandTotal: "25.00", status: "placed" }],
-      };
-      if (sql.includes("SELECT id, product_id")) return { rowCount: 1, rows: [] };
-      return { rowCount: 1, rows: [] };
-    });
-    const response = makeResponse();
-    await handleOrdersRequest(makeRequest(checkoutBody()), response as unknown as ServerResponse);
-    expect(response.statusCode).toBe(200);
-    expect(JSON.parse(response.body)).toMatchObject({ success: true, replayed: true, order: { id: orderId } });
-    const statements = mocks.clientQuery.mock.calls.map(([sql]) => String(sql));
-    expect(statements.some((sql) => sql.includes("INSERT INTO orders"))).toBe(false);
-    expect(statements.some((sql) => sql.includes("UPDATE store_products"))).toBe(false);
-    expect(statements.at(-1)).toBe("COMMIT");
-  });
 });
-
-  it("rejects invalid catalog currency before inserting an order", async () => {
-    mocks.clientQuery.mockImplementation(async (sql: string) => {
-      if (sql.includes("SELECT id FROM orders WHERE buyer_user_id")) return { rowCount: 0, rows: [] };
-      if (sql.includes("SELECT id FROM stores")) return { rowCount: 1, rows: [{ id: storeId }] };
-      if (sql.includes("FROM store_products")) return {
-        rowCount: 1,
-        rows: [{ id: productId, title: "Sample product", sku: "SKU-1", price: "12.50", currency: "usd", stockQuantity: 5, status: "active" }],
-      };
-      return { rowCount: 1, rows: [] };
-    });
-    const response = makeResponse();
-    await handleOrdersRequest(makeRequest(checkoutBody()), response as unknown as ServerResponse);
-    expect(response.statusCode).toBe(409);
-    const statements = mocks.clientQuery.mock.calls.map(([sql]) => String(sql));
-    expect(statements.at(-1)).toBe("ROLLBACK");
-    expect(statements.some(sql => sql.includes("INSERT INTO orders"))).toBe(false);
-  });
-
-  it("rejects totals above the supported database precision", async () => {
-    const body = checkoutBody();
-    body.items[0].quantity = 2_147_483_647;
-    mocks.clientQuery.mockImplementation(async (sql: string) => {
-      if (sql.includes("SELECT id FROM orders WHERE buyer_user_id")) return { rowCount: 0, rows: [] };
-      if (sql.includes("SELECT id FROM stores")) return { rowCount: 1, rows: [{ id: storeId }] };
-      if (sql.includes("FROM store_products")) return {
-        rowCount: 1,
-        rows: [{ id: productId, title: "Sample product", sku: "SKU-1", price: "9999999999.99", currency: "USD", stockQuantity: 2_147_483_647, status: "active" }],
-      };
-      return { rowCount: 1, rows: [] };
-    });
-    const response = makeResponse();
-    await handleOrdersRequest(makeRequest(body), response as unknown as ServerResponse);
-    expect(response.statusCode).toBe(409);
-    const statements = mocks.clientQuery.mock.calls.map(([sql]) => String(sql));
-    expect(statements.at(-1)).toBe("ROLLBACK");
-    expect(statements.some(sql => sql.includes("INSERT INTO orders"))).toBe(false);
-  });
-
-
 
 describe("store order workflow", () => {
   beforeEach(() => {
