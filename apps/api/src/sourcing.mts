@@ -707,8 +707,7 @@ export async function handleSourcingOrderEvents(req: IncomingMessage, res: Serve
     const result = await db.query(
       `SELECT soe.id, soe.event_type AS "eventType",
               soe.from_status AS "fromStatus", soe.to_status AS "toStatus",
-              soe.metadata, soe.created_at AS "createdAt",
-              soe.actor_user_id AS "actorUserId"
+              soe.metadata, soe.created_at AS "createdAt"
        FROM sourcing_order_events soe
        INNER JOIN sourcing_orders so ON so.id = soe.order_id
        WHERE soe.order_id = $1
