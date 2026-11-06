@@ -67,7 +67,7 @@ export async function handlePlatformUsersRequest(
              AND r.name = 'platform_owner'
          ) AS is_platform_owner
        FROM users u
-       WHERE ($1::text IS NULL OR u.name ILIKE $1 ESCAPE '\\\\' OR u.email ILIKE $1 ESCAPE '\\\\')
+       WHERE ($1::text IS NULL OR POSITION(LOWER($1) IN LOWER(u.name)) > 0 OR POSITION(LOWER($1) IN LOWER(u.email)) > 0)
        ORDER BY u.created_at DESC, u.id
        LIMIT $2 OFFSET $3`,
       [pattern, limit, (page - 1) * limit],
