@@ -233,7 +233,15 @@ describe("WASLA sourcing PostgreSQL concurrency constraints", () => {
     const first = await pool.connect();
     const second = await pool.connect();
     try {
-      await first.query("UPDATE sourcing_orders SET status = 'shipped' WHERE request_id = $1", [fixture.requestId]);
+      await first.query(
+        `INSERT INTO sourcing_orders
+         (order_number, request_id, accepted_offer_id, buyer_user_id, supplier_account_id,
+          status, currency, subtotal, shipping_total, grand_total, commercial_snapshot, idempotency_key)
+         VALUES ($1,$2,$3,$4,$5,'shipped','USD',37.50,5.00,42.50,'{"integration":true}'::jsonb,$6)`,
+        ["WS-DELIVERY-" + randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase(),
+         fixture.requestId, fixture.offerId, fixture.buyerId, fixture.supplierAccountId,
+         "sourcing-delivery-" + randomUUID()],
+      );
       await first.query("BEGIN");
       await second.query("BEGIN");
       const firstOrder = await first.query(
@@ -265,6 +273,8 @@ describe("WASLA sourcing PostgreSQL concurrency constraints", () => {
         [firstOrder.rows[0].id],
       );
       expect(events.rows[0].count).toBe(1);
+      await first.query("DELETE FROM sourcing_order_events WHERE order_id = $1", [firstOrder.rows[0].id]);
+      await first.query("DELETE FROM sourcing_orders WHERE id = $1", [firstOrder.rows[0].id]);
     } catch (error) {
       await first.query("ROLLBACK").catch(() => undefined);
       await second.query("ROLLBACK").catch(() => undefined);
