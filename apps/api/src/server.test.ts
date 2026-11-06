@@ -172,6 +172,17 @@ describe("WASLA API", () => {
     expect(await response.json()).toEqual({ success: false, error: "Authentication required" });
   });
 
+  it("requires authentication before supplier order status updates", async () => {
+    const baseUrl = await startTestServer();
+    const response = await fetch(
+      `${baseUrl}/api/supplier/sourcing-orders/00000000-0000-4000-8000-000000000001/status`,
+      { method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "shipped", trackingReference: "TRACK-123" }) },
+    );
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ success: false, error: "Authentication required" });
+  });
+
   it("validates supplier sourcing order IDs before status changes", async () => {
     const baseUrl = await startTestServer();
     const response = await fetch(`${baseUrl}/api/supplier/sourcing-orders/not-a-uuid/status`, {
