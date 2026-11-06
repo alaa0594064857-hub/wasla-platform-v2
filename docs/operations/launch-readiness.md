@@ -31,10 +31,11 @@ The API now allows production verification and password-reset emails to the actu
 
 ## Latest automated verification — 2026-11-06
 
-- GitHub Actions workflow run **#410** passed on candidate commit `d86996f33ba8087541703c73cc0f51451f3f202c`.
-- Passed steps: dependency installation, shared-package tests and TypeScript, API tests, database migrations and authorization seeding on the CI PostgreSQL service, database constraint/integration tests, API TypeScript/build, and web build.
+- GitHub Actions workflow run **#447** passed on candidate commit `316bcc9e4eed5d38cd7a889d2bea8d10113182f9`.
+- Passed steps: dependency installation, shared-package tests and TypeScript, API tests, database migrations and authorization seeding on the CI PostgreSQL service, database constraint/integration tests (including buyer/supplier Trade access), API TypeScript/build, and web build.
 - This is automated CI evidence only. It does **not** verify the deployed Render services, live email delivery, real browser journeys, or production data.
 - PR #2 remains open and draft. The candidate has not been merged or deployed; production migrations remain gated on explicit release approval.
+- Candidate Trade lifecycle route and PostgreSQL buyer/supplier access tests passed in CI on `316bcc9e4eed5d38cd7a889d2bea8d10113182f9`.
 
 ## Technical launch gates
 
@@ -85,9 +86,9 @@ This is a code/repository scope snapshot, not a claim that every feature has pas
 | Supplier-owned shops/catalog | Store/product APIs and public supplier storefront pages exist; storefront purchase action routes into sourcing, not direct checkout | Candidate for pilot |
 | Business/company profiles and brands | Business, brand, network, profile, and membership routes/pages exist | Needs role-by-role end-to-end acceptance |
 | Search | Search API and web page exist | Needs relevance and real-data acceptance |
-| Messages | Current `/messages` page is a presentation scaffold; it explicitly says conversation services are still in development | Not launch-ready |
-| WASLA Trade | No implemented trade/deal workflow is present in the current API route/module inventory | Not implemented |
-| WASLA AI operations | No operational AI service/module is present in the current API route/module inventory | Not implemented |
+| Messages | Authenticated direct conversations, exact-email recipient lookup, read/send APIs, unread counts, participant-only access, and bilingual workspace are implemented; CI covers auth and identifier validation | Candidate implementation; needs two-account hosted verification |
+| WASLA Trade | Deal foundation, versioned amendments, milestones, event log, explicit agreed → in-progress → completed/disputed lifecycle, buyer-only completion, bilingual workspace, and PostgreSQL buyer/supplier access integration tests | Candidate implementation; needs hosted two-account journey and final review |
+| WASLA AI operations | No operational AI service/module is present yet; no external model provider or AI credentials are configured | Not implemented; next engineering phase |
 | WASLA Admin | No dedicated platform-admin workspace/service is present in the current web/API route inventory | Not implemented |
 | Payments and supplier payouts | No payment gateway, signed payment webhook, reconciliation, refund/dispute flow, or supplier payout implementation | Disabled / not implemented |
 | Shipping | Supplier-entered tracking reference and carrier text only; no carrier integration or live verified tracking | Manual only |
