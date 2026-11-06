@@ -549,35 +549,7 @@ export const orders = pgTable("orders", {
   uniqueIndex("orders_buyer_idempotency_unique").on(table.buyerUserId, table.idempotencyKey),
   index("orders_buyer_created_idx").on(table.buyerUserId, table.createdAt.desc()),
   index("orders_store_status_created_idx").on(table.storeId, table.status, table.createdAt.desc()),
-  check("orders_currency_check", sql`${table.currency} ~ '^[A-Z]{3}
-  "audit_logs",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    actorUserId: uuid("actor_user_id").references(() => users.id, {
-      onDelete: "set null",
-    }),
-    action: varchar("action", { length: 120 }).notNull(),
-    resourceType: varchar("resource_type", { length: 100 }).notNull(),
-    resourceId: uuid("resource_id"),
-    accountId: uuid("account_id").references(() => accounts.id, {
-      onDelete: "set null",
-    }),
-    storeId: uuid("store_id").references(() => stores.id, {
-      onDelete: "set null",
-    }),
-    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-  },
-  (table) => [
-    index("audit_logs_actor_idx").on(table.actorUserId),
-    index("audit_logs_account_idx").on(table.accountId),
-    index("audit_logs_store_idx").on(table.storeId),
-    index("audit_logs_created_at_idx").on(table.createdAt),
-  ],
-);
-`),
+  check("orders_currency_check", sql`${table.currency} ~ '^[A-Z]{3}$'`),
   check("orders_amounts_nonnegative_check", sql`${table.subtotal} >= 0 AND ${table.discountTotal} >= 0 AND ${table.shippingTotal} >= 0 AND ${table.taxTotal} >= 0 AND ${table.grandTotal} >= 0`),
   check("orders_total_consistency_check", sql`${table.grandTotal} = ${table.subtotal} - ${table.discountTotal} + ${table.shippingTotal} + ${table.taxTotal}`),
 ]);
@@ -610,7 +582,6 @@ export const orderStatusHistory = pgTable("order_status_history", {
 }, (table) => [
   index("order_status_history_order_created_idx").on(table.orderId, table.createdAt.desc()),
 ]);
-
 export const auditLogs = pgTable(
   "audit_logs",
   {
