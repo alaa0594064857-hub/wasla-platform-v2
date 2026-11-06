@@ -222,3 +222,13 @@ WASLA Trade remains the next major module. Existing sourcing requests, supplier 
 - [ ] Build the bilingual Trade workspace UI and link it from the signed-in navigation.
 - [ ] Add database-backed two-party authorization, state-transition, and concurrency tests.
 - [ ] Review migration and verify the full buyer/supplier journey on the hosted candidate. No production migration or deployment has been performed.
+
+### Trade workspace progress — 2026-11-06
+
+- [x] Added API endpoints to propose versioned terms amendments and require the opposite party to accept or reject them.
+- [x] Added API endpoints to create milestones and mark pending milestones completed or cancelled, with actor attribution and event history.
+- [x] Added bilingual `/trade` workspace for deal creation, list/detail, responses, amendments, milestones, and activity history.
+- [x] Added Trade navigation entry and API tests for unauthenticated access and invalid amendment/milestone IDs.
+- [ ] Verify the buyer and supplier experience with two authenticated accounts against a migrated non-production database.
+- [ ] Review amendment terms UX and ensure each amendment submits a complete replacement terms snapshot; validate all concurrent party actions against a real PostgreSQL database.
+- [ ] Add hosted candidate verification after explicit release approval; no production deployment or migration has been performed.
