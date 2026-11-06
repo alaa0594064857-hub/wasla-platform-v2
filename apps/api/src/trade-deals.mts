@@ -75,13 +75,13 @@ export async function handleTradeDeals(req: IncomingMessage, res: ServerResponse
                 d.created_at, d.updated_at
          FROM trade_deals d
          JOIN accounts a ON a.id = d.supplier_account_id
-         WHERE d.buyer_user_id = $1
+         WHERE (d.buyer_user_id = $1
             OR EXISTS (
               SELECT 1 FROM account_members am
               WHERE am.account_id = d.supplier_account_id
                 AND am.user_id = $1 AND am.status = 'active'
-            )
-         AND ($2::uuid IS NULL OR d.id = $2)
+            ))
+           AND ($2::uuid IS NULL OR d.id = $2)
          ORDER BY d.updated_at DESC
          LIMIT 100`,
         [userId, dealId ?? null],
