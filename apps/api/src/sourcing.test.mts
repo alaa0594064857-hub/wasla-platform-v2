@@ -16,7 +16,7 @@ vi.mock("./database.js", () => ({
   getDatabasePool: () => ({ connect: mocks.connect }),
 }));
 
-import { handleAcceptSupplierOffer, handleBuyerConfirmSourcingDelivery, handleSupplierAvailability, handleSupplierOffer, handleSupplierSourcingOrders } from "./sourcing.mjs";
+import { handleAcceptSupplierOffer, handleBuyerConfirmSourcingDelivery, handleSourcingOrderEvents, handleSupplierAvailability, handleSupplierOffer, handleSupplierSourcingOrders } from "./sourcing.mjs";
 
 const buyerId = "00000000-0000-4000-8000-000000000010";
 const requestId = "00000000-0000-4000-8000-000000000020";
@@ -506,5 +506,47 @@ describe("supplier fulfilment transition lifecycle", () => {
     expect(String(event?.[1]?.[4])).toContain("TRACK-12345");
     expect(calls.at(-1)?.[0]).toBe("COMMIT");
     expect(mocks.release).toHaveBeenCalledOnce();
+  });
+});
+
+
+describe("sourcing order event history access", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.getSession.mockResolvedValue({ user: { id: buyerId } });
+    mocks.connect.mockResolvedValue({ query: mocks.clientQuery, release: mocks.release });
+  });
+
+  function historyRequest(): IncomingMessage {
+    const request = Readable.from([]) as IncomingMessage;
+    Object.assign(request, { method: "GET", headers: {} });
+    return request;
+  }
+
+  it("returns an empty history for an authorized order using one scoped query", async () => {
+    mocks.clientQuery.mockResolvedValue({ rowCount: 1, rows: [{ id: null }] });
+    const response = makeResponse();
+    await handleSourcingOrderEvents(
+      historyRequest(), response as unknown as ServerResponse,
+      "00000000-0000-4000-8000-000000000060",
+    );
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body)).toEqual({ success: true, events: [] });
+    expect(mocks.clientQuery).toHaveBeenCalledOnce();
+    const sql = String(mocks.clientQuery.mock.calls[0][0]);
+    expect(sql).toContain("LEFT JOIN sourcing_order_events");
+    expect(sql).toContain("so.buyer_user_id = $2");
+    expect(sql).toContain("am.status = 'active'");
+  });
+
+  it("returns not found when the order is absent or outside the caller's access scope", async () => {
+    mocks.clientQuery.mockResolvedValue({ rowCount: 0, rows: [] });
+    const response = makeResponse();
+    await handleSourcingOrderEvents(
+      historyRequest(), response as unknown as ServerResponse,
+      "00000000-0000-4000-8000-000000000060",
+    );
+    expect(response.statusCode).toBe(404);
+    expect(mocks.clientQuery).toHaveBeenCalledOnce();
   });
 });
