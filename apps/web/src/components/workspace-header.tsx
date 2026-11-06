@@ -46,6 +46,7 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
     { href: "/account", label: ar ? "حسابي وهويتي" : "My account & identity", icon: "◉" },
     { href: "/profile", label: ar ? "ملفي الشخصي" : "My profile", icon: "◎" },
     { href: "/shops", label: ar ? "متاجري" : "My shops", icon: "✳" },
+    { href: "/orders", label: ar ? "طلباتي" : "My orders", icon: "▤" },
     { href: "/business", label: ar ? "شركتي وحسابات الأعمال" : "My company & business", icon: "▦" },
     { href: "/network", label: ar ? "شبكتي وأصدقائي" : "My network & friends", icon: "♧" },
     { href: "/messages", label: ar ? "الرسائل" : "Messages", icon: "✉" },
