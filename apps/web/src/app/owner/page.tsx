@@ -21,7 +21,8 @@ export default function PlatformOwnerPage() {
   const [users, setUsers] = useState<PlatformUser[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [userSearch, setUserSearch] = useState("");
-  const [usersError, setUsersError] = useState(false);\n  const [overview, setOverview] = useState<Overview | null>(null);\n  const [overviewError, setOverviewError] = useState(false);\n  const [selectedRoom, setSelectedRoom] = useState("overview");
+  const [usersError, setUsersError] = useState(false);
+  const [overview, setOverview] = useState<Overview | null>(null);\n  const [overviewError, setOverviewError] = useState(false);\n  const [selectedRoom, setSelectedRoom] = useState("overview");
   const ar = locale === "ar";
   const profile = (session?.user || {}) as OwnerProfile;
   const ownerName = profile.name || (ar ? "مالك المنصة" : "Platform Owner");
