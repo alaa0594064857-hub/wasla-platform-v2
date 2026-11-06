@@ -232,3 +232,4 @@ WASLA Trade remains the next major module. Existing sourcing requests, supplier 
 - [ ] Verify the buyer and supplier experience with two authenticated accounts against a migrated non-production database.
 - [ ] Review amendment terms UX and ensure each amendment submits a complete replacement terms snapshot; validate all concurrent party actions against a real PostgreSQL database.
 - [ ] Add hosted candidate verification after explicit release approval; no production deployment or migration has been performed.
+- [x] Candidate CI passed the complete quality workflow, including API tests, migrations, API TypeScript/build, and bilingual web build, on commit `2eff8284647a4fbdf59af6a46635c14202cfb250`.
