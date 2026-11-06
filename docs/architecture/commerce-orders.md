@@ -169,3 +169,11 @@ Automated API unit tests cover authentication, checkout validation, successful s
 
 All implementation work is developed on the feature branch and validated in CI.
 No production migration, deployment, merge to main, payment integration, or paid service change is authorized by this specification.
+
+## 13. PostgreSQL validation and authorization hardening
+
+Store order access is evaluated from active account/store memberships and the corresponding granted `account.order.manage` or `store.order.manage` permission. This deliberately includes store/account administrators based on their actual permission grants rather than relying on a hard-coded subset of role names.
+
+Cancellation now verifies that every still-linked order product can be locked in the order's store before restoring any stock. If a linked product is missing or belongs to a different store, the transaction is rolled back instead of silently marking the order cancelled without restoring inventory.
+
+The PostgreSQL integration suite now exercises concurrent row-lock reservations and the buyer-scoped idempotency unique constraint against the CI PostgreSQL service. These checks validate database behavior; endpoint-level multi-request integration tests remain a separate follow-up.
