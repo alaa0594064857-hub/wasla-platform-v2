@@ -225,7 +225,7 @@ describe("WASLA sourcing PostgreSQL concurrency constraints", () => {
       await first.query("COMMIT");
       await expect(competingInsert).rejects.toThrow();
       await second.query("ROLLBACK");
-      const persisted = await pool.query(
+      const persisted = await first.query(
         "SELECT count(*)::int AS count FROM sourcing_orders WHERE request_id = $1",
         [fixture.requestId],
       );
