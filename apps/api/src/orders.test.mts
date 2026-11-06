@@ -110,6 +110,8 @@ describe("buyer order checkout", () => {
     expect(response.statusCode).toBe(200);
     expect(JSON.parse(response.body)).toMatchObject({ success: true, orders: [] });
     expect(mocks.poolQuery).toHaveBeenCalledTimes(2);
+    expect(String(mocks.poolQuery.mock.calls[1][0])).toContain("sourcing_order_events");
+    expect(String(mocks.poolQuery.mock.calls[1][0])).toContain("latest_shipment");
     expect(JSON.parse(response.body)).toMatchObject({ success: true, orders: [], sourcingOrders: [] });
     expect(mocks.connect).not.toHaveBeenCalled();
   });
