@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useLocale } from "../../../components/locale-provider";
@@ -34,6 +34,7 @@ export default function SourcingRequestDetailPage() {
   const [accepting, setAccepting] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const acceptanceKeys = useRef(new Map<string, string>());
   const dir = locale === "ar" ? "rtl" : "ltr";
 
   const load = useCallback(async () => {
@@ -52,13 +53,16 @@ export default function SourcingRequestDetailPage() {
 
   async function accept(offer: Offer) {
     setAccepting(offer.id); setError(""); setMessage("");
+    const idempotencyKey = acceptanceKeys.current.get(offer.id) ?? crypto.randomUUID();
+    acceptanceKeys.current.set(offer.id, idempotencyKey);
     try {
       const response = await fetch(`/api/sourcing-requests/${encodeURIComponent(id)}/accept-offer`, {
-        method:"POST", credentials:"include", headers:{ "Content-Type":"application/json", "Idempotency-Key":crypto.randomUUID() },
-        body:JSON.stringify({ offerId:offer.id, idempotencyKey:crypto.randomUUID() }),
+        method:"POST", credentials:"include", headers:{ "Content-Type":"application/json", "Idempotency-Key":idempotencyKey },
+        body:JSON.stringify({ offerId:offer.id, idempotencyKey }),
       });
       const data = await response.json();
       if (!response.ok || data.success !== true) throw new Error(data.error || t.error);
+      acceptanceKeys.current.delete(offer.id);
       setMessage(t.accepted + " " + t.payment);
       await load();
     } catch (cause) { setError(cause instanceof Error ? cause.message : t.error); }
