@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
@@ -146,12 +146,12 @@ export default function OwnerSubscriptionsPage() {
       <form onSubmit={createPlan} style={styles.form}>
         <label>{copy.code}<input style={styles.input} required minLength={2} maxLength={80} pattern="[a-z0-9][a-z0-9_-]+" value={code} onChange={e => setCode(e.target.value)} placeholder="starter_monthly" /></label>
         <label>{copy.nameAr}<input style={styles.input} required maxLength={160} value={nameAr} onChange={e => setNameAr(e.target.value)} /></label>
-        <label>{copy.nameEn}<input required maxLength={160} value={nameEn} onChange={e => setNameEn(e.target.value)} /></label>
+        <label>{copy.nameEn}<input style={styles.input} required maxLength={160} value={nameEn} onChange={e => setNameEn(e.target.value)} /></label>
         <label>{copy.amount}<input style={styles.input} required type="number" min="0" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} /></label>
         <label>{copy.currency}<input style={styles.input} required minLength={3} maxLength={3} pattern="[A-Za-z]{3}" value={currency} onChange={e => setCurrency(e.target.value.toUpperCase())} /></label>
         <label>{copy.interval}<select style={styles.input} value={interval} onChange={e => setInterval(e.target.value as typeof interval)}><option value="month">{copy.month}</option><option value="year">{copy.year}</option><option value="one_time">{copy.one_time}</option></select></label>
         <label>{copy.descriptionAr}<textarea style={styles.input} rows={3} maxLength={5000} value={descriptionAr} onChange={e => setDescriptionAr(e.target.value)} /></label>
-        <label>{copy.descriptionEn}<textarea rows={3} maxLength={5000} value={descriptionEn} onChange={e => setDescriptionEn(e.target.value)} /></label>
+        <label>{copy.descriptionEn}<textarea style={styles.input} rows={3} maxLength={5000} value={descriptionEn} onChange={e => setDescriptionEn(e.target.value)} /></label>
         <button type="submit" style={styles.button} disabled={saving}>{saving ? copy.saving : copy.create}</button>
       </form>
       <p style={styles.hint}>{copy.amountNote}</p>
@@ -167,7 +167,7 @@ export default function OwnerSubscriptionsPage() {
   </main>;
 }
 
-const styles: Record<string, React.CSSProperties> = {
+const styles: Record<string, CSSProperties> = {
   shell: { minHeight: "100vh", padding: "32px clamp(18px, 5vw, 64px)", background: "#f5f1e8", color: "#17253a", fontFamily: "Arial, sans-serif" },
   header: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20, marginBottom: 24 },
   back: { color: "#9a742d", textDecoration: "none", fontWeight: 700 },
