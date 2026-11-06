@@ -62,7 +62,7 @@ export async function handleProductInquiriesRequest(
   request: IncomingMessage,
   response: ServerResponse,
 ): Promise<void> {
-  if (request.method !== "GET" && request.method !== "POST") {
+  if (request.method !== "GET" && request.method !== "POST" && request.method !== "PATCH") {
     respond(response, 405, { success: false, error: "Method not allowed" });
     return;
   }
