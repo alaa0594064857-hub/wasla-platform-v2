@@ -522,6 +522,95 @@ export const storeInventoryMovements = pgTable(
   ],
 );
 
+
+export const orderStatusEnum = pgEnum("order_status", [
+  "placed", "accepted", "processing", "shipped", "completed", "cancelled",
+]);
+
+export const orders = pgTable("orders", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  orderNumber: varchar("order_number", { length: 32 }).notNull().unique(),
+  buyerUserId: uuid("buyer_user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  storeId: uuid("store_id").notNull().references(() => stores.id, { onDelete: "restrict" }),
+  status: orderStatusEnum("status").default("placed").notNull(),
+  currency: varchar("currency", { length: 3 }).notNull(),
+  subtotal: numeric("subtotal", { precision: 14, scale: 2 }).notNull(),
+  discountTotal: numeric("discount_total", { precision: 14, scale: 2 }).default("0").notNull(),
+  shippingTotal: numeric("shipping_total", { precision: 14, scale: 2 }).default("0").notNull(),
+  taxTotal: numeric("tax_total", { precision: 14, scale: 2 }).default("0").notNull(),
+  grandTotal: numeric("grand_total", { precision: 14, scale: 2 }).notNull(),
+  shippingAddressSnapshot: jsonb("shipping_address_snapshot").$type<Record<string, unknown>>().notNull(),
+  buyerNote: varchar("buyer_note", { length: 1000 }),
+  idempotencyKey: varchar("idempotency_key", { length: 128 }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+}, (table) => [
+  uniqueIndex("orders_buyer_idempotency_unique").on(table.buyerUserId, table.idempotencyKey),
+  index("orders_buyer_created_idx").on(table.buyerUserId, table.createdAt.desc()),
+  index("orders_store_status_created_idx").on(table.storeId, table.status, table.createdAt.desc()),
+  check("orders_currency_check", sql`${table.currency} ~ '^[A-Z]{3}
+  "audit_logs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    actorUserId: uuid("actor_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    action: varchar("action", { length: 120 }).notNull(),
+    resourceType: varchar("resource_type", { length: 100 }).notNull(),
+    resourceId: uuid("resource_id"),
+    accountId: uuid("account_id").references(() => accounts.id, {
+      onDelete: "set null",
+    }),
+    storeId: uuid("store_id").references(() => stores.id, {
+      onDelete: "set null",
+    }),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("audit_logs_actor_idx").on(table.actorUserId),
+    index("audit_logs_account_idx").on(table.accountId),
+    index("audit_logs_store_idx").on(table.storeId),
+    index("audit_logs_created_at_idx").on(table.createdAt),
+  ],
+);
+`),
+  check("orders_amounts_nonnegative_check", sql`${table.subtotal} >= 0 AND ${table.discountTotal} >= 0 AND ${table.shippingTotal} >= 0 AND ${table.taxTotal} >= 0 AND ${table.grandTotal} >= 0`),
+  check("orders_total_consistency_check", sql`${table.grandTotal} = ${table.subtotal} - ${table.discountTotal} + ${table.shippingTotal} + ${table.taxTotal}`),
+]);
+
+export const orderItems = pgTable("order_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  orderId: uuid("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
+  productId: uuid("product_id").references(() => storeProducts.id, { onDelete: "set null" }),
+  productTitleSnapshot: varchar("product_title_snapshot", { length: 180 }).notNull(),
+  skuSnapshot: varchar("sku_snapshot", { length: 80 }),
+  unitPriceSnapshot: numeric("unit_price_snapshot", { precision: 12, scale: 2 }).notNull(),
+  quantity: integer("quantity").notNull(),
+  lineSubtotal: numeric("line_subtotal", { precision: 14, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index("order_items_order_idx").on(table.orderId),
+  check("order_items_quantity_check", sql`${table.quantity} > 0`),
+  check("order_items_amounts_check", sql`${table.unitPriceSnapshot} >= 0 AND ${table.lineSubtotal} >= 0`),
+  check("order_items_line_total_check", sql`${table.lineSubtotal} = ${table.unitPriceSnapshot} * ${table.quantity}`),
+]);
+
+export const orderStatusHistory = pgTable("order_status_history", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  orderId: uuid("order_id").notNull().references(() => orders.id, { onDelete: "restrict" }),
+  previousStatus: orderStatusEnum("previous_status"),
+  newStatus: orderStatusEnum("new_status").notNull(),
+  actorUserId: uuid("actor_user_id").references(() => users.id, { onDelete: "set null" }),
+  reason: varchar("reason", { length: 500 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index("order_status_history_order_created_idx").on(table.orderId, table.createdAt.desc()),
+]);
+
 export const auditLogs = pgTable(
   "audit_logs",
   {
