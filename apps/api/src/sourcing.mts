@@ -26,7 +26,12 @@ async function readBody(req: IncomingMessage): Promise<Record<string, unknown> |
     if (size > 30_000) throw new Error("BODY_TOO_LARGE");
     raw += chunk.toString();
   }
-  const parsed: unknown = JSON.parse(raw);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
   return parsed as Record<string, unknown>;
 }
@@ -95,33 +100,48 @@ export async function handleSourcingCollection(req: IncomingMessage, res: Server
         typeof deliveryLocation !== "object" || deliveryLocation === null || Array.isArray(deliveryLocation)) {
       reply(res, 400, { success: false, error: "Specifications and delivery location must be objects" }); return;
     }
-    const inserted = await db.query(
-      `INSERT INTO sourcing_requests
-       (buyer_user_id, item_name, description, specifications, quantity, unit,
-        destination_country_code, destination_city, delivery_location_snapshot,
-        requested_currency, status, idempotency_key, submitted_at)
-       VALUES ($1,$2,$3,$4::jsonb,$5,$6,$7,$8,$9::jsonb,$10,'submitted',$11,NOW())
-       ON CONFLICT (buyer_user_id, idempotency_key) DO NOTHING
-       RETURNING id, item_name, quantity, unit, destination_country_code, destination_city, status, created_at`,
-      [userId, itemName.trim(), description, JSON.stringify(specifications), quantity, unit.trim(),
-       country, city.trim(), JSON.stringify(deliveryLocation), currency, idempotencyKey],
-    );
-    if (inserted.rows.length === 0) {
-      const existing = await db.query(
-        `SELECT id, item_name, quantity, unit, destination_country_code, destination_city, status, created_at
-         FROM sourcing_requests WHERE buyer_user_id = $1 AND idempotency_key = $2 LIMIT 1`,
-        [userId, idempotencyKey],
+    const client = await db.connect();
+    try {
+      await client.query("BEGIN");
+      const inserted = await client.query(
+        `INSERT INTO sourcing_requests
+         (buyer_user_id, item_name, description, specifications, quantity, unit,
+          destination_country_code, destination_city, delivery_location_snapshot,
+          requested_currency, status, idempotency_key, submitted_at)
+         VALUES ($1,$2,$3,$4::jsonb,$5,$6,$7,$8,$9::jsonb,$10,'submitted',$11,NOW())
+         ON CONFLICT (buyer_user_id, idempotency_key) DO NOTHING
+         RETURNING id, item_name, quantity, unit, destination_country_code, destination_city, status, created_at`,
+        [userId, itemName.trim(), description, JSON.stringify(specifications), quantity, unit.trim(),
+         country, city.trim(), JSON.stringify(deliveryLocation), currency, idempotencyKey],
       );
-      reply(res, 200, { success: true, replayed: true, request: existing.rows[0] });
-      return;
+      if (inserted.rows.length === 0) {
+        await client.query("ROLLBACK");
+        const existing = await db.query(
+          `SELECT id, item_name, quantity, unit, destination_country_code, destination_city, status, created_at
+           FROM sourcing_requests WHERE buyer_user_id = $1 AND idempotency_key = $2 LIMIT 1`,
+          [userId, idempotencyKey],
+        );
+        if (!existing.rows.length) {
+          reply(res, 409, { success: false, error: "Idempotency key could not be resolved" });
+          return;
+        }
+        reply(res, 200, { success: true, replayed: true, request: existing.rows[0] });
+        return;
+      }
+      const created = inserted.rows[0];
+      await client.query(
+        `INSERT INTO sourcing_request_events (request_id, actor_user_id, event_type, to_status, metadata)
+         VALUES ($1,$2,'request.submitted','submitted',$3::jsonb)`,
+        [created.id, userId, JSON.stringify({ origin: "buyer" })],
+      );
+      await client.query("COMMIT");
+      reply(res, 201, { success: true, request: created });
+    } catch (error) {
+      try { await client.query("ROLLBACK"); } catch {}
+      throw error;
+    } finally {
+      client.release();
     }
-    const created = inserted.rows[0];
-    await db.query(
-      `INSERT INTO sourcing_request_events (request_id, actor_user_id, event_type, to_status, metadata)
-       VALUES ($1,$2,'request.submitted','submitted',$3::jsonb)`,
-      [created.id, userId, JSON.stringify({ origin: "buyer" })],
-    );
-    reply(res, 201, { success: true, request: created });
   } catch (error) {
     console.error("WASLA sourcing collection API error:", error);
     const tooLarge = error instanceof Error && error.message === "BODY_TOO_LARGE";
