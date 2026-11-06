@@ -175,6 +175,19 @@ describe("WASLA API", () => {
     });
   });
 
+  it("requires authentication before accepting a supplier offer", async () => {
+    const baseUrl = await startTestServer();
+    const response = await fetch(
+      `${baseUrl}/api/sourcing-requests/00000000-0000-4000-8000-000000000001/accept-offer`,
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ offerId: "00000000-0000-4000-8000-000000000002", idempotencyKey: "accept-offer-test-1" }) },
+    );
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({
+      success: false,
+      error: "Authentication required",
+    });
+  });
+
   it("validates supplier offer identifiers before availability updates", async () => {
     const baseUrl = await startTestServer();
     const response = await fetch(`${baseUrl}/api/sourcing-offers/not-a-uuid/availability`, {
