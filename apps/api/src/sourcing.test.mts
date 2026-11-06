@@ -16,7 +16,7 @@ vi.mock("./database.js", () => ({
   getDatabasePool: () => ({ connect: mocks.connect }),
 }));
 
-import { handleAcceptSupplierOffer, handleBuyerConfirmSourcingDelivery, handleSupplierOffer, handleSupplierSourcingOrders } from "./sourcing.mjs";
+import { handleAcceptSupplierOffer, handleBuyerConfirmSourcingDelivery, handleSupplierAvailability, handleSupplierOffer, handleSupplierSourcingOrders } from "./sourcing.mjs";
 
 const buyerId = "00000000-0000-4000-8000-000000000010";
 const requestId = "00000000-0000-4000-8000-000000000020";
@@ -378,5 +378,106 @@ describe("buyer offer acceptance financial bounds", () => {
     expect(statements.some(sql => sql.includes("UPDATE supplier_offers"))).toBe(false);
     expect(statements.some(sql => sql.includes("UPDATE sourcing_requests"))).toBe(false);
     expect(statements.some(sql => sql.includes("INSERT INTO sourcing_orders"))).toBe(false);
+  });
+});
+
+
+describe("supplier availability update safeguards", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.getSession.mockResolvedValue({ user: { id: supplierUserId } });
+    mocks.connect.mockResolvedValue({ query: mocks.clientQuery, release: mocks.release });
+  });
+
+  function availabilityRequest(body: Record<string, unknown>): IncomingMessage {
+    const request = Readable.from([JSON.stringify(body)]) as IncomingMessage;
+    Object.assign(request, { method: "PATCH", headers: {} });
+    return request;
+  }
+
+  it("locks the offer, active membership, account and request before updating availability", async () => {
+    mocks.clientQuery.mockImplementation(async (sql: string) => {
+      if (["BEGIN", "ROLLBACK", "COMMIT"].includes(sql)) return { rowCount: 0, rows: [] };
+      if (sql.includes("SELECT o.id") && sql.includes("FOR UPDATE OF o")) {
+        return { rowCount: 1, rows: [{ id: offerId }] };
+      }
+      if (sql.includes("UPDATE supplier_offers o")) return { rowCount: 1, rows: [{
+        id: offerId, request_id: requestId, status: "available",
+        availability_confirmed_at: new Date().toISOString(),
+        availability_valid_until: null, quote_valid_until: null,
+      }] };
+      return { rowCount: 1, rows: [] };
+    });
+    const response = makeResponse();
+
+    await handleSupplierAvailability(
+      availabilityRequest({ availability: "available" }),
+      response as unknown as ServerResponse,
+      offerId,
+    );
+
+    expect(response.statusCode).toBe(200);
+    const lock = mocks.clientQuery.mock.calls.map(([sql]) => String(sql))
+      .find(sql => sql.includes("SELECT o.id") && sql.includes("FOR UPDATE OF o"));
+    expect(lock).toContain("FOR SHARE OF am, a, sr");
+    const updateCall = mocks.clientQuery.mock.calls.find(([sql]) => String(sql).includes("UPDATE supplier_offers o"));
+    expect(String(updateCall?.[0])).toContain("CASE WHEN $6 THEN $2 ELSE o.availability_valid_until END");
+    expect(String(updateCall?.[0])).toContain("CASE WHEN $7 THEN $3 ELSE o.quote_valid_until END");
+    expect(updateCall?.[1]?.[5]).toBe(false);
+    expect(updateCall?.[1]?.[6]).toBe(false);
+    expect(mocks.clientQuery.mock.calls.at(-1)?.[0]).toBe("COMMIT");
+    expect(mocks.release).toHaveBeenCalledOnce();
+  });
+
+  it("rejects expired validity dates before opening a transaction", async () => {
+    const response = makeResponse();
+    await handleSupplierAvailability(
+      availabilityRequest({ availability: "available", availabilityValidUntil: "2000-01-01T00:00:00.000Z" }),
+      response as unknown as ServerResponse,
+      offerId,
+    );
+    expect(response.statusCode).toBe(400);
+    expect(mocks.connect).not.toHaveBeenCalled();
+  });
+});
+
+
+describe("supplier fulfilment transition lifecycle", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.getSession.mockResolvedValue({ user: { id: supplierUserId } });
+    mocks.connect.mockResolvedValue({ query: mocks.clientQuery, release: mocks.release });
+  });
+
+  it("records shipment transition and tracking details atomically", async () => {
+    const request = Readable.from([JSON.stringify({
+      status: "shipped", trackingReference: "TRACK-12345", carrier: "Example Carrier",
+    })]) as IncomingMessage;
+    Object.assign(request, { method: "PATCH", headers: {} });
+    mocks.clientQuery.mockImplementation(async (sql: string) => {
+      if (["BEGIN", "ROLLBACK", "COMMIT"].includes(sql)) return { rowCount: 0, rows: [] };
+      if (sql.includes("FROM sourcing_orders so WHERE so.id = $1 FOR UPDATE")) return { rowCount: 1, rows: [{
+        id: "00000000-0000-4000-8000-000000000060", request_id: requestId,
+        supplier_account_id: supplierAccountId, status: "fulfilment_pending", buyer_user_id: buyerId,
+      }] };
+      if (sql.includes("FROM account_members am")) return { rowCount: 1, rows: [{ "?column?": 1 }] };
+      return { rowCount: 1, rows: [] };
+    });
+    const response = makeResponse();
+
+    await handleSupplierSourcingOrders(
+      request, response as unknown as ServerResponse,
+      "00000000-0000-4000-8000-000000000060",
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body)).toMatchObject({ success: true, order: { status: "shipped" } });
+    const calls = mocks.clientQuery.mock.calls;
+    const event = calls.find(([sql]) => String(sql).includes("INSERT INTO sourcing_order_events"));
+    expect(event?.[1]?.[2]).toBe("fulfilment_pending");
+    expect(event?.[1]?.[3]).toBe("shipped");
+    expect(String(event?.[1]?.[4])).toContain("TRACK-12345");
+    expect(calls.at(-1)?.[0]).toBe("COMMIT");
+    expect(mocks.release).toHaveBeenCalledOnce();
   });
 });
