@@ -508,6 +508,8 @@ if (process.env.NODE_ENV !== "test") {
       await ensureMessagesTables();
       await ensureProductInquiryTables();
       await ensureSubscriptionBillingTables();
+      const { ensureOfficialStoreTables } = await import("./official-store.mjs");
+      await ensureOfficialStoreTables();
     })
     .then(() => {
       server.listen(port, "0.0.0.0", () => {
