@@ -16,6 +16,7 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
   const [profile, setProfile] = useState<Profile | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [isPlatformOwner, setIsPlatformOwner] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchText, setSearchText] = useState("");
   const { data: session, isPending } = authClient.useSession();
@@ -28,6 +29,16 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!session?.user) { setProfile(null); setIsPlatformOwner(false); return; }
+    let active = true;
+    fetch("/api/platform/security", { credentials: "include", cache: "no-store" })
+      .then(async response => response.ok ? response.json() : null)
+      .then(data => { if (active) setIsPlatformOwner(Boolean(data?.success && data.platformAccess?.roles?.includes("platform_owner"))); })
+      .catch(() => { if (active) setIsPlatformOwner(false); });
+    return () => { active = false; };
+  }, [session?.user?.id]);
 
   useEffect(() => {
     if (!session?.user) { setProfile(null); return; }
@@ -107,6 +118,7 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
       <div className="wasla-drawer-label">{ar ? "مساحتك في وصلة" : "YOUR WASLA SPACE"}</div>
       <nav className="wasla-drawer-links">
         {items.map(item => <Link href={item.href} key={item.href} aria-current={pathname === item.href ? "page" : undefined}><span>{item.icon}</span>{item.label}<b>↗</b></Link>)}
+        {isPlatformOwner && <Link href="/owner" aria-current={pathname === "/owner" ? "page" : undefined}><span>◆</span>{ar ? "لوحة مالك المنصة" : "Platform owner console"}<b>↗</b></Link>}
       </nav>
       <div className="wasla-drawer-bottom">
         <button type="button" className="wasla-drawer-language" onClick={() => setLocale(ar ? "en" : "ar")}>{ar ? "🌐 التبديل إلى الإنجليزية" : "🌐 Switch to Arabic"}</button>
