@@ -21,7 +21,7 @@ The goods remain owned and held by the independent supplier until the supplier f
 - No platform-wide or AI-managed warehouse stock.
 - No decrement of platform stock when a buyer submits a sourcing request.
 - No inventory reservation merely because an AI search result or quote is displayed.
-- Supplier availability is external, supplier-owned information. Store its source, confirmation timestamp, and expiry/valid-until when supplied.
+- Supplier availability is external, supplier-owned information. Store its source, confirmation timestamp, and expiry/valid-until when supplied. When an update omits an expiry field, retain its previous value; an explicit `null` clears that expiry. A supplied expiry must be in the future when the supplier confirms availability.
 - A supplier may confirm or reject availability and may update its offer before buyer acceptance. Material changes require buyer re-confirmation.
 - If a supplier operates a WASLA storefront, any catalog quantity shown belongs to that supplier/store, not to WASLA centrally. Do not treat it as guaranteed until the supplier confirms it for the selected request.
 - A buyer request is not a paid order; an offer is not a confirmed order; a payment initiation is not a successful payment.
