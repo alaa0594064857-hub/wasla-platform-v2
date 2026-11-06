@@ -337,18 +337,6 @@ export async function handleAcceptSupplierOffer(req: IncomingMessage, res: Serve
     client = await pool.connect();
     await client.query("BEGIN");
 
-    const prior = await client.query(
-      `SELECT id, order_number, request_id, accepted_offer_id, status, currency,
-              subtotal, shipping_total, grand_total, commercial_snapshot, created_at
-       FROM sourcing_orders WHERE buyer_user_id = $1 AND idempotency_key = $2 LIMIT 1`,
-      [userId, idempotencyKey],
-    );
-    if (prior.rows.length) {
-      await client.query("COMMIT");
-      reply(res, 200, { success: true, replayed: true, order: prior.rows[0], payment: "not_started" });
-      return;
-    }
-
     const requestResult = await client.query(
       `SELECT id, buyer_user_id, item_name, description, specifications, quantity,
               unit, destination_country_code, destination_city, delivery_location_snapshot,
@@ -362,6 +350,19 @@ export async function handleAcceptSupplierOffer(req: IncomingMessage, res: Serve
     const sourcingRequest = requestResult.rows[0];
     if (sourcingRequest.buyer_user_id !== userId) {
       await client.query("ROLLBACK"); reply(res, 403, { success: false, error: "Only the buyer can accept an offer" }); return;
+    }
+
+    // Recheck after locking the request so concurrent retries with the same key replay safely.
+    const prior = await client.query(
+      `SELECT id, order_number, request_id, accepted_offer_id, status, currency,
+              subtotal, shipping_total, grand_total, commercial_snapshot, created_at
+       FROM sourcing_orders WHERE buyer_user_id = $1 AND idempotency_key = $2 LIMIT 1`,
+      [userId, idempotencyKey],
+    );
+    if (prior.rows.length) {
+      await client.query("COMMIT");
+      reply(res, 200, { success: true, replayed: true, order: prior.rows[0], payment: "not_started" });
+      return;
     }
     if (!["submitted", "searching", "offers_available"].includes(sourcingRequest.status)) {
       await client.query("ROLLBACK"); reply(res, 409, { success: false, error: "This sourcing request is no longer accepting offers" }); return;
