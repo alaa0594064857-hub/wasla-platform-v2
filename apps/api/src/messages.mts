@@ -78,20 +78,33 @@ export async function handleMessagesCollection(req: IncomingMessage, res: Server
 
     const body = await readBody(req);
     const recipientId = body?.recipientUserId;
-    if (typeof recipientId !== "string" || !UUID.test(recipientId) || recipientId === userId) {
-      reply(res, 400, { success: false, error: "A valid, different recipient is required" });
+    const recipientEmail = body?.recipientEmail;
+    let recipient;
+    if (typeof recipientId === "string" && UUID.test(recipientId) && recipientId !== userId) {
+      recipient = await db.query(
+        `SELECT id FROM users WHERE id = $1 AND status = 'active' LIMIT 1`,
+        [recipientId],
+      );
+    } else if (
+      typeof recipientEmail === "string" &&
+      recipientEmail.length <= 320 &&
+      /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(recipientEmail.trim())
+    ) {
+      recipient = await db.query(
+        `SELECT id FROM users WHERE lower(email) = lower($1) AND status = 'active' AND id <> $2 LIMIT 1`,
+        [recipientEmail.trim(), userId],
+      );
+    } else {
+      reply(res, 400, { success: false, error: "Enter a valid recipient email address" });
       return;
     }
-    const recipient = await db.query(
-      `SELECT id FROM users WHERE id = $1 AND status = 'active' LIMIT 1`,
-      [recipientId],
-    );
-    if (!recipient.rows.length) {
+    const resolvedRecipientId = recipient.rows[0]?.id as string | undefined;
+    if (!resolvedRecipientId) {
       reply(res, 404, { success: false, error: "Recipient not found or unavailable" });
       return;
     }
 
-    const [participantA, participantB] = [userId, recipientId].sort();
+    const [participantA, participantB] = [userId, resolvedRecipientId].sort();
     const created = await db.query(
       `INSERT INTO message_conversations (participant_a_id, participant_b_id)
        VALUES ($1, $2)
