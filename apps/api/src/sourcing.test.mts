@@ -345,6 +345,10 @@ describe("buyer offer acceptance idempotency scope", () => {
     const statements = mocks.clientQuery.mock.calls.map(([sql]) => String(sql));
     expect(statements.at(-1)).toBe("ROLLBACK");
     expect(statements.some(sql => sql.includes("INSERT INTO sourcing_orders"))).toBe(false);
+    const lockIndex = statements.findIndex(sql => sql.includes("pg_advisory_xact_lock"));
+    const lookupIndex = statements.findIndex(sql => sql.includes("FROM sourcing_orders WHERE buyer_user_id"));
+    expect(lockIndex).toBeGreaterThan(-1);
+    expect(lockIndex).toBeLessThan(lookupIndex);
   });
 });
 
