@@ -249,6 +249,7 @@ export async function handleSupplierOffer(req: IncomingMessage, res: ServerRespo
 export async function handleSupplierAvailability(req: IncomingMessage, res: ServerResponse, offerId: string): Promise<void> {
   if (req.method !== "PATCH") { reply(res, 405, { success: false, error: "Method not allowed" }); return; }
   if (!UUID.test(offerId)) { reply(res, 400, { success: false, error: "Invalid offer ID" }); return; }
+  let client: PoolClient | undefined;
   try {
     const userId = await sessionUser(req);
     if (!userId) { reply(res, 401, { success: false, error: "Authentication required" }); return; }
@@ -269,7 +270,9 @@ export async function handleSupplierAvailability(req: IncomingMessage, res: Serv
       reply(res, 400, { success: false, error: "Quote validity must be in the future" }); return;
     }
     const db = getDatabasePool();
-    const updated = await db.query(
+    client = await db.connect();
+    await client.query("BEGIN");
+    const updated = await client.query(
       `UPDATE supplier_offers o
        SET status = $1,
            availability_confirmed_at = CASE WHEN $1 = 'available' THEN NOW() ELSE NULL END,
@@ -293,25 +296,33 @@ export async function handleSupplierAvailability(req: IncomingMessage, res: Serv
                  o.availability_valid_until, o.quote_valid_until`,
       [body.availability, availabilityUntil ?? null, quoteUntil ?? null, offerId, userId],
     );
-    if (!updated.rows.length) { reply(res, 404, { success: false, error: "Offer not found or supplier access revoked" }); return; }
+    if (!updated.rows.length) {
+      await client.query("ROLLBACK");
+      reply(res, 404, { success: false, error: "Offer not found or supplier access revoked" });
+      return;
+    }
     const row = updated.rows[0];
-    if (row.status === 'available') {
-      await db.query(
+    if (row.status === "available") {
+      await client.query(
         `UPDATE sourcing_requests SET status = 'offers_available', updated_at = NOW()
          WHERE id = $1 AND status IN ('submitted','searching')`,
         [row.request_id],
       );
     }
-    await db.query(
+    await client.query(
       `INSERT INTO sourcing_request_events (request_id, actor_user_id, event_type, to_status, metadata)
        VALUES ($1,$2,'supplier.availability_confirmed',$3,$4::jsonb)`,
       [row.request_id, userId, row.status, JSON.stringify({ offerId, availabilityValidUntil: row.availability_valid_until, quoteValidUntil: row.quote_valid_until })],
     );
+    await client.query("COMMIT");
     reply(res, 200, { success: true, offer: row });
   } catch (error) {
+    if (client) { try { await client.query("ROLLBACK"); } catch {} }
     console.error("WASLA supplier availability API error:", error);
     const tooLarge = error instanceof Error && error.message === "BODY_TOO_LARGE";
     reply(res, tooLarge ? 413 : 500, { success: false, error: tooLarge ? "Request body is too large" : "Could not update supplier availability" });
+  } finally {
+    client?.release();
   }
 }
 
