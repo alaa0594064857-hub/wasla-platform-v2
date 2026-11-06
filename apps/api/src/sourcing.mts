@@ -412,6 +412,21 @@ export async function handleAcceptSupplierOffer(req: IncomingMessage, res: Serve
       await client.query("ROLLBACK"); reply(res, 404, { success: false, error: "Supplier offer not found" }); return;
     }
     const offer = offerResult.rows[0];
+    const activeMembership = await client.query(
+      `SELECT 1
+       FROM account_members am
+       INNER JOIN accounts a ON a.id = am.account_id
+       WHERE am.account_id = $1 AND am.user_id = $2
+         AND am.status = 'active' AND a.status = 'active'
+         AND a.account_type IN ('supplier','manufacturer')
+       LIMIT 1`,
+      [offer.supplier_account_id, offer.submitted_by_user_id],
+    );
+    if (!activeMembership.rows.length) {
+      await client.query("ROLLBACK");
+      reply(res, 409, { success: false, error: "Supplier membership is no longer active" });
+      return;
+    }
     const now = Date.now();
     const validAvailability = offer.availability_valid_until === null || new Date(offer.availability_valid_until).getTime() > now;
     const validQuote = offer.quote_valid_until === null || new Date(offer.quote_valid_until).getTime() > now;
