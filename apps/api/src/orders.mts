@@ -146,10 +146,18 @@ export async function handleOrdersRequest(request: IncomingMessage, response: Se
                   sr.item_name AS "itemName", sr.quantity, sr.unit,
                   sr.destination_city AS "destinationCity",
                   sr.destination_country_code AS "destinationCountryCode",
-                  a.display_name AS "supplierName"
+                  a.display_name AS "supplierName",
+                  latest_shipment.metadata->>'trackingReference' AS "trackingReference",
+                  latest_shipment.metadata->>'carrier' AS carrier
            FROM sourcing_orders so
            INNER JOIN sourcing_requests sr ON sr.id = so.request_id
            INNER JOIN accounts a ON a.id = so.supplier_account_id
+           LEFT JOIN LATERAL (
+             SELECT metadata FROM sourcing_order_events
+             WHERE order_id = so.id AND event_type = 'supplier.status_changed'
+               AND to_status = 'shipped'
+             ORDER BY created_at DESC LIMIT 1
+           ) latest_shipment ON TRUE
            WHERE so.buyer_user_id = $1
            ORDER BY so.created_at DESC, so.id DESC LIMIT 100`,
           [session.user.id],
