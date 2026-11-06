@@ -129,7 +129,8 @@ export default function PlatformOwnerPage() {
     { id: "users", label: copy.users, icon: "♙", href: "#users" },
     { id: "roles", label: copy.roles, icon: "◇", href: "#roles" },
     { id: "security", label: copy.security, icon: "◈", href: "#security" },
-    { id: "settings", label: copy.settings, icon: "⚙", href: "#settings" }
+    { id: "settings", label: copy.settings, icon: "⚙", href: "#settings" },
+    { id: "subscriptions", label: ar ? "خطط الاشتراك" : "Subscription plans", icon: "＄", href: "/owner/subscriptions" }
   ];
 
   const roomDefs = [
