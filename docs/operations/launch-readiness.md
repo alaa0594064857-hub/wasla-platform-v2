@@ -93,3 +93,22 @@ This is a code/repository scope snapshot, not a claim that every feature has pas
 - Keep the candidate branch isolated until PR review, staging verification, migration rehearsal, and explicit release approval are complete.
 - Confirm whether the additional legacy API service is still referenced by any public URL, environment group, or web configuration before removing it. Do not delete a service based on its name alone.
 - Render environment-variable values are secrets and must be reviewed in the dashboard without copying them into chat, source control, or logs.
+
+## Preliminary Türkiye setup notes for Sunday review — 2026-11-06
+
+Türkiye is a practical first jurisdiction to investigate because the founder is currently there, but this is not yet a recommendation to incorporate. Confirm nationality, residence status, tax residence, ownership structure, budget, and intended customer/supplier countries before selecting a jurisdiction.
+
+- The official investment guide says foreign individual shareholders use passport documentation; a foreign shareholder residing in Türkiye is also asked for a notarized residence permit and a Turkish tax identification number for the registration process. Foreign documents may need apostille/consular certification, Turkish translation, and notarization.
+- The Ministry's published company information lists minimum capital of **TRY 50,000 for a limited company (Ltd. Şti.)** and **TRY 250,000 for a joint-stock company (A.Ş.)**. The Ministry says a limited company's capital may be paid within 24 months after registration. Minimum capital is committed company capital, not a formation-service fee; confirm current rules and any later amendments with the trade registry/accountant.
+- Company formation is submitted through MERSİS and registered with the relevant Trade Registry Directorate. Do not pay an intermediary until its scope, official charges, monthly accounting fees, registered-office costs, tax obligations, and cancellation terms are itemized.
+- İşbank's official commercial-account guidance lists company registry records, articles, tax registration, signature circulars, and identification of authorized signatories among required documents. The bank explicitly says meeting the document list does **not** guarantee account opening; branch review and internal approvals apply.
+- Ask the bank before incorporation whether it will onboard the actual shareholder/beneficial-owner structure and WASLA's international marketplace activity, including expected cross-border receipts, supplier payouts, currencies, and payment-provider settlement. A company registration does not guarantee a corporate bank account or marketplace payment processing.
+- For WASLA's model, do not describe the platform as holding customer money, escrow, or paying suppliers on behalf of buyers until a bank, payment provider, and qualified local adviser confirm the legal and operational model.
+
+Official starting references:
+- Invest in Türkiye — Establishing a Business: https://www.invest.gov.tr/en/InvestmentGuide/Pages/establishing-a-business.aspx
+- Turkish Ministry of Trade — Establishing a Company: https://ticaret.gov.tr/ic-ticaret/sirketler/sirket-kurmak
+- Turkish Ministry of Trade — Minimum capital information: https://ticaret.gov.tr/ic-ticaret/sirketler/sirket-bilgiler
+- İşbank — Commercial account opening requirements: https://www.isbank.com.tr/en/commercial/how-to-open-an-account
+
+Sunday decision gate: first confirm the founder's citizenship and Turkish residence-permit status, then request written pre-screening from an accountant and at least two banks using the same one-page WASLA business-model description. Do not incorporate or transfer capital until the total first-year cost and account eligibility are confirmed.
