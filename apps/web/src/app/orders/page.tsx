@@ -28,7 +28,7 @@ const words = {
     order: "طلب", date: "التاريخ", total: "الإجمالي", status: "الحالة", details: "تفاصيل الطلب",
     hide: "إخفاء التفاصيل", items: "المنتجات", address: "عنوان التوصيل", phone: "الهاتف",
     placed: "جديد", accepted: "مقبول", processing: "قيد التجهيز", shipped: "تم الشحن",
-    completed: "مكتمل", cancelled: "ملغي", quantity: "الكمية", sourcingTitle: "طلبات التوريد المعتمدة", supplier: "المورد", destination: "التسليم", shipping: "الشحن",
+    completed: "مكتمل", cancelled: "ملغي", quantity: "الكمية", sourcingTitle: "طلبات التوريد المعتمدة", supplier: "المورد", destination: "التسليم", shipping: "الشحن", awaiting_payment: "بانتظار الدفع", payment_pending: "الدفع قيد المعالجة", paid: "مدفوع", fulfilment_pending: "بانتظار تجهيز المورد",
   },
   en: {
     title: "My orders", subtitle: "Track shop purchases and supplier-sourced orders in one place.",
@@ -37,7 +37,7 @@ const words = {
     order: "Order", date: "Date", total: "Total", status: "Status", details: "Order details",
     hide: "Hide details", items: "Items", address: "Delivery address", phone: "Phone",
     placed: "New", accepted: "Accepted", processing: "Processing", shipped: "Shipped",
-    completed: "Completed", cancelled: "Cancelled", quantity: "Quantity", sourcingTitle: "Accepted sourcing orders", supplier: "Supplier", destination: "Delivery", shipping: "Shipping",
+    completed: "Completed", cancelled: "Cancelled", quantity: "Quantity", sourcingTitle: "Accepted sourcing orders", supplier: "Supplier", destination: "Delivery", shipping: "Shipping", awaiting_payment: "Awaiting payment", payment_pending: "Payment pending", paid: "Paid", fulfilment_pending: "Awaiting supplier fulfilment",
   },
 };
 
@@ -110,7 +110,7 @@ export default function BuyerOrdersPage() {
                 <article className="shops-create-card" key={order.id}>
                   <div className="shops-card-top">
                     <span className="shops-eyebrow">{t.order} · {order.orderNumber}</span>
-                    <span className="shops-status">{order.status}</span>
+                    <span className="shops-status">{t[order.status as keyof typeof t] ?? order.status}</span>
                   </div>
                   <h3>{order.itemName}</h3>
                   <div className="shops-info-row"><small>{t.supplier}</small><strong>{order.supplierName}</strong></div>
@@ -124,7 +124,7 @@ export default function BuyerOrdersPage() {
             </div>
           </section>
         )}
-        {loading ? <div className="shops-empty">{t.loading}</div> : orders.length === 0 ? (
+        {loading ? <div className="shops-empty">{t.loading}</div> : orders.length === 0 && sourcingOrders.length === 0 ? (
           <div className="shops-empty"><p>{t.empty}</p><Link href="/search">{t.explore} ↗</Link></div>
         ) : (
           <div className="shops-grid">
