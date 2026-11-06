@@ -128,7 +128,7 @@ export default function SourcingRequestDetailPage() {
         {offers.length === 0 ? <div className="shops-empty">{t.noOffers}</div> : <div className="shops-grid">
           {offers.map(offer => {
             const local = offer.origin_country_code === request.destination_country_code;
-            const canAccept = offer.status === "available" && !!offer.availability_confirmed_at && request.status !== "buyer_selected";
+            const canAccept = matches.some(match => match.offer.id === offer.id) && request.status !== "buyer_selected";
             const estimated = (Number(offer.unit_price) * request.quantity + Number(offer.shipping_amount)).toFixed(2);
             return <article className="shops-create-card" key={offer.id}>
               <div className="shops-card-top"><span className="shops-eyebrow">{local ? t.local : t.cross}</span><span className="shops-status">{offer.status === "available" ? t.available : offer.status === "unavailable" ? t.unavailable : t.pending}</span></div>
