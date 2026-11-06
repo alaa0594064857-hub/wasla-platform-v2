@@ -342,3 +342,239 @@ export async function handleOrderDetailRequest(
     respond(response, 500, { success: false, error: "Could not load order" });
   }
 }
+
+
+function storeOrderAccessSql() {
+  return `(
+    EXISTS (
+      SELECT 1 FROM account_members am
+      INNER JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
+      WHERE am.account_id = s.account_id AND am.user_id = $2
+        AND am.status = 'active' AND r.name IN ('account_owner', 'account_manager')
+    )
+    OR EXISTS (
+      SELECT 1 FROM store_members sm
+      INNER JOIN roles sr ON sr.id = sm.role_id AND sr.scope_type = sm.role_scope
+      WHERE sm.store_id = s.id AND sm.user_id = $2
+        AND sm.status = 'active' AND sr.name IN ('store_owner', 'store_manager')
+    )
+  )`;
+}
+
+const allowedTransitions: Record<string, string[]> = {
+  placed: ["accepted", "cancelled"],
+  accepted: ["processing", "cancelled"],
+  processing: ["shipped", "cancelled"],
+  shipped: ["completed"],
+  completed: [],
+  cancelled: [],
+};
+
+export async function handleStoreOrdersRequest(
+  request: IncomingMessage,
+  response: ServerResponse,
+  storeSlug: string,
+  orderId?: string,
+): Promise<void> {
+  if ((!orderId && request.method !== "GET") || (orderId && request.method !== "PATCH")) {
+    respond(response, 405, { success: false, error: "Method not allowed" });
+    return;
+  }
+  try {
+    const session = await auth.api.getSession({ headers: fromNodeHeaders(request.headers) });
+    if (!session) {
+      respond(response, 401, { success: false, error: "Authentication required" });
+      return;
+    }
+    const pool = getDatabasePool();
+
+    if (!orderId) {
+      const ordersResult = await pool.query(
+        `SELECT o.id, o.order_number AS "orderNumber", o.status, o.currency,
+                o.subtotal::text AS subtotal, o.grand_total::text AS "grandTotal",
+                o.shipping_address_snapshot AS "shippingAddress",
+                o.buyer_note AS "buyerNote", o.created_at AS "createdAt",
+                u.id AS "buyerUserId", u.name AS "buyerName", u.email AS "buyerEmail"
+         FROM orders o
+         INNER JOIN stores s ON s.id = o.store_id
+         INNER JOIN users u ON u.id = o.buyer_user_id
+         WHERE s.slug = $1 AND s.status = 'active' AND ${storeOrderAccessSql()}
+         ORDER BY o.created_at DESC, o.id DESC LIMIT 100`,
+        [storeSlug, session.user.id],
+      );
+      if (ordersResult.rowCount === 0) {
+        const access = await pool.query(
+          `SELECT s.id FROM stores s
+           WHERE s.slug = $1 AND s.status = 'active' AND ${storeOrderAccessSql()}`,
+          [storeSlug, session.user.id],
+        );
+        if (access.rowCount !== 1) {
+          respond(response, 404, { success: false, error: "Store not found or access denied" });
+          return;
+        }
+      }
+      const ids = ordersResult.rows.map((order: any) => order.id);
+      const itemsResult = ids.length
+        ? await pool.query(
+          `SELECT oi.id, oi.order_id AS "orderId", oi.product_id AS "productId",
+                  oi.product_title_snapshot AS "productTitle", oi.sku_snapshot AS sku,
+                  oi.unit_price_snapshot::text AS "unitPrice", oi.quantity,
+                  oi.line_subtotal::text AS "lineSubtotal"
+           FROM order_items oi WHERE oi.order_id = ANY($1::uuid[])
+           ORDER BY oi.created_at, oi.id`,
+          [ids],
+        )
+        : { rows: [] };
+      const itemsByOrder = new Map<string, any[]>();
+      for (const item of itemsResult.rows) {
+        const current = itemsByOrder.get(item.orderId) ?? [];
+        current.push(item);
+        itemsByOrder.set(item.orderId, current);
+      }
+      respond(response, 200, {
+        success: true,
+        orders: ordersResult.rows.map((order: any) => ({
+          ...order,
+          items: itemsByOrder.get(order.id) ?? [],
+        })),
+      });
+      return;
+    }
+
+    let body: unknown;
+    try { body = await readBody(request); }
+    catch {
+      respond(response, 400, { success: false, error: "Invalid request body" });
+      return;
+    }
+    if (!isObject(body) || typeof body.status !== "string") {
+      respond(response, 400, { success: false, error: "A valid next order status is required" });
+      return;
+    }
+    const nextStatus = body.status;
+    const reason = body.reason === undefined ? null :
+      typeof body.reason === "string" ? body.reason.trim() : undefined;
+    if (!["accepted", "processing", "shipped", "completed", "cancelled"].includes(nextStatus) ||
+        reason === undefined || (reason !== null && reason.length > 500) ||
+        (nextStatus === "cancelled" && (!reason || reason.length < 3))) {
+      respond(response, 400, { success: false, error: "Invalid order status or transition reason" });
+      return;
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const locked = await client.query(
+        `SELECT o.id, o.status, o.order_number AS "orderNumber",
+                o.store_id AS "storeId", s.account_id AS "accountId"
+         FROM orders o
+         INNER JOIN stores s ON s.id = o.store_id
+         WHERE o.id = $3 AND s.slug = $1 AND s.status = 'active'
+           AND ${storeOrderAccessSql()}
+         FOR UPDATE OF o`,
+        [storeSlug, session.user.id, orderId],
+      );
+      if (locked.rowCount !== 1) {
+        await client.query("ROLLBACK");
+        respond(response, 404, { success: false, error: "Order not found or access denied" });
+        return;
+      }
+      const order = locked.rows[0];
+      const previousStatus = String(order.status);
+      if (!(allowedTransitions[previousStatus] ?? []).includes(nextStatus)) {
+        await client.query("ROLLBACK");
+        respond(response, 409, { success: false, error: "This order status transition is not allowed" });
+        return;
+      }
+
+      if (nextStatus === "cancelled") {
+        const lines = await client.query(
+          `SELECT product_id AS "productId", quantity
+           FROM order_items WHERE order_id = $1 AND product_id IS NOT NULL
+           ORDER BY product_id`,
+          [orderId],
+        );
+        const productIds = lines.rows.map((line: any) => line.productId);
+        const lockedProducts = productIds.length
+          ? await client.query(
+            `SELECT id, stock_quantity AS "stockQuantity"
+             FROM store_products
+             WHERE id = ANY($1::uuid[]) AND store_id = $2
+             ORDER BY id FOR UPDATE`,
+            [productIds, order.storeId],
+          )
+          : { rows: [] };
+        const products = new Map<string, any>(lockedProducts.rows.map((product: any) => [product.id, product]));
+        for (const line of lines.rows) {
+          const product = products.get(line.productId);
+          if (!product) continue;
+          const before = Number(product.stockQuantity);
+          const after = before + Number(line.quantity);
+          if (!Number.isSafeInteger(after) || after > 2_147_483_647) {
+            await client.query("ROLLBACK");
+            respond(response, 409, { success: false, error: "Stock limit would be exceeded while cancelling this order" });
+            return;
+          }
+        }
+        for (const line of lines.rows) {
+          const product = products.get(line.productId);
+          if (!product) continue;
+          const before = Number(product.stockQuantity);
+          const after = before + Number(line.quantity);
+          const updated = await client.query(
+            `UPDATE store_products SET stock_quantity = $1, updated_at = NOW()
+             WHERE id = $2 AND stock_quantity = $3 RETURNING id`,
+            [after, product.id, before],
+          );
+          if (updated.rowCount !== 1) throw new Error("Stock changed unexpectedly during order cancellation");
+          const movement = await client.query(
+            `INSERT INTO store_inventory_movements
+              (store_id, product_id, actor_user_id, movement_type, quantity_delta,
+               quantity_before, quantity_after, reason, reference_code)
+             VALUES ($1,$2,$3,'inbound',$4,$5,$6,'Stock restored after order cancellation',$7)
+             RETURNING id`,
+            [order.storeId, product.id, session.user.id, line.quantity, before, after, order.orderNumber],
+          );
+          await client.query(
+            `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, store_id, metadata)
+             VALUES ($1, 'inventory.movement.created', 'inventory_movement', $2, $3, $4)`,
+            [session.user.id, movement.rows[0].id, order.storeId,
+             JSON.stringify({ orderId, orderNumber: order.orderNumber, productId: product.id, quantityDelta: Number(line.quantity) })],
+          );
+        }
+      }
+
+      const updatedOrder = await client.query(
+        `UPDATE orders SET status = $1, updated_at = NOW(),
+                cancelled_at = CASE WHEN $1 = 'cancelled' THEN NOW() ELSE cancelled_at END
+         WHERE id = $2 AND status = $3
+         RETURNING id, order_number AS "orderNumber", status, updated_at AS "updatedAt",
+                   cancelled_at AS "cancelledAt"`,
+        [nextStatus, orderId, previousStatus],
+      );
+      if (updatedOrder.rowCount !== 1) throw new Error("Order status changed unexpectedly");
+      await client.query(
+        `INSERT INTO order_status_history
+          (order_id, previous_status, new_status, actor_user_id, reason)
+         VALUES ($1,$2,$3,$4,$5)`,
+        [orderId, previousStatus, nextStatus, session.user.id, reason],
+      );
+      await client.query(
+        `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, store_id, metadata)
+         VALUES ($1,$2,'order',$3,$4,$5)`,
+        [session.user.id, `order.${nextStatus}`, orderId, order.storeId,
+         JSON.stringify({ orderNumber: order.orderNumber, previousStatus, newStatus: nextStatus, reason })],
+      );
+      await client.query("COMMIT");
+      respond(response, 200, { success: true, order: updatedOrder.rows[0] });
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error("WASLA store orders API error:", error);
+    respond(response, 500, { success: false, error: "Could not process store order request" });
+  }
+}
