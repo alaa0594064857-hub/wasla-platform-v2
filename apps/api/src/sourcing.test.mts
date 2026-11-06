@@ -657,3 +657,88 @@ describe("supplier offer acceptance success and expiry safeguards", () => {
     expect(statements.some(sql => sql.includes("UPDATE supplier_offers"))).toBe(false);
   });
 });
+
+
+describe("supplier order authorization and transition boundaries", () => {
+  const orderId = "00000000-0000-4000-8000-000000000060";
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.getSession.mockResolvedValue({ user: { id: supplierUserId } });
+    mocks.connect.mockResolvedValue({ query: mocks.clientQuery, release: mocks.release });
+  });
+
+  function patchRequest(body: Record<string, unknown>): IncomingMessage {
+    const request = Readable.from([JSON.stringify(body)]) as IncomingMessage;
+    Object.assign(request, { method: "PATCH", headers: {} });
+    return request;
+  }
+
+  function configureOrder(status: string, activeMembership = true) {
+    mocks.clientQuery.mockImplementation(async (sql: string) => {
+      if (["BEGIN", "ROLLBACK", "COMMIT"].includes(sql)) return { rowCount: 0, rows: [] };
+      if (sql.includes("FROM sourcing_orders so WHERE so.id = $1 FOR UPDATE")) return {
+        rowCount: 1, rows: [{
+          id: orderId, request_id: requestId, supplier_account_id: supplierAccountId,
+          status, buyer_user_id: buyerId,
+        }],
+      };
+      if (sql.includes("FROM account_members am")) return {
+        rowCount: activeMembership ? 1 : 0, rows: activeMembership ? [{ "?column?": 1 }] : [],
+      };
+      return { rowCount: 1, rows: [] };
+    });
+  }
+
+  it("requires a tracking reference before opening a transaction for shipment", async () => {
+    const response = makeResponse();
+    await handleSupplierSourcingOrders(
+      patchRequest({ status: "shipped" }), response as unknown as ServerResponse, orderId,
+    );
+    expect(response.statusCode).toBe(400);
+    expect(mocks.connect).not.toHaveBeenCalled();
+  });
+
+  it("rejects shipment before payment and leaves the order unchanged", async () => {
+    configureOrder("awaiting_payment");
+    const response = makeResponse();
+    await handleSupplierSourcingOrders(
+      patchRequest({ status: "shipped", trackingReference: "TRACK-12345" }),
+      response as unknown as ServerResponse, orderId,
+    );
+    expect(response.statusCode).toBe(409);
+    const statements = mocks.clientQuery.mock.calls.map(([sql]) => String(sql));
+    expect(statements.at(-1)).toBe("ROLLBACK");
+    expect(statements.some(sql => sql.includes("UPDATE sourcing_orders"))).toBe(false);
+    expect(statements.some(sql => sql.includes("INSERT INTO sourcing_order_events"))).toBe(false);
+  });
+
+  it("blocks a supplier whose membership has been revoked", async () => {
+    configureOrder("paid", false);
+    const response = makeResponse();
+    await handleSupplierSourcingOrders(
+      patchRequest({ status: "fulfilment_pending" }),
+      response as unknown as ServerResponse, orderId,
+    );
+    expect(response.statusCode).toBe(403);
+    const statements = mocks.clientQuery.mock.calls.map(([sql]) => String(sql));
+    expect(statements.at(-1)).toBe("ROLLBACK");
+    expect(statements.some(sql => sql.includes("UPDATE sourcing_orders"))).toBe(false);
+  });
+
+  it("allows paid orders to enter fulfilment and records both audit events", async () => {
+    configureOrder("paid", true);
+    const response = makeResponse();
+    await handleSupplierSourcingOrders(
+      patchRequest({ status: "fulfilment_pending" }),
+      response as unknown as ServerResponse, orderId,
+    );
+    expect(response.statusCode).toBe(200);
+    const calls = mocks.clientQuery.mock.calls;
+    expect(calls.some(([sql, params]) => String(sql).includes("UPDATE sourcing_orders") &&
+      params?.[0] === "fulfilment_pending")).toBe(true);
+    expect(calls.filter(([sql]) => String(sql).includes("INSERT INTO sourcing_order_events"))).toHaveLength(1);
+    expect(calls.filter(([sql]) => String(sql).includes("INSERT INTO sourcing_request_events"))).toHaveLength(1);
+    expect(calls.at(-1)?.[0]).toBe("COMMIT");
+    expect(mocks.release).toHaveBeenCalledOnce();
+  });
+});
