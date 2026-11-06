@@ -2353,3 +2353,11 @@ html[data-wasla-theme="light"] .wasla-workspace-nav a,html[data-wasla-theme="lig
 .wasla-search-result em{display:block;margin-top:4px;color:#98713a;font-size:11px;font-style:normal;font-weight:800}
 .wasla-search-result>a{color:#98713a;font-size:10px;font-weight:800;text-decoration:none;white-space:nowrap}
 @media(max-width:560px){.wasla-search-form{gap:5px}.wasla-search-form button{padding:0 13px}.wasla-search-result{gap:8px;padding:10px}.wasla-search-result>a{font-size:9px}}
+
+
+.shops-order-nav { display:flex; justify-content:flex-end; margin: 0 0 20px; }
+.shops-order-nav a, .shops-order-actions button { display:inline-flex; align-items:center; justify-content:center; min-height:42px; padding:10px 18px; border:1px solid rgba(216,189,132,.48); border-radius:12px; background:#14263a; color:#f4e8ce; font:inherit; font-weight:700; text-decoration:none; cursor:pointer; }
+.shops-order-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:20px; }
+.shops-order-actions button:disabled { opacity:.55; cursor:wait; }
+.shops-order-items { display:grid; gap:8px; margin:10px 0 18px; }
+.shops-back-link { color:inherit; text-decoration:none; font-weight:700; }
