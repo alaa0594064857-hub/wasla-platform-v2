@@ -82,32 +82,29 @@ export async function handleMessagesRequest(
           respond(response, 200, { success: true, recipients: [] });
           return;
         }
-        const pattern = `%${query.replace(/[\\\\%_]/g, "\\\\    const db = getDatabasePool();
-    const userId = session.user.id;
-
-    if (!conversationId && request.method === "GET") {
-")}%`;
+        const pattern = \`%\${query.replace(/[\\\\%_]/g, (character) => "\\\\" + character)}%\`;
         const matches = await db.query(
-          `WITH candidates AS (
-             SELECT u.id AS recipient_id, COALESCE(p.display_name, u.name) AS display_name,
-                    'person'::text AS entity_type, NULL::text AS category
-             FROM users u
-             LEFT JOIN profiles p ON p.user_id = u.id
-             WHERE u.status = 'active' AND u.email_verified = TRUE
-               AND COALESCE(p.display_name, u.name) ILIKE $1 ESCAPE E'\\\\\\\\'
-             UNION ALL
-             SELECT DISTINCT ON (a.id) u.id AS recipient_id, a.display_name,
-                    'business'::text AS entity_type, a.account_type::text AS category
+          \`WITH account_contacts AS (
+             SELECT u.id AS recipient_id, a.display_name,
+                    'business'::text AS entity_type, a.account_type::text AS category,
+                    ROW_NUMBER() OVER (
+                      PARTITION BY a.id
+                      ORDER BY CASE WHEN r.name = 'account_owner' THEN 0 ELSE 1 END
+                    ) AS rn
              FROM accounts a
              INNER JOIN account_members am ON am.account_id = a.id AND am.status = 'active'
              INNER JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
              INNER JOIN users u ON u.id = am.user_id AND u.status = 'active' AND u.email_verified = TRUE
              WHERE a.status = 'active' AND r.name IN ('account_owner', 'account_manager')
                AND a.display_name ILIKE $1 ESCAPE E'\\\\\\\\'
-             ORDER BY a.id, CASE WHEN r.name = 'account_owner' THEN 0 ELSE 1 END
-             UNION ALL
-             SELECT DISTINCT ON (s.id) u.id AS recipient_id, s.name AS display_name,
-                    'store'::text AS entity_type, 'store'::text AS category
+           ),
+           store_contacts AS (
+             SELECT u.id AS recipient_id, s.name AS display_name,
+                    'store'::text AS entity_type, 'store'::text AS category,
+                    ROW_NUMBER() OVER (
+                      PARTITION BY s.id
+                      ORDER BY CASE WHEN r.name = 'account_owner' THEN 0 ELSE 1 END
+                    ) AS rn
              FROM stores s
              INNER JOIN accounts a ON a.id = s.account_id AND a.status = 'active'
              INNER JOIN account_members am ON am.account_id = a.id AND am.status = 'active'
@@ -115,11 +112,24 @@ export async function handleMessagesRequest(
              INNER JOIN users u ON u.id = am.user_id AND u.status = 'active' AND u.email_verified = TRUE
              WHERE s.status = 'active' AND r.name IN ('account_owner', 'account_manager')
                AND s.name ILIKE $1 ESCAPE E'\\\\\\\\'
-             ORDER BY s.id, CASE WHEN r.name = 'account_owner' THEN 0 ELSE 1 END
+           ),
+           candidates AS (
+             SELECT u.id AS recipient_id, COALESCE(p.display_name, u.name) AS display_name,
+                    'person'::text AS entity_type, NULL::text AS category
+             FROM users u
+             LEFT JOIN profiles p ON p.user_id = u.id
+             WHERE u.status = 'active' AND u.email_verified = TRUE
+               AND COALESCE(p.display_name, u.name) ILIKE $1 ESCAPE E'\\\\\\\\'
+             UNION ALL
+             SELECT recipient_id, display_name, entity_type, category
+             FROM account_contacts WHERE rn = 1
+             UNION ALL
+             SELECT recipient_id, display_name, entity_type, category
+             FROM store_contacts WHERE rn = 1
            )
            SELECT recipient_id, display_name, entity_type, category
            FROM candidates WHERE recipient_id <> $2
-           ORDER BY display_name ASC LIMIT 30`,
+           ORDER BY display_name ASC LIMIT 30\`,
           [pattern, userId],
         );
         respond(response, 200, { success: true, recipients: matches.rows });
