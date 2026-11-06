@@ -380,6 +380,24 @@ describe("WASLA API", () => {
     expect(await milestone.json()).toEqual({ success: false, error: "Invalid deal or milestone ID" });
   });
 
+  it("requires authentication for deterministic sourcing matches", async () => {
+    const baseUrl = await startTestServer();
+    const response = await fetch(`${baseUrl}/api/ai/sourcing/matches`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ requestId: "00000000-0000-4000-8000-000000000001" }),
+    });
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ success: false, error: "Authentication required" });
+  });
+
+  it("rejects unsupported methods on sourcing matches", async () => {
+    const baseUrl = await startTestServer();
+    const response = await fetch(`${baseUrl}/api/ai/sourcing/matches`, { method: "GET" });
+    expect(response.status).toBe(405);
+    expect(await response.json()).toEqual({ success: false, error: "Method not allowed" });
+  });
+
   it("returns 404 for unknown routes", async () => {
     const baseUrl = await startTestServer();
     const response = await fetch(`${baseUrl}/unknown`);
