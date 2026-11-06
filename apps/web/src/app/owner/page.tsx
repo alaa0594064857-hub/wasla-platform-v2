@@ -19,6 +19,7 @@ export default function PlatformOwnerPage() {
   const [loading, setLoading] = useState(true);
   const [denied, setDenied] = useState(false);
   const [users, setUsers] = useState<PlatformUser[]>([]);
+  const [usersTotal, setUsersTotal] = useState<number | null>(null);
   const [usersLoading, setUsersLoading] = useState(false);
   const [userSearch, setUserSearch] = useState("");
   const [usersError, setUsersError] = useState(false);
@@ -65,7 +66,7 @@ export default function PlatformOwnerPage() {
         if (!response.ok) throw new Error("users-load-failed");
         return response.json();
       })
-      .then(data => { if (active && data?.success && Array.isArray(data.users)) setUsers(data.users); })
+      .then(data => { if (active && data?.success && Array.isArray(data.users)) { setUsers(data.users); setUsersTotal(Number(data.pagination?.total ?? data.users.length)); } })
       .catch(() => { if (active) setUsersError(true); })
       .finally(() => { if (active) setUsersLoading(false); });
     return () => { active = false; };
@@ -180,7 +181,7 @@ export default function PlatformOwnerPage() {
         </div>
 
         <div style={styles.metrics}>
-          <article style={styles.metric}><span style={styles.metricIcon}>♙</span><small>{copy.userCount}</small><strong>{usersLoading ? "—" : users.length}</strong><span style={styles.metricFoot}>{ar ? "أول 25 نتيجة" : "First 25 results"}</span></article>
+          <article style={styles.metric}><span style={styles.metricIcon}>♙</span><small>{copy.userCount}</small><strong>{usersLoading ? "—" : (usersTotal ?? users.length)}</strong><span style={styles.metricFoot}>{ar ? "إجمالي المستخدمين المسجلين" : "Total registered users"}</span></article>
           <article style={styles.metric}><span style={styles.metricIcon}>◇</span><small>{copy.permissions}</small><strong>{access.permissions.length}</strong><span style={styles.metricFoot}>{ar ? "محمّلة من الخادم" : "Loaded from server"}</span></article>
           <article style={styles.metric}><span style={styles.metricIcon}>◈</span><small>{copy.access}</small><strong style={styles.metricWord}>{ar ? "نشط" : "ACTIVE"}</strong><span style={styles.metricFoot}>{ar ? "تم التحقق من الدور" : "Owner role verified"}</span></article>
         </div>
