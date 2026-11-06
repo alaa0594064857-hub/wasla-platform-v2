@@ -168,7 +168,7 @@ This section consolidates the existing V2 candidate with the remaining master-pl
 | WASLA Shops | Supplier storefront foundation exists | Finish store management, catalog lifecycle, public profile, and owner/staff permissions |
 | WASLA Business | Business profiles, account membership, invitations and brands foundations exist | Complete company directory, supplier/manufacturer discovery, verification workflow, and role acceptance tests |
 | WASLA Trade | Not implemented as a complete workflow | Deal workspace: parties, commercial terms, milestones, attachments, status history, approvals, and audit trail |
-| WASLA Messages | UI scaffold only; no conversation API/service | Secure one-to-one conversations, participant authorization, message history, unread state, and order/request context; attachments and real-time delivery are later gates |
+| WASLA Messages | Candidate implementation: authenticated one-to-one conversation API, exact-email conversation start, participant-only read/send, message history, unread counts/read state, and bilingual workspace | Add DB-backed cross-user integration tests, connect conversations to order/request context, then add notification delivery; attachments and real-time delivery remain later gates |
 | WASLA AI | No operational AI service | Start with assisted sourcing search and offer comparison; use verified database results only, show sources/uncertainty, and require human confirmation for commitments |
 | WASLA Admin | No dedicated platform-admin workspace | Platform roles/permissions, account and supplier review queues, moderation, order/request oversight, audit log, and safe support actions |
 | Payments and payouts | Not implemented; intentionally disabled | Keep disabled until legal/provider approval, signed webhooks, reconciliation, refunds/disputes, and payout controls exist |
@@ -180,7 +180,7 @@ This section consolidates the existing V2 candidate with the remaining master-pl
 ### Execution order
 
 1. **Stabilize the current commerce pilot:** hosted buyer/supplier end-to-end checks, role boundaries, account membership changes, email verification/reset, and Arabic/English responsive review. Fix confirmed defects before adding broad features.
-2. **Build the shared communication foundation:** conversations and messages API, participant-only access, unread/read state, and a real bilingual messages workspace. Do not start with file uploads or real-time sockets; establish secure persisted messaging first.
+2. **Verify the shared communication foundation:** run database-backed tests for two real users, participant isolation, retries, and hosted buyer/supplier messaging before release. Do not start with file uploads or real-time sockets; establish secure persisted messaging first.
 3. **Build WASLA Trade on existing sourcing/order records:** deal records should reference requests/offers/orders rather than duplicate their commercial facts. Add immutable snapshots and audited status transitions.
 4. **Build WASLA AI as an assistive layer:** supplier search, local-country-first matching, comparison and explanations. AI may not create supplier availability, prices, stock, payment confirmations, or delivery promises.
 5. **Build WASLA Admin and operational controls:** explicit platform-admin permissions, review queues, moderation, audit trail, and safe intervention boundaries.
@@ -196,3 +196,17 @@ This section consolidates the existing V2 candidate with the remaining master-pl
 - User-visible states distinguish pending, confirmed, rejected, failed, and completed actions accurately.
 - CI passes on the candidate branch; hosted verification is recorded separately.
 - No PR is merged, no Render deployment is triggered, and no production migration is run without explicit release approval.
+
+
+### Messaging candidate update — 2026-11-06
+
+- [x] Added migration-backed conversation and message tables on the candidate branch.
+- [x] Added authenticated conversation list/create and conversation message read/send API routes.
+- [x] Enforced participant-only access and bounded message payloads.
+- [x] Added exact active-account email lookup for starting a conversation without exposing a public user directory.
+- [x] Replaced the messages scaffold with a bilingual Arabic/English workspace connected to the API.
+- [x] Candidate CI passed after the latest email-validation correction (commit `0499b621dc8065cbf6383a92d214c2325784760f`).
+- [ ] Add database-backed two-user integration tests and verify the full messaging journey on the hosted candidate.
+- [ ] Do not claim messaging production-ready until the migration is reviewed/applied through an approved release and hosted checks pass.
+
+WASLA Trade remains the next major module. Existing sourcing requests, supplier offers, accepted sourcing orders, commercial snapshots, and order event history are the source of truth; Trade must reference those records and add party-approved deal terms, milestones, amendments, and an immutable audit trail rather than duplicating order facts. Payments remain disabled.
