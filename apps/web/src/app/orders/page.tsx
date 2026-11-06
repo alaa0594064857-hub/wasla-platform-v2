@@ -17,7 +17,7 @@ type SourcingOrder = {
   id: string; orderNumber: string; status: string; currency: string;
   subtotal: string; shippingTotal: string; grandTotal: string; createdAt: string;
   itemName: string; quantity: number; unit: string; destinationCity: string;
-  destinationCountryCode: string; supplierName: string;
+  destinationCountryCode: string; supplierName: string; trackingReference?: string | null; carrier?: string | null;
 };
 
 const words = {
@@ -28,7 +28,7 @@ const words = {
     order: "طلب", date: "التاريخ", total: "الإجمالي", status: "الحالة", details: "تفاصيل الطلب",
     hide: "إخفاء التفاصيل", items: "المنتجات", address: "عنوان التوصيل", phone: "الهاتف",
     placed: "جديد", accepted: "مقبول", processing: "قيد التجهيز", shipped: "تم الشحن",
-    completed: "مكتمل", cancelled: "ملغي", quantity: "الكمية", sourcingTitle: "طلبات التوريد المعتمدة", supplier: "المورد", destination: "التسليم", shipping: "الشحن", awaiting_payment: "بانتظار الدفع", payment_pending: "الدفع قيد المعالجة", paid: "مدفوع", fulfilment_pending: "بانتظار تجهيز المورد",
+    completed: "مكتمل", cancelled: "ملغي", quantity: "الكمية", sourcingTitle: "طلبات التوريد المعتمدة", supplier: "المورد", destination: "التسليم", shipping: "الشحن", awaiting_payment: "بانتظار الدفع", payment_pending: "الدفع قيد المعالجة", paid: "مدفوع", fulfilment_pending: "بانتظار تجهيز المورد", shipped: "تم الشحن", completed: "مكتمل", cancelled: "ملغي", tracking: "رقم التتبع", carrier: "شركة الشحن",
   },
   en: {
     title: "My orders", subtitle: "Track shop purchases and supplier-sourced orders in one place.",
@@ -37,7 +37,7 @@ const words = {
     order: "Order", date: "Date", total: "Total", status: "Status", details: "Order details",
     hide: "Hide details", items: "Items", address: "Delivery address", phone: "Phone",
     placed: "New", accepted: "Accepted", processing: "Processing", shipped: "Shipped",
-    completed: "Completed", cancelled: "Cancelled", quantity: "Quantity", sourcingTitle: "Accepted sourcing orders", supplier: "Supplier", destination: "Delivery", shipping: "Shipping", awaiting_payment: "Awaiting payment", payment_pending: "Payment pending", paid: "Paid", fulfilment_pending: "Awaiting supplier fulfilment",
+    completed: "Completed", cancelled: "Cancelled", quantity: "Quantity", sourcingTitle: "Accepted sourcing orders", supplier: "Supplier", destination: "Delivery", shipping: "Shipping", awaiting_payment: "Awaiting payment", payment_pending: "Payment pending", paid: "Paid", fulfilment_pending: "Awaiting supplier fulfilment", shipped: "Shipped", completed: "Completed", cancelled: "Cancelled", tracking: "Tracking reference", carrier: "Carrier",
   },
 };
 
@@ -119,6 +119,8 @@ export default function BuyerOrdersPage() {
                   <div className="shops-info-row"><small>{t.shipping}</small><strong>{order.shippingTotal} {order.currency}</strong></div>
                   <div className="shops-info-row"><small>{t.total}</small><strong>{order.grandTotal} {order.currency}</strong></div>
                   <div className="shops-info-row"><small>{t.date}</small><strong>{dateLabel(order.createdAt, locale)}</strong></div>
+                  {order.trackingReference && <div className="shops-info-row"><small>{t.tracking}</small><strong dir="ltr">{order.trackingReference}</strong></div>}
+                  {order.carrier && <div className="shops-info-row"><small>{t.carrier}</small><strong>{order.carrier}</strong></div>}
                 </article>
               ))}
             </div>
