@@ -83,6 +83,19 @@ async function handleRequest(
     return;
   }
 
+  const publicStorefrontMatch = requestUrl.pathname.match(/^\\/api\\/public\\/stores\\/([^/]+)$/);
+  if (publicStorefrontMatch) {
+    try {
+      const { handlePublicStorefrontRequest } = await import("./storefront.mjs");
+      await handlePublicStorefrontRequest(request, response, decodeURIComponent(publicStorefrontMatch[1]));
+    } catch (error) {
+      console.error("WASLA public storefront route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Storefront service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/search") {
     try {
       const { handleSearchRequest } = await import("./search.mjs");
