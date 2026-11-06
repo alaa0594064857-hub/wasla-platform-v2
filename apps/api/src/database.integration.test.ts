@@ -143,3 +143,100 @@ describe("WASLA commerce PostgreSQL transaction guarantees", () => {
 afterAll(async () => {
   await pool.end();
 });
+
+
+describe("WASLA sourcing PostgreSQL concurrency constraints", () => {
+  const fixture = {
+    buyerId: randomUUID(),
+    supplierUserId: randomUUID(),
+    supplierAccountId: randomUUID(),
+    requestId: randomUUID(),
+    offerId: randomUUID(),
+  };
+
+  beforeAll(async () => {
+    await pool.query(
+      "INSERT INTO users (id, name, email, status) VALUES ($1, $2, $3, 'active')",
+      [fixture.buyerId, "Sourcing Integration Buyer", "sourcing-buyer-" + fixture.buyerId + "@example.test"],
+    );
+    await pool.query(
+      "INSERT INTO users (id, name, email, status) VALUES ($1, $2, $3, 'active')",
+      [fixture.supplierUserId, "Sourcing Integration Supplier", "sourcing-supplier-" + fixture.supplierUserId + "@example.test"],
+    );
+    await pool.query(
+      "INSERT INTO accounts (id, account_type, legal_name, display_name, status) VALUES ($1, 'supplier', $2, $3, 'active')",
+      [fixture.supplierAccountId, "Sourcing Integration Supplier LLC", "Sourcing Integration Supplier"],
+    );
+    await pool.query(
+      `INSERT INTO sourcing_requests
+       (id, buyer_user_id, item_name, quantity, unit, destination_country_code,
+        destination_city, requested_currency, status, idempotency_key)
+       VALUES ($1,$2,'Concurrency sourcing item',3,'pieces','TR','Istanbul','USD','offers_available',$3)`,
+      [fixture.requestId, fixture.buyerId, "integration-request-" + randomUUID()],
+    );
+    await pool.query(
+      `INSERT INTO supplier_offers
+       (id, request_id, supplier_account_id, submitted_by_user_id, origin_country_code,
+        offered_quantity, unit_price, currency, shipping_amount, status, availability_confirmed_at)
+       VALUES ($1,$2,$3,$4,'TR',3,12.50,'USD',5.00,'available',NOW())`,
+      [fixture.offerId, fixture.requestId, fixture.supplierAccountId, fixture.supplierUserId],
+    );
+  });
+
+  afterAll(async () => {
+    await pool.query("DELETE FROM sourcing_order_events WHERE order_id IN (SELECT id FROM sourcing_orders WHERE request_id = $1)", [fixture.requestId]);
+    await pool.query("DELETE FROM sourcing_orders WHERE request_id = $1", [fixture.requestId]);
+    await pool.query("DELETE FROM sourcing_request_events WHERE request_id = $1", [fixture.requestId]);
+    await pool.query("DELETE FROM supplier_offers WHERE request_id = $1", [fixture.requestId]);
+    await pool.query("DELETE FROM sourcing_requests WHERE id = $1", [fixture.requestId]);
+    await pool.query("DELETE FROM accounts WHERE id = $1", [fixture.supplierAccountId]);
+    await pool.query("DELETE FROM users WHERE id IN ($1,$2)", [fixture.buyerId, fixture.supplierUserId]);
+  });
+
+  it("serializes competing order inserts and allows only one order per sourcing request", async () => {
+    const first = await pool.connect();
+    const second = await pool.connect();
+    const orderValues = (suffix: string) => [
+      "WS-" + suffix + randomUUID().replace(/-/g, "").slice(0, 12).toUpperCase(),
+      fixture.requestId,
+      fixture.offerId,
+      fixture.buyerId,
+      fixture.supplierAccountId,
+      "USD",
+      "37.50",
+      "5.00",
+      "42.50",
+      JSON.stringify({ integration: true }),
+      "sourcing-concurrency-" + suffix + randomUUID(),
+    ] as const;
+    const insertOrder = (client: typeof first, values: readonly unknown[]) => client.query(
+      `INSERT INTO sourcing_orders
+       (order_number, request_id, accepted_offer_id, buyer_user_id, supplier_account_id,
+        status, currency, subtotal, shipping_total, grand_total, commercial_snapshot, idempotency_key)
+       VALUES ($1,$2,$3,$4,$5,'awaiting_payment',$6,$7,$8,$9,$10::jsonb,$11)`,
+      [...values],
+    );
+
+    try {
+      await first.query("BEGIN");
+      await second.query("BEGIN");
+      await insertOrder(first, orderValues("A"));
+      const competingInsert = insertOrder(second, orderValues("B"));
+      await first.query("COMMIT");
+      await expect(competingInsert).rejects.toThrow();
+      await second.query("ROLLBACK");
+      const persisted = await pool.query(
+        "SELECT count(*)::int AS count FROM sourcing_orders WHERE request_id = $1",
+        [fixture.requestId],
+      );
+      expect(persisted.rows[0].count).toBe(1);
+    } catch (error) {
+      await first.query("ROLLBACK").catch(() => undefined);
+      await second.query("ROLLBACK").catch(() => undefined);
+      throw error;
+    } finally {
+      first.release();
+      second.release();
+    }
+  });
+});
