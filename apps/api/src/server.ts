@@ -56,7 +56,7 @@ async function handleRequest(
     return;
   }
 
-  const sourcingAcceptMatch = requestUrl.pathname.match(/^\/api\/sourcing-requests\/([0-9a-f-]{36})\/accept-offer$/);
+  const sourcingAcceptMatch = requestUrl.pathname.match(/^\/api\/sourcing-requests\/([^/]+)\/accept-offer$/);
   if (sourcingAcceptMatch) {
     try {
       const { handleAcceptSupplierOffer } = await import("./sourcing.mjs");
@@ -69,7 +69,7 @@ async function handleRequest(
     return;
   }
 
-  const sourcingOfferMatch = requestUrl.pathname.match(/^\/api\/sourcing-offers\/([0-9a-f-]{36})\/availability$/);
+  const sourcingOfferMatch = requestUrl.pathname.match(/^\/api\/sourcing-offers\/([^/]+)\/availability$/);
   if (sourcingOfferMatch) {
     try {
       const { handleSupplierAvailability } = await import("./sourcing.mjs");
@@ -82,7 +82,7 @@ async function handleRequest(
     return;
   }
 
-  const sourcingOfferCreateMatch = requestUrl.pathname.match(/^\/api\/sourcing-requests\/([0-9a-f-]{36})\/offers$/);
+  const sourcingOfferCreateMatch = requestUrl.pathname.match(/^\/api\/sourcing-requests\/([^/]+)\/offers$/);
   if (sourcingOfferCreateMatch) {
     try {
       const { handleSupplierOffer } = await import("./sourcing.mjs");
@@ -95,7 +95,7 @@ async function handleRequest(
     return;
   }
 
-  const sourcingRequestDetailMatch = requestUrl.pathname.match(/^\/api\/sourcing-requests\/([0-9a-f-]{36})$/);
+  const sourcingRequestDetailMatch = requestUrl.pathname.match(/^\/api\/sourcing-requests\/([^/]+)$/);
   if (sourcingRequestDetailMatch) {
     try {
       const { handleSourcingRequestDetail } = await import("./sourcing.mjs");
@@ -225,7 +225,7 @@ async function handleRequest(
   }
 
   const memberActionMatch = requestUrl.pathname.match(
-    /^\/api\/accounts\/([0-9a-f-]{36})\/members\/([0-9a-f-]{36})\/(accept|revoke|decline)$/,
+    /^\/api\/accounts\/([^/]+)\/members\/([^/]+)\/(accept|revoke|decline)$/,
   );
 
   if (memberActionMatch) {
@@ -256,7 +256,7 @@ async function handleRequest(
   }
 
   const memberManagementMatch = requestUrl.pathname.match(
-    /^\/api\/accounts\/([0-9a-f-]{36})\/members\/([0-9a-f-]{36})$/,
+    /^\/api\/accounts\/([^/]+)\/members\/([^/]+)$/,
   );
 
   if (memberManagementMatch && request.method === "PATCH") {
@@ -286,7 +286,7 @@ async function handleRequest(
   }
 
   const membersMatch = requestUrl.pathname.match(
-    /^\/api\/accounts\/([0-9a-f-]{36})\/members$/,
+    /^\/api\/accounts\/([^/]+)\/members$/,
   );
 
   if (membersMatch) {
@@ -311,7 +311,7 @@ async function handleRequest(
 
 
 
-  const storeOrderStatusMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/orders\/([0-9a-f-]{36})\/status$/);
+  const storeOrderStatusMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/orders\/([^/]+)\/status$/);
   if (storeOrderStatusMatch) {
     try {
       const { handleStoreOrdersRequest } = await import("./orders.mjs");
@@ -339,7 +339,7 @@ async function handleRequest(
     return;
   }
 
-  const orderDetailMatch = requestUrl.pathname.match(/^\/api\/orders\/([0-9a-f-]{36})$/);
+  const orderDetailMatch = requestUrl.pathname.match(/^\/api\/orders\/([^/]+)$/);
   if (orderDetailMatch) {
     try {
       const { handleOrderDetailRequest } = await import("./orders.mjs");
@@ -365,7 +365,7 @@ async function handleRequest(
   }
 
   const inventoryMovementsMatch = requestUrl.pathname.match(
-    /^\/api\/stores\/([^/]+)\/products\/([0-9a-f-]{36})\/inventory-movements$/,
+    /^\/api\/stores\/([^/]+)\/products\/([^/]+)\/inventory-movements$/,
   );
   if (inventoryMovementsMatch) {
     try {
@@ -382,7 +382,7 @@ async function handleRequest(
   }
 
   const storeProductDetailMatch = requestUrl.pathname.match(
-    /^\/api\/stores\/([^/]+)\/products\/([0-9a-f-]{36})$/,
+    /^\/api\/stores\/([^/]+)\/products\/([^/]+)$/,
   );
   if (storeProductDetailMatch) {
     try {
