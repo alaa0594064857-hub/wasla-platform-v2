@@ -71,7 +71,7 @@ export async function handleTradeDeals(req: IncomingMessage, res: ServerResponse
         `SELECT d.id, d.deal_number, d.sourcing_order_id, d.buyer_user_id,
                 d.supplier_account_id, a.display_name AS supplier_name,
                 d.status, d.terms_version, d.terms_snapshot,
-                d.proposed_by_user_id, (d.proposed_by_user_id <> $1) AS can_respond,
+                d.proposed_by_user_id, (d.proposed_by_user_id <> $1) AS can_respond, (d.buyer_user_id = $1) AS can_complete,
                 d.accepted_by_user_id, d.accepted_at, d.created_at, d.updated_at
          FROM trade_deals d
          JOIN accounts a ON a.id = d.supplier_account_id
