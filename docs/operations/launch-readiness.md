@@ -234,3 +234,13 @@ WASLA Trade remains the next major module. Existing sourcing requests, supplier 
 - [ ] Review amendment terms UX and ensure each amendment submits a complete replacement terms snapshot; validate all concurrent party actions against a real PostgreSQL database.
 - [ ] Add hosted candidate verification after explicit release approval; no production deployment or migration has been performed.
 - [x] Candidate CI passed the complete quality workflow, including API tests, migrations, API TypeScript/build, and bilingual web build, on commit `2eff8284647a4fbdf59af6a46635c14202cfb250`.
+
+### Deterministic sourcing intelligence — 2026-11-06
+
+- [x] Added buyer-authenticated `POST /api/ai/sourcing/matches` for requests owned by the signed-in buyer.
+- [x] Only returns offers with active supplier/manufacturer accounts, supplier-confirmed availability, unexpired availability/quote validity, and quantity sufficient for the request.
+- [x] Ranks local suppliers before cross-border offers; then considers requested-currency match, comparable landed total only within the same currency, and lead time.
+- [x] Returns an explainable rank score and reason codes; no LLM provider, paid API, new secret, inventory mutation, offer acceptance, or order creation.
+- [x] Added API tests for authentication and HTTP method restrictions; candidate CI passed API tests, database integration checks, API TypeScript check, API build, and web build on commit `1981cb71275c771a0d456d9adafb17c40d95842e`.
+- [ ] Add focused database-backed tests for local-versus-cross-border ranking, excluded inactive/unconfirmed/expired/insufficient offers, and read-only behavior.
+- [ ] Connect the buyer sourcing detail UI to this endpoint and verify it with two hosted accounts after approved candidate deployment. No production deployment or migration has been performed.
