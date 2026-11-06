@@ -478,7 +478,7 @@ if (process.env.NODE_ENV !== "test") {
   const server = createWaslaServer();
 
   void import("./database.js")
-    .then(async ({ ensureRegistrationTypeColumn, ensureAccountOwnerRole, ensureStoreOwnerRole, ensurePlatformOwnerRole, ensurePersonalThemesTable, ensureStoreProductsTable, ensureNetworkTables, ensureProductInquiryTables }) => {
+    .then(async ({ ensureRegistrationTypeColumn, ensureAccountOwnerRole, ensureStoreOwnerRole, ensurePlatformOwnerRole, ensurePersonalThemesTable, ensureStoreProductsTable, ensureNetworkTables, ensureProductInquiryTables, ensureSubscriptionBillingTables }) => {
       await ensureRegistrationTypeColumn();
       await ensureAccountOwnerRole();
       await ensureStoreOwnerRole();
@@ -489,6 +489,7 @@ if (process.env.NODE_ENV !== "test") {
       const { ensureMessagesTables } = await import("./messages.mjs");
       await ensureMessagesTables();
       await ensureProductInquiryTables();
+      await ensureSubscriptionBillingTables();
     })
     .then(() => {
       server.listen(port, "0.0.0.0", () => {
