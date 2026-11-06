@@ -210,3 +210,15 @@ This section consolidates the existing V2 candidate with the remaining master-pl
 - [ ] Do not claim messaging production-ready until the migration is reviewed/applied through an approved release and hosted checks pass.
 
 WASLA Trade remains the next major module. Existing sourcing requests, supplier offers, accepted sourcing orders, commercial snapshots, and order event history are the source of truth; Trade must reference those records and add party-approved deal terms, milestones, amendments, and an immutable audit trail rather than duplicating order facts. Payments remain disabled.
+
+### Trade candidate update — 2026-11-06
+
+- [x] Added migration-backed Trade deal, amendment, milestone, and event-history tables linked to accepted sourcing orders.
+- [x] Added authenticated Trade deal listing and detail API, restricted to the buyer or active supplier-account members.
+- [x] Added buyer-proposed deal creation from an eligible accepted sourcing order, with a commercial snapshot and audited proposal event.
+- [x] Added accept/decline response workflow requiring the other party; a proposer cannot approve their own proposal.
+- [x] Added unauthenticated-route, invalid-ID, and method-level API tests.
+- [ ] Add amendment proposal/response endpoints and milestone management endpoints.
+- [ ] Build the bilingual Trade workspace UI and link it from the signed-in navigation.
+- [ ] Add database-backed two-party authorization, state-transition, and concurrency tests.
+- [ ] Review migration and verify the full buyer/supplier journey on the hosted candidate. No production migration or deployment has been performed.
