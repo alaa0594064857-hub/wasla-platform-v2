@@ -177,3 +177,9 @@ Store order access is evaluated from active account/store memberships and the co
 Cancellation now verifies that every still-linked order product can be locked in the order's store before restoring any stock. If a linked product is missing or belongs to a different store, the transaction is rolled back instead of silently marking the order cancelled without restoring inventory.
 
 The PostgreSQL integration suite now exercises concurrent row-lock reservations and the buyer-scoped idempotency unique constraint against the CI PostgreSQL service. These checks validate database behavior; endpoint-level multi-request integration tests remain a separate follow-up.
+
+## 14. Order management interfaces
+
+The web application now includes a bilingual buyer order-history page at `/orders`. It loads only the signed-in buyer's orders and fetches full immutable order details on demand through the buyer-authorized order detail endpoint.
+
+Each shop workspace links to its bilingual order-management page at `/shops/:slug/orders`. That page lists only orders visible to the active store/account manager permissions and exposes only the next permitted workflow actions. Status updates and cancellation stock restoration remain enforced by the API; the interface is not the security boundary.
