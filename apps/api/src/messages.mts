@@ -88,7 +88,7 @@ export async function handleMessagesCollection(req: IncomingMessage, res: Server
     } else if (
       typeof recipientEmail === "string" &&
       recipientEmail.length <= 320 &&
-      /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(recipientEmail.trim())
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail.trim())
     ) {
       recipient = await db.query(
         `SELECT id FROM users WHERE lower(email) = lower($1) AND status = 'active' AND id <> $2 LIMIT 1`,
