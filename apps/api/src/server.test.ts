@@ -339,6 +339,16 @@ describe("WASLA API", () => {
     expect(await response.json()).toEqual({ success: false, error: "Authentication required" });
   });
 
+  it("requires authentication for Trade lifecycle status changes and validates IDs", async () => {
+    const baseUrl = await startTestServer();
+    const unauthorized = await fetch("${baseUrl}/api/trade-deals/00000000-0000-4000-8000-000000000001/status", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "in_progress" }) });
+    expect(unauthorized.status).toBe(401);
+    expect(await unauthorized.json()).toEqual({ success: false, error: "Authentication required" });
+    const invalid = await fetch("${baseUrl}/api/trade-deals/00000000-0000-4000-8000-000000000001/status/not-a-uuid/status", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "completed" }) });
+    expect(invalid.status).toBe(400);
+    expect(await invalid.json()).toEqual({ success: false, error: "Invalid deal ID" });
+  });
+
   it("requires authentication for Trade amendments and milestones", async () => {
     const baseUrl = await startTestServer();
     const dealId = "00000000-0000-4000-8000-000000000001";
