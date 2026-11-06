@@ -100,7 +100,7 @@ export async function ensureOfficialStoreTables(): Promise<void> {
         inquiry_id uuid NOT NULL REFERENCES official_store_inquiries(id) ON DELETE CASCADE,
         sender_type varchar(16) NOT NULL
           CHECK (sender_type IN ('customer', 'ai', 'human', 'system')),
-        sender_user_id uuid REFERENCES users(id) ON DELETE SET NULL,
+        sender_user_id uuid REFERENCES users(id) ON DELETE RESTRICT,
         body text NOT NULL CHECK (length(body) BETWEEN 1 AND 5000),
         created_at timestamptz NOT NULL DEFAULT NOW(),
         CONSTRAINT official_store_message_sender_check CHECK (
@@ -122,7 +122,7 @@ export async function ensureOfficialStoreTables(): Promise<void> {
         product_id uuid REFERENCES official_store_products(id) ON DELETE SET NULL,
         actor_type varchar(16) NOT NULL
           CHECK (actor_type IN ('system', 'ai', 'human', 'customer')),
-        actor_user_id uuid REFERENCES users(id) ON DELETE SET NULL,
+        actor_user_id uuid REFERENCES users(id) ON DELETE RESTRICT,
         action varchar(120) NOT NULL,
         details jsonb NOT NULL DEFAULT '{}'::jsonb,
         created_at timestamptz NOT NULL DEFAULT NOW(),
