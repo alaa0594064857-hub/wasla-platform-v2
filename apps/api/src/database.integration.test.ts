@@ -425,13 +425,13 @@ describe("WASLA sourcing PostgreSQL concurrency constraints", () => {
       await second.query("ROLLBACK").catch(() => undefined);
       throw error;
     } finally {
+      first.release();
+      second.release();
       await pool.query(
         "DELETE FROM sourcing_request_events WHERE actor_user_id = $1 AND event_type = 'supplier.offer_submitted' AND metadata->>'idempotencyKey' = $2",
         [fixture.supplierUserId, key],
       );
       await pool.query("DELETE FROM supplier_offers WHERE id = $1", [offerId]);
-      first.release();
-      second.release();
     }
   });
 
