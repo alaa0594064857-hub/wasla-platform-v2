@@ -327,7 +327,7 @@ export async function handleSupplierOffer(req: IncomingMessage, res: ServerRespo
     const prior = await client.query(
       `SELECT e.request_id, o.id, o.supplier_account_id, o.offered_quantity,
               o.unit_price, o.currency, o.shipping_amount, o.lead_time_days,
-              o.terms_snapshot,
+              o.terms_snapshot, o.status,
               (e.request_id = $3
                AND o.supplier_account_id = $4
                AND o.offered_quantity = $5
@@ -359,9 +359,8 @@ export async function handleSupplierOffer(req: IncomingMessage, res: ServerRespo
           offered_quantity: prior.rows[0].offered_quantity,
           unit_price: prior.rows[0].unit_price, currency: prior.rows[0].currency,
           shipping_amount: prior.rows[0].shipping_amount, lead_time_days: prior.rows[0].lead_time_days,
-          status: "availability_pending",
+          status: prior.rows[0].status,
         },
-        availability: "pending_supplier_confirmation",
       });
       return;
     }
