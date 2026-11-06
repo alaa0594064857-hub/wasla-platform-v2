@@ -168,13 +168,12 @@ export async function handleSupplierOffer(req: IncomingMessage, res: ServerRespo
     const body = await readBody(req);
     if (!body) { reply(res, 400, { success: false, error: "Invalid request body" }); return; }
     const accountId = body.supplierAccountId;
-    const origin = typeof body.originCountryCode === "string" ? body.originCountryCode.toUpperCase() : "";
     const currency = typeof body.currency === "string" ? body.currency.toUpperCase() : "";
     const quantity = body.offeredQuantity;
     const unitPrice = body.unitPrice;
     const shipping = body.shippingAmount ?? 0;
     const leadTime = body.leadTimeDays ?? null;
-    if (typeof accountId !== "string" || !UUID.test(accountId) || !COUNTRY.test(origin) || !CURRENCY.test(currency) ||
+    if (typeof accountId !== "string" || !UUID.test(accountId) || !CURRENCY.test(currency) ||
         typeof quantity !== "number" || !Number.isSafeInteger(quantity) || quantity <= 0 ||
         typeof unitPrice !== "number" && typeof unitPrice !== "string" ||
         !Number.isFinite(Number(unitPrice)) || Number(unitPrice) < 0 ||
@@ -202,6 +201,10 @@ export async function handleSupplierOffer(req: IncomingMessage, res: ServerRespo
     );
     if (!membership.rows.length) {
       await client.query("ROLLBACK"); reply(res, 403, { success: false, error: "An active supplier or manufacturer account membership is required" }); return;
+    }
+    const origin = typeof membership.rows[0].country_code === "string" ? membership.rows[0].country_code.toUpperCase() : "";
+    if (!COUNTRY.test(origin)) {
+      await client.query("ROLLBACK"); reply(res, 409, { success: false, error: "Set a valid country on the supplier account before submitting offers" }); return;
     }
     const target = await client.query(
       `SELECT id, buyer_user_id, quantity, unit, status, destination_country_code
