@@ -562,7 +562,7 @@ describe("supplier offer acceptance success and expiry safeguards", () => {
     offered_quantity: 2, unit_price: "10.00", currency: "USD",
     shipping_amount: "2.00", lead_time_days: 3, status: "available",
     availability_confirmed_at: new Date().toISOString(),
-    availability_valid_until: null, quote_valid_until: null,
+    availability_valid_until: null as string | null, quote_valid_until: null as string | null,
     supplier_name: "Test Supplier", supplier_account_status: "active",
     supplier_account_type: "supplier", terms_snapshot: {},
   };
