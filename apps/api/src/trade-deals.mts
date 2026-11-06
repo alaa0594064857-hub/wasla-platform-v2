@@ -280,6 +280,74 @@ export async function handleTradeDealResponse(req: IncomingMessage, res: ServerR
 }
 
 
+/** Explicit, audited lifecycle transitions; completion is confirmed by the buyer. */
+export async function handleTradeDealStatus(req: IncomingMessage, res: ServerResponse, dealId: string): Promise<void> {
+  if (!UUID.test(dealId)) { reply(res, 400, { success: false, error: "Invalid deal ID" }); return; }
+  if (req.method !== "PATCH") { reply(res, 405, { success: false, error: "Method not allowed" }); return; }
+  try {
+    const userId = await currentUser(req);
+    if (!userId) { reply(res, 401, { success: false, error: "Authentication required" }); return; }
+    const body = await readBody(req);
+    const target = body?.status;
+    const reason = body?.reason;
+    if (!["in_progress", "completed", "disputed"].includes(String(target)) ||
+        (reason !== undefined && (typeof reason !== "string" || reason.trim().length > 1000))) {
+      reply(res, 400, { success: false, error: "Provide a valid status and an optional reason up to 1000 characters" }); return;
+    }
+    const db = getDatabasePool();
+    const client = await db.connect();
+    try {
+      await client.query("BEGIN");
+      const deal = await requireTradeParty(client, dealId, userId);
+      if (!deal) {
+        await client.query("ROLLBACK");
+        reply(res, 404, { success: false, error: "Trade deal not found" }); return;
+      }
+      if (deal.account_status !== "active") {
+        await client.query("ROLLBACK");
+        reply(res, 409, { success: false, error: "The supplier account is not active" }); return;
+      }
+      const supplierMember = await client.query(
+        "SELECT 1 FROM account_members WHERE account_id = $1 AND user_id = $2 AND status = 'active' LIMIT 1",
+        [deal.supplier_account_id, userId],
+      );
+      const isSupplier = supplierMember.rows.length > 0;
+      const isBuyer = deal.buyer_user_id === userId;
+      if (isBuyer && isSupplier) {
+        await client.query("ROLLBACK");
+        reply(res, 403, { success: false, error: "A user cannot act as both parties in one deal" }); return;
+      }
+      const allowed =
+        (deal.status === "agreed" && target === "in_progress") ||
+        (deal.status === "in_progress" && target === "completed" && isBuyer) ||
+        (["agreed", "in_progress"].includes(deal.status) && target === "disputed");
+      if (!allowed) {
+        await client.query("ROLLBACK");
+        reply(res, 409, { success: false, error: "This status transition is not permitted for your party or the current deal state" }); return;
+      }
+      const updated = await client.query(
+        "UPDATE trade_deals SET status = $2, updated_at = NOW() WHERE id = $1 RETURNING id, deal_number, status, updated_at",
+        [dealId, target],
+      );
+      await client.query(
+        "INSERT INTO trade_deal_events (deal_id, actor_user_id, event_type, from_status, to_status, metadata) VALUES ($1,$2,$3,$4,$5,$6::jsonb)",
+        [dealId, userId, target === "disputed" ? "deal_disputed" : target === "completed" ? "deal_completed" : "deal_started", deal.status, target,
+         JSON.stringify({ reason: typeof reason === "string" ? reason.trim() : null })],
+      );
+      await client.query("COMMIT");
+      reply(res, 200, { success: true, deal: updated.rows[0] });
+    } catch (error) {
+      try { await client.query("ROLLBACK"); } catch {}
+      throw error;
+    } finally { client.release(); }
+  } catch (error) {
+    console.error("WASLA trade status error:", error);
+    const tooLarge = error instanceof Error && error.message === "BODY_TOO_LARGE";
+    reply(res, tooLarge ? 413 : 500, { success: false, error: tooLarge ? "Request body is too large" : "Could not update trade status" });
+  }
+}
+
+
 async function requireTradeParty(client: { query: (sql: string, values?: unknown[]) => Promise<{ rows: any[] }> }, dealId: string, userId: string) {
   const result = await client.query(
     `SELECT d.id, d.buyer_user_id, d.supplier_account_id, d.status, d.terms_version, d.terms_snapshot,
