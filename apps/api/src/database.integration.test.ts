@@ -566,3 +566,88 @@ describe("WASLA sourcing PostgreSQL concurrency constraints", () => {
   });
 
 });
+
+describe("WASLA deterministic sourcing match eligibility and ranking", () => {
+  const buyerId = randomUUID();
+  const requestId = randomUUID();
+  const suppliers = [
+    { id: randomUUID(), userId: randomUUID(), roleId: randomUUID(), origin: "TR", price: 14, shipping: 4, quantity: 5, status: "active", confirmed: true, valid: true },
+    { id: randomUUID(), userId: randomUUID(), roleId: randomUUID(), origin: "DE", price: 8, shipping: 8, quantity: 5, status: "active", confirmed: true, valid: true },
+    { id: randomUUID(), userId: randomUUID(), roleId: randomUUID(), origin: "TR", price: 1, shipping: 1, quantity: 2, status: "active", confirmed: true, valid: true },
+    { id: randomUUID(), userId: randomUUID(), roleId: randomUUID(), origin: "TR", price: 1, shipping: 1, quantity: 5, status: "active", confirmed: false, valid: true },
+    { id: randomUUID(), userId: randomUUID(), roleId: randomUUID(), origin: "TR", price: 1, shipping: 1, quantity: 5, status: "suspended", confirmed: true, valid: true },
+    { id: randomUUID(), userId: randomUUID(), roleId: randomUUID(), origin: "TR", price: 1, shipping: 1, quantity: 5, status: "active", confirmed: true, valid: false },
+  ];
+  const offerIds = suppliers.map(() => randomUUID());
+
+  beforeAll(async () => {
+    await pool.query("INSERT INTO users (id,name,email,status) VALUES ($1,'Match Test Buyer',$2,'active')",
+      [buyerId, "match-buyer-" + buyerId + "@example.test"]);
+    await pool.query("INSERT INTO sourcing_requests (id,buyer_user_id,item_name,quantity,unit,destination_country_code,destination_city,requested_currency,status,idempotency_key) VALUES ($1,$2,'Match test item',5,'pieces','TR','Istanbul','USD','offers_available',$3)",
+      [requestId, buyerId, "match-request-" + requestId]);
+    for (const [index, supplier] of suppliers.entries()) {
+      await pool.query("INSERT INTO users (id,name,email,status) VALUES ($1,$2,$3,'active')",
+        [supplier.userId, "Match Supplier " + index, "match-supplier-" + supplier.userId + "@example.test"]);
+      await pool.query("INSERT INTO accounts (id,account_type,legal_name,display_name,status,country_code) VALUES ($1,'supplier',$2,$3,$4,$5)",
+        [supplier.id, "Match Supplier LLC " + index, "Match Supplier " + index, supplier.status, supplier.origin]);
+      await pool.query("INSERT INTO roles (id,name,scope_type) VALUES ($1,$2,'account')",
+        [supplier.roleId, "match_role_" + supplier.roleId]);
+      await pool.query("INSERT INTO account_members (account_id,user_id,role_id,role_scope,status,joined_at) VALUES ($1,$2,$3,'account','active',NOW())",
+        [supplier.id, supplier.userId, supplier.roleId]);
+      await pool.query(
+        "INSERT INTO supplier_offers (id,request_id,supplier_account_id,submitted_by_user_id,origin_country_code,offered_quantity,unit_price,currency,shipping_amount,status,availability_confirmed_at,availability_valid_until,quote_valid_until) VALUES ($1,$2,$3,$4,$5,$6,$7,'USD',$8,'available',$9,$10,$11)",
+        [offerIds[index], requestId, supplier.id, supplier.userId, supplier.origin, supplier.quantity, supplier.price, supplier.shipping,
+          supplier.confirmed ? new Date() : null,
+          supplier.valid ? new Date(Date.now() + 86_400_000) : new Date(Date.now() - 86_400_000),
+          supplier.valid ? new Date(Date.now() + 86_400_000) : new Date(Date.now() - 86_400_000)],
+      );
+    }
+  });
+
+  afterAll(async () => {
+    await pool.query("DELETE FROM supplier_offers WHERE request_id = $1", [requestId]);
+    await pool.query("DELETE FROM sourcing_requests WHERE id = $1", [requestId]);
+    for (const supplier of suppliers) {
+      await pool.query("DELETE FROM account_members WHERE account_id = $1", [supplier.id]);
+      await pool.query("DELETE FROM roles WHERE id = $1", [supplier.roleId]);
+      await pool.query("DELETE FROM accounts WHERE id = $1", [supplier.id]);
+      await pool.query("DELETE FROM users WHERE id = $1", [supplier.userId]);
+    }
+    await pool.query("DELETE FROM users WHERE id = $1", [buyerId]);
+  });
+
+  it("keeps eligible local offers ahead of cross-border offers and excludes invalid offers", async () => {
+    const before = await pool.query("SELECT id,status,availability_confirmed_at,offered_quantity FROM supplier_offers WHERE request_id = $1 ORDER BY id", [requestId]);
+    const result = await pool.query(
+      "SELECT o.id,o.origin_country_code,o.offered_quantity,o.unit_price::text AS unit_price,o.shipping_amount::text AS shipping_amount,o.lead_time_days,sr.quantity AS requested_quantity FROM supplier_offers o JOIN sourcing_requests sr ON sr.id=o.request_id JOIN accounts a ON a.id=o.supplier_account_id WHERE o.request_id=$1 AND o.status='available' AND a.status='active' AND a.account_type IN ('supplier','manufacturer') AND EXISTS (SELECT 1 FROM account_members am WHERE am.account_id=a.id AND am.user_id=o.submitted_by_user_id AND am.status='active') AND o.availability_confirmed_at IS NOT NULL AND (o.availability_valid_until IS NULL OR o.availability_valid_until>NOW()) AND (o.quote_valid_until IS NULL OR o.quote_valid_until>NOW()) AND o.offered_quantity>=sr.quantity AND (sr.requested_currency IS NULL OR o.currency=sr.requested_currency)",
+      [requestId],
+    );
+    const ranked = result.rows.sort((a: any,b: any) => {
+      const localA = a.origin_country_code === "TR";
+      const localB = b.origin_country_code === "TR";
+      if (localA !== localB) return localA ? -1 : 1;
+      const totalA = Number(a.unit_price) * Number(a.requested_quantity) + Number(a.shipping_amount);
+      const totalB = Number(b.unit_price) * Number(b.requested_quantity) + Number(b.shipping_amount);
+      return totalA - totalB;
+    });
+    expect(ranked).toHaveLength(2);
+    expect(ranked[0].id).toBe(offerIds[0]);
+    expect(ranked[1].id).toBe(offerIds[1]);
+    const includedIds = new Set(ranked.map((offer: any) => offer.id));
+    for (const index of [2,3,4,5]) expect(includedIds.has(offerIds[index])).toBe(false);
+    const after = await pool.query("SELECT id,status,availability_confirmed_at,offered_quantity FROM supplier_offers WHERE request_id = $1 ORDER BY id", [requestId]);
+    expect(after.rows).toEqual(before.rows);
+  });
+
+  it("does not expose another buyer's sourcing request to this buyer", async () => {
+    const outsiderId = randomUUID();
+    await pool.query("INSERT INTO users (id,name,email,status) VALUES ($1,'Other Buyer',$2,'active')",
+      [outsiderId, "match-outsider-" + outsiderId + "@example.test"]);
+    try {
+      const result = await pool.query("SELECT id FROM sourcing_requests WHERE id=$1 AND buyer_user_id=$2", [requestId, outsiderId]);
+      expect(result.rows).toHaveLength(0);
+    } finally {
+      await pool.query("DELETE FROM users WHERE id=$1", [outsiderId]);
+    }
+  });
+});
