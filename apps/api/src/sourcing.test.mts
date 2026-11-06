@@ -17,7 +17,7 @@ vi.mock("./database.js", () => ({
   getDatabasePool: () => ({ connect: mocks.connect, query: mocks.poolQuery }),
 }));
 
-import { handleAcceptSupplierOffer, handleBuyerConfirmSourcingDelivery, handleSourcingOrderEvents, handleSupplierAvailability, handleSupplierOffer, handleSupplierSourcingOrders } from "./sourcing.mjs";
+import { handleAcceptSupplierOffer, handleBuyerConfirmSourcingDelivery, handleSourcingCollection, handleSourcingOrderEvents, handleSupplierAvailability, handleSupplierOffer, handleSupplierSourcingOrders } from "./sourcing.mjs";
 
 const buyerId = "00000000-0000-4000-8000-000000000010";
 const requestId = "00000000-0000-4000-8000-000000000020";
@@ -45,6 +45,68 @@ function makeResponse() {
     end(body: string) { this.body = body; return this; },
   };
 }
+
+describe("buyer sourcing request idempotency payload scope", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.getSession.mockResolvedValue({ user: { id: buyerId } });
+    mocks.connect.mockResolvedValue({ query: mocks.clientQuery, release: mocks.release });
+    mocks.clientQuery.mockImplementation(async (sql: string) => {
+      if (sql === "BEGIN" || sql === "ROLLBACK" || sql === "COMMIT") return { rowCount: 0, rows: [] };
+      if (sql.includes("INSERT INTO sourcing_requests")) return { rowCount: 0, rows: [] };
+      return { rowCount: 0, rows: [] };
+    });
+  });
+
+  function requestBody(): IncomingMessage {
+    const request = Readable.from([JSON.stringify({
+      itemName: "Steel fasteners",
+      quantity: 50,
+      unit: "pieces",
+      destinationCountryCode: "TR",
+      destinationCity: "Istanbul",
+      requestedCurrency: "USD",
+      idempotencyKey: "request-payload-key-001",
+    })]) as IncomingMessage;
+    Object.assign(request, { method: "POST", headers: {} });
+    return request;
+  }
+
+  it("rejects reuse of a request key with a different payload", async () => {
+    mocks.poolQuery.mockResolvedValue({ rowCount: 1, rows: [{
+      id: requestId, item_name: "Different item", quantity: 50, unit: "pieces",
+      destination_country_code: "TR", destination_city: "Istanbul",
+      status: "submitted", created_at: new Date(), payload_matches: false,
+    }] });
+    const response = makeResponse();
+
+    await handleSourcingCollection(requestBody(), response as unknown as ServerResponse);
+
+    expect(response.statusCode).toBe(409);
+    expect(JSON.parse(response.body)).toMatchObject({
+      success: false,
+      error: "Idempotency key was already used for a different sourcing request",
+    });
+    expect(mocks.clientQuery.mock.calls.at(-1)?.[0]).toBe("ROLLBACK");
+    expect(mocks.poolQuery).toHaveBeenCalledOnce();
+  });
+
+  it("replays a request only when the complete payload matches", async () => {
+    mocks.poolQuery.mockResolvedValue({ rowCount: 1, rows: [{
+      id: requestId, item_name: "Steel fasteners", quantity: 50, unit: "pieces",
+      destination_country_code: "TR", destination_city: "Istanbul",
+      status: "submitted", created_at: new Date(), payload_matches: true,
+    }] });
+    const response = makeResponse();
+
+    await handleSourcingCollection(requestBody(), response as unknown as ServerResponse);
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body)).toMatchObject({ success: true, replayed: true, request: { id: requestId } });
+    expect(JSON.parse(response.body).request).not.toHaveProperty("payload_matches");
+  });
+});
+
 
 describe("supplier offer acceptance authorization", () => {
   beforeEach(() => {
