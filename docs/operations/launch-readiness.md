@@ -66,3 +66,30 @@ Start with a controlled pilot: verified buyer and supplier accounts, request/off
 - [ ] Prepare a concise company activity description and platform business model for bank/provider onboarding.
 - [ ] Prepare domain/email verification and customer-facing legal pages.
 - [ ] Run the pilot test matrix and record each pass/fail before inviting external users.
+
+## Verified platform scope snapshot — 2026-11-06
+
+This is a code/repository scope snapshot, not a claim that every feature has passed live production testing.
+
+| Master-plan area | Current evidence | Launch status |
+|---|---|---|
+| Account registration, login, email verification, password reset | Better Auth routes and account flows exist; production email requires a verified Resend sender and secrets | Needs live-domain tests |
+| Buyer/supplier sourcing | Request, offer, availability, acceptance, order history, event history, and manual fulfillment flows are implemented with CI coverage | Candidate for controlled pilot after deployed end-to-end checks |
+| Supplier-owned shops/catalog | Store/product APIs and public supplier storefront pages exist; storefront purchase action routes into sourcing, not direct checkout | Candidate for pilot |
+| Business/company profiles and brands | Business, brand, network, profile, and membership routes/pages exist | Needs role-by-role end-to-end acceptance |
+| Search | Search API and web page exist | Needs relevance and real-data acceptance |
+| Messages | Current `/messages` page is a presentation scaffold; it explicitly says conversation services are still in development | Not launch-ready |
+| WASLA Trade | No implemented trade/deal workflow is present in the current API route/module inventory | Not implemented |
+| WASLA AI operations | No operational AI service/module is present in the current API route/module inventory | Not implemented |
+| WASLA Admin | No dedicated platform-admin workspace/service is present in the current web/API route inventory | Not implemented |
+| Payments and supplier payouts | No payment gateway, signed payment webhook, reconciliation, refund/dispute flow, or supplier payout implementation | Disabled / not implemented |
+| Shipping | Supplier-entered tracking reference and carrier text only; no carrier integration or live verified tracking | Manual only |
+| Native Android/iOS apps | Current repository contains the web app and API workspaces; native mobile applications are not part of this release candidate | Not implemented |
+
+## Current hosting facts to resolve before production
+
+- Render PostgreSQL service `wasla-db` was observed as available on the Free plan in Ohio, with a scheduled expiry of **2026-12-04 12:25 UTC** unless the plan is changed. Do not treat this as durable production storage. Choose an appropriate paid database plan and verify backups/restore before real customer data or launch.
+- The API and web Render services were observed running deployments from commit `43f286b29ad7325e0033af6a21bf64e5356d40ea` on **2026-11-05**, while the current candidate is in draft PR #2 at a later commit. The candidate has not been merged or deployed.
+- Keep the candidate branch isolated until PR review, staging verification, migration rehearsal, and explicit release approval are complete.
+- Confirm whether the additional legacy API service is still referenced by any public URL, environment group, or web configuration before removing it. Do not delete a service based on its name alone.
+- Render environment-variable values are secrets and must be reviewed in the dashboard without copying them into chat, source control, or logs.
