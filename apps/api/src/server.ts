@@ -99,7 +99,7 @@ async function handleRequest(
     return;
   }
 
-  const subscriptionPlanMatch = requestUrl.pathname.match(/^\\/api\\/platform\\/subscription-plans(?:\\/([0-9a-f-]{36}))?$/i);
+  const subscriptionPlanMatch = requestUrl.pathname.match(new RegExp("^/api/platform/subscription-plans(?:/([0-9a-f-]{36}))?$", "i"));
   if (subscriptionPlanMatch || requestUrl.pathname === "/api/subscription-plans") {
     try {
       const { handleSubscriptionPlansRequest } = await import("./subscription-plans.mjs");
