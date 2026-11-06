@@ -14,10 +14,6 @@ const pool = new Pool({
 });
 
 describe("WASLA database role permission scope integrity", () => {
-  afterAll(async () => {
-    await pool.end();
-  });
-
   it("allows a role and permission with the same scope", async () => {
     const roleId = randomUUID();
     const permissionId = randomUUID();
@@ -142,4 +138,8 @@ describe("WASLA commerce PostgreSQL transaction guarantees", () => {
       await pool.query("DELETE FROM orders WHERE id = $1", [orderId]);
     }
   });
+});
+
+afterAll(async () => {
+  await pool.end();
 });
