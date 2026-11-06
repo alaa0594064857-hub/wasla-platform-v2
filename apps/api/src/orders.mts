@@ -347,16 +347,22 @@ export async function handleOrderDetailRequest(
 function storeOrderAccessSql() {
   return `(
     EXISTS (
-      SELECT 1 FROM account_members am
+      SELECT 1
+      FROM account_members am
       INNER JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
+      INNER JOIN role_permissions rp ON rp.role_id = r.id AND rp.scope_type = r.scope_type
+      INNER JOIN permissions p ON p.id = rp.permission_id AND p.scope_type = rp.scope_type
       WHERE am.account_id = s.account_id AND am.user_id = $2
-        AND am.status = 'active' AND r.name IN ('account_owner', 'account_manager')
+        AND am.status = 'active' AND p.permission_key = 'account.order.manage'
     )
     OR EXISTS (
-      SELECT 1 FROM store_members sm
+      SELECT 1
+      FROM store_members sm
       INNER JOIN roles sr ON sr.id = sm.role_id AND sr.scope_type = sm.role_scope
+      INNER JOIN role_permissions srp ON srp.role_id = sr.id AND srp.scope_type = sr.scope_type
+      INNER JOIN permissions sp ON sp.id = srp.permission_id AND sp.scope_type = srp.scope_type
       WHERE sm.store_id = s.id AND sm.user_id = $2
-        AND sm.status = 'active' AND sr.name IN ('store_owner', 'store_manager')
+        AND sm.status = 'active' AND sp.permission_key = 'store.order.manage'
     )
   )`;
 }
@@ -504,10 +510,15 @@ export async function handleStoreOrdersRequest(
             [productIds, order.storeId],
           )
           : { rows: [] };
+        if (lockedProducts.rowCount !== productIds.length) {
+          await client.query("ROLLBACK");
+          respond(response, 409, { success: false, error: "One or more order products are no longer available in this store" });
+          return;
+        }
         const products = new Map<string, any>(lockedProducts.rows.map((product: any) => [product.id, product]));
         for (const line of lines.rows) {
           const product = products.get(line.productId);
-          if (!product) continue;
+          if (!product) throw new Error("Locked cancellation product is missing");
           const before = Number(product.stockQuantity);
           const after = before + Number(line.quantity);
           if (!Number.isSafeInteger(after) || after > 2_147_483_647) {
