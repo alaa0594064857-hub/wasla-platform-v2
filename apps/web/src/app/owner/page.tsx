@@ -130,7 +130,8 @@ export default function PlatformOwnerPage() {
     { id: "roles", label: copy.roles, icon: "◇", href: "#roles" },
     { id: "security", label: copy.security, icon: "◈", href: "#security" },
     { id: "settings", label: copy.settings, icon: "⚙", href: "#settings" },
-    { id: "subscriptions", label: ar ? "خطط الاشتراك" : "Subscription plans", icon: "＄", href: "/owner/subscriptions" }
+    { id: "subscriptions", label: ar ? "خطط الاشتراك" : "Subscription plans", icon: "＄", href: "/owner/subscriptions" },
+    { id: "official-store", label: ar ? "متجر WASLA الرسمي" : "Official WASLA Store", icon: "▣", href: "/owner/official-store" }
   ];
 
   const roomDefs = [
