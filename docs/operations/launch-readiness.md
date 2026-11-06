@@ -244,3 +244,8 @@ WASLA Trade remains the next major module. Existing sourcing requests, supplier 
 - [x] Added API tests for authentication and HTTP method restrictions; candidate CI passed API tests, database integration checks, API TypeScript check, API build, and web build on commit `1981cb71275c771a0d456d9adafb17c40d95842e`.
 - [ ] Add focused database-backed tests for local-versus-cross-border ranking, excluded inactive/unconfirmed/expired/insufficient offers, and read-only behavior.
 - [ ] Connect the buyer sourcing detail UI to this endpoint and verify it with two hosted accounts after approved candidate deployment. No production deployment or migration has been performed.
+
+- [x] Connected the deterministic sourcing match endpoint to the bilingual buyer sourcing-request detail page. Ranked matches show local/cross-border classification, transparent score and reason codes, supplier price/shipping/estimated total/lead time, and eligible-only acceptance controls.
+- [x] Match eligibility now also requires an active membership for the user who submitted the supplier offer and enforces the requested currency when one is specified.
+- [x] GitHub Actions run #460 passed API tests, database integration checks, API TypeScript check, API build, and web build on commit `67a78e80f3fb5e58798ff4f758619fd2373222d5`.
+- [ ] Add focused database-backed ranking and exclusion tests, then perform a two-account hosted buyer/supplier verification after separately approved deployment. No production deployment or production migration has been performed.
