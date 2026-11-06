@@ -16,7 +16,7 @@ vi.mock("./database.js", () => ({
   getDatabasePool: () => ({ connect: mocks.connect }),
 }));
 
-import { handleAcceptSupplierOffer, handleBuyerConfirmSourcingDelivery, handleSupplierSourcingOrders } from "./sourcing.mjs";
+import { handleAcceptSupplierOffer, handleBuyerConfirmSourcingDelivery, handleSupplierOffer, handleSupplierSourcingOrders } from "./sourcing.mjs";
 
 const buyerId = "00000000-0000-4000-8000-000000000010";
 const requestId = "00000000-0000-4000-8000-000000000020";
@@ -282,5 +282,50 @@ describe("buyer offer acceptance idempotency scope", () => {
     const statements = mocks.clientQuery.mock.calls.map(([sql]) => String(sql));
     expect(statements.at(-1)).toBe("ROLLBACK");
     expect(statements.some(sql => sql.includes("INSERT INTO sourcing_orders"))).toBe(false);
+  });
+});
+
+
+describe("supplier offer submission membership locking", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.getSession.mockResolvedValue({ user: { id: supplierUserId } });
+    mocks.connect.mockResolvedValue({ query: mocks.clientQuery, release: mocks.release });
+    mocks.clientQuery.mockImplementation(async (sql: string) => {
+      if (sql === "BEGIN" || sql === "ROLLBACK" || sql === "COMMIT") return { rowCount: 0, rows: [] };
+      if (sql.includes("FROM account_members am")) return { rowCount: 1, rows: [{
+        id: supplierAccountId, account_type: "supplier", status: "active", country_code: "TR",
+      }] };
+      if (sql.includes("FROM sourcing_requests WHERE id = $1 FOR UPDATE")) return { rowCount: 1, rows: [{
+        id: requestId, buyer_user_id: buyerId, quantity: 2, unit: "pieces",
+        status: "submitted", destination_country_code: "TR",
+      }] };
+      if (sql.includes("INSERT INTO supplier_offers")) return { rowCount: 1, rows: [{
+        id: offerId, request_id: requestId, supplier_account_id: supplierAccountId,
+        origin_country_code: "TR", offered_quantity: 2, unit_price: "10.00",
+        currency: "USD", shipping_amount: "2.00", lead_time_days: 3,
+        status: "availability_pending", created_at: new Date().toISOString(),
+      }] };
+      return { rowCount: 1, rows: [] };
+    });
+  });
+
+  it("share-locks the active supplier account membership during offer creation", async () => {
+    const request = Readable.from([JSON.stringify({
+      supplierAccountId, offeredQuantity: 2, unitPrice: "10.00",
+      currency: "USD", shippingAmount: "2.00", leadTimeDays: 3,
+    })]) as IncomingMessage;
+    Object.assign(request, { method: "POST", headers: {} });
+    const response = makeResponse();
+
+    await handleSupplierOffer(request, response as unknown as ServerResponse, requestId);
+
+    expect(response.statusCode).toBe(201);
+    const membershipQuery = mocks.clientQuery.mock.calls
+      .map(([sql]) => String(sql))
+      .find(sql => sql.includes("FROM account_members am"));
+    expect(membershipQuery).toContain("FOR SHARE OF am, a");
+    expect(mocks.clientQuery.mock.calls.at(-1)?.[0]).toBe("COMMIT");
+    expect(mocks.release).toHaveBeenCalledOnce();
   });
 });
