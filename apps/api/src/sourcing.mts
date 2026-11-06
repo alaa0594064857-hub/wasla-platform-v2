@@ -478,7 +478,8 @@ export async function handleAcceptSupplierOffer(req: IncomingMessage, res: Serve
        WHERE am.account_id = $1 AND am.user_id = $2
          AND am.status = 'active' AND a.status = 'active'
          AND a.account_type IN ('supplier','manufacturer')
-       LIMIT 1`,
+       LIMIT 1
+       FOR SHARE OF am, a`,
       [offer.supplier_account_id, offer.submitted_by_user_id],
     );
     if (!activeMembership.rows.length) {
