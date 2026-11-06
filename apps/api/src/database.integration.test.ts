@@ -375,4 +375,64 @@ describe("WASLA sourcing PostgreSQL concurrency constraints", () => {
       second.release();
     }
   });
+
+  it("serializes duplicate supplier offer submissions for the same user idempotency key", async () => {
+    const first = await pool.connect();
+    const second = await pool.connect();
+    const key = "supplier-offer-" + randomUUID();
+    const offerId = randomUUID();
+    try {
+      await first.query("BEGIN");
+      await second.query("BEGIN");
+      await first.query(
+        "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
+        [fixture.supplierUserId + ":" + key],
+      );
+      const competingLock = second.query(
+        "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
+        [fixture.supplierUserId + ":" + key],
+      );
+
+      await first.query(
+        `INSERT INTO supplier_offers
+         (id, request_id, supplier_account_id, submitted_by_user_id, origin_country_code,
+          offered_quantity, unit_price, currency, shipping_amount, status, terms_snapshot)
+         VALUES ($1,$2,$3,$4,'TR',3,12.50,'USD',5.00,'availability_pending','{"integration":true}'::jsonb)`,
+        [offerId, fixture.requestId, fixture.supplierAccountId, fixture.supplierUserId],
+      );
+      await first.query(
+        `INSERT INTO sourcing_request_events (request_id, actor_user_id, event_type, metadata)
+         VALUES ($1,$2,'supplier.offer_submitted',$3::jsonb)`,
+        [fixture.requestId, fixture.supplierUserId, JSON.stringify({ offerId, idempotencyKey: key })],
+      );
+      await first.query("COMMIT");
+
+      await competingLock;
+      const replay = await second.query(
+        `SELECT e.request_id, o.id
+         FROM sourcing_request_events e
+         INNER JOIN supplier_offers o ON o.id::text = e.metadata->>'offerId'
+         WHERE e.actor_user_id = $1
+           AND e.event_type = 'supplier.offer_submitted'
+           AND e.metadata->>'idempotencyKey' = $2`,
+        [fixture.supplierUserId, key],
+      );
+      expect(replay.rows).toHaveLength(1);
+      expect(replay.rows[0].id).toBe(offerId);
+      await second.query("ROLLBACK");
+    } catch (error) {
+      await first.query("ROLLBACK").catch(() => undefined);
+      await second.query("ROLLBACK").catch(() => undefined);
+      throw error;
+    } finally {
+      await pool.query(
+        "DELETE FROM sourcing_request_events WHERE actor_user_id = $1 AND event_type = 'supplier.offer_submitted' AND metadata->>'idempotencyKey' = $2",
+        [fixture.supplierUserId, key],
+      );
+      await pool.query("DELETE FROM supplier_offers WHERE id = $1", [offerId]);
+      first.release();
+      second.release();
+    }
+  });
+
 });
