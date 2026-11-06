@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useLocale } from "../../../components/locale-provider";
 import WorkspaceHeader from "../../../components/workspace-header";
 
-type SupplierOrderEvent = { id: string; eventType: string; fromStatus: string | null; toStatus: string | null; metadata: Record<string, unknown>; createdAt: string; actorUserId: string | null };
+type SupplierOrderEvent = { id: string; eventType: string; fromStatus: string | null; toStatus: string | null; metadata: Record<string, unknown>; createdAt: string };
 type SupplierOrder = {
   id: string; order_number: string; status: string; currency: string;
   subtotal: string; shipping_total: string; grand_total: string; created_at: string;
