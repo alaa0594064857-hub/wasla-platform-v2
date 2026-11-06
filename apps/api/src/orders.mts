@@ -230,8 +230,19 @@ export async function handleOrdersRequest(request: IncomingMessage, response: Se
         }
         const price = moneyToCents(product.price);
         if (price === null) throw new Error("Invalid catalog price stored in database");
-        currencies.add(String(product.currency));
+        const productCurrency = String(product.currency);
+        if (!/^[A-Z]{3}$/.test(productCurrency)) {
+          await client.query("ROLLBACK");
+          respond(response, 409, { success: false, error: "A product has an invalid currency configuration" });
+          return;
+        }
+        currencies.add(productCurrency);
         subtotalCents += price * BigInt(line.quantity);
+        if (subtotalCents > 99_999_999_999_999n) {
+          await client.query("ROLLBACK");
+          respond(response, 409, { success: false, error: "Order total exceeds the supported amount" });
+          return;
+        }
       }
       if (currencies.size !== 1) {
         await client.query("ROLLBACK");
