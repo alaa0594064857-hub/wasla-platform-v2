@@ -56,6 +56,57 @@ async function handleRequest(
     return;
   }
 
+  const sourcingOfferMatch = requestUrl.pathname.match(/^\\/api\\/sourcing-offers\\/([0-9a-f-]{36})\\/availability$/);
+  if (sourcingOfferMatch) {
+    try {
+      const { handleSupplierAvailability } = await import("./sourcing.mjs");
+      await handleSupplierAvailability(request, response, sourcingOfferMatch[1]);
+    } catch (error) {
+      console.error("WASLA supplier availability route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Supplier availability service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const sourcingOfferCreateMatch = requestUrl.pathname.match(/^\\/api\\/sourcing-requests\\/([0-9a-f-]{36})\\/offers$/);
+  if (sourcingOfferCreateMatch) {
+    try {
+      const { handleSupplierOffer } = await import("./sourcing.mjs");
+      await handleSupplierOffer(request, response, sourcingOfferCreateMatch[1]);
+    } catch (error) {
+      console.error("WASLA supplier offer route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Supplier offer service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const sourcingRequestDetailMatch = requestUrl.pathname.match(/^\\/api\\/sourcing-requests\\/([0-9a-f-]{36})$/);
+  if (sourcingRequestDetailMatch) {
+    try {
+      const { handleSourcingRequestDetail } = await import("./sourcing.mjs");
+      await handleSourcingRequestDetail(request, response, sourcingRequestDetailMatch[1]);
+    } catch (error) {
+      console.error("WASLA sourcing detail route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Sourcing service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/sourcing-requests") {
+    try {
+      const { handleSourcingCollection } = await import("./sourcing.mjs");
+      await handleSourcingCollection(request, response);
+    } catch (error) {
+      console.error("WASLA sourcing collection route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Sourcing service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/preferences/themes") {
     try {
       const { handleWorldThemesRequest } = await import("./world-themes.mjs");
