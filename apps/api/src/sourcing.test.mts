@@ -16,7 +16,7 @@ vi.mock("./database.js", () => ({
   getDatabasePool: () => ({ connect: mocks.connect }),
 }));
 
-import { handleAcceptSupplierOffer, handleSupplierSourcingOrders } from "./sourcing.mjs";
+import { handleAcceptSupplierOffer, handleBuyerConfirmSourcingDelivery, handleSupplierSourcingOrders } from "./sourcing.mjs";
 
 const buyerId = "00000000-0000-4000-8000-000000000010";
 const requestId = "00000000-0000-4000-8000-000000000020";
@@ -148,5 +148,95 @@ describe("supplier payment-state protection", () => {
       error: "Supplier status must be fulfilment_pending or shipped",
     });
     expect(mocks.connect).not.toHaveBeenCalled();
+  });
+});
+
+
+describe("buyer sourcing delivery confirmation lifecycle", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.getSession.mockResolvedValue({ user: { id: buyerId } });
+    mocks.connect.mockResolvedValue({ query: mocks.clientQuery, release: mocks.release });
+  });
+
+  function deliveryRequest(): IncomingMessage {
+    const request = Readable.from([]) as IncomingMessage;
+    Object.assign(request, { method: "POST", headers: {} });
+    return request;
+  }
+
+  function mockLockedOrder(status: string, owner = buyerId) {
+    mocks.clientQuery.mockImplementation(async (sql: string) => {
+      if (sql === "BEGIN" || sql === "ROLLBACK" || sql === "COMMIT") return { rowCount: 0, rows: [] };
+      if (sql.includes("FROM sourcing_orders WHERE id = $1 FOR UPDATE")) {
+        return { rowCount: 1, rows: [{ id: "00000000-0000-4000-8000-000000000060", request_id: requestId, status, buyer_user_id: owner }] };
+      }
+      return { rowCount: 1, rows: [] };
+    });
+  }
+
+  it("confirms only a shipped order and writes both audit events in the same transaction", async () => {
+    mockLockedOrder("shipped");
+    const response = makeResponse();
+
+    await handleBuyerConfirmSourcingDelivery(
+      deliveryRequest(), response as unknown as ServerResponse,
+      "00000000-0000-4000-8000-000000000060",
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body)).toMatchObject({ success: true, order: { status: "completed" } });
+    const statements = mocks.clientQuery.mock.calls.map(([sql]) => String(sql));
+    expect(statements.some(sql => sql.includes("UPDATE sourcing_orders SET status = 'completed'"))).toBe(true);
+    expect(statements.some(sql => sql.includes("buyer.delivery_confirmed"))).toBe(true);
+    expect(statements.some(sql => sql.includes("sourcing_order.delivery_confirmed"))).toBe(true);
+    expect(statements.at(-1)).toBe("COMMIT");
+    expect(mocks.release).toHaveBeenCalledOnce();
+  });
+
+  it("rejects confirmation before shipment without writing audit events", async () => {
+    mockLockedOrder("awaiting_payment");
+    const response = makeResponse();
+
+    await handleBuyerConfirmSourcingDelivery(
+      deliveryRequest(), response as unknown as ServerResponse,
+      "00000000-0000-4000-8000-000000000060",
+    );
+
+    expect(response.statusCode).toBe(409);
+    const statements = mocks.clientQuery.mock.calls.map(([sql]) => String(sql));
+    expect(statements.at(-1)).toBe("ROLLBACK");
+    expect(statements.some(sql => sql.includes("INSERT INTO sourcing_order_events"))).toBe(false);
+    expect(statements.some(sql => sql.includes("INSERT INTO sourcing_request_events"))).toBe(false);
+  });
+
+  it("replays completed confirmation without duplicating audit events", async () => {
+    mockLockedOrder("completed");
+    const response = makeResponse();
+
+    await handleBuyerConfirmSourcingDelivery(
+      deliveryRequest(), response as unknown as ServerResponse,
+      "00000000-0000-4000-8000-000000000060",
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body)).toMatchObject({ success: true, replayed: true, order: { status: "completed" } });
+    const statements = mocks.clientQuery.mock.calls.map(([sql]) => String(sql));
+    expect(statements.at(-1)).toBe("COMMIT");
+    expect(statements.some(sql => sql.includes("UPDATE sourcing_orders"))).toBe(false);
+    expect(statements.some(sql => sql.includes("INSERT INTO sourcing_order_events"))).toBe(false);
+  });
+
+  it("does not disclose or confirm another buyer's order", async () => {
+    mockLockedOrder("shipped", supplierUserId);
+    const response = makeResponse();
+
+    await handleBuyerConfirmSourcingDelivery(
+      deliveryRequest(), response as unknown as ServerResponse,
+      "00000000-0000-4000-8000-000000000060",
+    );
+
+    expect(response.statusCode).toBe(404);
+    expect(mocks.clientQuery.mock.calls.at(-1)?.[0]).toBe("ROLLBACK");
   });
 });
