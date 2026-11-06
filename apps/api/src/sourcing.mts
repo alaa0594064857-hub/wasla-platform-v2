@@ -197,9 +197,9 @@ export async function handleSupplierOffer(req: IncomingMessage, res: ServerRespo
     if (typeof accountId !== "string" || !UUID.test(accountId) || !CURRENCY.test(currency) ||
         typeof quantity !== "number" || !Number.isSafeInteger(quantity) || quantity <= 0 || quantity > 2_147_483_647 ||
         typeof unitPrice !== "number" && typeof unitPrice !== "string" ||
-        !/^\\d{1,10}(?:\\.\\d{1,4})?$/.test(String(unitPrice)) ||
+        !/^\d{1,10}(?:\.\d{1,4})?$/.test(String(unitPrice)) ||
         typeof shipping !== "number" && typeof shipping !== "string" ||
-        !/^\\d{1,12}(?:\\.\\d{1,2})?$/.test(String(shipping)) ||
+        !/^\d{1,12}(?:\.\d{1,2})?$/.test(String(shipping)) ||
         (leadTime !== null && (typeof leadTime !== "number" || !Number.isSafeInteger(leadTime) || leadTime < 0))) {
       reply(res, 400, { success: false, error: "Invalid supplier offer details" }); return;
     }
