@@ -77,8 +77,8 @@ export async function handleProductInquiriesRequest(
     const db = getDatabasePool();
     const userId = session.user.id;
     const path = new URL(request.url || "/", "http://localhost").pathname;
-    const replyMatch = path.match(/^\\/api\\/product-inquiries\\/([0-9a-f-]{36})\\/replies$/i);
-    const statusMatch = path.match(/^\\/api\\/product-inquiries\\/([0-9a-f-]{36})\\/status$/i);
+    const replyMatch = path.match(/^\/api\/product-inquiries\/([0-9a-f-]{36})\/replies$/i);
+    const statusMatch = path.match(/^\/api\/product-inquiries\/([0-9a-f-]{36})\/status$/i);
 
     if (replyMatch && request.method === "GET") {
       const access = await db.query(
