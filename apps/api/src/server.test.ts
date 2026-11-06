@@ -155,6 +155,40 @@ describe("WASLA API", () => {
     });
   });
 
+  it("requires authentication to create or list sourcing requests", async () => {
+    const baseUrl = await startTestServer();
+    const response = await fetch(`${baseUrl}/api/sourcing-requests`);
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({
+      success: false,
+      error: "Authentication required",
+    });
+  });
+
+  it("validates sourcing request identifiers before loading details", async () => {
+    const baseUrl = await startTestServer();
+    const response = await fetch(`${baseUrl}/api/sourcing-requests/not-a-uuid`);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      success: false,
+      error: "Invalid request ID",
+    });
+  });
+
+  it("validates supplier offer identifiers before availability updates", async () => {
+    const baseUrl = await startTestServer();
+    const response = await fetch(`${baseUrl}/api/sourcing-offers/not-a-uuid/availability`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ availability: "available" }),
+    });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      success: false,
+      error: "Invalid offer ID",
+    });
+  });
+
   it("returns 404 for unknown routes", async () => {
     const baseUrl = await startTestServer();
     const response = await fetch(`${baseUrl}/unknown`);
