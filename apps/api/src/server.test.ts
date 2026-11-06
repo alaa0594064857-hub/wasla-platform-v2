@@ -268,6 +268,44 @@ describe("WASLA API", () => {
     });
   });
 
+  it("requires authentication to list or create message conversations", async () => {
+    const baseUrl = await startTestServer();
+    const listResponse = await fetch(`${baseUrl}/api/messages`);
+    expect(listResponse.status).toBe(401);
+    expect(await listResponse.json()).toEqual({ success: false, error: "Authentication required" });
+
+    const createResponse = await fetch(`${baseUrl}/api/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ recipientUserId: "00000000-0000-4000-8000-000000000002" }),
+    });
+    expect(createResponse.status).toBe(401);
+    expect(await createResponse.json()).toEqual({ success: false, error: "Authentication required" });
+  });
+
+  it("requires authentication to read or send conversation messages", async () => {
+    const baseUrl = await startTestServer();
+    const conversationId = "00000000-0000-4000-8000-000000000001";
+    const readResponse = await fetch(`${baseUrl}/api/messages/${conversationId}`);
+    expect(readResponse.status).toBe(401);
+    expect(await readResponse.json()).toEqual({ success: false, error: "Authentication required" });
+
+    const sendResponse = await fetch(`${baseUrl}/api/messages/${conversationId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: "Hello" }),
+    });
+    expect(sendResponse.status).toBe(401);
+    expect(await sendResponse.json()).toEqual({ success: false, error: "Authentication required" });
+  });
+
+  it("validates conversation IDs before accessing messages", async () => {
+    const baseUrl = await startTestServer();
+    const response = await fetch(`${baseUrl}/api/messages/not-a-uuid`);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ success: false, error: "Invalid conversation ID" });
+  });
+
   it("returns 404 for unknown routes", async () => {
     const baseUrl = await startTestServer();
     const response = await fetch(`${baseUrl}/unknown`);
