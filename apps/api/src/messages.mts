@@ -82,9 +82,9 @@ export async function handleMessagesRequest(
           respond(response, 200, { success: true, recipients: [] });
           return;
         }
-        const pattern = \`%\${query.replace(/[\\\\%_]/g, (character) => "\\\\" + character)}%\`;
+        const pattern = `%\${query.replace(/[\\\\%_]/g, (character) => "\\\\" + character)}%`;
         const matches = await db.query(
-          \`WITH account_contacts AS (
+          `WITH account_contacts AS (
              SELECT u.id AS recipient_id, a.display_name,
                     'business'::text AS entity_type, a.account_type::text AS category,
                     ROW_NUMBER() OVER (
@@ -129,7 +129,7 @@ export async function handleMessagesRequest(
            )
            SELECT recipient_id, display_name, entity_type, category
            FROM candidates WHERE recipient_id <> $2
-           ORDER BY display_name ASC LIMIT 30\`,
+           ORDER BY display_name ASC LIMIT 30`,
           [pattern, userId],
         );
         respond(response, 200, { success: true, recipients: matches.rows });
