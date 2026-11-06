@@ -99,6 +99,24 @@ async function handleRequest(
     return;
   }
 
+  const subscriptionPlanMatch = requestUrl.pathname.match(/^\\/api\\/platform\\/subscription-plans(?:\\/([0-9a-f-]{36}))?$/i);
+  if (subscriptionPlanMatch || requestUrl.pathname === "/api/subscription-plans") {
+    try {
+      const { handleSubscriptionPlansRequest } = await import("./subscription-plans.mjs");
+      await handleSubscriptionPlansRequest(
+        request,
+        response,
+        subscriptionPlanMatch?.[1],
+        requestUrl.pathname === "/api/subscription-plans",
+      );
+    } catch (error) {
+      console.error("WASLA subscription plans route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Subscription plans service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/platform/users") {
     try {
       const { handlePlatformUsersRequest } = await import("./platform-users.mjs");
