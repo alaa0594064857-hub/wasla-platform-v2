@@ -223,6 +223,93 @@ export async function closeDatabaseConnection(): Promise<void> {
   }
 }
 
+
+/**
+ * Bootstrap the single, explicitly configured WASLA platform owner.
+ * This never creates a user and never grants ownership to a registration.
+ */
+export async function ensurePlatformOwnerRole(): Promise<void> {
+  const ownerEmail = "alaa0594064857@gmail.com";
+  const client = await getDatabasePool().connect();
+  try {
+    await client.query("BEGIN");
+
+    const ownerResult = await client.query<{ id: string }>(
+      `SELECT id FROM users WHERE lower(email) = lower($1) AND status = 'active' AND email_verified = TRUE FOR UPDATE`,
+      [ownerEmail],
+    );
+
+    const roleResult = await client.query<{ id: string }>(
+      `INSERT INTO roles (name, scope_type, description, is_system_role)
+       VALUES ('platform_owner', 'platform', 'Original WASLA platform owner with highest platform authority', TRUE)
+       ON CONFLICT (scope_type, name)
+       DO UPDATE SET description = EXCLUDED.description, is_system_role = TRUE
+       RETURNING id`,
+    );
+
+    const permissions = [
+      ["platform.manage", "Manage platform-wide operations"],
+      ["platform.users.read", "View platform users"],
+      ["platform.users.manage", "Manage platform user accounts"],
+      ["platform.roles.read", "View platform roles and assignments"],
+      ["platform.roles.manage", "Manage platform roles and assignments"],
+      ["platform.settings.manage", "Manage global platform settings"],
+      ["platform.reports.read", "View global platform reports"],
+      ["platform.security.read", "View platform security information"],
+      ["platform.security.manage", "Manage platform security controls"],
+      ["platform.audit.read", "View platform audit records"],
+    ] as const;
+
+    for (const [key, description] of permissions) {
+      const permissionResult = await client.query<{ id: string }>(
+        `INSERT INTO permissions (permission_key, description, scope_type)
+         VALUES ($1, $2, 'platform')
+         ON CONFLICT (permission_key)
+         DO UPDATE SET description = EXCLUDED.description, scope_type = EXCLUDED.scope_type
+         RETURNING id`,
+        [key, description],
+      );
+      await client.query(
+        `INSERT INTO role_permissions (role_id, permission_id, scope_type)
+         VALUES ($1, $2, 'platform')
+         ON CONFLICT (role_id, permission_id)
+         DO UPDATE SET scope_type = EXCLUDED.scope_type`,
+        [roleResult.rows[0].id, permissionResult.rows[0].id],
+      );
+    }
+
+    if (ownerResult.rows[0]) {
+      const ownerId = ownerResult.rows[0].id;
+      const assignment = await client.query(
+        `INSERT INTO platform_role_assignments (user_id, role_id, role_scope, status, assigned_by)
+         VALUES ($1, $2, 'platform', 'active', $1)
+         ON CONFLICT (user_id, role_id)
+         DO UPDATE SET status = 'active', role_scope = 'platform'
+         RETURNING id`,
+        [ownerId, roleResult.rows[0].id],
+      );
+
+      if (assignment.rowCount) {
+        await client.query(
+          `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, metadata)
+           VALUES ($1, 'platform.owner.bootstrap', 'platform_role_assignment', $2,
+                   jsonb_build_object('owner_email', $3, 'role', 'platform_owner'))`,
+          [ownerId, assignment.rows[0].id, ownerEmail],
+        );
+      }
+    } else {
+      console.warn("WASLA platform owner account is not yet verified and active; role assignment is deferred.");
+    }
+
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 /** Ensure the store-owner role exists before store endpoints accept requests. */
 export async function ensureStoreOwnerRole(): Promise<void> {
   const client = await getDatabasePool().connect();
