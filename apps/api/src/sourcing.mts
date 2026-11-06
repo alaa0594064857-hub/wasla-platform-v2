@@ -168,6 +168,15 @@ export async function handleSupplierOpportunities(req: IncomingMessage, res: Ser
       reply(res, 403, { success: false, error: "An active supplier or manufacturer account is required" });
       return;
     }
+    const supplierAccounts = await db.query(
+      `SELECT a.id, a.display_name, a.country_code, a.account_type
+       FROM account_members am
+       INNER JOIN accounts a ON a.id = am.account_id
+       WHERE am.user_id = $1 AND am.status = 'active'
+         AND a.status = 'active' AND a.account_type IN ('supplier','manufacturer')
+       ORDER BY a.display_name ASC`,
+      [userId],
+    );
     const result = await db.query(
       `SELECT sr.id, sr.item_name, sr.description, sr.specifications, sr.quantity, sr.unit,
               sr.destination_country_code, sr.destination_city, sr.requested_currency,
@@ -189,6 +198,7 @@ export async function handleSupplierOpportunities(req: IncomingMessage, res: Ser
     const requests = result.rows;
     reply(res, 200, {
       success: true,
+      supplierAccounts: supplierAccounts.rows,
       local: requests.filter((item: { local_match: boolean }) => item.local_match),
       crossBorder: requests.filter((item: { local_match: boolean }) => !item.local_match),
     });
