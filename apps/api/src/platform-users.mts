@@ -41,11 +41,11 @@ export async function handlePlatformUsersRequest(
     }
 
     const pool = getDatabasePool();
-    const pattern = search ? `%${search.replace(/[\\\\%_]/g, "\\\\$&")}%` : null;
+    const pattern = search || null;
     const count = await pool.query<{ total: string }>(
       `SELECT COUNT(*)::text AS total
        FROM users u
-       WHERE ($1::text IS NULL OR u.name ILIKE $1 ESCAPE '\\\\' OR u.email ILIKE $1 ESCAPE '\\\\')`,
+       WHERE ($1::text IS NULL OR POSITION(LOWER($1) IN LOWER(u.name)) > 0 OR POSITION(LOWER($1) IN LOWER(u.email)) > 0)`,
       [pattern],
     );
     const rows = await pool.query(
