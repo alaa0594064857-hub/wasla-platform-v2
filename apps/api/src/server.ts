@@ -247,6 +247,31 @@ async function handleRequest(
     return;
   }
 
+  const conversationMessagesMatch = requestUrl.pathname.match(/^\/api\/messages\/([^/]+)$/);
+  if (conversationMessagesMatch) {
+    try {
+      const { handleConversationMessages } = await import("./messages.mjs");
+      await handleConversationMessages(request, response, conversationMessagesMatch[1]);
+    } catch (error) {
+      console.error("WASLA conversation messages route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Messages service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/messages") {
+    try {
+      const { handleMessagesCollection } = await import("./messages.mjs");
+      await handleMessagesCollection(request, response);
+    } catch (error) {
+      console.error("WASLA messages route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Messages service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/profile") {
     try {
       const { handleProfileRequest } = await import("./profile.mjs");
