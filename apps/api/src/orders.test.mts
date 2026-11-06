@@ -152,6 +152,45 @@ describe("buyer order checkout", () => {
   });
 });
 
+  it("rejects invalid catalog currency before inserting an order", async () => {
+    mocks.clientQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes("SELECT id FROM orders WHERE buyer_user_id")) return { rowCount: 0, rows: [] };
+      if (sql.includes("SELECT id FROM stores")) return { rowCount: 1, rows: [{ id: storeId }] };
+      if (sql.includes("FROM store_products")) return {
+        rowCount: 1,
+        rows: [{ id: productId, title: "Sample product", sku: "SKU-1", price: "12.50", currency: "usd", stockQuantity: 5, status: "active" }],
+      };
+      return { rowCount: 1, rows: [] };
+    });
+    const response = makeResponse();
+    await handleOrdersRequest(makeRequest(checkoutBody()), response as unknown as ServerResponse);
+    expect(response.statusCode).toBe(409);
+    const statements = mocks.clientQuery.mock.calls.map(([sql]) => String(sql));
+    expect(statements.at(-1)).toBe("ROLLBACK");
+    expect(statements.some(sql => sql.includes("INSERT INTO orders"))).toBe(false);
+  });
+
+  it("rejects totals above the supported database precision", async () => {
+    const body = checkoutBody();
+    body.items[0].quantity = 2_147_483_647;
+    mocks.clientQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes("SELECT id FROM orders WHERE buyer_user_id")) return { rowCount: 0, rows: [] };
+      if (sql.includes("SELECT id FROM stores")) return { rowCount: 1, rows: [{ id: storeId }] };
+      if (sql.includes("FROM store_products")) return {
+        rowCount: 1,
+        rows: [{ id: productId, title: "Sample product", sku: "SKU-1", price: "9999999999.99", currency: "USD", stockQuantity: 2_147_483_647, status: "active" }],
+      };
+      return { rowCount: 1, rows: [] };
+    });
+    const response = makeResponse();
+    await handleOrdersRequest(makeRequest(body), response as unknown as ServerResponse);
+    expect(response.statusCode).toBe(409);
+    const statements = mocks.clientQuery.mock.calls.map(([sql]) => String(sql));
+    expect(statements.at(-1)).toBe("ROLLBACK");
+    expect(statements.some(sql => sql.includes("INSERT INTO orders"))).toBe(false);
+  });
+
+
 
 describe("store order workflow", () => {
   beforeEach(() => {
