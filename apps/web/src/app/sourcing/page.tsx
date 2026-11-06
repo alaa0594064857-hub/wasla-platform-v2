@@ -139,7 +139,10 @@ export default function SourcingPage() {
         </section>
         <div className="shops-heading" style={{ marginTop: 30 }}>
           <div><h2>{t.mine}</h2></div>
-          <button type="button" className="shops-order-details-toggle" onClick={() => void load()} disabled={loading}>{t.refresh}</button>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+            <Link href="/sourcing/opportunities" className="shops-order-details-toggle">{locale === "ar" ? "فرص الموردين" : "Supplier opportunities"} ↗</Link>
+            <button type="button" className="shops-order-details-toggle" onClick={() => void load()} disabled={loading}>{t.refresh}</button>
+          </div>
         </div>
         {loading ? <div className="shops-empty">{t.loading}</div> : requests.length === 0 ? (
           <div className="shops-empty">{t.empty}</div>
