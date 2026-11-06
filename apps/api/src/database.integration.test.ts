@@ -115,7 +115,7 @@ describe("WASLA commerce PostgreSQL transaction guarantees", () => {
       expect(secondRead.rows[0].stock_quantity).toBe(1);
       expect(Number(secondRead.rows[0].stock_quantity) >= 4).toBe(false);
       await second.query("ROLLBACK");
-      const finalStock = await pool.query("SELECT stock_quantity FROM store_products WHERE id = $1", [fixture.productId]);
+      const finalStock = await second.query("SELECT stock_quantity FROM store_products WHERE id = $1", [fixture.productId]);
       expect(finalStock.rows[0].stock_quantity).toBe(1);
     } catch (error) {
       await first.query("ROLLBACK").catch(() => undefined);
