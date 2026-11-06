@@ -247,6 +247,58 @@ async function handleRequest(
     return;
   }
 
+  const tradeAmendmentResponseMatch = requestUrl.pathname.match(/^\/api\/trade-deals\/([^/]+)\/amendments\/([^/]+)\/respond$/);
+  if (tradeAmendmentResponseMatch) {
+    try {
+      const { handleTradeAmendments } = await import("./trade-deals.mjs");
+      await handleTradeAmendments(request, response, tradeAmendmentResponseMatch[1], tradeAmendmentResponseMatch[2]);
+    } catch (error) {
+      console.error("WASLA trade amendment response route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Trade amendment service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const tradeAmendmentsMatch = requestUrl.pathname.match(/^\/api\/trade-deals\/([^/]+)\/amendments$/);
+  if (tradeAmendmentsMatch) {
+    try {
+      const { handleTradeAmendments } = await import("./trade-deals.mjs");
+      await handleTradeAmendments(request, response, tradeAmendmentsMatch[1]);
+    } catch (error) {
+      console.error("WASLA trade amendments route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Trade amendment service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const tradeMilestoneMatch = requestUrl.pathname.match(/^\/api\/trade-deals\/([^/]+)\/milestones\/([^/]+)$/);
+  if (tradeMilestoneMatch) {
+    try {
+      const { handleTradeMilestones } = await import("./trade-deals.mjs");
+      await handleTradeMilestones(request, response, tradeMilestoneMatch[1], tradeMilestoneMatch[2]);
+    } catch (error) {
+      console.error("WASLA trade milestone route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Trade milestone service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const tradeMilestonesMatch = requestUrl.pathname.match(/^\/api\/trade-deals\/([^/]+)\/milestones$/);
+  if (tradeMilestonesMatch) {
+    try {
+      const { handleTradeMilestones } = await import("./trade-deals.mjs");
+      await handleTradeMilestones(request, response, tradeMilestonesMatch[1]);
+    } catch (error) {
+      console.error("WASLA trade milestones route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Trade milestone service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const tradeDealResponseMatch = requestUrl.pathname.match(/^\/api\/trade-deals\/([^/]+)\/respond$/);
   if (tradeDealResponseMatch) {
     try {
