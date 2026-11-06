@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useLocale } from "../../../components/locale-provider";
 import WorkspaceHeader from "../../../components/workspace-header";
 
+type SupplierOrderEvent = { id: string; eventType: string; fromStatus: string | null; toStatus: string | null; metadata: Record<string, unknown>; createdAt: string; actorUserId: string | null };
 type SupplierOrder = {
   id: string; order_number: string; status: string; currency: string;
   subtotal: string; shipping_total: string; grand_total: string; created_at: string;
@@ -22,6 +23,7 @@ const words = {
     paid: "مدفوع", fulfilment_pending: "بانتظار التجهيز", shipped: "تم الشحن",
     completed: "مكتمل", cancelled: "ملغي", prepare: "تأكيد بدء التجهيز",
     markShipped: "تأكيد الشحن", tracking: "رقم التتبع", carrier: "شركة الشحن (اختياري)",
+    history: "سجل حركة الطلب", showHistory: "عرض سجل الحركة", hideHistory: "إخفاء السجل", noHistory: "لا توجد تحديثات مسجلة بعد.",
     save: "حفظ التحديث", saving: "جارٍ الحفظ...", noTracking: "أدخل رقم التتبع قبل تأكيد الشحن.",
     error: "تعذر تحميل أو تحديث الطلبات.", done: "تم تحديث حالة الطلب.",
     paymentNote: "لا يمكن بدء التجهيز قبل تأكيد الدفع من نظام الدفع."
@@ -35,6 +37,7 @@ const words = {
     paid: "Paid", fulfilment_pending: "Preparing", shipped: "Shipped",
     completed: "Completed", cancelled: "Cancelled", prepare: "Confirm preparation started",
     markShipped: "Confirm shipment", tracking: "Tracking reference", carrier: "Carrier (optional)",
+    history: "Order activity", showHistory: "View activity", hideHistory: "Hide activity", noHistory: "No activity has been recorded yet.",
     save: "Save update", saving: "Saving...", noTracking: "Enter a tracking reference before shipping.",
     error: "Could not load or update orders.", done: "Order status updated.",
     paymentNote: "Preparation cannot start until payment is confirmed by the payment system."
@@ -52,6 +55,8 @@ export default function SupplierOrdersPage() {
   const [message, setMessage] = useState("");
   const [tracking, setTracking] = useState<Record<string,string>>({});
   const [carriers, setCarriers] = useState<Record<string,string>>({});
+  const [eventHistory, setEventHistory] = useState<Record<string, SupplierOrderEvent[]>>({});
+  const [loadingHistory, setLoadingHistory] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
@@ -65,6 +70,21 @@ export default function SupplierOrdersPage() {
   }, [t.error]);
 
   useEffect(() => { void load(); }, [load]);
+
+  async function toggleHistory(orderId: string) {
+    if (eventHistory[orderId]) {
+      setEventHistory(current => { const next = { ...current }; delete next[orderId]; return next; });
+      return;
+    }
+    setLoadingHistory(orderId); setError("");
+    try {
+      const response = await fetch(`/api/sourcing-orders/${encodeURIComponent(orderId)}/events`, { credentials:"include", cache:"no-store" });
+      const data = await response.json();
+      if (!response.ok || data.success !== true) throw new Error(data.error || t.error);
+      setEventHistory(current => ({ ...current, [orderId]: data.events as SupplierOrderEvent[] }));
+    } catch (cause) { setError(cause instanceof Error ? cause.message : t.error); }
+    finally { setLoadingHistory(null); }
+  }
 
   async function update(order: SupplierOrder, status: "fulfilment_pending" | "shipped") {
     if (status === "shipped" && (tracking[order.id] ?? "").trim().length < 3) {
@@ -110,6 +130,8 @@ export default function SupplierOrdersPage() {
           <div className="shops-info-row"><small>{t.destination}</small><strong>{order.destination_city}, {order.destination_country_code}</strong></div>
           <div className="shops-info-row"><small>{t.buyerTotal}</small><strong>{order.grand_total} {order.currency}</strong></div>
           <div className="shops-info-row"><small>{t.order}</small><strong>{date(order.created_at)}</strong></div>
+          <button type="button" className="shops-order-details-toggle" disabled={loadingHistory !== null} onClick={()=>void toggleHistory(order.id)}>{loadingHistory===order.id?t.loading:eventHistory[order.id]?t.hideHistory:t.showHistory}</button>
+          {eventHistory[order.id] && <div className="shops-order-detail-body"><h3>{t.history}</h3>{eventHistory[order.id].length===0?<p>{t.noHistory}</p>:eventHistory[order.id].map(event=><div className="shops-info-row" key={event.id}><span>{event.toStatus?statusLabel(event.toStatus):event.eventType}</span><strong>{date(event.createdAt)}</strong></div>)}</div>}
           {order.status === "awaiting_payment" || order.status === "payment_pending" ? <p>{t.paymentNote}</p> : null}
           {order.status === "paid" && <button type="button" className="shops-primary-button" disabled={saving!==null} onClick={()=>void update(order,"fulfilment_pending")}>{saving===order.id?t.saving:t.prepare}</button>}
           {order.status === "fulfilment_pending" && <div style={{display:"grid",gap:10}}>
