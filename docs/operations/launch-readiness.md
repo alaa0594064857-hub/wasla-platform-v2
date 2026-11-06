@@ -142,3 +142,57 @@ Use this only as a discussion draft; have a Turkish accountant/lawyer adapt the 
 6. If WASLA later adds marketplace payment collection or split payouts, does the bank support that model directly or require a licensed payment institution?
 
 Do not present the draft as an approved legal classification or promise that a bank will accept the business.
+
+
+## Master-plan consolidation and next implementation sequence — 2026-11-06
+
+This section consolidates the existing V2 candidate with the remaining master-plan work. It is an engineering tracker, not a production-readiness declaration.
+
+### Existing work to retain in the current V2 candidate
+
+- [x] Unified authentication foundation and account types for buyers and business-side users.
+- [x] Personal profile API and bilingual profile page.
+- [x] Business accounts, memberships, invitations, member actions, and role-scoped authorization foundation.
+- [x] Supplier-owned stores, product catalog, storefront pages, and product search.
+- [x] Demand-led sourcing requests, supplier opportunities, supplier quotations, availability confirmation, buyer acceptance, and accepted-order creation.
+- [x] Buyer and supplier order workspaces, order event history, buyer delivery confirmation, and supplier-entered tracking.
+- [x] No central WASLA stock; no buyer direct checkout against supplier catalog quantities.
+- [x] CI coverage for API, shared package, database constraints/integration, TypeScript, and web build.
+- [ ] Hosted acceptance testing for the complete buyer/supplier journey and all account roles.
+
+### Remaining master-plan implementation
+
+| Planned module | Current state | Next engineering deliverable |
+|---|---|---|
+| WASLA Store | Storefront and supplier product pages exist; platform-owned official catalog experience needs product-scope review | Define official platform listings separately from independent supplier listings; no central stock assumption |
+| WASLA Shops | Supplier storefront foundation exists | Finish store management, catalog lifecycle, public profile, and owner/staff permissions |
+| WASLA Business | Business profiles, account membership, invitations and brands foundations exist | Complete company directory, supplier/manufacturer discovery, verification workflow, and role acceptance tests |
+| WASLA Trade | Not implemented as a complete workflow | Deal workspace: parties, commercial terms, milestones, attachments, status history, approvals, and audit trail |
+| WASLA Messages | UI scaffold only; no conversation API/service | Secure one-to-one conversations, participant authorization, message history, unread state, and order/request context; attachments and real-time delivery are later gates |
+| WASLA AI | No operational AI service | Start with assisted sourcing search and offer comparison; use verified database results only, show sources/uncertainty, and require human confirmation for commitments |
+| WASLA Admin | No dedicated platform-admin workspace | Platform roles/permissions, account and supplier review queues, moderation, order/request oversight, audit log, and safe support actions |
+| Payments and payouts | Not implemented; intentionally disabled | Keep disabled until legal/provider approval, signed webhooks, reconciliation, refunds/disputes, and payout controls exist |
+| Shipping | Manual supplier tracking only | Add carrier integrations only after carrier and country coverage are selected |
+| Mobile apps | No native Android/iOS app in current candidate | Stabilize responsive web and API contracts first; then plan native clients |
+| Notifications | No complete unified notification service | In-app notification records and user preferences; email/push delivery only after verified provider setup |
+| Reporting/analytics | No complete operations reporting module | Role-safe operational dashboards and exportable summaries after core workflows stabilize |
+
+### Execution order
+
+1. **Stabilize the current commerce pilot:** hosted buyer/supplier end-to-end checks, role boundaries, account membership changes, email verification/reset, and Arabic/English responsive review. Fix confirmed defects before adding broad features.
+2. **Build the shared communication foundation:** conversations and messages API, participant-only access, unread/read state, and a real bilingual messages workspace. Do not start with file uploads or real-time sockets; establish secure persisted messaging first.
+3. **Build WASLA Trade on existing sourcing/order records:** deal records should reference requests/offers/orders rather than duplicate their commercial facts. Add immutable snapshots and audited status transitions.
+4. **Build WASLA AI as an assistive layer:** supplier search, local-country-first matching, comparison and explanations. AI may not create supplier availability, prices, stock, payment confirmations, or delivery promises.
+5. **Build WASLA Admin and operational controls:** explicit platform-admin permissions, review queues, moderation, audit trail, and safe intervention boundaries.
+6. **Complete notifications, reporting, and mobile readiness:** only after the underlying workflows and authorization contracts are stable.
+7. **Keep payments, payouts, and carrier integrations gated:** no customer money collection, escrow claims, or automatic supplier payouts in the current no-payment pilot.
+
+### Definition of done for each module
+
+- Database changes are migration-backed and reviewed; no schema mutation is run against production as part of feature development.
+- API endpoints enforce authenticated identity, ownership, active membership, and least-privilege access.
+- Tests cover valid flow, invalid input, unauthenticated access, cross-user access denial, duplicate/retry behavior, and relevant concurrent changes.
+- Arabic RTL and English LTR are usable on mobile and desktop.
+- User-visible states distinguish pending, confirmed, rejected, failed, and completed actions accurately.
+- CI passes on the candidate branch; hosted verification is recorded separately.
+- No PR is merged, no Render deployment is triggered, and no production migration is run without explicit release approval.
