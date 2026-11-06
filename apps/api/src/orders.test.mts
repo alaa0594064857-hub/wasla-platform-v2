@@ -17,7 +17,7 @@ vi.mock("./database.js", () => ({
   getDatabasePool: () => ({ query: mocks.poolQuery, connect: mocks.connect }),
 }));
 
-import { handleOrdersRequest } from "./orders.mjs";
+import { handleOrdersRequest, handleStoreOrdersRequest } from "./orders.mjs";
 
 const userId = "00000000-0000-4000-8000-000000000010";
 const storeId = "00000000-0000-4000-8000-000000000020";
@@ -149,5 +149,71 @@ describe("buyer order checkout", () => {
     expect(statements.some((sql) => sql.includes("INSERT INTO orders"))).toBe(false);
     expect(statements.some((sql) => sql.includes("UPDATE store_products"))).toBe(false);
     expect(statements.at(-1)).toBe("COMMIT");
+  });
+});
+
+
+describe("store order workflow", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.getSession.mockResolvedValue({ user: { id: userId } });
+    mocks.connect.mockResolvedValue({ query: mocks.clientQuery, release: mocks.release });
+  });
+
+  it("restores stock and records cancellation atomically", async () => {
+    mocks.clientQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes("FROM orders o") && sql.includes("FOR UPDATE OF o")) return {
+        rowCount: 1,
+        rows: [{ id: orderId, status: "accepted", orderNumber: "WSL-TEST", storeId, accountId: "account-1" }],
+      };
+      if (sql.includes("FROM order_items WHERE order_id")) return {
+        rowCount: 1,
+        rows: [{ productId, quantity: 2 }],
+      };
+      if (sql.includes("FROM store_products") && sql.includes("FOR UPDATE")) return {
+        rowCount: 1,
+        rows: [{ id: productId, stockQuantity: 3 }],
+      };
+      if (sql.includes("UPDATE store_products")) return { rowCount: 1, rows: [{ id: productId }] };
+      if (sql.includes("INSERT INTO store_inventory_movements")) return { rowCount: 1, rows: [{ id: "movement-2" }] };
+      if (sql.includes("UPDATE orders SET status")) return {
+        rowCount: 1,
+        rows: [{ id: orderId, orderNumber: "WSL-TEST", status: "cancelled" }],
+      };
+      return { rowCount: 1, rows: [] };
+    });
+    const request = Readable.from([JSON.stringify({ status: "cancelled", reason: "Buyer requested cancellation" })]) as IncomingMessage;
+    Object.assign(request, { method: "PATCH", headers: {} });
+    const response = makeResponse();
+    await handleStoreOrdersRequest(request, response as unknown as ServerResponse, "sample-shop", orderId);
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body)).toMatchObject({ success: true, order: { status: "cancelled" } });
+    const statements = mocks.clientQuery.mock.calls.map(([sql]) => String(sql));
+    expect(statements.some((sql) => sql.includes("FOR UPDATE OF o"))).toBe(true);
+    expect(statements.some((sql) => sql.includes("UPDATE store_products"))).toBe(true);
+    expect(statements.some((sql) => sql.includes("'inbound'"))).toBe(true);
+    expect(statements.some((sql) => sql.includes("INSERT INTO order_status_history"))).toBe(true);
+    expect(statements.some((sql) => sql.includes("'order.cancelled'"))).toBe(true);
+    expect(statements.at(-1)).toBe("COMMIT");
+    expect(mocks.release).toHaveBeenCalledOnce();
+  });
+
+  it("rejects an invalid status transition without restoring stock", async () => {
+    mocks.clientQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes("FROM orders o") && sql.includes("FOR UPDATE OF o")) return {
+        rowCount: 1,
+        rows: [{ id: orderId, status: "shipped", orderNumber: "WSL-TEST", storeId, accountId: "account-1" }],
+      };
+      return { rowCount: 1, rows: [] };
+    });
+    const request = Readable.from([JSON.stringify({ status: "cancelled", reason: "Cancel this shipment" })]) as IncomingMessage;
+    Object.assign(request, { method: "PATCH", headers: {} });
+    const response = makeResponse();
+    await handleStoreOrdersRequest(request, response as unknown as ServerResponse, "sample-shop", orderId);
+    expect(response.statusCode).toBe(409);
+    const statements = mocks.clientQuery.mock.calls.map(([sql]) => String(sql));
+    expect(statements.at(-1)).toBe("ROLLBACK");
+    expect(statements.some((sql) => sql.includes("UPDATE store_products"))).toBe(false);
+    expect(statements.some((sql) => sql.includes("INSERT INTO store_inventory_movements"))).toBe(false);
   });
 });
