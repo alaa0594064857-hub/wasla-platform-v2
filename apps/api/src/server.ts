@@ -234,6 +234,31 @@ async function handleRequest(
 
 
 
+  const orderDetailMatch = requestUrl.pathname.match(/^\\/api\\/orders\\/([0-9a-f-]{36})$/);
+  if (orderDetailMatch) {
+    try {
+      const { handleOrderDetailRequest } = await import("./orders.mjs");
+      await handleOrderDetailRequest(request, response, orderDetailMatch[1]);
+    } catch (error) {
+      console.error("WASLA order detail route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Order service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/orders") {
+    try {
+      const { handleOrdersRequest } = await import("./orders.mjs");
+      await handleOrdersRequest(request, response);
+    } catch (error) {
+      console.error("WASLA orders route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Orders service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const inventoryMovementsMatch = requestUrl.pathname.match(
     /^\/api\/stores\/([^/]+)\/products\/([0-9a-f-]{36})\/inventory-movements$/,
   );
