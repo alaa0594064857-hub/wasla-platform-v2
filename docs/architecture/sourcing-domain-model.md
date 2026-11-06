@@ -54,17 +54,23 @@ The accepted supplier offer creates a separate sourcing order. Do not force it i
 - Cross-border offers are explicitly labelled and grouped separately from destination-country offers. Never silently replace local sourcing with an imported result.
 - No payment capture, supplier payout, commission, refund, or live shipment integration is included in this first domain slice.
 
-## API contract (proposed; not yet registered)
-- `POST /api/sourcing/requests`: authenticated buyer creates a request; validate and persist only. It does not create an order or reserve stock.
-- `GET /api/sourcing/requests`: buyer lists only their own requests.
-- `GET /api/sourcing/requests/:id`: buyer-owned detail with offers visible to that buyer.
-- `POST /api/sourcing/requests/:id/submit`: buyer submits a draft request.
-- `POST /api/sourcing/requests/:id/offers`: authorized supplier account member submits an offer for a request. Verify active supplier/manufacturer account membership and ensure the supplier cannot impersonate another account.
-- `PATCH /api/sourcing/offers/:id/availability`: supplier account member confirms or rejects availability; record actor and timestamp.
-- `PATCH /api/sourcing/offers/:id`: supplier updates only its own unaccepted offer. Material changes must be versioned and trigger buyer reconfirmation.
-- `POST /api/sourcing/offers/:id/accept`: buyer explicitly accepts an eligible offer; idempotent and transactional; creates the sourcing order snapshot, not a payment.
-- `GET /api/sourcing/orders`: buyer sees own sourcing orders; supplier members see only orders belonging to their supplier account.
-- AI sourcing/search is a separate service boundary. Until real provider integrations and verified source data exist, it must not claim to have searched suppliers or return invented live availability/prices.
+## API contract (implemented foundation; discovery is not yet AI-powered)
+- `POST /api/sourcing-requests`: authenticated buyer creates a submitted request; idempotent; request and submission event are committed atomically. It does not create an order or reserve stock.
+- `GET /api/sourcing-requests`: buyer lists only their own requests.
+- `GET /api/sourcing-requests/:id`: buyer-owned detail with offers visible to that buyer.
+- `GET /api/sourcing-opportunities`: authenticated active supplier/manufacturer members receive open requests grouped into destination-country matches first and cross-border requests second. The response includes only active supplier accounts belonging to the signed-in user and does not expose buyer contact or delivery-address data.
+- `POST /api/sourcing-requests/:id/offers`: authorized supplier account member submits an offer. The API verifies active supplier/manufacturer membership and derives origin country from the supplier account. Availability starts pending.
+- `PATCH /api/sourcing-offers/:id/availability`: supplier member confirms or rejects availability; offer update, request status update, and event log are transactional.
+- `POST /api/sourcing-requests/:id/accept-offer`: buyer explicitly accepts an eligible offer; idempotent and transactional; creates a sourcing order snapshot in `awaiting_payment`. It does not initiate payment.
+- Malformed JSON is rejected as a client validation error. Request quantities are bounded to the database integer range and offer prices/shipping are validated against database precision.
+- Supplier membership and account status are rechecked at offer acceptance. A requested currency, when supplied, must match the selected offer currency.
+- AI sourcing/search is not implemented yet. The current opportunity feed is a transparent supplier-facing discovery endpoint, not an AI search result and not a claim of verified live availability or price.
+
+## Current implementation boundaries
+- The current first slice does not yet implement supplier offer editing/versioning, sourcing order list/detail APIs, payment, supplier payouts, shipment tracking, dispute/refund workflows, or external supplier discovery.
+- Store catalog and inventory remain merchant-owned. The sourcing request/offer/order path does not reserve or decrement store inventory.
+- The `sourcing_request_events` table is the current append-only event record used for request and offer activity in this slice.
+- Buyer and supplier web entry points exist for request submission, request/offer review, supplier opportunity browsing, and offer submission. Full end-to-end UI verification still requires authenticated test accounts and a connected test database.
 
 ## Authorization and abuse controls
 - Derive buyer identity from the Better Auth session, never from request-body user IDs.
