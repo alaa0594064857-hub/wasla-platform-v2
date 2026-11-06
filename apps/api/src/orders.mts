@@ -130,15 +130,32 @@ export async function handleOrdersRequest(request: IncomingMessage, response: Se
     const pool = getDatabasePool();
 
     if (request.method === "GET") {
-      const result = await pool.query(
-        `SELECT id, order_number AS "orderNumber", store_id AS "storeId",
-                status, currency, subtotal::text AS subtotal,
-                grand_total::text AS "grandTotal", created_at AS "createdAt"
-         FROM orders WHERE buyer_user_id = $1
-         ORDER BY created_at DESC, id DESC LIMIT 100`,
-        [session.user.id],
-      );
-      respond(response, 200, { success: true, orders: result.rows });
+      const [result, sourcingResult] = await Promise.all([
+        pool.query(
+          `SELECT id, order_number AS "orderNumber", store_id AS "storeId",
+                  status, currency, subtotal::text AS subtotal,
+                  grand_total::text AS "grandTotal", created_at AS "createdAt"
+           FROM orders WHERE buyer_user_id = $1
+           ORDER BY created_at DESC, id DESC LIMIT 100`,
+          [session.user.id],
+        ),
+        pool.query(
+          `SELECT so.id, so.order_number AS "orderNumber", so.status, so.currency,
+                  so.subtotal::text AS subtotal, so.shipping_total::text AS "shippingTotal",
+                  so.grand_total::text AS "grandTotal", so.created_at AS "createdAt",
+                  sr.item_name AS "itemName", sr.quantity, sr.unit,
+                  sr.destination_city AS "destinationCity",
+                  sr.destination_country_code AS "destinationCountryCode",
+                  a.display_name AS "supplierName"
+           FROM sourcing_orders so
+           INNER JOIN sourcing_requests sr ON sr.id = so.request_id
+           INNER JOIN accounts a ON a.id = so.supplier_account_id
+           WHERE so.buyer_user_id = $1
+           ORDER BY so.created_at DESC, so.id DESC LIMIT 100`,
+          [session.user.id],
+        ),
+      ]);
+      respond(response, 200, { success: true, orders: result.rows, sourcingOrders: sourcingResult.rows });
       return;
     }
 
