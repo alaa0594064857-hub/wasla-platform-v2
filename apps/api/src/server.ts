@@ -56,6 +56,19 @@ async function handleRequest(
     return;
   }
 
+  const sourcingAcceptMatch = requestUrl.pathname.match(/^\\/api\\/sourcing-requests\\/([0-9a-f-]{36})\\/accept-offer$/);
+  if (sourcingAcceptMatch) {
+    try {
+      const { handleAcceptSupplierOffer } = await import("./sourcing.mjs");
+      await handleAcceptSupplierOffer(request, response, sourcingAcceptMatch[1]);
+    } catch (error) {
+      console.error("WASLA accept offer route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Offer acceptance service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const sourcingOfferMatch = requestUrl.pathname.match(/^\\/api\\/sourcing-offers\\/([0-9a-f-]{36})\\/availability$/);
   if (sourcingOfferMatch) {
     try {
