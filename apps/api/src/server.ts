@@ -56,7 +56,7 @@ async function handleRequest(
     return;
   }
 
-  if (/^\\/api\\/product-inquiries(?:\\/[0-9a-f-]{36}\\/(?:replies|status))?$/i.test(requestUrl.pathname)) {
+  if (/^\/api\/product-inquiries(?:\/[0-9a-f-]{36}\/(?:replies|status))?$/i.test(requestUrl.pathname)) {
     try {
       const { handleProductInquiriesRequest } = await import("./product-inquiries.mjs");
       await handleProductInquiriesRequest(request, response);
