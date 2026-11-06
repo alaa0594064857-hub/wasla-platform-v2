@@ -229,6 +229,52 @@ describe("WASLA sourcing PostgreSQL concurrency constraints", () => {
     }
   });
 
+  it("serializes duplicate delivery confirmations and records only one completion event", async () => {
+    const first = await pool.connect();
+    const second = await pool.connect();
+    try {
+      await first.query("UPDATE sourcing_orders SET status = 'shipped' WHERE request_id = $1", [fixture.requestId]);
+      await first.query("BEGIN");
+      await second.query("BEGIN");
+      const firstOrder = await first.query(
+        "SELECT id, status FROM sourcing_orders WHERE request_id = $1 FOR UPDATE",
+        [fixture.requestId],
+      );
+      expect(firstOrder.rows[0].status).toBe("shipped");
+      const secondConfirmation = second.query(
+        "SELECT id, status FROM sourcing_orders WHERE request_id = $1 FOR UPDATE",
+        [fixture.requestId],
+      );
+      await first.query(
+        "UPDATE sourcing_orders SET status = 'completed' WHERE request_id = $1",
+        [fixture.requestId],
+      );
+      await first.query(
+        `INSERT INTO sourcing_order_events
+         (order_id, actor_user_id, event_type, from_status, to_status, metadata)
+         SELECT id, $2, 'buyer.delivery_confirmed', 'shipped', 'completed', '{"integration":true}'::jsonb
+         FROM sourcing_orders WHERE request_id = $1`,
+        [fixture.requestId, fixture.buyerId],
+      );
+      await first.query("COMMIT");
+      const secondView = await secondConfirmation;
+      expect(secondView.rows[0].status).toBe("completed");
+      await second.query("ROLLBACK");
+      const events = await first.query(
+        "SELECT count(*)::int AS count FROM sourcing_order_events WHERE order_id = $1 AND event_type = 'buyer.delivery_confirmed'",
+        [firstOrder.rows[0].id],
+      );
+      expect(events.rows[0].count).toBe(1);
+    } catch (error) {
+      await first.query("ROLLBACK").catch(() => undefined);
+      await second.query("ROLLBACK").catch(() => undefined);
+      throw error;
+    } finally {
+      first.release();
+      second.release();
+    }
+  });
+
   it("serializes competing order inserts and allows only one order per sourcing request", async () => {
     const first = await pool.connect();
     const second = await pool.connect();
