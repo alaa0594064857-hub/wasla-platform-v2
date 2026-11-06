@@ -16,7 +16,7 @@ vi.mock("./database.js", () => ({
   getDatabasePool: () => ({ connect: mocks.connect }),
 }));
 
-import { handleAcceptSupplierOffer } from "./sourcing.mjs";
+import { handleAcceptSupplierOffer, handleSupplierSourcingOrders } from "./sourcing.mjs";
 
 const buyerId = "00000000-0000-4000-8000-000000000010";
 const requestId = "00000000-0000-4000-8000-000000000020";
@@ -120,6 +120,33 @@ describe("supplier offer acceptance authorization", () => {
     );
 
     expect(response.statusCode).toBe(401);
+    expect(mocks.connect).not.toHaveBeenCalled();
+  });
+});
+
+
+describe("supplier payment-state protection", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.getSession.mockResolvedValue({ user: { id: supplierUserId } });
+  });
+
+  it("does not allow suppliers to mark an order as paid", async () => {
+    const request = Readable.from([JSON.stringify({ status: "paid" })]) as IncomingMessage;
+    Object.assign(request, { method: "PATCH", headers: {} });
+    const response = makeResponse();
+
+    await handleSupplierSourcingOrders(
+      request,
+      response as unknown as ServerResponse,
+      "00000000-0000-4000-8000-000000000060",
+    );
+
+    expect(response.statusCode).toBe(400);
+    expect(JSON.parse(response.body)).toMatchObject({
+      success: false,
+      error: "Supplier status must be fulfilment_pending or shipped",
+    });
     expect(mocks.connect).not.toHaveBeenCalled();
   });
 });
