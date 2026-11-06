@@ -552,3 +552,108 @@ describe("sourcing order event history access", () => {
     expect(mocks.poolQuery).toHaveBeenCalledOnce();
   });
 });
+
+
+describe("supplier offer acceptance success and expiry safeguards", () => {
+  const lockedOrderId = "00000000-0000-4000-8000-000000000071";
+  const activeOffer = {
+    id: offerId, request_id: requestId, supplier_account_id: supplierAccountId,
+    submitted_by_user_id: supplierUserId, origin_country_code: "TR",
+    offered_quantity: 2, unit_price: "10.00", currency: "USD",
+    shipping_amount: "2.00", lead_time_days: 3, status: "available",
+    availability_confirmed_at: new Date().toISOString(),
+    availability_valid_until: null, quote_valid_until: null,
+    supplier_name: "Test Supplier", supplier_account_status: "active",
+    supplier_account_type: "supplier", terms_snapshot: {},
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.getSession.mockResolvedValue({ user: { id: buyerId } });
+    mocks.connect.mockResolvedValue({ query: mocks.clientQuery, release: mocks.release });
+  });
+
+  function configureAcceptance(offer = activeOffer, prior: unknown[] = []) {
+    mocks.clientQuery.mockImplementation(async (sql: string) => {
+      if (["BEGIN", "ROLLBACK", "COMMIT"].includes(sql)) return { rowCount: 0, rows: [] };
+      if (sql.includes("FROM sourcing_requests WHERE id = $1 FOR UPDATE")) return { rowCount: 1, rows: [{
+        id: requestId, buyer_user_id: buyerId, item_name: "Test item",
+        description: null, specifications: {}, quantity: 2, unit: "pieces",
+        destination_country_code: "TR", destination_city: "Istanbul",
+        delivery_location_snapshot: {}, requested_currency: "USD", status: "offers_available",
+      }] };
+      if (sql.includes("FROM sourcing_orders WHERE buyer_user_id")) return { rowCount: prior.length, rows: prior };
+      if (sql.includes("FROM supplier_offers o")) return { rowCount: offer ? 1 : 0, rows: offer ? [offer] : [] };
+      if (sql.includes("FROM account_members am")) return { rowCount: 1, rows: [{ "?column?": 1 }] };
+      if (sql.includes("AS exceeds_order_amount_limit")) return { rowCount: 1, rows: [{
+        subtotal: "20.00", shipping_total: "2.00", grand_total: "22.00",
+        exceeds_order_amount_limit: false,
+      }] };
+      if (sql.includes("INSERT INTO sourcing_orders")) return { rowCount: 1, rows: [{
+        id: lockedOrderId, order_number: "WS-TESTORDER000001",
+        request_id: requestId, accepted_offer_id: offerId,
+        status: "awaiting_payment", currency: "USD",
+        subtotal: "20.00", shipping_total: "2.00", grand_total: "22.00",
+        commercial_snapshot: {}, created_at: new Date().toISOString(),
+      }] };
+      return { rowCount: 1, rows: [] };
+    });
+  }
+
+  it("accepts a currently confirmed offer and commits the order and audit trail atomically", async () => {
+    configureAcceptance();
+    const response = makeResponse();
+
+    await handleAcceptSupplierOffer(makeRequest(), response as unknown as ServerResponse, requestId);
+
+    expect(response.statusCode).toBe(201);
+    expect(JSON.parse(response.body)).toMatchObject({
+      success: true, payment: "not_started", order: { status: "awaiting_payment", grand_total: "22.00" },
+    });
+    const statements = mocks.clientQuery.mock.calls.map(([sql]) => String(sql));
+    expect(statements[1]).toContain("FROM sourcing_requests WHERE id = $1 FOR UPDATE");
+    expect(statements.some(sql => sql.includes("UPDATE supplier_offers SET status = 'accepted'"))).toBe(true);
+    expect(statements.some(sql => sql.includes("UPDATE sourcing_requests SET status = 'buyer_selected'"))).toBe(true);
+    expect(statements.some(sql => sql.includes("INSERT INTO sourcing_orders"))).toBe(true);
+    expect(statements.filter(sql => sql.includes("INSERT INTO sourcing_order_events"))).toHaveLength(1);
+    expect(statements.at(-1)).toBe("COMMIT");
+    expect(mocks.release).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ["availability", { ...activeOffer, availability_valid_until: "2000-01-01T00:00:00.000Z" }],
+    ["quote", { ...activeOffer, quote_valid_until: "2000-01-01T00:00:00.000Z" }],
+  ])("rejects an expired %s before changing offer or request state", async (_kind, offer) => {
+    configureAcceptance(offer);
+    const response = makeResponse();
+
+    await handleAcceptSupplierOffer(makeRequest(), response as unknown as ServerResponse, requestId);
+
+    expect(response.statusCode).toBe(409);
+    const statements = mocks.clientQuery.mock.calls.map(([sql]) => String(sql));
+    expect(statements.at(-1)).toBe("ROLLBACK");
+    expect(statements.some(sql => sql.includes("UPDATE supplier_offers SET status = 'accepted'"))).toBe(false);
+    expect(statements.some(sql => sql.includes("UPDATE sourcing_requests SET status = 'buyer_selected'"))).toBe(false);
+    expect(statements.some(sql => sql.includes("INSERT INTO sourcing_orders"))).toBe(false);
+  });
+
+  it("replays the exact accepted offer for the same idempotency key without duplicating an order", async () => {
+    configureAcceptance(undefined, [{
+      id: lockedOrderId, order_number: "WS-TESTORDER000001",
+      request_id: requestId, accepted_offer_id: offerId,
+      status: "awaiting_payment", currency: "USD",
+      subtotal: "20.00", shipping_total: "2.00", grand_total: "22.00",
+      commercial_snapshot: {}, created_at: new Date().toISOString(),
+    }]);
+    const response = makeResponse();
+
+    await handleAcceptSupplierOffer(makeRequest(), response as unknown as ServerResponse, requestId);
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body)).toMatchObject({ success: true, replayed: true, payment: "not_started" });
+    const statements = mocks.clientQuery.mock.calls.map(([sql]) => String(sql));
+    expect(statements.at(-1)).toBe("COMMIT");
+    expect(statements.some(sql => sql.includes("INSERT INTO sourcing_orders"))).toBe(false);
+    expect(statements.some(sql => sql.includes("UPDATE supplier_offers"))).toBe(false);
+  });
+});
