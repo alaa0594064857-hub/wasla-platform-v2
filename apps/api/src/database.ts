@@ -333,3 +333,117 @@ export async function ensureProductInquiryTables(): Promise<void> {
   const { ensureProductInquiryTables: createTables } = await import("./product-inquiries.mjs");
   await createTables();
 }
+
+
+/**
+ * Provider-neutral billing records for WASLA subscriptions.
+ * This creates empty structures only; it does not set prices,
+ * create subscriptions, or enable payment collection.
+ */
+export async function ensureSubscriptionBillingTables(): Promise<void> {
+  const client = await getDatabasePool().connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS subscription_plans (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        code varchar(80) NOT NULL UNIQUE,
+        name_ar varchar(160) NOT NULL,
+        name_en varchar(160) NOT NULL,
+        description_ar text,
+        description_en text,
+        amount numeric(12,2) NOT NULL CHECK (amount >= 0),
+        currency varchar(3) NOT NULL,
+        billing_interval varchar(16) NOT NULL
+          CHECK (billing_interval IN ('month', 'year', 'one_time')),
+        interval_count integer NOT NULL DEFAULT 1 CHECK (interval_count > 0),
+        trial_days integer NOT NULL DEFAULT 0 CHECK (trial_days >= 0),
+        entitlements jsonb NOT NULL DEFAULT '{}'::jsonb,
+        is_active boolean NOT NULL DEFAULT false,
+        is_public boolean NOT NULL DEFAULT false,
+        sort_order integer NOT NULL DEFAULT 0,
+        created_at timestamptz NOT NULL DEFAULT NOW(),
+        updated_at timestamptz NOT NULL DEFAULT NOW()
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS subscriptions (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        plan_id uuid NOT NULL REFERENCES subscription_plans(id) ON DELETE RESTRICT,
+        customer_user_id uuid REFERENCES users(id) ON DELETE RESTRICT,
+        customer_account_id uuid REFERENCES accounts(id) ON DELETE RESTRICT,
+        billing_contact_user_id uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+        status varchar(24) NOT NULL DEFAULT 'pending'
+          CHECK (status IN ('pending', 'trialing', 'active', 'past_due', 'paused', 'canceled', 'expired')),
+        payment_provider varchar(60),
+        provider_customer_id varchar(255),
+        provider_subscription_id varchar(255),
+        provider_checkout_id varchar(255),
+        current_period_start timestamptz,
+        current_period_end timestamptz,
+        trial_start timestamptz,
+        trial_end timestamptz,
+        cancel_at_period_end boolean NOT NULL DEFAULT false,
+        canceled_at timestamptz,
+        started_at timestamptz,
+        created_at timestamptz NOT NULL DEFAULT NOW(),
+        updated_at timestamptz NOT NULL DEFAULT NOW(),
+        CONSTRAINT subscriptions_exactly_one_customer
+          CHECK (num_nonnulls(customer_user_id, customer_account_id) = 1)
+      )
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS subscriptions_user_status_idx
+      ON subscriptions (customer_user_id, status, created_at DESC)
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS subscriptions_account_status_idx
+      ON subscriptions (customer_account_id, status, created_at DESC)
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS subscription_invoices (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        subscription_id uuid NOT NULL REFERENCES subscriptions(id) ON DELETE RESTRICT,
+        invoice_number varchar(100) NOT NULL UNIQUE,
+        status varchar(20) NOT NULL DEFAULT 'draft'
+          CHECK (status IN ('draft', 'open', 'paid', 'void', 'uncollectible')),
+        amount_due numeric(12,2) NOT NULL CHECK (amount_due >= 0),
+        amount_paid numeric(12,2) NOT NULL DEFAULT 0 CHECK (amount_paid >= 0),
+        currency varchar(3) NOT NULL,
+        period_start timestamptz,
+        period_end timestamptz,
+        due_at timestamptz,
+        paid_at timestamptz,
+        payment_provider varchar(60),
+        provider_invoice_id varchar(255),
+        hosted_invoice_url text,
+        created_at timestamptz NOT NULL DEFAULT NOW(),
+        updated_at timestamptz NOT NULL DEFAULT NOW(),
+        CONSTRAINT subscription_invoice_amount_paid_check
+          CHECK (amount_paid <= amount_due)
+      )
+    `);
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS subscription_invoices_provider_id_unique
+      ON subscription_invoices (payment_provider, provider_invoice_id)
+      WHERE provider_invoice_id IS NOT NULL
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS subscription_payment_events (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        payment_provider varchar(60) NOT NULL,
+        provider_event_id varchar(255) NOT NULL,
+        event_type varchar(160) NOT NULL,
+        metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+        processing_status varchar(16) NOT NULL DEFAULT 'received'
+          CHECK (processing_status IN ('received', 'processed', 'failed')),
+        processed_at timestamptz,
+        failure_reason text,
+        created_at timestamptz NOT NULL DEFAULT NOW(),
+        CONSTRAINT subscription_payment_events_provider_event_unique
+          UNIQUE (payment_provider, provider_event_id)
+      )
+    `);
+  } finally {
+    client.release();
+  }
+}
