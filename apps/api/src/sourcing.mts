@@ -579,3 +579,104 @@ export async function handleAcceptSupplierOffer(req: IncomingMessage, res: Serve
     client?.release();
   }
 }
+
+
+export async function handleSupplierSourcingOrders(req: IncomingMessage, res: ServerResponse, orderId?: string): Promise<void> {
+  if (req.method !== "GET" && req.method !== "PATCH") {
+    reply(res, 405, { success: false, error: "Method not allowed" }); return;
+  }
+  if (orderId && !UUID.test(orderId)) {
+    reply(res, 400, { success: false, error: "Invalid sourcing order ID" }); return;
+  }
+  try {
+    const userId = await sessionUser(req);
+    if (!userId) { reply(res, 401, { success: false, error: "Authentication required" }); return; }
+    const db = getDatabasePool();
+    if (req.method === "GET") {
+      const result = await db.query(
+        `SELECT so.id, so.order_number, so.status, so.currency,
+                so.subtotal::text AS subtotal, so.shipping_total::text AS shipping_total,
+                so.grand_total::text AS grand_total, so.created_at, so.updated_at,
+                sr.item_name, sr.description, sr.quantity, sr.unit,
+                sr.destination_city, sr.destination_country_code,
+                a.id AS supplier_account_id, a.display_name AS supplier_name,
+                so.commercial_snapshot
+         FROM sourcing_orders so
+         INNER JOIN sourcing_requests sr ON sr.id = so.request_id
+         INNER JOIN accounts a ON a.id = so.supplier_account_id
+         INNER JOIN account_members am ON am.account_id = a.id
+         WHERE am.user_id = $1 AND am.status = 'active'
+           AND a.status = 'active' AND a.account_type IN ('supplier','manufacturer')
+         ORDER BY so.created_at DESC LIMIT 100`,
+        [userId],
+      );
+      reply(res, 200, { success: true, orders: result.rows });
+      return;
+    }
+
+    const body = await readBody(req);
+    if (!body || (body.status !== "fulfilment_pending" && body.status !== "shipped")) {
+      reply(res, 400, { success: false, error: "Supplier status must be fulfilment_pending or shipped" }); return;
+    }
+    const trackingReference = body.trackingReference;
+    const carrier = body.carrier;
+    if (body.status === "shipped" &&
+        (!validText(trackingReference, 3, 120) ||
+         (carrier !== undefined && !validText(carrier, 1, 80)))) {
+      reply(res, 400, { success: false, error: "A valid tracking reference is required before marking an order shipped" }); return;
+    }
+
+    const client = await db.connect();
+    try {
+      await client.query("BEGIN");
+      const orderResult = await client.query(
+        `SELECT so.id, so.request_id, so.supplier_account_id, so.status, so.buyer_user_id
+         FROM sourcing_orders so WHERE so.id = $1 FOR UPDATE`,
+        [orderId],
+      );
+      if (!orderResult.rows.length) {
+        await client.query("ROLLBACK"); reply(res, 404, { success: false, error: "Sourcing order not found" }); return;
+      }
+      const order = orderResult.rows[0];
+      const membership = await client.query(
+        `SELECT 1 FROM account_members am
+         INNER JOIN accounts a ON a.id = am.account_id
+         WHERE am.account_id = $1 AND am.user_id = $2
+           AND am.status = 'active' AND a.status = 'active'
+           AND a.account_type IN ('supplier','manufacturer')
+         LIMIT 1 FOR SHARE OF am, a`,
+        [order.supplier_account_id, userId],
+      );
+      if (!membership.rows.length) {
+        await client.query("ROLLBACK"); reply(res, 403, { success: false, error: "Active supplier membership is required" }); return;
+      }
+      const allowed = (order.status === "paid" && body.status === "fulfilment_pending") ||
+        (order.status === "fulfilment_pending" && body.status === "shipped");
+      if (!allowed) {
+        await client.query("ROLLBACK");
+        reply(res, 409, { success: false, error: "Invalid supplier order status transition" }); return;
+      }
+      await client.query(
+        `UPDATE sourcing_orders SET status = $1, updated_at = NOW() WHERE id = $2`,
+        [body.status, orderId],
+      );
+      await client.query(
+        `INSERT INTO sourcing_request_events (request_id, actor_user_id, event_type, from_status, to_status, metadata)
+         VALUES ($1,$2,'sourcing_order.supplier_status_changed',$3,$4,$5::jsonb)`,
+        [order.request_id, userId, order.status, body.status,
+         JSON.stringify({ orderId, trackingReference: body.status === "shipped" ? trackingReference : null,
+           carrier: body.status === "shipped" ? carrier ?? null : null })],
+      );
+      await client.query("COMMIT");
+      reply(res, 200, { success: true, order: { id: orderId, status: body.status } });
+    } catch (error) {
+      try { await client.query("ROLLBACK"); } catch {}
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error("WASLA supplier sourcing orders API error:", error);
+    reply(res, 500, { success: false, error: "Could not process supplier sourcing order" });
+  }
+}
