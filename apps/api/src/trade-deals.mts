@@ -282,8 +282,10 @@ export async function handleTradeDealResponse(req: IncomingMessage, res: ServerR
 
 async function requireTradeParty(client: { query: (sql: string, values?: unknown[]) => Promise<{ rows: any[] }> }, dealId: string, userId: string) {
   const result = await client.query(
-    `SELECT d.id, d.buyer_user_id, d.supplier_account_id, d.status, d.terms_version, d.terms_snapshot
+    `SELECT d.id, d.buyer_user_id, d.supplier_account_id, d.status, d.terms_version, d.terms_snapshot,
+            a.status AS account_status
      FROM trade_deals d
+     JOIN accounts a ON a.id = d.supplier_account_id
      WHERE d.id = $1
        AND (d.buyer_user_id = $2 OR EXISTS (
          SELECT 1 FROM account_members am
@@ -314,6 +316,10 @@ export async function handleTradeAmendments(req: IncomingMessage, res: ServerRes
         await client.query("ROLLBACK");
         reply(res, 404, { success: false, error: "Trade deal not found" }); return;
       }
+      if (deal.account_status !== "active") {
+        await client.query("ROLLBACK");
+        reply(res, 409, { success: false, error: "The supplier account is not active" }); return;
+      }
       const supplierMember = await client.query(
         `SELECT 1 FROM account_members WHERE account_id = $1 AND user_id = $2 AND status = 'active' LIMIT 1`,
         [deal.supplier_account_id, userId],
@@ -325,6 +331,10 @@ export async function handleTradeAmendments(req: IncomingMessage, res: ServerRes
         reply(res, 403, { success: false, error: "A user cannot act as both parties in one deal" }); return;
       }
       if (amendmentId) {
+        if (!["agreed", "in_progress"].includes(deal.status)) {
+          await client.query("ROLLBACK");
+          reply(res, 409, { success: false, error: "Only active agreed deals can process amendments" }); return;
+        }
         if (body?.decision !== "accept" && body?.decision !== "reject") {
           await client.query("ROLLBACK");
           reply(res, 400, { success: false, error: "Decision must be accept or reject" }); return;
