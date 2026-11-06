@@ -165,6 +165,20 @@ describe("WASLA API", () => {
     });
   });
 
+  it("requires authentication to read sourcing order history", async () => {
+    const baseUrl = await startTestServer();
+    const response = await fetch(`${baseUrl}/api/sourcing-orders/00000000-0000-4000-8000-000000000001/events`);
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ success: false, error: "Authentication required" });
+  });
+
+  it("validates sourcing order history IDs", async () => {
+    const baseUrl = await startTestServer();
+    const response = await fetch(`${baseUrl}/api/sourcing-orders/not-a-uuid/events`);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ success: false, error: "Invalid sourcing order ID" });
+  });
+
   it("requires authentication to list supplier sourcing orders", async () => {
     const baseUrl = await startTestServer();
     const response = await fetch(`${baseUrl}/api/supplier/sourcing-orders`);
