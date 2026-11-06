@@ -83,7 +83,7 @@ async function handleRequest(
     return;
   }
 
-  const publicStorefrontMatch = requestUrl.pathname.match(/^\\/api\\/public\\/stores\\/([^/]+)$/);
+  const publicStorefrontMatch = requestUrl.pathname.match(/^\/api\/public\/stores\/([^/]+)$/);
   if (publicStorefrontMatch) {
     try {
       const { handlePublicStorefrontRequest } = await import("./storefront.mjs");
