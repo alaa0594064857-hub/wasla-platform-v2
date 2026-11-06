@@ -56,6 +56,19 @@ async function handleRequest(
     return;
   }
 
+  const messageConversationMatch = requestUrl.pathname.match(/^\/api\/messages\/([0-9a-f-]{36})$/i);
+  if (messageConversationMatch || requestUrl.pathname === "/api/messages") {
+    try {
+      const { handleMessagesRequest } = await import("./messages.mjs");
+      await handleMessagesRequest(request, response, messageConversationMatch?.[1]);
+    } catch (error) {
+      console.error("WASLA messages route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Messages service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/platform/users") {
     try {
       const { handlePlatformUsersRequest } = await import("./platform-users.mjs");
@@ -435,7 +448,7 @@ if (process.env.NODE_ENV !== "test") {
   const server = createWaslaServer();
 
   void import("./database.js")
-    .then(async ({ ensureRegistrationTypeColumn, ensureAccountOwnerRole, ensureStoreOwnerRole, ensurePlatformOwnerRole, ensurePersonalThemesTable, ensureStoreProductsTable, ensureNetworkTables }) => {
+    .then(async ({ ensureRegistrationTypeColumn, ensureAccountOwnerRole, ensureStoreOwnerRole, ensurePlatformOwnerRole, ensurePersonalThemesTable, ensureStoreProductsTable, ensureNetworkTables, ensureMessagesTables }) => {
       await ensureRegistrationTypeColumn();
       await ensureAccountOwnerRole();
       await ensureStoreOwnerRole();
@@ -443,6 +456,7 @@ if (process.env.NODE_ENV !== "test") {
       await ensurePersonalThemesTable();
       await ensureStoreProductsTable();
       await ensureNetworkTables();
+      await ensureMessagesTables();
     })
     .then(() => {
       server.listen(port, "0.0.0.0", () => {
