@@ -60,6 +60,7 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
     { href: "/business", label: ar ? "شركتي وحسابات الأعمال" : "My company & business", icon: "▦" },
     { href: "/network", label: ar ? "شبكتي وأصدقائي" : "My network & friends", icon: "♧" },
     { href: "/messages", label: ar ? "الرسائل" : "Messages", icon: "✉" },
+    { href: "/inquiries", label: ar ? "استفسارات المنتجات" : "Product inquiries", icon: "▤" },
     { href: "/notifications", label: ar ? "الإشعارات" : "Notifications", icon: "♢" },
     { href: "/brands", label: ar ? "العلامات والشعارات" : "Brands & logos", icon: "✧" },
     { href: "/settings", label: ar ? "الإعدادات والخصوصية" : "Settings & privacy", icon: "⚙" },
@@ -89,6 +90,7 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
         <Link href="/business">{ar ? "الأعمال" : "Business"}</Link>
         <Link href="/network" aria-current={pathname === "/network" ? "page" : undefined}>{ar ? "شبكتي" : "My network"}</Link>
         <Link href={messagesHref}>{pathname === "/messages" ? (ar ? "الرئيسية" : "Home") : (ar ? "الرسائل" : "Messages")}</Link>
+        <Link href="/inquiries" aria-current={pathname === "/inquiries" ? "page" : undefined}>{ar ? "الاستفسارات" : "Inquiries"}</Link>
       </nav>
       <div className="wasla-workspace-actions">
         <button type="button" className="wasla-search-trigger" aria-label={ar ? "فتح البحث" : "Open search"} aria-expanded={searchOpen} title={ar ? "البحث الشامل" : "Universal search"} onClick={() => setSearchOpen(value => !value)}>
