@@ -140,6 +140,136 @@ describe("WASLA commerce PostgreSQL transaction guarantees", () => {
   });
 });
 
+
+describe("WASLA Trade buyer and supplier access integrity", () => {
+  const fixture = {
+    buyerId: randomUUID(),
+    supplierUserId: randomUUID(),
+    outsiderId: randomUUID(),
+    supplierAccountId: randomUUID(),
+    roleId: randomUUID(),
+    requestId: randomUUID(),
+    offerId: randomUUID(),
+    orderId: randomUUID(),
+    dealId: randomUUID(),
+  };
+
+  beforeAll(async () => {
+    await pool.query(
+      "INSERT INTO users (id, name, email, status) VALUES ($1,$2,$3,'active'),($4,$5,$6,'active'),($7,$8,$9,'active')",
+      [fixture.buyerId, "Trade Integration Buyer", "trade-buyer-" + fixture.buyerId + "@example.test",
+       fixture.supplierUserId, "Trade Integration Supplier", "trade-supplier-" + fixture.supplierUserId + "@example.test",
+       fixture.outsiderId, "Trade Integration Outsider", "trade-outsider-" + fixture.outsiderId + "@example.test"],
+    );
+    await pool.query(
+      "INSERT INTO accounts (id, account_type, legal_name, display_name, status, country_code) VALUES ($1,'supplier',$2,$3,'active','TR')",
+      [fixture.supplierAccountId, "Trade Integration Supplier LLC", "Trade Integration Supplier"],
+    );
+    await pool.query(
+      "INSERT INTO roles (id, name, scope_type) VALUES ($1,$2,'account')",
+      [fixture.roleId, "trade_integration_" + fixture.roleId],
+    );
+    await pool.query(
+      "INSERT INTO account_members (account_id,user_id,role_id,role_scope,status,joined_at) VALUES ($1,$2,$3,'account','active',NOW())",
+      [fixture.supplierAccountId, fixture.supplierUserId, fixture.roleId],
+    );
+    await pool.query(
+      "INSERT INTO sourcing_requests (id,buyer_user_id,item_name,quantity,unit,destination_country_code,destination_city,requested_currency,status,idempotency_key) VALUES ($1,$2,'Trade integration item',2,'pieces','TR','Istanbul','USD','buyer_selected',$3)",
+      [fixture.requestId, fixture.buyerId, "trade-request-" + randomUUID()],
+    );
+    await pool.query(
+      "INSERT INTO supplier_offers (id,request_id,supplier_account_id,submitted_by_user_id,origin_country_code,offered_quantity,unit_price,currency,shipping_amount,status,availability_confirmed_at) VALUES ($1,$2,$3,$4,'TR',2,20,'USD',5,'accepted',NOW())",
+      [fixture.offerId, fixture.requestId, fixture.supplierAccountId, fixture.supplierUserId],
+    );
+    await pool.query(
+      "INSERT INTO sourcing_orders (id,order_number,request_id,accepted_offer_id,buyer_user_id,supplier_account_id,status,currency,subtotal,shipping_total,grand_total,commercial_snapshot,idempotency_key) VALUES ($1,$2,$3,$4,$5,$6,'awaiting_payment','USD',40,5,45,'{\"integration\":true}'::jsonb,$7)",
+      [fixture.orderId, "WS-TRADE-" + fixture.orderId.replace(/-/g, "").slice(0, 12).toUpperCase(),
+       fixture.requestId, fixture.offerId, fixture.buyerId, fixture.supplierAccountId, "trade-order-" + randomUUID()],
+    );
+    await pool.query(
+      "INSERT INTO trade_deals (id,deal_number,sourcing_order_id,buyer_user_id,supplier_account_id,status,terms_snapshot,proposed_by_user_id) VALUES ($1,$2,$3,$4,$5,'agreed','{\"delivery\":\"Istanbul\"}'::jsonb,$4)",
+      [fixture.dealId, "WD-" + fixture.dealId.replace(/-/g, "").slice(0, 12).toUpperCase(),
+       fixture.orderId, fixture.buyerId, fixture.supplierAccountId],
+    );
+  });
+
+  afterAll(async () => {
+    await pool.query("DELETE FROM trade_deal_events WHERE deal_id = $1", [fixture.dealId]);
+    await pool.query("DELETE FROM trade_deal_amendments WHERE deal_id = $1", [fixture.dealId]);
+    await pool.query("DELETE FROM trade_deal_milestones WHERE deal_id = $1", [fixture.dealId]);
+    await pool.query("DELETE FROM trade_deals WHERE id = $1", [fixture.dealId]);
+    await pool.query("DELETE FROM sourcing_orders WHERE id = $1", [fixture.orderId]);
+    await pool.query("DELETE FROM supplier_offers WHERE id = $1", [fixture.offerId]);
+    await pool.query("DELETE FROM sourcing_requests WHERE id = $1", [fixture.requestId]);
+    await pool.query("DELETE FROM account_members WHERE account_id = $1 AND user_id = $2", [fixture.supplierAccountId, fixture.supplierUserId]);
+    await pool.query("DELETE FROM roles WHERE id = $1", [fixture.roleId]);
+    await pool.query("DELETE FROM accounts WHERE id = $1", [fixture.supplierAccountId]);
+    await pool.query("DELETE FROM users WHERE id IN ($1,$2,$3)", [fixture.buyerId, fixture.supplierUserId, fixture.outsiderId]);
+  });
+
+  async function canAccess(userId: string): Promise<boolean> {
+    const result = await pool.query(
+      `SELECT (
+         d.buyer_user_id = $2 OR EXISTS (
+           SELECT 1 FROM account_members am
+           INNER JOIN accounts a ON a.id = am.account_id
+           WHERE am.account_id = d.supplier_account_id
+             AND am.user_id = $2 AND am.status = 'active' AND a.status = 'active'
+         )
+       ) AS allowed
+       FROM trade_deals d WHERE d.id = $1`,
+      [fixture.dealId, userId],
+    );
+    return result.rows[0]?.allowed === true;
+  }
+
+  it("grants deal visibility only to the buyer and active supplier members", async () => {
+    expect(await canAccess(fixture.buyerId)).toBe(true);
+    expect(await canAccess(fixture.supplierUserId)).toBe(true);
+    expect(await canAccess(fixture.outsiderId)).toBe(false);
+
+    await pool.query(
+      "UPDATE account_members SET status = 'suspended' WHERE account_id = $1 AND user_id = $2",
+      [fixture.supplierAccountId, fixture.supplierUserId],
+    );
+    expect(await canAccess(fixture.supplierUserId)).toBe(false);
+    await pool.query(
+      "UPDATE account_members SET status = 'active' WHERE account_id = $1 AND user_id = $2",
+      [fixture.supplierAccountId, fixture.supplierUserId],
+    );
+  });
+
+  it("records an agreed-to-in-progress-to-completed buyer confirmation trail", async () => {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const current = await client.query("SELECT status FROM trade_deals WHERE id = $1 FOR UPDATE", [fixture.dealId]);
+      expect(current.rows[0].status).toBe("agreed");
+      await client.query("UPDATE trade_deals SET status = 'in_progress' WHERE id = $1", [fixture.dealId]);
+      await client.query(
+        "INSERT INTO trade_deal_events (deal_id,actor_user_id,event_type,from_status,to_status,metadata) VALUES ($1,$2,'deal_started','agreed','in_progress','{}'::jsonb)",
+        [fixture.dealId, fixture.supplierUserId],
+      );
+      await client.query("UPDATE trade_deals SET status = 'completed' WHERE id = $1 AND status = 'in_progress'", [fixture.dealId]);
+      await client.query(
+        "INSERT INTO trade_deal_events (deal_id,actor_user_id,event_type,from_status,to_status,metadata) VALUES ($1,$2,'deal_completed','in_progress','completed','{}'::jsonb)",
+        [fixture.dealId, fixture.buyerId],
+      );
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
+    }
+    const result = await pool.query(
+      "SELECT d.status, count(e.id)::int AS event_count, count(*) FILTER (WHERE e.actor_user_id = $2 AND e.event_type = 'deal_completed')::int AS buyer_completion_events FROM trade_deals d LEFT JOIN trade_deal_events e ON e.deal_id = d.id WHERE d.id = $1 GROUP BY d.id",
+      [fixture.dealId, fixture.buyerId],
+    );
+    expect(result.rows[0]).toMatchObject({ status: "completed", event_count: 2, buyer_completion_events: 1 });
+  });
+});
+
 afterAll(async () => {
   await pool.end();
 });
