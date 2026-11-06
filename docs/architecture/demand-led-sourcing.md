@@ -48,7 +48,7 @@ Use supplier ownership and authorization boundaries throughout. A supplier may a
 - Supplier payout, marketplace commission, refunds, disputes, and legal merchant-of-record responsibilities require a separate approved commercial/legal design before live payments.
 
 ## Implementation impact and current gap
-The current PR implementation is a single-store catalog checkout. Its apps/api/src/orders.mts flow locks store_products, requires sufficient stock_quantity, decrements that quantity at order placement, and restores it on cancellation. This is not the approved demand-led sourcing flow and must not be represented as compliant with this decision.
+The original PR implementation was a single-store catalog checkout. Its apps/api/src/orders.mts flow locked store_products, required sufficient stock_quantity, decremented that quantity at order placement, and restored it on cancellation. The buyer-facing POST checkout endpoint has now been retired with a SOURCING_REQUIRED response; it no longer creates orders or changes supplier catalog quantities. Existing legacy order reads and store-side status handling remain isolated for historical records. New buyer orders must be created only by accepting a supplier-confirmed sourcing offer. The supplier's own storefront catalog and supplier-managed quantities may remain as supplier-owned listing information, but are not a WASLA warehouse and are not a substitute for request-specific availability confirmation.
 
 Before this PR can be considered ready for the intended WASLA business model:
 1. Keep the current code isolated from production; do not deploy or enable live checkout.
