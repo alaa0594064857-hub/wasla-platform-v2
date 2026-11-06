@@ -108,6 +108,18 @@ async function handleRequest(
     return;
   }
 
+  if (requestUrl.pathname === "/api/sourcing-opportunities") {
+    try {
+      const { handleSupplierOpportunities } = await import("./sourcing.mjs");
+      await handleSupplierOpportunities(request, response);
+    } catch (error) {
+      console.error("WASLA supplier opportunities route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Supplier opportunities service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/sourcing-requests") {
     try {
       const { handleSourcingCollection } = await import("./sourcing.mjs");
