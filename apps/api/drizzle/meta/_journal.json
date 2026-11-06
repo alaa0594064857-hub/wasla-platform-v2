@@ -64,6 +64,13 @@
       "when": 1794004000000,
       "tag": "0008_sourcing_order_events",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794005000000,
+      "tag": "0009_secure_messaging",
+      "breakpoints": true
     }
   ]
 }
