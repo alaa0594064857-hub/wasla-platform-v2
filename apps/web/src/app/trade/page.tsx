@@ -8,7 +8,7 @@ type Deal = {
   id: string; deal_number: string; sourcing_order_id: string; buyer_user_id: string;
   supplier_account_id: string; supplier_name: string; status: string; terms_version: number;
   terms_snapshot: Record<string, unknown>; proposed_by_user_id: string;
-  accepted_by_user_id: string | null; accepted_at: string | null; created_at: string; can_respond: boolean;
+  accepted_by_user_id: string | null; accepted_at: string | null; created_at: string; can_respond: boolean; can_complete: boolean;
 };
 type SourcingOrder = { id: string; orderNumber: string; status: string; currency: string; grandTotal: string; supplierName: string };
 type Amendment = { id: string; version: number; proposed_by_user_id: string; can_respond: boolean; status: string; terms_snapshot: Record<string, unknown>; reason: string | null; created_at: string };
