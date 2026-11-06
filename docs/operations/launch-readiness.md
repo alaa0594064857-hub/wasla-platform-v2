@@ -31,7 +31,7 @@ The API now allows production verification and password-reset emails to the actu
 
 ## Latest automated verification — 2026-11-06
 
-- GitHub Actions workflow run **#447** passed on candidate commit `316bcc9e4eed5d38cd7a889d2bea8d10113182f9`.
+- GitHub Actions workflow run **#448** passed on candidate commit `316bcc9e4eed5d38cd7a889d2bea8d10113182f9`.
 - Passed steps: dependency installation, shared-package tests and TypeScript, API tests, database migrations and authorization seeding on the CI PostgreSQL service, database constraint/integration tests (including buyer/supplier Trade access), API TypeScript/build, and web build.
 - This is automated CI evidence only. It does **not** verify the deployed Render services, live email delivery, real browser journeys, or production data.
 - PR #2 remains open and draft. The candidate has not been merged or deployed; production migrations remain gated on explicit release approval.
