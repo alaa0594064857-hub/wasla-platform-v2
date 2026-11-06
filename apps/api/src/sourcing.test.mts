@@ -240,3 +240,47 @@ describe("buyer sourcing delivery confirmation lifecycle", () => {
     expect(mocks.clientQuery.mock.calls.at(-1)?.[0]).toBe("ROLLBACK");
   });
 });
+
+
+describe("buyer offer acceptance idempotency scope", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.getSession.mockResolvedValue({ user: { id: buyerId } });
+    mocks.connect.mockResolvedValue({ query: mocks.clientQuery, release: mocks.release });
+  });
+
+  it("rejects reuse of an idempotency key for another request or offer", async () => {
+    const otherRequestId = "00000000-0000-4000-8000-000000000099";
+    mocks.clientQuery.mockImplementation(async (sql: string) => {
+      if (sql === "BEGIN" || sql === "ROLLBACK" || sql === "COMMIT") return { rowCount: 0, rows: [] };
+      if (sql.includes("FROM sourcing_requests WHERE id = $1 FOR UPDATE")) {
+        return { rowCount: 1, rows: [{
+          id: requestId, buyer_user_id: buyerId, item_name: "Test item",
+          description: null, specifications: {}, quantity: 2, unit: "pieces",
+          destination_country_code: "TR", destination_city: "Istanbul",
+          delivery_location_snapshot: {}, requested_currency: "USD", status: "offers_available",
+        }] };
+      }
+      if (sql.includes("FROM sourcing_orders WHERE buyer_user_id")) {
+        return { rowCount: 1, rows: [{
+          id: "00000000-0000-4000-8000-000000000070",
+          request_id: otherRequestId, accepted_offer_id: offerId,
+          status: "awaiting_payment",
+        }] };
+      }
+      return { rowCount: 0, rows: [] };
+    });
+    const response = makeResponse();
+
+    await handleAcceptSupplierOffer(makeRequest(), response as unknown as ServerResponse, requestId);
+
+    expect(response.statusCode).toBe(409);
+    expect(JSON.parse(response.body)).toMatchObject({
+      success: false,
+      error: "Idempotency key was already used for a different offer or request",
+    });
+    const statements = mocks.clientQuery.mock.calls.map(([sql]) => String(sql));
+    expect(statements.at(-1)).toBe("ROLLBACK");
+    expect(statements.some(sql => sql.includes("INSERT INTO sourcing_orders"))).toBe(false);
+  });
+});
