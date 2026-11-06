@@ -118,24 +118,52 @@ export async function handleStoreProductsRequest(
       respond(response, 400, { success: false, error: "Check product name, price, currency, stock, status, and secure media URLs" });
       return;
     }
-    const result = await pool.query(
-      `INSERT INTO store_products
-        (store_id, title, description, sku, price, currency, stock_quantity, image_url, video_url, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-       RETURNING id, store_id AS "storeId", title, description, sku,
-         price::text AS price, currency, stock_quantity AS "stockQuantity",
-         image_url AS "imageUrl", video_url AS "videoUrl", status,
-         created_at AS "createdAt", updated_at AS "updatedAt"`,
-      [store.id, title, description || null, sku || null, price, currency,
-       stock, body.imageUrl || null, body.videoUrl || null, status],
-    );
-    await pool.query(
-      `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, account_id, store_id, metadata)
-       VALUES ($1, 'product.created', 'product', $2, $3, $4, $5)`,
-      [session.user.id, result.rows[0].id, store.account_id, store.id,
-       JSON.stringify({ title, status })],
-    );
-    respond(response, 201, { success: true, product: result.rows[0] });
+    const client = await pool.connect();
+    let product: Record<string, unknown>;
+    try {
+      await client.query("BEGIN");
+      const result = await client.query(
+        `INSERT INTO store_products
+          (store_id, title, description, sku, price, currency, stock_quantity, image_url, video_url, status)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+         RETURNING id, store_id AS "storeId", title, description, sku,
+           price::text AS price, currency, stock_quantity AS "stockQuantity",
+           image_url AS "imageUrl", video_url AS "videoUrl", status,
+           created_at AS "createdAt", updated_at AS "updatedAt"`,
+        [store.id, title, description || null, sku || null, price, currency,
+         stock, body.imageUrl || null, body.videoUrl || null, status],
+      );
+      product = result.rows[0];
+      await client.query(
+        `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, account_id, store_id, metadata)
+         VALUES ($1, 'product.created', 'product', $2, $3, $4, $5)`,
+        [session.user.id, product.id, store.account_id, store.id,
+         JSON.stringify({ title, status, openingStock: stock })],
+      );
+      if ((stock as number) > 0) {
+        const openingMovement = await client.query(
+          `INSERT INTO store_inventory_movements
+            (store_id, product_id, actor_user_id, movement_type, quantity_delta,
+             quantity_before, quantity_after, reason)
+           VALUES ($1, $2, $3, 'inbound', $4, 0, $4, 'Opening stock on product creation')
+           RETURNING id`,
+          [store.id, product.id, session.user.id, stock],
+        );
+        await client.query(
+          `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, account_id, store_id, metadata)
+           VALUES ($1, 'inventory.movement.created', 'inventory_movement', $2, $3, $4, $5)`,
+          [session.user.id, openingMovement.rows[0].id, store.account_id, store.id,
+           JSON.stringify({ productId: product.id, movementType: "inbound", quantityDelta: stock, quantityBefore: 0, quantityAfter: stock, reason: "Opening stock on product creation" })],
+        );
+      }
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+    respond(response, 201, { success: true, product });
   } catch (error) {
     console.error("WASLA store products API error:", error);
     respond(response, 500, { success: false, error: "Could not process product request" });
@@ -199,11 +227,9 @@ export async function handleStoreProductDetailRequest(
       }
       add("currency", body.currency.toUpperCase());
     }
-    if (body.stockQuantity !== undefined) {
-      if (!Number.isSafeInteger(body.stockQuantity) || (body.stockQuantity as number) < 0) {
-        respond(response, 400, { success: false, error: "Invalid stock quantity" }); return;
-      }
-      add("stock_quantity", body.stockQuantity);
+    if (Object.prototype.hasOwnProperty.call(body, "stockQuantity")) {
+      respond(response, 400, { success: false, error: "Use inventory movements to change stock quantity" });
+      return;
     }
     for (const [key, column] of [["imageUrl", "image_url"], ["videoUrl", "video_url"]] as const) {
       if (body[key] !== undefined) {
@@ -223,22 +249,47 @@ export async function handleStoreProductDetailRequest(
       respond(response, 400, { success: false, error: "No product changes supplied" }); return;
     }
     const pool = getDatabasePool();
+    const client = await pool.connect();
     const queryValues = [slug, session.user.id, productId, ...values];
-    const result = await pool.query(
-      `UPDATE store_products p SET ${fields.join(", ")}, updated_at = NOW()
-       FROM stores s
-       WHERE p.id = $3 AND p.store_id = s.id AND s.slug = $1
-         AND s.status = 'active' AND ${canManageSql()}
-       RETURNING p.id, p.store_id AS "storeId", p.title, p.description, p.sku,
-         p.price::text AS price, p.currency, p.stock_quantity AS "stockQuantity",
-         p.image_url AS "imageUrl", p.video_url AS "videoUrl", p.status,
-         p.created_at AS "createdAt", p.updated_at AS "updatedAt"`,
-      queryValues,
-    );
-    if (result.rowCount !== 1) {
-      respond(response, 404, { success: false, error: "Product not found or access denied" }); return;
+    let product: Record<string, unknown>;
+    try {
+      await client.query("BEGIN");
+      const result = await client.query(
+        `UPDATE store_products p SET ${fields.join(", ")}, updated_at = NOW()
+         FROM stores s
+         WHERE p.id = $3 AND p.store_id = s.id AND s.slug = $1
+           AND s.status = 'active' AND ${canManageSql()}
+         RETURNING p.id, p.store_id AS "storeId", p.title, p.description, p.sku,
+           p.price::text AS price, p.currency, p.stock_quantity AS "stockQuantity",
+           p.image_url AS "imageUrl", p.video_url AS "videoUrl", p.status,
+           p.created_at AS "createdAt", p.updated_at AS "updatedAt",
+           s.account_id AS "accountId"`,
+        queryValues,
+      );
+      if (result.rowCount !== 1) {
+        await client.query("ROLLBACK");
+        respond(response, 404, { success: false, error: "Product not found or access denied" });
+        return;
+      }
+      product = result.rows[0];
+      const changedFields = Object.keys(body).filter((key) =>
+        ["title", "description", "sku", "price", "currency", "imageUrl", "videoUrl", "status"].includes(key),
+      );
+      await client.query(
+        `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, account_id, store_id, metadata)
+         VALUES ($1, 'product.updated', 'product', $2, $3, $4, $5)`,
+        [session.user.id, product.id, product.accountId, product.storeId,
+         JSON.stringify({ changedFields })],
+      );
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
     }
-    respond(response, 200, { success: true, product: result.rows[0] });
+    const { accountId: _accountId, ...publicProduct } = product;
+    respond(response, 200, { success: true, product: publicProduct });
   } catch (error) {
     console.error("WASLA store product update API error:", error);
     respond(response, 500, { success: false, error: "Could not update product" });

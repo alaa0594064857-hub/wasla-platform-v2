@@ -8,7 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run src/server.test.ts src/database.test.ts",
+    "test": "vitest run src/server.test.ts src/database.test.ts src/inventory-movements.test.mts src/orders.test.mts src/sourcing.test.mts src/storefront.test.mts",
     "test:integration": "vitest run src/database.integration.test.ts",
     "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
     "db:migrate": "drizzle-kit migrate --config=drizzle.config.ts",

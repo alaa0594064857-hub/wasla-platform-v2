@@ -56,6 +56,133 @@ async function handleRequest(
     return;
   }
 
+  const buyerDeliveryConfirmationMatch = requestUrl.pathname.match(/^\/api\/sourcing-orders\/([^/]+)\/confirm-delivery$/);
+  if (buyerDeliveryConfirmationMatch) {
+    try {
+      const { handleBuyerConfirmSourcingDelivery } = await import("./sourcing.mjs");
+      await handleBuyerConfirmSourcingDelivery(request, response, buyerDeliveryConfirmationMatch[1]);
+    } catch (error) {
+      console.error("WASLA buyer delivery confirmation route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Delivery confirmation service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const sourcingOrderEventsMatch = requestUrl.pathname.match(/^\/api\/sourcing-orders\/([^/]+)\/events$/);
+  if (sourcingOrderEventsMatch) {
+    try {
+      const { handleSourcingOrderEvents } = await import("./sourcing.mjs");
+      await handleSourcingOrderEvents(request, response, sourcingOrderEventsMatch[1]);
+    } catch (error) {
+      console.error("WASLA sourcing order events route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Sourcing order history service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const supplierSourcingOrderStatusMatch = requestUrl.pathname.match(/^\/api\/supplier\/sourcing-orders\/([^/]+)\/status$/);
+  if (supplierSourcingOrderStatusMatch) {
+    try {
+      const { handleSupplierSourcingOrders } = await import("./sourcing.mjs");
+      await handleSupplierSourcingOrders(request, response, supplierSourcingOrderStatusMatch[1]);
+    } catch (error) {
+      console.error("WASLA supplier sourcing order status route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Supplier sourcing order service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/supplier/sourcing-orders") {
+    try {
+      const { handleSupplierSourcingOrders } = await import("./sourcing.mjs");
+      await handleSupplierSourcingOrders(request, response);
+    } catch (error) {
+      console.error("WASLA supplier sourcing orders route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Supplier sourcing orders service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const sourcingAcceptMatch = requestUrl.pathname.match(/^\/api\/sourcing-requests\/([^/]+)\/accept-offer$/);
+  if (sourcingAcceptMatch) {
+    try {
+      const { handleAcceptSupplierOffer } = await import("./sourcing.mjs");
+      await handleAcceptSupplierOffer(request, response, sourcingAcceptMatch[1]);
+    } catch (error) {
+      console.error("WASLA accept offer route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Offer acceptance service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const sourcingOfferMatch = requestUrl.pathname.match(/^\/api\/sourcing-offers\/([^/]+)\/availability$/);
+  if (sourcingOfferMatch) {
+    try {
+      const { handleSupplierAvailability } = await import("./sourcing.mjs");
+      await handleSupplierAvailability(request, response, sourcingOfferMatch[1]);
+    } catch (error) {
+      console.error("WASLA supplier availability route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Supplier availability service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const sourcingOfferCreateMatch = requestUrl.pathname.match(/^\/api\/sourcing-requests\/([^/]+)\/offers$/);
+  if (sourcingOfferCreateMatch) {
+    try {
+      const { handleSupplierOffer } = await import("./sourcing.mjs");
+      await handleSupplierOffer(request, response, sourcingOfferCreateMatch[1]);
+    } catch (error) {
+      console.error("WASLA supplier offer route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Supplier offer service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const sourcingRequestDetailMatch = requestUrl.pathname.match(/^\/api\/sourcing-requests\/([^/]+)$/);
+  if (sourcingRequestDetailMatch) {
+    try {
+      const { handleSourcingRequestDetail } = await import("./sourcing.mjs");
+      await handleSourcingRequestDetail(request, response, sourcingRequestDetailMatch[1]);
+    } catch (error) {
+      console.error("WASLA sourcing detail route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Sourcing service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/sourcing-opportunities") {
+    try {
+      const { handleSupplierOpportunities } = await import("./sourcing.mjs");
+      await handleSupplierOpportunities(request, response);
+    } catch (error) {
+      console.error("WASLA supplier opportunities route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Supplier opportunities service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/sourcing-requests") {
+    try {
+      const { handleSourcingCollection } = await import("./sourcing.mjs");
+      await handleSourcingCollection(request, response);
+    } catch (error) {
+      console.error("WASLA sourcing collection route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Sourcing service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/preferences/themes") {
     try {
       const { handleWorldThemesRequest } = await import("./world-themes.mjs");
@@ -83,6 +210,19 @@ async function handleRequest(
     return;
   }
 
+  const publicStorefrontMatch = requestUrl.pathname.match(/^\/api\/public\/stores\/([^/]+)$/);
+  if (publicStorefrontMatch) {
+    try {
+      const { handlePublicStorefrontRequest } = await import("./storefront.mjs");
+      await handlePublicStorefrontRequest(request, response, decodeURIComponent(publicStorefrontMatch[1]));
+    } catch (error) {
+      console.error("WASLA public storefront route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Storefront service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/search") {
     try {
       const { handleSearchRequest } = await import("./search.mjs");
@@ -102,6 +242,147 @@ async function handleRequest(
     } catch (error) {
       console.error("WASLA network route error:", error);
       if (!response.headersSent) sendJson(response, 500, { success: false, error: "Network service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+
+  const tradeStatusMatch = requestUrl.pathname.match(/^\/api\/trade-deals\/([^/]+)\/status$/);
+  if (tradeStatusMatch) {
+    try {
+      const { handleTradeDealStatus } = await import("./trade-deals.mjs");
+      await handleTradeDealStatus(request, response, tradeStatusMatch[1]);
+    } catch (error) {
+      console.error("WASLA trade status route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Trade status service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const tradeAmendmentResponseMatch = requestUrl.pathname.match(/^\/api\/trade-deals\/([^/]+)\/amendments\/([^/]+)\/respond$/);
+  if (tradeAmendmentResponseMatch) {
+    try {
+      const { handleTradeAmendments } = await import("./trade-deals.mjs");
+      await handleTradeAmendments(request, response, tradeAmendmentResponseMatch[1], tradeAmendmentResponseMatch[2]);
+    } catch (error) {
+      console.error("WASLA trade amendment response route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Trade amendment service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const tradeAmendmentsMatch = requestUrl.pathname.match(/^\/api\/trade-deals\/([^/]+)\/amendments$/);
+  if (tradeAmendmentsMatch) {
+    try {
+      const { handleTradeAmendments } = await import("./trade-deals.mjs");
+      await handleTradeAmendments(request, response, tradeAmendmentsMatch[1]);
+    } catch (error) {
+      console.error("WASLA trade amendments route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Trade amendment service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const tradeMilestoneMatch = requestUrl.pathname.match(/^\/api\/trade-deals\/([^/]+)\/milestones\/([^/]+)$/);
+  if (tradeMilestoneMatch) {
+    try {
+      const { handleTradeMilestones } = await import("./trade-deals.mjs");
+      await handleTradeMilestones(request, response, tradeMilestoneMatch[1], tradeMilestoneMatch[2]);
+    } catch (error) {
+      console.error("WASLA trade milestone route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Trade milestone service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const tradeMilestonesMatch = requestUrl.pathname.match(/^\/api\/trade-deals\/([^/]+)\/milestones$/);
+  if (tradeMilestonesMatch) {
+    try {
+      const { handleTradeMilestones } = await import("./trade-deals.mjs");
+      await handleTradeMilestones(request, response, tradeMilestonesMatch[1]);
+    } catch (error) {
+      console.error("WASLA trade milestones route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Trade milestone service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const tradeDealResponseMatch = requestUrl.pathname.match(/^\/api\/trade-deals\/([^/]+)\/respond$/);
+  if (tradeDealResponseMatch) {
+    try {
+      const { handleTradeDealResponse } = await import("./trade-deals.mjs");
+      await handleTradeDealResponse(request, response, tradeDealResponseMatch[1]);
+    } catch (error) {
+      console.error("WASLA trade deal response route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Trade deal response service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const tradeDealDetailMatch = requestUrl.pathname.match(/^\/api\/trade-deals\/([^/]+)$/);
+  if (tradeDealDetailMatch) {
+    try {
+      const { handleTradeDeals } = await import("./trade-deals.mjs");
+      await handleTradeDeals(request, response, tradeDealDetailMatch[1]);
+    } catch (error) {
+      console.error("WASLA trade deal detail route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Trade deal service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/trade-deals") {
+    try {
+      const { handleTradeDeals } = await import("./trade-deals.mjs");
+      await handleTradeDeals(request, response);
+    } catch (error) {
+      console.error("WASLA trade deals route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Trade deals service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const conversationMessagesMatch = requestUrl.pathname.match(/^\/api\/messages\/([^/]+)$/);
+  if (conversationMessagesMatch) {
+    try {
+      const { handleConversationMessages } = await import("./messages.mjs");
+      await handleConversationMessages(request, response, conversationMessagesMatch[1]);
+    } catch (error) {
+      console.error("WASLA conversation messages route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Messages service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/messages") {
+    try {
+      const { handleMessagesCollection } = await import("./messages.mjs");
+      await handleMessagesCollection(request, response);
+    } catch (error) {
+      console.error("WASLA messages route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Messages service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/ai/sourcing/matches") {
+    try {
+      const { handleSourcingMatches } = await import("./ai-sourcing.mjs");
+      await handleSourcingMatches(request, response);
+    } catch (error) {
+      console.error("WASLA sourcing matches route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Sourcing matches service error" });
       else response.destroy(error instanceof Error ? error : undefined);
     }
     return;
@@ -148,7 +429,7 @@ async function handleRequest(
   }
 
   const memberActionMatch = requestUrl.pathname.match(
-    /^\/api\/accounts\/([0-9a-f-]{36})\/members\/([0-9a-f-]{36})\/(accept|revoke|decline)$/,
+    /^\/api\/accounts\/([^/]+)\/members\/([^/]+)\/(accept|revoke|decline)$/,
   );
 
   if (memberActionMatch) {
@@ -179,7 +460,7 @@ async function handleRequest(
   }
 
   const memberManagementMatch = requestUrl.pathname.match(
-    /^\/api\/accounts\/([0-9a-f-]{36})\/members\/([0-9a-f-]{36})$/,
+    /^\/api\/accounts\/([^/]+)\/members\/([^/]+)$/,
   );
 
   if (memberManagementMatch && request.method === "PATCH") {
@@ -209,7 +490,7 @@ async function handleRequest(
   }
 
   const membersMatch = requestUrl.pathname.match(
-    /^\/api\/accounts\/([0-9a-f-]{36})\/members$/,
+    /^\/api\/accounts\/([^/]+)\/members$/,
   );
 
   if (membersMatch) {
@@ -234,8 +515,78 @@ async function handleRequest(
 
 
 
+  const storeOrderStatusMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/orders\/([^/]+)\/status$/);
+  if (storeOrderStatusMatch) {
+    try {
+      const { handleStoreOrdersRequest } = await import("./orders.mjs");
+      await handleStoreOrdersRequest(
+        request, response, decodeURIComponent(storeOrderStatusMatch[1]), storeOrderStatusMatch[2],
+      );
+    } catch (error) {
+      console.error("WASLA store order status route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Store orders service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const storeOrdersMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/orders$/);
+  if (storeOrdersMatch) {
+    try {
+      const { handleStoreOrdersRequest } = await import("./orders.mjs");
+      await handleStoreOrdersRequest(request, response, decodeURIComponent(storeOrdersMatch[1]));
+    } catch (error) {
+      console.error("WASLA store orders route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Store orders service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const orderDetailMatch = requestUrl.pathname.match(/^\/api\/orders\/([^/]+)$/);
+  if (orderDetailMatch) {
+    try {
+      const { handleOrderDetailRequest } = await import("./orders.mjs");
+      await handleOrderDetailRequest(request, response, orderDetailMatch[1]);
+    } catch (error) {
+      console.error("WASLA order detail route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Order service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/orders") {
+    try {
+      const { handleOrdersRequest } = await import("./orders.mjs");
+      await handleOrdersRequest(request, response);
+    } catch (error) {
+      console.error("WASLA orders route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Orders service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const inventoryMovementsMatch = requestUrl.pathname.match(
+    /^\/api\/stores\/([^/]+)\/products\/([^/]+)\/inventory-movements$/,
+  );
+  if (inventoryMovementsMatch) {
+    try {
+      const { handleInventoryMovementsRequest } = await import("./inventory-movements.mjs");
+      await handleInventoryMovementsRequest(
+        request, response, decodeURIComponent(inventoryMovementsMatch[1]), inventoryMovementsMatch[2],
+      );
+    } catch (error) {
+      console.error("WASLA inventory movements route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Inventory service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const storeProductDetailMatch = requestUrl.pathname.match(
-    /^\/api\/stores\/([^/]+)\/products\/([0-9a-f-]{36})$/,
+    /^\/api\/stores\/([^/]+)\/products\/([^/]+)$/,
   );
   if (storeProductDetailMatch) {
     try {
@@ -399,12 +750,11 @@ if (process.env.NODE_ENV !== "test") {
   const server = createWaslaServer();
 
   void import("./database.js")
-    .then(async ({ ensureRegistrationTypeColumn, ensureAccountOwnerRole, ensureStoreOwnerRole, ensurePersonalThemesTable, ensureStoreProductsTable, ensureNetworkTables }) => {
+    .then(async ({ ensureRegistrationTypeColumn, ensureAccountOwnerRole, ensureStoreOwnerRole, ensurePersonalThemesTable, ensureNetworkTables }) => {
       await ensureRegistrationTypeColumn();
       await ensureAccountOwnerRole();
       await ensureStoreOwnerRole();
       await ensurePersonalThemesTable();
-      await ensureStoreProductsTable();
       await ensureNetworkTables();
     })
     .then(() => {

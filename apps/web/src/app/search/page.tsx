@@ -77,12 +77,12 @@ function SearchResults() {
               <div className="wasla-search-result-grid">
                 {section.key === "products" && (section.items as Product[]).map(item => (
                   <article className="wasla-search-result" key={item.id}>
-                    <span className="wasla-search-result-icon">{section.icon}</span><div><strong>{item.title}</strong><small>{item.store_name} · {item.business_name}</small>{item.price && <em>{item.price} {item.currency}</em>}</div><Link href={section.href}>{ar ? "المتاجر" : "Shops"} ↗</Link>
+                    <span className="wasla-search-result-icon">{section.icon}</span><div><strong>{item.title}</strong><small>{item.store_name} · {item.business_name}</small>{item.price && <em>{item.price} {item.currency}</em>}</div><Link href={`/store/${encodeURIComponent(item.store_slug)}`}>{ar ? "عرض المنتج" : "View shop"} ↗</Link>
                   </article>
                 ))}
                 {section.key === "stores" && (section.items as Store[]).map(item => (
                   <article className="wasla-search-result" key={item.id}>
-                    <span className="wasla-search-result-icon">{section.icon}</span><div><strong>{item.name}</strong><small>{item.business_name}{item.country_code ? ` · ${item.country_code}` : ""}</small></div><Link href={section.href}>{ar ? "المتاجر" : "Shops"} ↗</Link>
+                    <span className="wasla-search-result-icon">{section.icon}</span><div><strong>{item.name}</strong><small>{item.business_name}{item.country_code ? ` · ${item.country_code}` : ""}</small></div><Link href={`/store/${encodeURIComponent(item.slug)}`}>{ar ? "زيارة المتجر" : "Visit shop"} ↗</Link>
                   </article>
                 ))}
                 {section.key === "businesses" && (section.items as Business[]).map(item => (

@@ -9,9 +9,23 @@ import * as schema from "./db/schema.js";
 const secret = process.env.BETTER_AUTH_SECRET;
 const resendApiKey = process.env.RESEND_API_KEY;
 const testRecipient = process.env.RESEND_TEST_RECIPIENT;
+const productionFromEmail = process.env.RESEND_FROM_EMAIL;
+const fromEmail = productionFromEmail ?? "WASLA <onboarding@resend.dev>";
 
 if (process.env.NODE_ENV === "production" && !secret) {
   throw new Error("BETTER_AUTH_SECRET is required in production");
+}
+
+if (process.env.NODE_ENV === "production") {
+  if (!process.env.BETTER_AUTH_URL) {
+    throw new Error("BETTER_AUTH_URL is required in production");
+  }
+  if (!process.env.BETTER_AUTH_TRUSTED_ORIGINS) {
+    throw new Error("BETTER_AUTH_TRUSTED_ORIGINS is required in production");
+  }
+  if (!productionFromEmail || productionFromEmail.includes("@resend.dev")) {
+    throw new Error("RESEND_FROM_EMAIL must use a verified WASLA sending domain in production");
+  }
 }
 
 const trustedOrigins = (
@@ -22,22 +36,24 @@ const trustedOrigins = (
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-async function sendVerificationEmail(
-  email: string,
-  url: string,
+async function sendWASLAEmail(
+  recipient: string,
+  subject: string,
+  text: string,
+  context: string,
 ): Promise<void> {
   if (!resendApiKey) {
     throw new Error("RESEND_API_KEY is not configured");
   }
 
-  if (!testRecipient) {
-    throw new Error("RESEND_TEST_RECIPIENT is not configured");
-  }
-
-  if (email.toLowerCase() !== testRecipient.toLowerCase()) {
-    throw new Error(
-      "Resend test mode only allows the configured test recipient",
-    );
+  const isProduction = process.env.NODE_ENV === "production";
+  if (!isProduction) {
+    if (!testRecipient) {
+      throw new Error("RESEND_TEST_RECIPIENT is required outside production");
+    }
+    if (recipient.toLowerCase() !== testRecipient.toLowerCase()) {
+      throw new Error("Resend test mode only allows the configured test recipient");
+    }
   }
 
   const response = await fetch("https://api.resend.com/emails", {
@@ -47,25 +63,37 @@ async function sendVerificationEmail(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: "WASLA <onboarding@resend.dev>",
-      to: [testRecipient],
-      subject: "Verify your WASLA account",
-      text: [
-        "Welcome to WASLA.",
-        "",
-        "Please verify your email address using this link:",
-        url,
-        "",
-        "This link expires in one hour.",
-      ].join("\n"),
+      from: fromEmail,
+      to: [isProduction ? recipient : testRecipient],
+      subject,
+      text,
     }),
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error("Resend email delivery failed:", errorText);
-    throw new Error("Could not send verification email");
+    console.error(`WASLA ${context} email delivery failed:`, errorText);
+    throw new Error("Could not send email");
   }
+}
+
+async function sendVerificationEmail(
+  email: string,
+  url: string,
+): Promise<void> {
+  await sendWASLAEmail(
+    email,
+    "Verify your WASLA account",
+    [
+      "Welcome to WASLA.",
+      "",
+      "Please verify your email address using this link:",
+      url,
+      "",
+      "This link expires in one hour.",
+    ].join("\n"),
+    "verification",
+  );
 }
 
 export const auth = betterAuth({
@@ -135,36 +163,19 @@ export const auth = betterAuth({
     enabled: true,
     requireEmailVerification: true,
     sendResetPassword: async ({ user, url }) => {
-      if (!resendApiKey) throw new Error("RESEND_API_KEY is not configured");
-      if (!testRecipient) throw new Error("RESEND_TEST_RECIPIENT is not configured");
-      if (user.email.toLowerCase() !== testRecipient.toLowerCase()) {
-        throw new Error("Resend test mode only allows the configured test recipient");
-      }
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${resendApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: "WASLA <onboarding@resend.dev>",
-          to: [testRecipient],
-          subject: "Reset your WASLA password",
-          text: [
-            "A password reset was requested for your WASLA account.",
-            "",
-            "Use this link to choose a new password:",
-            url,
-            "",
-            "If you did not request this, you can ignore this email.",
-          ].join("\\n"),
-        }),
-      });
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Resend password reset email failed:", errorText);
-        throw new Error("Could not send password reset email");
-      }
+      await sendWASLAEmail(
+        user.email,
+        "Reset your WASLA password",
+        [
+          "A password reset was requested for your WASLA account.",
+          "",
+          "Use this link to choose a new password:",
+          url,
+          "",
+          "If you did not request this, you can ignore this email.",
+        ].join("\n"),
+        "password reset",
+      );
     },
   },
 
