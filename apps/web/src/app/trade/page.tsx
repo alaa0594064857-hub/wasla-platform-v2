@@ -8,10 +8,10 @@ type Deal = {
   id: string; deal_number: string; sourcing_order_id: string; buyer_user_id: string;
   supplier_account_id: string; supplier_name: string; status: string; terms_version: number;
   terms_snapshot: Record<string, unknown>; proposed_by_user_id: string;
-  accepted_by_user_id: string | null; accepted_at: string | null; created_at: string;
+  accepted_by_user_id: string | null; accepted_at: string | null; created_at: string; can_respond: boolean;
 };
 type SourcingOrder = { id: string; orderNumber: string; status: string; currency: string; grandTotal: string; supplierName: string };
-type Amendment = { id: string; version: number; proposed_by_user_id: string; status: string; terms_snapshot: Record<string, unknown>; reason: string | null; created_at: string };
+type Amendment = { id: string; version: number; proposed_by_user_id: string; can_respond: boolean; status: string; terms_snapshot: Record<string, unknown>; reason: string | null; created_at: string };
 type Milestone = { id: string; title: string; description: string | null; due_at: string | null; status: string; created_by_user_id: string };
 type Detail = { deal: Deal; amendments: Amendment[]; milestones: Milestone[]; events: { id: string; event_type: string; created_at: string }[] };
 
@@ -20,14 +20,14 @@ const copy = {
     title: "إدارة الصفقات", subtitle: "اتفق مع المورد على الشروط، وتابع مراحل التنفيذ والتعديلات بسجل واضح.",
     loading: "جارٍ تحميل الصفقات...", empty: "لا توجد صفقات بعد. أنشئ صفقة من طلب توريد معتمد.",
     create: "إنشاء صفقة", order: "طلب التوريد", choose: "اختر طلباً", terms: "الشروط المقترحة", termsHint: "اكتب الشروط التجارية بوضوح، مثل المواصفات والتسليم والضمان.", submit: "إرسال للطرف الآخر",
-    status: "الحالة", supplier: "المورد", version: "نسخة الشروط", proposed: "بانتظار موافقة الطرف الآخر", agreed: "متفق عليها", in_progress: "قيد التنفيذ", completed: "مكتملة", cancelled: "ملغاة", disputed: "متنازع عليها",
+    status: "الحالة", supplier: "المورد", version: "نسخة الشروط", proposed: "بانتظار موافقة الطرف الآخر", agreed: "متفق عليها", in_progress: "قيد التنفيذ", completed: "مكتملة", cancelled: "ملغاة", disputed: "متنازع عليها", accepted: "مقبول", rejected: "مرفوض", pending: "قيد الانتظار",
     details: "تفاصيل الصفقة", accept: "موافقة", decline: "رفض", amendment: "اقتراح تعديل", reason: "سبب التعديل (اختياري)", propose: "إرسال التعديل", milestones: "مراحل التنفيذ", milestoneTitle: "اسم المرحلة", milestoneDescription: "التفاصيل (اختياري)", dueAt: "موعد مستهدف (اختياري)", addMilestone: "إضافة مرحلة", pending: "معلقة", milestoneCompleted: "مكتملة", milestoneCancelled: "ملغاة", markComplete: "تأكيد الإنجاز", cancelMilestone: "إلغاء المرحلة", amendments: "تعديلات الشروط", events: "سجل الأحداث", noMilestones: "لا توجد مراحل بعد.", noAmendments: "لا توجد تعديلات.", error: "تعذر إكمال العملية.", loadingDetails: "جارٍ تحميل التفاصيل...", back: "العودة للصفقات", submitBusy: "جارٍ الحفظ...", note: "لا توجد مدفوعات أو تحويلات مالية تلقائية ضمن هذه النسخة."
   },
   en: {
     title: "Trade deals", subtitle: "Agree supplier terms, track execution milestones, and keep a clear change history.",
     loading: "Loading deals...", empty: "No deals yet. Create one from an accepted sourcing order.",
     create: "Create a deal", order: "Sourcing order", choose: "Choose an order", terms: "Proposed terms", termsHint: "Describe commercial terms clearly, including specifications, delivery, and warranty.", submit: "Send to the other party",
-    status: "Status", supplier: "Supplier", version: "Terms version", proposed: "Awaiting the other party", agreed: "Agreed", in_progress: "In progress", completed: "Completed", cancelled: "Cancelled", disputed: "Disputed",
+    status: "Status", supplier: "Supplier", version: "Terms version", proposed: "Awaiting the other party", agreed: "Agreed", in_progress: "In progress", completed: "Completed", cancelled: "Cancelled", disputed: "Disputed", accepted: "Accepted", rejected: "Rejected", pending: "Pending",
     details: "Deal details", accept: "Accept", decline: "Decline", amendment: "Propose an amendment", reason: "Reason (optional)", propose: "Send amendment", milestones: "Execution milestones", milestoneTitle: "Milestone title", milestoneDescription: "Details (optional)", dueAt: "Target date (optional)", addMilestone: "Add milestone", pending: "Pending", milestoneCompleted: "Completed", milestoneCancelled: "Cancelled", markComplete: "Mark complete", cancelMilestone: "Cancel milestone", amendments: "Terms amendments", events: "Activity log", noMilestones: "No milestones yet.", noAmendments: "No amendments.", error: "Could not complete the operation.", loadingDetails: "Loading details...", back: "Back to deals", submitBusy: "Saving...", note: "Payments and automatic money transfers are not included in this version."
   }
 };
@@ -60,7 +60,7 @@ export default function TradePage() {
       const [dealData, orderData] = await Promise.all([dealResponse.json(), orderResponse.json()]);
       if (!dealResponse.ok || dealData.success !== true) throw new Error(dealData.error || t.error);
       setDeals(dealData.deals as Deal[]);
-      setOrders(orderData.success ? (orderData.sourcingOrders ?? []) as SourcingOrder[] : []);
+      setOrders(orderData.success ? ((orderData.sourcingOrders ?? []) as SourcingOrder[]).filter(o => ["awaiting_payment", "payment_pending", "paid", "fulfilment_pending"].includes(o.status)) : []);
     } catch (cause) { setError(cause instanceof Error ? cause.message : t.error); }
     finally { setLoading(false); }
   }, [t.error]);
@@ -118,7 +118,7 @@ export default function TradePage() {
           </div>
           <p className="mt-3 text-sm">{t.version}: {selected.deal.terms_version}</p>
           <pre className="mt-3 overflow-x-auto rounded-lg bg-slate-50 p-3 text-xs">{JSON.stringify(selected.deal.terms_snapshot, null, 2)}</pre>
-          {selected.deal.status === "proposed" && <div className="mt-4 flex gap-2">
+          {selected.deal.status === "proposed" && selected.deal.can_respond && <div className="mt-4 flex gap-2">
             <button disabled={busy} className="rounded-lg bg-[#17243a] px-4 py-2 text-white disabled:opacity-50" onClick={() => void action(`/api/trade-deals/${selected.deal.id}/respond`, "POST", { decision: "accept" })}>{t.accept}</button>
             <button disabled={busy} className="rounded-lg border px-4 py-2 disabled:opacity-50" onClick={() => void action(`/api/trade-deals/${selected.deal.id}/respond`, "POST", { decision: "decline" })}>{t.decline}</button>
           </div>}
@@ -139,7 +139,7 @@ export default function TradePage() {
             <div className="mt-4 space-y-2">{selected.milestones.length ? selected.milestones.map(m => <div key={m.id} className="rounded-lg bg-slate-50 p-3"><div className="flex flex-wrap justify-between gap-2"><strong>{m.title}</strong><span className="text-xs">{statusLabel(m.status === "pending" ? "pending" : m.status === "completed" ? "milestoneCompleted" : "milestoneCancelled")}</span></div>{m.description && <p className="mt-1 text-sm text-slate-600">{m.description}</p>}{m.due_at && <p className="mt-1 text-xs text-slate-500">{new Date(m.due_at).toLocaleString(locale === "ar" ? "ar" : "en")}</p>}{m.status === "pending" && <div className="mt-2 flex gap-2"><button type="button" disabled={busy} className="text-xs underline" onClick={() => void action(`/api/trade-deals/${selected.deal.id}/milestones/${m.id}`, "PATCH", { status: "completed" })}>{t.markComplete}</button><button type="button" disabled={busy} className="text-xs underline" onClick={() => void action(`/api/trade-deals/${selected.deal.id}/milestones/${m.id}`, "PATCH", { status: "cancelled" })}>{t.cancelMilestone}</button></div>}</div>) : <p className="text-sm text-slate-500">{t.noMilestones}</p>}</div>
           </form>
         </>}
-        <section className="rounded-xl border bg-white p-5"><h3 className="font-semibold">{t.amendments}</h3>{selected.amendments.length ? selected.amendments.map(a => <div key={a.id} className="mt-3 border-t pt-3"><div className="flex justify-between gap-2 text-sm"><strong>v{a.version}</strong><span>{statusLabel(a.status)}</span></div><pre className="mt-2 overflow-x-auto rounded bg-slate-50 p-2 text-xs">{JSON.stringify(a.terms_snapshot, null, 2)}</pre>{a.reason && <p className="text-xs text-slate-600">{a.reason}</p>}{a.status === "proposed" && a.proposed_by_user_id !== selected.deal.proposed_by_user_id && <div className="mt-2 flex gap-2"><button className="text-sm underline" onClick={() => void action(`/api/trade-deals/${selected.deal.id}/amendments/${a.id}/respond`, "POST", { decision: "accept" })}>{t.accept}</button><button className="text-sm underline" onClick={() => void action(`/api/trade-deals/${selected.deal.id}/amendments/${a.id}/respond`, "POST", { decision: "reject" })}>{t.decline}</button></div>}</div>) : <p className="mt-2 text-sm text-slate-500">{t.noAmendments}</p>}</section>
+        <section className="rounded-xl border bg-white p-5"><h3 className="font-semibold">{t.amendments}</h3>{selected.amendments.length ? selected.amendments.map(a => <div key={a.id} className="mt-3 border-t pt-3"><div className="flex justify-between gap-2 text-sm"><strong>v{a.version}</strong><span>{statusLabel(a.status)}</span></div><pre className="mt-2 overflow-x-auto rounded bg-slate-50 p-2 text-xs">{JSON.stringify(a.terms_snapshot, null, 2)}</pre>{a.reason && <p className="text-xs text-slate-600">{a.reason}</p>}{a.status === "proposed" && a.can_respond && <div className="mt-2 flex gap-2"><button className="text-sm underline" onClick={() => void action(`/api/trade-deals/${selected.deal.id}/amendments/${a.id}/respond`, "POST", { decision: "accept" })}>{t.accept}</button><button className="text-sm underline" onClick={() => void action(`/api/trade-deals/${selected.deal.id}/amendments/${a.id}/respond`, "POST", { decision: "reject" })}>{t.decline}</button></div>}</div>) : <p className="mt-2 text-sm text-slate-500">{t.noAmendments}</p>}</section>
         <section className="rounded-xl border bg-white p-5"><h3 className="font-semibold">{t.events}</h3>{selected.events.map(ev => <p key={ev.id} className="mt-2 border-t pt-2 text-xs text-slate-600">{ev.event_type} · {new Date(ev.created_at).toLocaleString(locale === "ar" ? "ar" : "en")}</p>)}</section>
       </section> : <>
         <form onSubmit={createDeal} className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
