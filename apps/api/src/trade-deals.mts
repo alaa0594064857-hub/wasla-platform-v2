@@ -444,6 +444,10 @@ export async function handleTradeMilestones(req: IncomingMessage, res: ServerRes
         await client.query("ROLLBACK");
         reply(res, 404, { success: false, error: "Trade deal not found" }); return;
       }
+      if (deal.account_status !== "active") {
+        await client.query("ROLLBACK");
+        reply(res, 409, { success: false, error: "The supplier account is not active" }); return;
+      }
       if (!["agreed", "in_progress"].includes(deal.status)) {
         await client.query("ROLLBACK");
         reply(res, 409, { success: false, error: "Milestones require an agreed or in-progress deal" }); return;
