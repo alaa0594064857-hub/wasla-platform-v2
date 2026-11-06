@@ -56,6 +56,18 @@ async function handleRequest(
     return;
   }
 
+  if (requestUrl.pathname === "/api/product-inquiries") {
+    try {
+      const { handleProductInquiriesRequest } = await import("./product-inquiries.mjs");
+      await handleProductInquiriesRequest(request, response);
+    } catch (error) {
+      console.error("WASLA product inquiries route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Product inquiries service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const messageConversationMatch = requestUrl.pathname.match(/^\/api\/messages\/([0-9a-f-]{36})$/i);
   if (messageConversationMatch || requestUrl.pathname === "/api/messages") {
     try {
@@ -448,7 +460,7 @@ if (process.env.NODE_ENV !== "test") {
   const server = createWaslaServer();
 
   void import("./database.js")
-    .then(async ({ ensureRegistrationTypeColumn, ensureAccountOwnerRole, ensureStoreOwnerRole, ensurePlatformOwnerRole, ensurePersonalThemesTable, ensureStoreProductsTable, ensureNetworkTables }) => {
+    .then(async ({ ensureRegistrationTypeColumn, ensureAccountOwnerRole, ensureStoreOwnerRole, ensurePlatformOwnerRole, ensurePersonalThemesTable, ensureStoreProductsTable, ensureNetworkTables, ensureProductInquiryTables }) => {
       await ensureRegistrationTypeColumn();
       await ensureAccountOwnerRole();
       await ensureStoreOwnerRole();
@@ -458,6 +470,7 @@ if (process.env.NODE_ENV !== "test") {
       await ensureNetworkTables();
       const { ensureMessagesTables } = await import("./messages.mjs");
       await ensureMessagesTables();
+      await ensureProductInquiryTables();
     })
     .then(() => {
       server.listen(port, "0.0.0.0", () => {
