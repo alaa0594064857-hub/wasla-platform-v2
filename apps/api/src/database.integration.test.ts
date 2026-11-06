@@ -193,6 +193,50 @@ describe("WASLA sourcing PostgreSQL concurrency constraints", () => {
     await pool.query("DELETE FROM users WHERE id IN ($1,$2)", [fixture.buyerId, fixture.supplierUserId]);
   });
 
+  it("serializes the same buyer idempotency key across different acceptance transactions", async () => {
+    const first = await pool.connect();
+    const second = await pool.connect();
+    const key = "sourcing-acceptance-" + randomUUID();
+    const orderId = randomUUID();
+    try {
+      await first.query("BEGIN");
+      await second.query("BEGIN");
+      await first.query(
+        "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
+        [fixture.buyerId + ":" + key],
+      );
+      const competingLock = second.query(
+        "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
+        [fixture.buyerId + ":" + key],
+      );
+      await first.query(
+        `INSERT INTO sourcing_orders
+         (id, order_number, request_id, accepted_offer_id, buyer_user_id, supplier_account_id,
+          status, currency, subtotal, shipping_total, grand_total, commercial_snapshot, idempotency_key)
+         VALUES ($1,$2,$3,$4,$5,$6,'awaiting_payment','USD',37.50,5.00,42.50,'{"integration":true}'::jsonb,$7)`,
+        [orderId, "WS-IDEMP-" + orderId.replace(/-/g, "").slice(0, 12).toUpperCase(),
+         fixture.requestId, fixture.offerId, fixture.buyerId, fixture.supplierAccountId, key],
+      );
+      await first.query("COMMIT");
+      await competingLock;
+      const replay = await second.query(
+        "SELECT id FROM sourcing_orders WHERE buyer_user_id = $1 AND idempotency_key = $2",
+        [fixture.buyerId, key],
+      );
+      expect(replay.rows).toHaveLength(1);
+      expect(replay.rows[0].id).toBe(orderId);
+      await second.query("ROLLBACK");
+      await first.query("DELETE FROM sourcing_orders WHERE id = $1", [orderId]);
+    } catch (error) {
+      await first.query("ROLLBACK").catch(() => undefined);
+      await second.query("ROLLBACK").catch(() => undefined);
+      throw error;
+    } finally {
+      first.release();
+      second.release();
+    }
+  });
+
   it("serializes two buyer acceptance transactions on the sourcing request row", async () => {
     const first = await pool.connect();
     const second = await pool.connect();
