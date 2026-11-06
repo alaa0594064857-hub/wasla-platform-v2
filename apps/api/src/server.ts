@@ -56,6 +56,31 @@ async function handleRequest(
     return;
   }
 
+  const supplierSourcingOrderStatusMatch = requestUrl.pathname.match(/^\/api\/supplier\/sourcing-orders\/([^/]+)\/status$/);
+  if (supplierSourcingOrderStatusMatch) {
+    try {
+      const { handleSupplierSourcingOrders } = await import("./sourcing.mjs");
+      await handleSupplierSourcingOrders(request, response, supplierSourcingOrderStatusMatch[1]);
+    } catch (error) {
+      console.error("WASLA supplier sourcing order status route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Supplier sourcing order service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/supplier/sourcing-orders") {
+    try {
+      const { handleSupplierSourcingOrders } = await import("./sourcing.mjs");
+      await handleSupplierSourcingOrders(request, response);
+    } catch (error) {
+      console.error("WASLA supplier sourcing orders route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Supplier sourcing orders service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const sourcingAcceptMatch = requestUrl.pathname.match(/^\/api\/sourcing-requests\/([^/]+)\/accept-offer$/);
   if (sourcingAcceptMatch) {
     try {
