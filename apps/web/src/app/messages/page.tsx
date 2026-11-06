@@ -14,6 +14,7 @@ type Message = {
   id: string; sender_id: string; body: string; created_at: string;
   sender_name?: string | null; sender_image?: string | null;
 };
+type Recipient = { recipient_id: string; display_name: string; entity_type: "person" | "business" | "store"; category: string | null };
 
 export default function MessagesPage() {
   const { locale } = useLocale();
@@ -24,7 +25,9 @@ export default function MessagesPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
-  const [recipientId, setRecipientId] = useState("");
+  const [recipientSearch, setRecipientSearch] = useState("");
+  const [recipients, setRecipients] = useState<Recipient[]>([]);
+  const [searchingRecipients, setSearchingRecipients] = useState(false);
   const [loading, setLoading] = useState(true);
   const [chatLoading, setChatLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -42,9 +45,10 @@ export default function MessagesPage() {
     message: ar ? "اكتب رسالتك..." : "Write a message...",
     send: ar ? "إرسال" : "Send",
     start: ar ? "بدء محادثة" : "Start a conversation",
-    recipient: ar ? "معرّف حساب المستلم" : "Recipient account ID",
-    startButton: ar ? "بدء" : "Start",
-    idHint: ar ? "يمكنك الحصول على معرّف الحساب من صفحة الشبكة أو من مسؤول الحساب." : "Get the account ID from the network page or the account administrator.",
+    recipient: ar ? "ابحث عن شخص أو شركة أو متجر أو مصنع أو مورد" : "Search for a person, company, shop, factory or supplier",
+    search: ar ? "بحث" : "Search",
+    chooseRecipient: ar ? "اختر جهة لبدء محادثة خاصة" : "Choose a result to start a private conversation",
+    person: ar ? "شخص" : "Person", business: ar ? "شركة / جهة" : "Business", store: ar ? "متجر" : "Store",
     login: ar ? "يرجى تسجيل الدخول لاستخدام الرسائل." : "Please sign in to use messaging.",
     loadError: ar ? "تعذر تحميل المحادثات. حدّث الصفحة وحاول مجدداً." : "Could not load conversations. Refresh and try again.",
     sendError: ar ? "تعذر إرسال الرسالة." : "Could not send the message.",
@@ -94,19 +98,36 @@ export default function MessagesPage() {
     else setMessages([]);
   }, [selected, loadMessages]);
 
-  async function startConversation(event: FormEvent<HTMLFormElement>) {
+  async function searchRecipients(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!recipientId.trim()) return;
+    if (recipientSearch.trim().length < 2) return;
+    setSearchingRecipients(true); setError(""); setRecipients([]);
+    try {
+      const response = await fetch(`/api/messages?recipients=${encodeURIComponent(recipientSearch.trim())}`, { credentials: "include", cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok || !data.success || !Array.isArray(data.recipients)) throw new Error("search");
+      setRecipients(data.recipients as Recipient[]);
+      if (data.recipients.length === 0) setNotice(ar ? "لا توجد نتائج مطابقة." : "No matching results.");
+      else setNotice(t.chooseRecipient);
+    } catch {
+      setError(ar ? "تعذر البحث حالياً." : "Search is temporarily unavailable.");
+    } finally {
+      setSearchingRecipients(false);
+    }
+  }
+
+  async function startConversation(recipientId: string) {
+    if (!recipientId || starting) return;
     setStarting(true); setError(""); setNotice("");
     try {
       const response = await fetch("/api/messages", {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recipientId: recipientId.trim() }),
+        body: JSON.stringify({ recipientId }),
       });
       const data = await response.json();
       if (!response.ok || !data.success || !data.conversationId) throw new Error("start");
-      setRecipientId("");
+      setRecipients([]); setRecipientSearch("");
       await loadConversations();
       setSelected(data.conversationId);
       setNotice(ar ? "تم فتح المحادثة." : "Conversation opened.");
@@ -164,12 +185,17 @@ export default function MessagesPage() {
               <h2>{t.conversations}</h2>
               <span>{conversations.length}</span>
             </div>
-            <form onSubmit={startConversation} style={{ display: "grid", gap: 8, padding: 14, borderBottom: "1px solid rgba(160,160,160,.22)" }}>
+            <form onSubmit={searchRecipients} style={{ display: "grid", gap: 8, padding: 14, borderBottom: "1px solid rgba(160,160,160,.22)" }}>
               <strong>{t.start}</strong>
-              <input value={recipientId} onChange={event => setRecipientId(event.target.value)} placeholder={t.recipient} aria-label={t.recipient} style={{ width: "100%", minWidth: 0, padding: 11, borderRadius: 9, border: "1px solid #b9b9b9", background: "transparent", color: "inherit" }} />
-              <small>{t.idHint}</small>
-              <button type="submit" disabled={starting || !recipientId.trim()}>{starting ? "…" : t.startButton}</button>
+              <input value={recipientSearch} onChange={event => setRecipientSearch(event.target.value)} placeholder={t.recipient} aria-label={t.recipient} style={{ width: "100%", minWidth: 0, padding: 11, borderRadius: 9, border: "1px solid #b9b9b9", background: "transparent", color: "inherit" }} />
+              <button type="submit" disabled={searchingRecipients || recipientSearch.trim().length < 2}>{searchingRecipients ? "…" : t.search}</button>
             </form>
+            {recipients.length > 0 && <div style={{ padding: "4px 10px 12px", borderBottom: "1px solid rgba(160,160,160,.22)" }}>
+              {recipients.map(item => <button key={item.entity_type + item.recipient_id} type="button" disabled={starting} onClick={() => void startConversation(item.recipient_id)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, width: "100%", padding: 10, border: 0, borderRadius: 8, background: "rgba(190,155,80,.10)", color: "inherit", textAlign: ar ? "right" : "left", marginTop: 5, cursor: "pointer" }}>
+                <span><strong>{item.display_name}</strong><small style={{ display: "block", opacity: .7 }}>{item.entity_type === "person" ? t.person : item.entity_type === "store" ? t.store : (item.category ? item.category : t.business)}</small></span>
+                <span>{starting ? "…" : "✉"}</span>
+              </button>)}
+            </div>}
             <div className="wasla-conversation-list">
               {conversations.length === 0 ? <div className="wasla-conversations-empty"><span>✉</span><strong>{t.empty}</strong></div> :
                 conversations.map(item => (
