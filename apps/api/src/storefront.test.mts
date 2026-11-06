@@ -21,7 +21,7 @@ describe("public storefront API", () => {
   it("returns an active shop and its published catalog without requiring a session", async () => {
     mocks.query
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "store-1", name: "Public Shop", slug: "public-shop" }] })
-      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "product-1", title: "Published item", price: "15.00", currency: "USD", stockQuantity: 3 }] });
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "product-1", title: "Published item", price: "15.00", currency: "USD" }] });
     const res = response();
     await handlePublicStorefrontRequest(request(), res as unknown as ServerResponse, "public-shop");
     expect(res.statusCode).toBe(200);
@@ -32,6 +32,7 @@ describe("public storefront API", () => {
     });
     expect(mocks.query).toHaveBeenCalledTimes(2);
     expect(String(mocks.query.mock.calls[1][0])).toContain("status = 'active'");
+    expect(String(mocks.query.mock.calls[1][0])).not.toContain("stock_quantity");
   });
 
   it("returns 404 when the shop is not publicly active", async () => {

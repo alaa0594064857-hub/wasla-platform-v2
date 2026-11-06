@@ -44,7 +44,7 @@ export async function handlePublicStorefrontRequest(
     const store = storeResult.rows[0];
     const products = await db.query(
       `SELECT id, title, description, sku, price::text AS price, currency,
-              stock_quantity AS "stockQuantity", image_url AS "imageUrl",
+              image_url AS "imageUrl",
               video_url AS "videoUrl"
        FROM store_products
        WHERE store_id = $1 AND status = 'active'

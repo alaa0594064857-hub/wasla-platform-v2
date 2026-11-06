@@ -76,6 +76,20 @@ export default function SourcingPage() {
 
   useEffect(() => { void load(); }, [load]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const item = params.get("item")?.trim().slice(0, 180) ?? "";
+    const description = params.get("description")?.trim().slice(0, 2000) ?? "";
+    const currency = params.get("currency")?.trim().toUpperCase() ?? "";
+    if (!item && !description && !/^[A-Z]{3}$/.test(currency)) return;
+    setForm(current => ({
+      ...current,
+      itemName: current.itemName || item,
+      description: current.description || description,
+      requestedCurrency: current.requestedCurrency || (/^[A-Z]{3}$/.test(currency) ? currency : ""),
+    }));
+  }, []);
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSending(true);
