@@ -33,7 +33,7 @@ This is an evidence-based implementation tracker, not a claim that the platform 
 | Platform owner console | Implemented, read-only areas | Owner authorization, user directory and live account/store overview exist; many management actions are deliberately not enabled. |
 | Platform security/audit | Partial | Owner authorization and audit foundations exist; security review and full audit coverage remain. |
 | Subscription billing data model | Implemented foundation, verified in Render DB | Four tables exist: `subscription_plans`, `subscriptions`, `subscription_invoices`, `subscription_payment_events`. All are empty; no plans, subscriptions, invoices, or payment events have been created. |
-| Subscription plan administration | Partial | Owner-only plan catalogue API and bilingual `/owner/subscriptions` console are implemented; plans remain empty until the owner creates them. Public catalogue is read-only and only exposes active/public plans. Needs deployment and end-to-end authorization/CRUD tests. Customer self-service and subscription lifecycle are not implemented. |
+| Subscription plan administration | Partial — deployed | Owner-only plan API and bilingual `/owner/subscriptions` console are deployed; Render API and web deploys for commit `ce6e2025e13270ab849afde03c5f9cedcc12771f` are both confirmed `live` (2026-11-07 review). Plans remain empty until the owner creates them. Public catalogue is read-only and only exposes active/public plans. End-to-end authorization/CRUD tests remain; customer self-service and subscription lifecycle are not implemented. |
 | Subscription payment provider | Not implemented | Deferred until legal entity, operating jurisdiction, provider eligibility, pricing, tax and settlement requirements are confirmed. No live billing. |
 | Official WASLA Store | Not implemented | Architecture decision recorded; separate official-store schema, catalog, orders, admin workflow and customer experience remain. Do not reuse a member store as the official store. |
 | Official-store AI operations manager | Not implemented | Architecture decision recorded; needs scoped official-store inbox, AI identity, approval/escalation controls, audit log and owner oversight. |
@@ -51,7 +51,7 @@ This is an evidence-based implementation tracker, not a claim that the platform 
 ## Immediate build order
 
 1. Verify database initialization and readiness after every schema change.
-2. Deploy and test owner-only subscription plan management and the safe public plan catalogue; keep payment collection disabled.
+2. Subscription plan management and the safe public plan catalogue are deployed; next verify owner authorization, create/update behavior and public-catalogue filtering in production. Keep payment collection disabled.
 3. Build subscription lifecycle and entitlements with audited manual state changes; never mark a paid subscription active from a browser redirect.
 4. Design and implement the official WASLA Store in tables and routes separate from member stores.
 5. Build official-store order/inquiry routing to the AI operations inbox with human-owner escalation and audit.
