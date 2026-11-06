@@ -249,3 +249,57 @@ Status: Architecture decisions recorded.
 
 Next step: Reconcile architecture documents
 before implementing the database schema.
+
+
+## 17. Official WASLA Store and AI Operations
+
+Decision:
+
+The official WASLA Store is a platform-owned commerce
+channel. It is separate from member-owned stores
+and must not be represented as an ordinary member store.
+
+Customer communications for the official WASLA Store
+follow a dedicated AI-operated workflow:
+
+- Messages addressed to the official WASLA Store
+  are received by the WASLA AI operations manager.
+- Product inquiries for official-store listings
+  are routed to the same AI operations workflow.
+- The AI manager may answer routine questions,
+  classify and track requests, and coordinate
+  fulfillment with the relevant supplier or product owner.
+- The platform does not assume centralized inventory.
+  Product availability and fulfillment remain tied
+  to the responsible supplier or owner.
+- The platform owner retains ultimate oversight
+  and may review operational records, intervene,
+  or take over a case through authorized controls.
+
+Member-owned stores remain independent:
+
+- Direct messages are routed to the relevant active
+  store/account contact.
+- Product inquiries are delivered to the responsible
+  store/account contact.
+- The official-store AI workflow must not receive
+  member-store private conversations by default.
+
+Security and audit requirements:
+
+- AI operations must use a dedicated service identity,
+  not impersonate a customer or platform owner.
+- Record AI actions, routing decisions, and human
+  interventions in an auditable activity log.
+- Customer private messages remain visible only
+  to conversation participants and explicitly
+  authorized operational actors for that workflow.
+- AI access must be scoped to the official-store
+  inbox and the minimum data needed to respond.
+
+Implementation status:
+
+This is an approved architecture decision.
+The official WASLA Store, AI inbox, AI service identity,
+and AI response workflow are not yet implemented.
+Existing member-store inquiry routing remains separate.
