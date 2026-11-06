@@ -234,6 +234,34 @@ async function handleRequest(
 
 
 
+  const storeOrderStatusMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/orders\/([0-9a-f-]{36})\/status$/);
+  if (storeOrderStatusMatch) {
+    try {
+      const { handleStoreOrdersRequest } = await import("./orders.mjs");
+      await handleStoreOrdersRequest(
+        request, response, decodeURIComponent(storeOrderStatusMatch[1]), storeOrderStatusMatch[2],
+      );
+    } catch (error) {
+      console.error("WASLA store order status route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Store orders service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const storeOrdersMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/orders$/);
+  if (storeOrdersMatch) {
+    try {
+      const { handleStoreOrdersRequest } = await import("./orders.mjs");
+      await handleStoreOrdersRequest(request, response, decodeURIComponent(storeOrdersMatch[1]));
+    } catch (error) {
+      console.error("WASLA store orders route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Store orders service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const orderDetailMatch = requestUrl.pathname.match(/^\/api\/orders\/([0-9a-f-]{36})$/);
   if (orderDetailMatch) {
     try {
