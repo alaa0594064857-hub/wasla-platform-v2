@@ -99,6 +99,25 @@ async function handleRequest(
     return;
   }
 
+  const officialStoreProductMatch = requestUrl.pathname.match(/^\/api\/platform\/official-store\/products(?:\/([0-9a-f-]{36}))?$/i);
+  const publicOfficialStoreProducts = requestUrl.pathname === "/api/official-store/products";
+  if (officialStoreProductMatch || publicOfficialStoreProducts) {
+    try {
+      const { handleOfficialStoreProductsRequest } = await import("./official-store-products.mjs");
+      await handleOfficialStoreProductsRequest(
+        request,
+        response,
+        officialStoreProductMatch?.[1],
+        publicOfficialStoreProducts,
+      );
+    } catch (error) {
+      console.error("WASLA official store products route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Official store products service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const subscriptionPlanMatch = requestUrl.pathname.match(new RegExp("^/api/platform/subscription-plans(?:/([0-9a-f-]{36}))?$", "i"));
   if (subscriptionPlanMatch || requestUrl.pathname === "/api/subscription-plans") {
     try {
