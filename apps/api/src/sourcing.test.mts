@@ -329,3 +329,54 @@ describe("supplier offer submission membership locking", () => {
     expect(mocks.release).toHaveBeenCalledOnce();
   });
 });
+
+
+describe("buyer offer acceptance financial bounds", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.getSession.mockResolvedValue({ user: { id: buyerId } });
+    mocks.connect.mockResolvedValue({ query: mocks.clientQuery, release: mocks.release });
+  });
+
+  it("rejects totals above the order numeric precision before changing offer or request states", async () => {
+    mocks.clientQuery.mockImplementation(async (sql: string) => {
+      if (sql === "BEGIN" || sql === "ROLLBACK" || sql === "COMMIT") return { rowCount: 0, rows: [] };
+      if (sql.includes("FROM sourcing_requests WHERE id = $1 FOR UPDATE")) return { rowCount: 1, rows: [{
+        id: requestId, buyer_user_id: buyerId, item_name: "Bulk item",
+        description: null, specifications: {}, quantity: 2_147_483_647, unit: "pieces",
+        destination_country_code: "TR", destination_city: "Istanbul",
+        delivery_location_snapshot: {}, requested_currency: "USD", status: "offers_available",
+      }] };
+      if (sql.includes("FROM sourcing_orders WHERE buyer_user_id")) return { rowCount: 0, rows: [] };
+      if (sql.includes("FROM supplier_offers o")) return { rowCount: 1, rows: [{
+        id: offerId, request_id: requestId, supplier_account_id: supplierAccountId,
+        submitted_by_user_id: supplierUserId, origin_country_code: "TR",
+        offered_quantity: 2_147_483_647, unit_price: "9999999999.9999",
+        currency: "USD", shipping_amount: "0.00", lead_time_days: 3, status: "available",
+        availability_confirmed_at: new Date().toISOString(), availability_valid_until: null,
+        quote_valid_until: null, supplier_name: "Test Supplier",
+        supplier_account_status: "active", supplier_account_type: "supplier", terms_snapshot: {},
+      }] };
+      if (sql.includes("FROM account_members am")) return { rowCount: 1, rows: [{ "?column?": 1 }] };
+      if (sql.includes("AS exceeds_order_amount_limit")) return { rowCount: 1, rows: [{
+        subtotal: "21474836469999999997.85", shipping_total: "0.00",
+        grand_total: "21474836469999999997.85", exceeds_order_amount_limit: true,
+      }] };
+      return { rowCount: 1, rows: [] };
+    });
+    const response = makeResponse();
+
+    await handleAcceptSupplierOffer(makeRequest(), response as unknown as ServerResponse, requestId);
+
+    expect(response.statusCode).toBe(422);
+    expect(JSON.parse(response.body)).toMatchObject({
+      success: false,
+      error: "Offer total exceeds the supported order amount limit",
+    });
+    const statements = mocks.clientQuery.mock.calls.map(([sql]) => String(sql));
+    expect(statements.at(-1)).toBe("ROLLBACK");
+    expect(statements.some(sql => sql.includes("UPDATE supplier_offers"))).toBe(false);
+    expect(statements.some(sql => sql.includes("UPDATE sourcing_requests"))).toBe(false);
+    expect(statements.some(sql => sql.includes("INSERT INTO sourcing_orders"))).toBe(false);
+  });
+});
