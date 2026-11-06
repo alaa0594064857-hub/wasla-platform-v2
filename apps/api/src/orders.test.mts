@@ -109,7 +109,8 @@ describe("buyer order checkout", () => {
     await handleOrdersRequest(request, response as unknown as ServerResponse);
     expect(response.statusCode).toBe(200);
     expect(JSON.parse(response.body)).toMatchObject({ success: true, orders: [] });
-    expect(mocks.poolQuery).toHaveBeenCalledOnce();
+    expect(mocks.poolQuery).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(response.body)).toMatchObject({ success: true, orders: [], sourcingOrders: [] });
     expect(mocks.connect).not.toHaveBeenCalled();
   });
 });
