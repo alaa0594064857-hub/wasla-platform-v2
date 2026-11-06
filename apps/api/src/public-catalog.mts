@@ -31,6 +31,7 @@ export async function handlePublicCatalogRequest(
       const result = await db.query(
         `SELECT p.id, p.title, p.description, p.price::text AS price,
                 p.currency, p.image_url AS "imageUrl", p.video_url AS "videoUrl",
+                p.seller_checkout_url AS "sellerCheckoutUrl",
                 s.id AS "storeId", s.name AS "storeName", s.slug AS "storeSlug",
                 COALESCE(so.user_id, ao.user_id, am.user_id) AS "sellerUserId"
          FROM store_products p
