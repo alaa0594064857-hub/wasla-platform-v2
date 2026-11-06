@@ -610,3 +610,6 @@ export const auditLogs = pgTable(
     index("audit_logs_created_at_idx").on(table.createdAt),
   ],
 );
+
+
+export * from "./sourcing-schema.js";
