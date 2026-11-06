@@ -569,6 +569,11 @@ export async function handleAcceptSupplierOffer(req: IncomingMessage, res: Serve
        VALUES ($1,$2,'buyer.offer_accepted',$3,'buyer_selected',$4::jsonb)`,
       [requestId, userId, sourcingRequest.status, JSON.stringify({ offerId: offer.id, orderId: created.rows[0].id })],
     );
+    await client.query(
+      `INSERT INTO sourcing_order_events (order_id, actor_user_id, event_type, from_status, to_status, metadata)
+       VALUES ($1,$2,'buyer.offer_accepted',NULL,'awaiting_payment',$3::jsonb)`,
+      [created.rows[0].id, userId, JSON.stringify({ offerId: offer.id })],
+    );
     await client.query("COMMIT");
     reply(res, 201, { success: true, order: created.rows[0], payment: "not_started" });
   } catch (error) {
@@ -661,11 +666,17 @@ export async function handleSupplierSourcingOrders(req: IncomingMessage, res: Se
         [body.status, orderId],
       );
       await client.query(
+        `INSERT INTO sourcing_order_events
+         (order_id, actor_user_id, event_type, from_status, to_status, metadata)
+         VALUES ($1,$2,'supplier.status_changed',$3,$4,$5::jsonb)`,
+        [orderId, userId, order.status, body.status,
+         JSON.stringify({ trackingReference: body.status === "shipped" ? trackingReference.trim() : null,
+           carrier: body.status === "shipped" ? carrier?.trim() ?? null : null })],
+      );
+      await client.query(
         `INSERT INTO sourcing_request_events (request_id, actor_user_id, event_type, from_status, to_status, metadata)
          VALUES ($1,$2,'sourcing_order.supplier_status_changed',$3,$4,$5::jsonb)`,
-        [order.request_id, userId, order.status, body.status,
-         JSON.stringify({ orderId, trackingReference: body.status === "shipped" ? trackingReference : null,
-           carrier: body.status === "shipped" ? carrier ?? null : null })],
+        [order.request_id, userId, order.status, body.status, JSON.stringify({ orderId })],
       );
       await client.query("COMMIT");
       reply(res, 200, { success: true, order: { id: orderId, status: body.status } });
