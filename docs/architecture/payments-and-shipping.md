@@ -4,7 +4,7 @@
 
 This document defines a provider-neutral integration contract for online payments and physical-order fulfillment. It is an architecture specification only: it does not add database tables, call a payment processor, create carrier accounts, store credentials, or change production services.
 
-The existing order and inventory foundation remains the source of truth for catalog prices, order totals, stock reservation/deduction, and order ownership. Payment and shipment lifecycles are separate from the existing order workflow status.
+For demand-led sourcing orders, the accepted supplier offer snapshot is the source of truth for supplier, item, quantity, price, currency, shipping, and order totals. WASLA does not reserve or deduct a central warehouse stock balance; supplier-owned availability is confirmed per request. Legacy catalog-order records remain isolated for historical compatibility. Payment and shipment lifecycles are separate from the existing order workflow status.
 
 ## 2. Payment domain
 
