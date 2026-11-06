@@ -56,6 +56,24 @@ async function handleRequest(
     return;
   }
 
+  const publicStoreMatch = requestUrl.pathname.match(/^\/api\/public\/stores\/([^/]+)$/);
+  const publicProductMatch = requestUrl.pathname.match(/^\/api\/public\/products\/([0-9a-f-]{36})$/i);
+  if (publicStoreMatch || publicProductMatch) {
+    try {
+      const { handlePublicCatalogRequest } = await import("./public-catalog.mjs");
+      await handlePublicCatalogRequest(
+        request, response,
+        publicStoreMatch ? decodeURIComponent(publicStoreMatch[1]) : undefined,
+        publicProductMatch?.[1],
+      );
+    } catch (error) {
+      console.error("WASLA public catalog route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Public catalog service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (/^\/api\/product-inquiries(?:\/[0-9a-f-]{36}\/(?:replies|status))?$/i.test(requestUrl.pathname)) {
     try {
       const { handleProductInquiriesRequest } = await import("./product-inquiries.mjs");
