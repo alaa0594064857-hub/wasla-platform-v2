@@ -623,8 +623,8 @@ export async function handleSupplierSourcingOrders(req: IncomingMessage, res: Se
     if (!body || (body.status !== "fulfilment_pending" && body.status !== "shipped")) {
       reply(res, 400, { success: false, error: "Supplier status must be fulfilment_pending or shipped" }); return;
     }
-    const trackingReference = body.trackingReference;
-    const carrier = body.carrier;
+    const trackingReference = typeof body.trackingReference === "string" ? body.trackingReference : "";
+    const carrier = typeof body.carrier === "string" ? body.carrier : undefined;
     if (body.status === "shipped" &&
         (!validText(trackingReference, 3, 120) ||
          (carrier !== undefined && !validText(carrier, 1, 80)))) {
