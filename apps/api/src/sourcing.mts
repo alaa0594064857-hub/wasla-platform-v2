@@ -691,3 +691,62 @@ export async function handleSupplierSourcingOrders(req: IncomingMessage, res: Se
     reply(res, 500, { success: false, error: "Could not process supplier sourcing order" });
   }
 }
+
+
+export async function handleSourcingOrderEvents(req: IncomingMessage, res: ServerResponse, orderId: string): Promise<void> {
+  if (req.method !== "GET") {
+    reply(res, 405, { success: false, error: "Method not allowed" }); return;
+  }
+  if (!UUID.test(orderId)) {
+    reply(res, 400, { success: false, error: "Invalid sourcing order ID" }); return;
+  }
+  try {
+    const userId = await sessionUser(req);
+    if (!userId) { reply(res, 401, { success: false, error: "Authentication required" }); return; }
+    const db = getDatabasePool();
+    const result = await db.query(
+      `SELECT soe.id, soe.event_type AS "eventType",
+              soe.from_status AS "fromStatus", soe.to_status AS "toStatus",
+              soe.metadata, soe.created_at AS "createdAt",
+              soe.actor_user_id AS "actorUserId"
+       FROM sourcing_order_events soe
+       INNER JOIN sourcing_orders so ON so.id = soe.order_id
+       WHERE soe.order_id = $1
+         AND (
+           so.buyer_user_id = $2
+           OR EXISTS (
+             SELECT 1 FROM account_members am
+             INNER JOIN accounts a ON a.id = am.account_id
+             WHERE am.account_id = so.supplier_account_id
+               AND am.user_id = $2 AND am.status = 'active'
+               AND a.status = 'active'
+               AND a.account_type IN ('supplier','manufacturer')
+           )
+         )
+       ORDER BY soe.created_at ASC, soe.id ASC
+       LIMIT 200`,
+      [orderId, userId],
+    );
+    const ownership = await db.query(
+      `SELECT 1 FROM sourcing_orders so
+       WHERE so.id = $1 AND (
+         so.buyer_user_id = $2 OR EXISTS (
+           SELECT 1 FROM account_members am
+           INNER JOIN accounts a ON a.id = am.account_id
+           WHERE am.account_id = so.supplier_account_id
+             AND am.user_id = $2 AND am.status = 'active'
+             AND a.status = 'active'
+             AND a.account_type IN ('supplier','manufacturer')
+         )
+       ) LIMIT 1`,
+      [orderId, userId],
+    );
+    if (!ownership.rows.length) {
+      reply(res, 404, { success: false, error: "Sourcing order not found" }); return;
+    }
+    reply(res, 200, { success: true, events: result.rows });
+  } catch (error) {
+    console.error("WASLA sourcing order events API error:", error);
+    reply(res, 500, { success: false, error: "Could not load sourcing order history" });
+  }
+}
