@@ -339,6 +339,37 @@ describe("WASLA API", () => {
     expect(await response.json()).toEqual({ success: false, error: "Authentication required" });
   });
 
+  it("requires authentication for Trade amendments and milestones", async () => {
+    const baseUrl = await startTestServer();
+    const dealId = "00000000-0000-4000-8000-000000000001";
+    const amendment = await fetch(`${baseUrl}/api/trade-deals/${dealId}/amendments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ termsSnapshot: { delivery: "Updated" } }),
+    });
+    expect(amendment.status).toBe(401);
+    expect(await amendment.json()).toEqual({ success: false, error: "Authentication required" });
+
+    const milestone = await fetch(`${baseUrl}/api/trade-deals/${dealId}/milestones`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "Inspection" }),
+    });
+    expect(milestone.status).toBe(401);
+    expect(await milestone.json()).toEqual({ success: false, error: "Authentication required" });
+  });
+
+  it("validates Trade amendment and milestone identifiers", async () => {
+    const baseUrl = await startTestServer();
+    const amendment = await fetch(`${baseUrl}/api/trade-deals/not-a-uuid/amendments`, { method: "POST" });
+    expect(amendment.status).toBe(400);
+    expect(await amendment.json()).toEqual({ success: false, error: "Invalid deal or amendment ID" });
+
+    const milestone = await fetch(`${baseUrl}/api/trade-deals/not-a-uuid/milestones/not-a-uuid`, { method: "PATCH" });
+    expect(milestone.status).toBe(400);
+    expect(await milestone.json()).toEqual({ success: false, error: "Invalid deal or milestone ID" });
+  });
+
   it("returns 404 for unknown routes", async () => {
     const baseUrl = await startTestServer();
     const response = await fetch(`${baseUrl}/unknown`);
