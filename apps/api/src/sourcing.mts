@@ -450,8 +450,14 @@ export async function handleAcceptSupplierOffer(req: IncomingMessage, res: Serve
       [userId, idempotencyKey],
     );
     if (prior.rows.length) {
+      const existingOrder = prior.rows[0];
+      if (existingOrder.request_id !== requestId || existingOrder.accepted_offer_id !== body.offerId) {
+        await client.query("ROLLBACK");
+        reply(res, 409, { success: false, error: "Idempotency key was already used for a different offer or request" });
+        return;
+      }
       await client.query("COMMIT");
-      reply(res, 200, { success: true, replayed: true, order: prior.rows[0], payment: "not_started" });
+      reply(res, 200, { success: true, replayed: true, order: existingOrder, payment: "not_started" });
       return;
     }
     if (!["submitted", "searching", "offers_available"].includes(sourcingRequest.status)) {
