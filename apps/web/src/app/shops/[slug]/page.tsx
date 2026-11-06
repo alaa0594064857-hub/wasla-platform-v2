@@ -7,11 +7,11 @@ import { useLocale } from "../../../components/locale-provider";
 import WorkspaceHeader from "../../../components/workspace-header";
 
 type Store = { id: string; name: string; slug: string; status: string; account_name: string; business_description: string | null; website: string | null; country_code: string | null };
-type Product = { id: string; title: string; description: string | null; sku: string | null; price: string; currency: string; stockQuantity: number; imageUrl: string | null; videoUrl: string | null; status: "draft" | "active" | "archived" };
+type Product = { id: string; title: string; description: string | null; sku: string | null; price: string; currency: string; stockQuantity: number; imageUrl: string | null; videoUrl: string | null; sellerCheckoutUrl: string | null; status: "draft" | "active" | "archived" };
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 const labels = {
-  ar: { title:"إدارة المتجر", subtitle:"هذه مساحة إدارة متجرك المرتبط بحسابك التجاري.", home:"الرئيسية", shops:"متاجري", name:"اسم المتجر", save:"حفظ التغييرات", saving:"جارٍ الحفظ...", account:"الحساب التجاري", address:"معرّف المتجر", loading:"جارٍ تحميل بيانات المتجر...", error:"تعذر تحميل المتجر أو لا تملك صلاحية الوصول.", saved:"تم حفظ التغييرات.", back:"العودة إلى المتاجر", viewPublic:"عرض المتجر العام", status:"حالة المتجر", active:"نشط", products:"المنتجات", addProduct:"إضافة منتج", productName:"اسم المنتج", description:"الوصف", sku:"رمز المنتج (اختياري)", price:"السعر", currency:"العملة", stock:"الكمية في المخزون", imageUrl:"رابط صورة المنتج (HTTPS)", videoUrl:"رابط فيديو المنتج (HTTPS)", add:"إضافة المنتج", adding:"جارٍ الإضافة...", noProducts:"لا توجد منتجات بعد. أضف أول منتج.", draft:"مسودة", published:"منشور", archived:"مؤرشف", saveProduct:"حفظ", savedProduct:"تم تحديث المنتج." },
-  en: { title:"Shop management", subtitle:"Manage your shop connected to your business account.", home:"Home", shops:"My shops", name:"Shop name", save:"Save changes", saving:"Saving...", account:"Business account", address:"Shop identifier", loading:"Loading shop details...", error:"Could not load this shop or you do not have access.", saved:"Changes saved.", back:"Back to shops", viewPublic:"View public shop", status:"Shop status", active:"Active", products:"Products", addProduct:"Add a product", productName:"Product name", description:"Description", sku:"SKU (optional)", price:"Price", currency:"Currency", stock:"Stock quantity", imageUrl:"Product image URL (HTTPS)", videoUrl:"Product video URL (HTTPS)", add:"Add product", adding:"Adding...", noProducts:"No products yet. Add your first product.", draft:"Draft", published:"Published", archived:"Archived", saveProduct:"Save", savedProduct:"Product updated." },
+  ar: { title:"إدارة المتجر", subtitle:"هذه مساحة إدارة متجرك المرتبط بحسابك التجاري.", home:"الرئيسية", shops:"متاجري", name:"اسم المتجر", save:"حفظ التغييرات", saving:"جارٍ الحفظ...", account:"الحساب التجاري", address:"معرّف المتجر", loading:"جارٍ تحميل بيانات المتجر...", error:"تعذر تحميل المتجر أو لا تملك صلاحية الوصول.", saved:"تم حفظ التغييرات.", back:"العودة إلى المتاجر", viewPublic:"عرض المتجر العام", status:"حالة المتجر", active:"نشط", products:"المنتجات", addProduct:"إضافة منتج", productName:"اسم المنتج", description:"الوصف", sku:"رمز المنتج (اختياري)", price:"السعر", currency:"العملة", stock:"الكمية في المخزون", imageUrl:"رابط صورة المنتج (HTTPS)", videoUrl:"رابط فيديو المنتج (HTTPS)", checkoutUrl:"رابط الشراء أو الدفع لدى البائع (HTTPS)", add:"إضافة المنتج", adding:"جارٍ الإضافة...", noProducts:"لا توجد منتجات بعد. أضف أول منتج.", draft:"مسودة", published:"منشور", archived:"مؤرشف", saveProduct:"حفظ", savedProduct:"تم تحديث المنتج." },
+  en: { title:"Shop management", subtitle:"Manage your shop connected to your business account.", home:"Home", shops:"My shops", name:"Shop name", save:"Save changes", saving:"Saving...", account:"Business account", address:"Shop identifier", loading:"Loading shop details...", error:"Could not load this shop or you do not have access.", saved:"Changes saved.", back:"Back to shops", viewPublic:"View public shop", status:"Shop status", active:"Active", products:"Products", addProduct:"Add a product", productName:"Product name", description:"Description", sku:"SKU (optional)", price:"Price", currency:"Currency", stock:"Stock quantity", imageUrl:"Product image URL (HTTPS)", videoUrl:"Product video URL (HTTPS)", checkoutUrl:"Seller purchase/payment link (HTTPS)", add:"Add product", adding:"Adding...", noProducts:"No products yet. Add your first product.", draft:"Draft", published:"Published", archived:"Archived", saveProduct:"Save", savedProduct:"Product updated." },
 };
 async function api<T>(slug:string, options?:RequestInit, suffix=""):Promise<T>{
  const response=await fetch(`${API_BASE}/api/stores/${encodeURIComponent(slug)}${suffix}`,{...options,credentials:"include",headers:{"Content-Type":"application/json",...options?.headers}});
@@ -22,7 +22,7 @@ export default function ShopManagementPage(){
  const { locale } = useLocale(); const [store,setStore]=useState<Store|null>(null);
  const [name,setName]=useState(""); const [loading,setLoading]=useState(true); const [saving,setSaving]=useState(false); const [error,setError]=useState(""); const [message,setMessage]=useState("");
  const [products,setProducts]=useState<Product[]>([]); const [addingProduct,setAddingProduct]=useState(false);
- const [productForm,setProductForm]=useState({title:"",description:"",sku:"",price:"",currency:"USD",stockQuantity:"0",imageUrl:"",videoUrl:""});
+ const [productForm,setProductForm]=useState({title:"",description:"",sku:"",price:"",currency:"USD",stockQuantity:"0",imageUrl:"",videoUrl:"",sellerCheckoutUrl:""});
  const t=labels[locale]; const dir=locale==="ar"?"rtl":"ltr";
  const load=useCallback(async()=>{setLoading(true);setError("");try{const result=await api<{store:Store}>(slug);setStore(result.store);setName(result.store.name);const catalog=await api<{products:Product[]}>(slug,undefined,"/products");setProducts(catalog.products);}catch{setError(t.error);}finally{setLoading(false);}},[slug,t.error]);
  useEffect(()=>{void load();},[load]);
@@ -32,10 +32,10 @@ export default function ShopManagementPage(){
   try{
    const result=await api<{product:Product}>(slug,{method:"POST",body:JSON.stringify({
     ...productForm,price:productForm.price,stockQuantity:Number(productForm.stockQuantity),
-    imageUrl:productForm.imageUrl.trim()||null,videoUrl:productForm.videoUrl.trim()||null,status:"draft"
+    imageUrl:productForm.imageUrl.trim()||null,videoUrl:productForm.videoUrl.trim()||null,sellerCheckoutUrl:productForm.sellerCheckoutUrl.trim()||null,status:"draft"
    })},"/products");
    setProducts(current=>[result.product,...current]);
-   setProductForm({title:"",description:"",sku:"",price:"",currency:"USD",stockQuantity:"0",imageUrl:"",videoUrl:""});
+   setProductForm({title:"",description:"",sku:"",price:"",currency:"USD",stockQuantity:"0",imageUrl:"",videoUrl:"",sellerCheckoutUrl:""});
    setMessage(t.savedProduct);
   }catch(cause){setError(cause instanceof Error?cause.message:t.error);}
   finally{setAddingProduct(false);}
@@ -83,6 +83,8 @@ export default function ShopManagementPage(){
       </div>
       <label>{t.imageUrl}<input type="url" placeholder="https://..." value={productForm.imageUrl} onChange={e=>setProductForm(v=>({...v,imageUrl:e.target.value}))}/></label>
       <label>{t.videoUrl}<input type="url" placeholder="https://..." value={productForm.videoUrl} onChange={e=>setProductForm(v=>({...v,videoUrl:e.target.value}))}/></label>
+      <label>{t.checkoutUrl}<input type="url" placeholder="https://..." value={productForm.sellerCheckoutUrl} onChange={e=>setProductForm(v=>({...v,sellerCheckoutUrl:e.target.value}))}/></label>
+      <p className="shops-note">{locale==="ar"?"رابط الشراء يخص البائع ويوجه العميل إليه مباشرة؛ WASLA لا تستلم مدفوعات هذا المنتج.":"This link belongs to the seller and sends the customer directly to the seller; WASLA does not collect this product payment."}</p>
       <p className="shops-note">{locale==="ar"?"حالياً أضف روابط HTTPS للوسائط؛ رفع الملفات المباشر وربط التخزين السحابي مرحلة لاحقة.":"For now, add HTTPS media links; direct uploads and cloud storage are a later phase."}</p>
       <button type="submit" disabled={addingProduct}>{addingProduct?t.adding:t.add}<span>↗</span></button>
      </form>
