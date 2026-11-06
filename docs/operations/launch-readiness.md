@@ -112,3 +112,26 @@ Official starting references:
 - İşbank — Commercial account opening requirements: https://www.isbank.com.tr/en/commercial/how-to-open-an-account
 
 Sunday decision gate: first confirm the founder's citizenship and Turkish residence-permit status, then request written pre-screening from an accountant and at least two banks using the same one-page WASLA business-model description. Do not incorporate or transfer capital until the total first-year cost and account eligibility are confirmed.
+
+## Draft business activity description for bank/accountant pre-screening
+
+Use this only as a discussion draft; have a Turkish accountant/lawyer adapt the activity codes and wording before registration.
+
+**English**
+
+> WASLA is a digital B2B and B2C marketplace technology platform. It enables independent businesses, manufacturers, brands, and suppliers to publish business profiles and product listings, receive buyer sourcing requests, provide request-specific quotations, and communicate with buyers. Suppliers remain the owners and sellers of their own goods and are responsible for confirming availability, pricing, fulfilment, and delivery. WASLA does not own a central inventory or warehouse. The initial pilot does not collect, hold, or safeguard customer funds and does not provide escrow or supplier payout services. Any future payment collection, marketplace commission, or supplier settlement functionality will be introduced only after the relevant legal, banking, and payment-provider approvals.
+
+**العربية**
+
+> وصلة (WASLA) منصة تقنية رقمية للسوق التجاري بين الشركات والأفراد. تتيح للشركات والمصانع والعلامات التجارية والموردين المستقلين إنشاء ملفات أعمال وعرض منتجاتهم، واستقبال طلبات التوريد من المشترين، وتقديم عروض أسعار مخصصة لكل طلب، والتواصل مع المشترين. يبقى المورد المستقل مالكاً وبائعاً لبضاعته، وهو المسؤول عن تأكيد التوفر والسعر والتجهيز والتسليم. لا تمتلك وصلة مخزوناً مركزياً أو مستودعاً للبضائع. وفي المرحلة التجريبية الأولى، لا تجمع المنصة أموال العملاء ولا تحتفظ بها ولا تقدم خدمة ضمان/وساطة مالية أو تحويل مستحقات الموردين. ولن تُفعّل أي خدمة مستقبلية لتحصيل المدفوعات أو العمولات أو تسوية مستحقات الموردين إلا بعد الحصول على الموافقات القانونية والمصرفية وموافقات مزود الدفع اللازمة.
+
+**Questions to obtain written answers from each bank before incorporation**
+
+1. Will the bank onboard a newly formed Turkish limited company with the founder's actual citizenship, residence status, and beneficial-ownership structure?
+2. Does the bank accept the described international B2B/B2C marketplace activity, including incoming international transfers and payments to overseas suppliers?
+3. Which countries, currencies, transfer rails, and transaction sizes are supported, and what are the fees, limits, and compliance documents?
+4. Can the company open TRY, USD, and EUR business accounts, and what minimum balance or account-maintenance fees apply?
+5. Does the bank require the authorized signatory to attend in person, and what exact documents must be apostilled, translated, or notarized?
+6. If WASLA later adds marketplace payment collection or split payouts, does the bank support that model directly or require a licensed payment institution?
+
+Do not present the draft as an approved legal classification or promise that a bank will accept the business.
