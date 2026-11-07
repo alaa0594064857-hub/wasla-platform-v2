@@ -74,8 +74,8 @@ async function handleRequest(
     return;
   }
 
-  if (/^\/api\/trade\/opportunities(?:\/(?:review|[0-9a-f-]{36}))?$/i.test(requestUrl.pathname)) {
-    const opportunityId = requestUrl.pathname.match(/^\/api\/trade\/opportunities\/(review|[0-9a-f-]{36})$/i)?.[1];
+  if (/^\/api\/trade\/opportunities(?:\/(?:review|matches|[0-9a-f-]{36}))?$/i.test(requestUrl.pathname)) {
+    const opportunityId = requestUrl.pathname.match(/^\/api\/trade\/opportunities\/(review|matches|[0-9a-f-]{36})$/i)?.[1];
     try {
       const { handleTradeOpportunitiesRequest } = await import("./trade-opportunities.mjs");
       await handleTradeOpportunitiesRequest(request, response, opportunityId);
