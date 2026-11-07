@@ -312,7 +312,7 @@ export async function ensureOfficialStoreTables(): Promise<void> {
       WHERE manufacturer_part_number IS NOT NULL
     `);
 
-    await client.query(\`
+    await client.query(`
       CREATE TABLE IF NOT EXISTS official_store_product_source_offers (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         product_id uuid NOT NULL REFERENCES official_store_products(id) ON DELETE CASCADE,
@@ -348,7 +348,7 @@ export async function ensureOfficialStoreTables(): Promise<void> {
           OR estimated_shipping_days_max >= estimated_shipping_days_min
         )
       )
-    \`);
+    `);
 
     await client.query(`
       CREATE UNIQUE INDEX IF NOT EXISTS official_store_source_offer_url_unique
