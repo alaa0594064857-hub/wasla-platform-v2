@@ -99,7 +99,7 @@ async function handleRequest(
     return;
   }
 
-  const officialStoreSourcingMatch = requestUrl.pathname.match(/^\\/api\\/platform\\/official-store\\/sourcing-candidates(?:\\/([0-9a-f-]{36}))?$/i);
+  const officialStoreSourcingMatch = requestUrl.pathname.match(/^\/api\/platform\/official-store\/sourcing-candidates(?:\/([0-9a-f-]{36}))?$/i);
   if (officialStoreSourcingMatch) {
     try {
       const { handleOfficialStoreSourcingRequest } = await import("./official-store-sourcing.mjs");
