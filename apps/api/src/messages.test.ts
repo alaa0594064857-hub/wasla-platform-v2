@@ -140,4 +140,16 @@ describe("product-based private messaging", () => {
     expect(mocks.query).toHaveBeenCalledTimes(3);
     expect(String(mocks.query.mock.calls[1][0])).toContain("participant_high_last_read_at");
   });
+
+  it("does not reveal messages to a user who is not a conversation participant", async () => {
+    mocks.query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
+
+    const baseUrl = await startServer("11111111-1111-4111-8111-111111111111");
+    const response = await fetch(`${baseUrl}/api/messages/11111111-1111-4111-8111-111111111111`);
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ success: false, error: "Conversation not found" });
+    expect(mocks.query).toHaveBeenCalledOnce();
+    expect(String(mocks.query.mock.calls[0][0])).toContain("participant_low = $2 OR participant_high = $2");
+  });
 });
