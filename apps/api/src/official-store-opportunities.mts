@@ -62,7 +62,7 @@ export async function handleOfficialStoreOpportunityAssessment(request: Incoming
     ] as const;
     const riskScore = checks.reduce((sum, item) => sum + (item[1] ? item[2] : 0), 0);
     const totalScore = demandScore + marginScore + riskScore;
-    const missing = checks.filter(item => !item[1]).map(item => item[0]);
+    const missing: string[] = checks.filter(item => !item[1]).map(item => item[0]);
     if (ageDays > 90) missing.push("refresh_demand_evidence");
     if (grossMarginPercent < 20) missing.push("review_margin_and_missing_costs");
     if (!str(body.supplierEvidenceUrl, 2000) || !validHttps(str(body.supplierEvidenceUrl, 2000))) missing.push("supplier_identity_evidence_required");
