@@ -32,32 +32,10 @@ export async function handlePublicCatalogRequest(
         `SELECT p.id, p.title, p.description, p.price::text AS price,
                 p.currency, p.image_url AS "imageUrl", p.video_url AS "videoUrl",
                 p.seller_checkout_url AS "sellerCheckoutUrl",
-                s.id AS "storeId", s.name AS "storeName", s.slug AS "storeSlug",
-                COALESCE(so.user_id, ao.user_id, am.user_id) AS "sellerUserId"
+                s.id AS "storeId", s.name AS "storeName", s.slug AS "storeSlug"
          FROM store_products p
          INNER JOIN stores s ON s.id = p.store_id AND s.status = 'active'
          INNER JOIN accounts a ON a.id = s.account_id AND a.status = 'active'
-         LEFT JOIN LATERAL (
-           SELECT sm.user_id FROM store_members sm
-           INNER JOIN users u ON u.id = sm.user_id AND u.status = 'active' AND u.email_verified = TRUE
-           INNER JOIN roles r ON r.id = sm.role_id AND r.scope_type = sm.role_scope AND r.name = 'store_owner'
-           WHERE sm.store_id = s.id AND sm.status = 'active'
-           ORDER BY sm.created_at ASC LIMIT 1
-         ) so ON TRUE
-         LEFT JOIN LATERAL (
-           SELECT m.user_id FROM account_members m
-           INNER JOIN users u ON u.id = m.user_id AND u.status = 'active' AND u.email_verified = TRUE
-           INNER JOIN roles r ON r.id = m.role_id AND r.scope_type = m.role_scope AND r.name = 'account_owner'
-           WHERE m.account_id = a.id AND m.status = 'active'
-           ORDER BY m.created_at ASC LIMIT 1
-         ) ao ON TRUE
-         LEFT JOIN LATERAL (
-           SELECT m.user_id FROM account_members m
-           INNER JOIN users u ON u.id = m.user_id AND u.status = 'active' AND u.email_verified = TRUE
-           INNER JOIN roles r ON r.id = m.role_id AND r.scope_type = m.role_scope AND r.name = 'account_manager'
-           WHERE m.account_id = a.id AND m.status = 'active'
-           ORDER BY m.created_at ASC LIMIT 1
-         ) am ON TRUE
          WHERE p.id = $1 AND p.status = 'active'
          LIMIT 1`,
         [productId],
