@@ -87,7 +87,10 @@ function validate(input: Record<string, unknown>, partial: boolean): string | nu
   }
   if (has("shippingCountries") && (!Array.isArray(input.shippingCountries) || input.shippingCountries.length > 100 ||
       input.shippingCountries.some(value => typeof value !== "string" || !/^[A-Z]{2}$/.test(value)))) return "Shipping countries must be ISO 2-letter country codes";
-  if (has("evidence") && (!Array.isArray(input.evidence) || input.evidence.length > 20 || JSON.stringify(input.evidence).length > 12000)) return "Evidence must be an array of up to 20 compact items";
+  if (has("evidence") && (!Array.isArray(input.evidence) || input.evidence.length > 20 || JSON.stringify(input.evidence).length > 12000 ||
+      input.evidence.some(item => !item || typeof item !== "object" || Array.isArray(item) ||
+        !["supplier_evidence_url", "product_specification"].includes(String((item as Record<string, unknown>).type)) ||
+        !isHttps((item as Record<string, unknown>).url)))) return "Evidence must contain supported HTTPS supplier or specification proof URLs";
   if (has("verificationStatus") && !["unverified", "awaiting_supplier", "partially_verified", "verified", "rejected"].includes(String(input.verificationStatus))) return "Invalid verification status";
   if (has("reviewStatus") && !["draft", "needs_owner_review", "approved", "rejected"].includes(String(input.reviewStatus))) return "Invalid review status";
   if (has("quoteValidUntil") && input.quoteValidUntil !== null && (typeof input.quoteValidUntil !== "string" || !Number.isFinite(Date.parse(input.quoteValidUntil)))) return "Invalid supplier quote expiry";
@@ -178,6 +181,10 @@ export async function handleOfficialStoreSourcingRequest(
           proposed_price: string | null; currency: string | null;
           supplier_identity_verified: boolean; specifications_verified: boolean;
         } | undefined;
+        if (!row) {
+          await client.query("ROLLBACK");
+          reply(response, 404, { success: false, error: "Sourcing candidate not found" }); return;
+        }
         const value = (key: Field, currentValue: unknown) => input[key] === undefined ? currentValue : input[key];
         const verified = value("verificationStatus", row?.verification_status);
         const dropship = value("supplierDropshipConfirmed", row?.supplier_dropship_confirmed);
@@ -195,12 +202,12 @@ export async function handleOfficialStoreSourcingRequest(
         const hasSupplierProof = proofItems.some(item => item?.type === "supplier_evidence_url" && typeof item.url === "string");
         const hasSpecificationProof = proofItems.some(item => item?.type === "product_specification" && typeof item.url === "string");
         const quoteTime = quote instanceof Date ? quote.getTime() : typeof quote === "string" ? Date.parse(quote) : NaN;
-        if (!row || verified !== "verified" || supplierIdentity !== true || specifications !== true || dropship !== true ||
-            (minimum !== null && Number(minimum) > 1) || !sourceUrl ||
+        if (verified !== "verified" || supplierIdentity !== true || specifications !== true || dropship !== true ||
+            minimum === null || minimum === undefined || Number(minimum) > 1 || !sourceUrl ||
             !hasSupplierProof || !hasSpecificationProof || !Number.isFinite(quoteTime) || quoteTime <= Date.now() ||
             price === null || price === undefined || currency === null || currency === undefined) {
           await client.query("ROLLBACK");
-          reply(response, 409, { success: false, error: "Verification and approval require supplier and specification evidence, verified supplier status, confirmed single-unit direct shipping, MOQ of one or less, a future-valid quote, price, currency, and a supplier or product URL" }); return;
+          reply(response, 409, { success: false, error: "Verification and approval require supplier and specification HTTPS evidence, verified supplier status, confirmed single-unit direct shipping, an explicit MOQ of one or less, a future-valid quote, price, currency, and a supplier or product URL" }); return;
         }
       }
       if (request.method === "POST") {
