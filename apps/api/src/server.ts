@@ -112,6 +112,19 @@ async function handleRequest(
     return;
   }
 
+  const officialStoreSourceOfferMatch = requestUrl.pathname.match(/^\\/api\\/platform\\/official-store\\/source-offers(?:\\/([0-9a-f-]{36}))?$/i);
+  if (officialStoreSourceOfferMatch) {
+    try {
+      const { handleOfficialStoreSourceOffersRequest } = await import("./official-store-source-offers.mjs");
+      await handleOfficialStoreSourceOffersRequest(request, response, officialStoreSourceOfferMatch[1]);
+    } catch (error) {
+      console.error("WASLA official store source offers route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Source offer service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const officialStoreProductMatch = requestUrl.pathname.match(/^\/api\/platform\/official-store\/products(?:\/([0-9a-f-]{36}))?$/i);
   const publicOfficialStoreProducts = requestUrl.pathname === "/api/official-store/products";
   if (officialStoreProductMatch || publicOfficialStoreProducts) {
