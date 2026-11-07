@@ -273,7 +273,7 @@ Do not describe the platform as commercially launch-ready based only on successf
 
 - Added the initial two-account trade-deal model: initiator and counterparty accounts, deal terms, optional line items, pending responder, lifecycle status and append-only event history.
 - Added permissioned API endpoints to list deals, create private drafts, view authorized deal details and perform server-validated propose/counter/accept/decline/cancel/complete transitions.
-- Drafts are private to the initiating account until proposed. Counterparties must have an active verified account member with `account.trade.read` before a deal can be created for them.
+- Drafts are private to the initiating account until proposed. Counterparties must have an active verified account member with `account.trade.negotiate` before a deal can be created for them.
 - Scoped permissions are enforced for deal creation, negotiation, acceptance, cancellation and completion. Every state transition, event, audit entry and counterparty notification is written in a transaction.
 - Trade acceptance is an internal human decision only. It does not create an order, charge a payment, reserve inventory, contact a supplier or trigger fulfillment.
 - Added the bilingual `/trade` workspace and navigation entry. It supports business search, creating drafts, proposing, countering, accepting, declining, cancelling and marking an accepted deal complete.
