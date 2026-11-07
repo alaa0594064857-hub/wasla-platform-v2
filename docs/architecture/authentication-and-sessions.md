@@ -82,7 +82,7 @@ Current implementation status:
 - Email verification is enabled in Better Auth and required before normal sign-in.
 - Verification and password-reset email delivery both depend on Resend configuration.
 - Without a verified custom sender/domain, delivery remains restricted to the configured Resend test recipient.
-- The API now has production-safe defaults for its Better Auth base URL and the current Render web origin; the purchased custom domain must be added to BETTER_AUTH_TRUSTED_ORIGINS and BETTER_AUTH_URL when it is connected.
+- The API now has a production-safe Better Auth base URL fallback and always retains the current Render web origin in its trusted-origin list, while also merging explicitly configured origins. The purchased custom domain must be added to BETTER_AUTH_TRUSTED_ORIGINS and BETTER_AUTH_URL when it is connected.
 
 Email delivery must be configured with a verified sender and the full registration, verification, login and password-reset flows must be tested before public production registration is opened.
 
