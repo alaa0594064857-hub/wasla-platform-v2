@@ -681,3 +681,22 @@ Implementation status:
 Approved architecture decision. Canonical product aggregation, source-offer
 linking, duplicate/variant resolution, image-rights provenance, multi-source
 price comparison and automated offer refresh are not yet implemented.
+
+
+## 23. WASLA Trade Managed Brokerage and Commission Boundary
+
+Decision:
+
+WASLA Trade may offer a separately identified managed B2B brokerage service. In that service, WASLA actively sources or qualifies a buyer/supplier opportunity, documents the introduction and may earn a disclosed brokerage fee under an explicit engagement accepted before the commercial introduction.
+
+- Ordinary self-managed member-to-member deals remain commission-free under the existing member-commerce boundary. A deal record, message, match suggestion or introduction alone does not create a fee.
+- A brokerage engagement must identify the parties, opportunity scope, attribution, fee payer(s), fixed/percentage basis, calculation base, currency, cap if any, earning trigger, due date, cancellation/refund treatment, repeat-order scope, and accepted terms.
+- Required fee payer(s) must affirmatively accept the exact terms before the introduction or other fee-triggering work. Acceptance must be timestamped and versioned. No hidden or retroactive commission.
+- A separate commission ledger must store the immutable agreement and evidence of the agreed earning milestone, calculation snapshot, invoice reference, payment evidence and dispute/waiver history. It must not be mixed with subscriptions or member-store customer payments.
+- Initial brokerage release is discovery, introduction, negotiation coordination and invoicing only. WASLA must not hold underlying buyer/supplier trade funds, provide escrow, split payments, guarantee performance, or act as importer/exporter without a separate legal/payment architecture approval.
+- AI may discover and rank candidates only from authorized sources and preserve provenance/freshness. It cannot fabricate verification, send bulk unsolicited outreach, accept terms, bind WASLA, approve its own verification or move money. Human review is required for verification, introductions, fee acceptance, material terms and disputes.
+- Jurisdiction-specific broker/intermediary licensing, business registration, tax/invoicing, sanctions/export controls, privacy and outreach requirements must be reviewed before commercial activation.
+
+Implementation status:
+
+Approved product direction and architecture boundary. The existing Trade deal negotiation workspace is a separate foundation; managed opportunity discovery, sourcing connectors, brokerage engagement acceptance, commission ledger, invoicing and end-to-end tests are not yet implemented.
