@@ -81,7 +81,10 @@ export async function handleOfficialStoreCandidateEnrichment(req: IncomingMessag
       )`);
     if (req.method === "GET") {
       const result = await db.query(`
-        SELECT c.id, c.proposed_title,
+        SELECT c.id, c.proposed_title, c.supplier_name,
+               c.proposed_price::text AS proposed_price, c.currency,
+               c.source_platform, c.source_product_url, c.review_status,
+               c.verification_status, c.reviewed_at,
                e.enrichment, e.updated_at AS enrichment_updated_at
         FROM official_store_sourcing_candidates c
         LEFT JOIN official_store_candidate_enrichments e
@@ -89,6 +92,35 @@ export async function handleOfficialStoreCandidateEnrichment(req: IncomingMessag
         ORDER BY c.created_at DESC
         LIMIT 250`, [access.userId]);
       reply(res, 200, { success: true, candidates: result.rows });
+      return;
+    }
+    if (req.method === "PATCH") {
+      let body: Record<string, unknown> | null;
+      try { body = await readBody(req); } catch { reply(res, 400, { success: false, error: "Invalid JSON body" }); return; }
+      const candidateId = typeof body?.candidateId === "string" ? body.candidateId.trim() : "";
+      const decision = body?.decision;
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(candidateId) ||
+          !["request_evidence", "reject"].includes(String(decision))) {
+        reply(res, 400, { success: false, error: "A valid candidateId and supported review decision are required" }); return;
+      }
+      const nextStatus = decision === "reject" ? "rejected" : "needs_owner_review";
+      const updated = await db.query(
+        `UPDATE official_store_sourcing_candidates
+         SET review_status = $1, reviewed_by_user_id = $2, reviewed_at = NOW(), updated_at = NOW()
+         WHERE id = $3
+         RETURNING id, review_status, verification_status, reviewed_at`,
+        [nextStatus, access.userId, candidateId],
+      );
+      if (!updated.rows.length) { reply(res, 404, { success: false, error: "Sourcing candidate not found" }); return; }
+      await db.query(
+        `INSERT INTO official_store_activity_log (product_id, actor_type, actor_user_id, action, details)
+         SELECT product_id, 'human', $1, 'sourcing_candidate_reviewed', $2::jsonb
+         FROM official_store_sourcing_candidates WHERE id = $3`,
+        [access.userId, JSON.stringify({ candidateId, decision, reviewStatus: nextStatus }), candidateId],
+      );
+      reply(res, 200, { success: true, candidate: updated.rows[0], note: decision === "reject"
+        ? "Candidate rejected. No product was published and no supplier order was placed."
+        : "Candidate returned for more evidence. It remains private and unpublished." });
       return;
     }
     if (req.method !== "POST") { reply(res, 405, { success: false, error: "Method not allowed" }); return; }
