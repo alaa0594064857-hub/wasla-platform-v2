@@ -79,4 +79,27 @@ describe("public catalog privacy and visibility", () => {
     expect(response.status).toBe(405);
     expect(mocks.query).not.toHaveBeenCalled();
   });
+
+  it("lists only active public store products using a supplier-free projection", async () => {
+    mocks.query
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{ id: "store-id", name: "Member Store", slug: "member-store", businessName: "Member Business", businessDescription: null, website: null }],
+      })
+      .mockResolvedValueOnce({
+        rows: [{ id: "product-id", title: "Public item", price: "12.00", currency: "USD" }],
+      });
+    const baseUrl = await startServer({ storeSlug: "member-store" });
+    const response = await fetch(baseUrl);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(data.store.slug).toBe("member-store");
+    expect(data.products).toHaveLength(1);
+    expect(JSON.stringify(data)).not.toMatch(/supplier|source_offer|supplier_price|supplier_name/i);
+    expect(String(mocks.query.mock.calls[0][0])).toContain("s.status = 'active'");
+    expect(String(mocks.query.mock.calls[1][0])).toContain("status = 'active'");
+    expect(String(mocks.query.mock.calls[1][0])).not.toMatch(/supplier|source_offer/i);
+  });
 });
