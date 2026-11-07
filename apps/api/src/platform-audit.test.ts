@@ -56,7 +56,13 @@ describe("platform audit endpoint", () => {
     expect(await response.json()).toEqual({ success: true, entries: [{ id: "audit-1", action: "product.created" }] });
     expect(mocks.authorize).toHaveBeenCalledWith(expect.anything(), expect.anything(), "platform.audit.read");
     expect(mocks.query.mock.calls[0][1]).toEqual([25]);
-    expect(String(mocks.query.mock.calls[0][0])).toContain("ORDER BY al.created_at DESC");
+    const sql = String(mocks.query.mock.calls[0][0]);
+    expect(sql).toContain("ORDER BY \"createdAt\" DESC");
+    expect(sql).toContain("trade_opportunity_events");
+    expect(sql).toContain("trade_brokerage_agreement_events");
+    expect(sql).toContain("trade_brokerage_commission_events");
+    expect(sql).toContain("trade_brokerage_commission_invoice_events");
+    expect(sql).toContain("LIMIT $1");
   });
 
   it("does not query audit data when platform permission is denied", async () => {
