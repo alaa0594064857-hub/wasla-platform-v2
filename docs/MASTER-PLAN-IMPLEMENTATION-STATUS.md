@@ -253,3 +253,17 @@ Do not describe the platform as commercially launch-ready based only on successf
 - GitHub Actions run `42401768346` passed API tests, database migrations, authorization seed idempotency, database integration tests, TypeScript checks and API/Web builds.
 - Render API deployment `dep-dbnmtafavr4c73al87l0` for commit `d122cf03738333273981347476eb0c82522fc6bb` is confirmed Live; runtime logs confirm the API listener started successfully. The owner assignment and production permission matrix were re-read after startup.
 - Verification boundary: role data and startup were verified against production. Full browser-based tests of invitation acceptance and every role's UI actions with separate accounts are still required.
+
+
+## Messaging and in-app notifications checkpoint — 2026-11-07
+
+- Messaging now stores a separate last-read timestamp for each conversation participant. Opening a conversation updates only the signed-in participant's read timestamp; conversation lists return accurate unread counts, and the message workspace displays an unread badge.
+- Conversation lists and message threads now use the member's saved profile display name and avatar when available, falling back to the authentication profile.
+- Added a private in-app notification center with user-scoped listing, unread totals, mark-one-read and mark-all-read actions. The API never returns another user's notifications; mark-read updates are scoped to the signed-in user.
+- The workspace header shows the unread notification count and refreshes it when notification state changes.
+- In-app notifications are created transactionally for account invitations, incoming private messages, product inquiries and replies, and friend requests/acceptance. Invitation senders are also notified when an invitation is accepted or declined.
+- Added versioned migrations `0004_extend_profiles.sql`, `0005_message_read_receipts.sql` and `0006_notifications.sql`; all are registered in Drizzle's migration journal. Startup schema checks remain idempotent for existing deployments.
+- Added regression tests for private notification listing, read ownership, read-all scoping, message read receipts, unread-count query behavior and profile-aware conversation display.
+- GitHub Actions run `42403323245` passed API tests, migrations on a fresh database, authorization seeding, database constraints, TypeScript checks and API/Web builds.
+- Render API deployment for commit `0186745fb41f219468ca0fc2f65c3042dea5790b` is Live and its logs confirm successful startup. The notification schema and message read-receipt columns were verified in the production database.
+- Scope boundary: this is an in-app notification system. Push notifications and email delivery for these event types are not implemented. No synthetic production notifications were created; the live notification table currently contains no event rows because there has been no real invitation/message/inquiry/friend activity yet.
