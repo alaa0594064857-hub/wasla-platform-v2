@@ -603,6 +603,8 @@ if (process.env.NODE_ENV !== "test") {
       await ensureSubscriptionBillingTables();
       const { ensureOfficialStoreTables } = await import("./official-store.mjs");
       await ensureOfficialStoreTables();
+      const { ensureOfficialStoreOpportunityTables } = await import("./official-store-opportunities.mjs");
+      await ensureOfficialStoreOpportunityTables();
     })
     .then(() => {
       server.listen(port, "0.0.0.0", () => {
