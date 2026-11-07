@@ -119,6 +119,9 @@ export async function handleOfficialStorePricingRequest(request: IncomingMessage
     const finalPrice = Math.ceil((costSubtotal + margin) * factor - 1e-10) / factor;
     const roundedCost = Math.round(costSubtotal * factor) / factor;
     const roundedMargin = Math.round(margin * factor) / factor;
+    const grossMarginPercent = finalPrice > 0
+      ? Number(((finalPrice - roundedCost) / finalPrice * 100).toFixed(2))
+      : 0;
     reply(response, 200, {
       success: true, previewOnly: true, published: false, currency: target,
       breakdown: {
