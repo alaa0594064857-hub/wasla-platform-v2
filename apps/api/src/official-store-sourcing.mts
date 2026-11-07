@@ -160,14 +160,14 @@ export async function handleOfficialStoreSourcingRequest(
            FROM official_store_sourcing_candidates WHERE id = $1 FOR UPDATE`,
           [candidateId],
         );
-        const row = current.rows[0] as { verification_status: string; supplier_dropship_confirmed: boolean; minimum_order_quantity: number | null; source_product_url: string | null } | undefined;
+        const row = current.rows[0] as { verification_status: string; supplier_dropship_confirmed: boolean; minimum_order_quantity: number | null; source_product_url: string | null; evidence: unknown[]; quote_valid_until: Date | null; proposed_price: string | null; currency: string | null } | undefined;
         const verified = input.verificationStatus === undefined ? row?.verification_status : input.verificationStatus;
         const dropship = input.supplierDropshipConfirmed === undefined ? row?.supplier_dropship_confirmed : input.supplierDropshipConfirmed;
         const minimum = input.minimumOrderQuantity === undefined ? row?.minimum_order_quantity : input.minimumOrderQuantity;
         const sourceUrl = input.sourceProductUrl === undefined ? row?.source_product_url : input.sourceProductUrl;
         if (!row || verified !== "verified" || dropship !== true || (minimum !== null && Number(minimum) > 1) || !sourceUrl) {
           await client.query("ROLLBACK");
-          reply(response, 409, { success: false, error: "Approval requires verified supplier evidence, confirmed single-unit direct shipping, MOQ of one or less, and a source product URL" }); return;
+          reply(response, 409, { success: false, error: "Approval requires evidence, verified supplier status, confirmed single-unit direct shipping, MOQ of one or less, a current quote, price, currency, and source product URL" }); return;
         }
       }
       if (request.method === "POST") {
