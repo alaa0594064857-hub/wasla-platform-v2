@@ -343,7 +343,7 @@ export async function ensureOfficialStoreTables(): Promise<void> {
       "  CONSTRAINT official_store_source_offer_url_https CHECK (source_product_url ~* '^https://'),",
       "  CONSTRAINT official_store_source_offer_shipping_days_check CHECK (estimated_shipping_days_min IS NULL OR estimated_shipping_days_max IS NULL OR estimated_shipping_days_max >= estimated_shipping_days_min)",
       ")"
-    ].join("\\n"));
+    ].join(String.fromCharCode(10)));
 
 
     await client.query(`
