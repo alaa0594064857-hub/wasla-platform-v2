@@ -70,6 +70,7 @@ export default function OwnerSourcingPage() {
     note: "يمكن التوريد من مصنع أو تاجر محلي في تركيا أو من أي دولة أو منصة؛ لا نعتمد على Alibaba وحده. لا يعتمد المنتج إلا بعد إثبات المورد ومطابقة المواصفات وتأكيد الشحن المباشر لقطعة واحدة وسعر ساري. الاعتماد لا ينشر المنتج ولا يشتريه.",
     sourceLabel: "المصدر", priceLabel: "السعر", moqLabel: "الحد الأدنى", shipLabel: "الشحن",
     dropshipYes: "شحن مباشر مؤكد", dropshipNo: "الشحن المباشر غير مؤكد",
+    identityVerified: "تم التحقق من هوية المورد", specsVerified: "تم التحقق من مطابقة المواصفات", sampleInspected: "تم فحص عينة المنتج",
     actionError: "تعذر تنفيذ الإجراء.", saved: "تم تحديث حالة العرض.",
   } : {
     title: "Supplier & product review", subtitle: "Record supplier offers before converting any item into the official WASLA Store.",
@@ -93,6 +94,7 @@ export default function OwnerSourcingPage() {
     note: "Source from a local Turkish manufacturer or seller, or any trusted supplier worldwide; Alibaba is not required. Approval requires supplier proof, matching product specifications, confirmed single-unit direct shipping and a current quote. Approval does not publish or purchase the product.",
     sourceLabel: "Source", priceLabel: "Price", moqLabel: "MOQ", shipLabel: "Shipping",
     dropshipYes: "Direct shipping confirmed", dropshipNo: "Direct shipping not confirmed",
+    identityVerified: "Supplier identity verified", specsVerified: "Product specifications verified", sampleInspected: "Product sample inspected",
     actionError: "Could not complete this action.", saved: "Offer status updated.",
   };
 
