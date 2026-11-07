@@ -74,6 +74,19 @@ async function handleRequest(
     return;
   }
 
+  if (/^\/api\/trade\/brokerage-agreements\/commission-ledger(?:\/[0-9a-f-]{36})?$/i.test(requestUrl.pathname)) {
+    const entryId = requestUrl.pathname.match(/^\/api\/trade\/brokerage-agreements\/commission-ledger\/([0-9a-f-]{36})$/i)?.[1];
+    try {
+      const { handleBrokerageCommissionLedger } = await import("./trade-brokerage-commission-ledger.mjs");
+      await handleBrokerageCommissionLedger(request, response, entryId);
+    } catch (error) {
+      console.error("WASLA commission ledger route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Commission ledger service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (/^\/api\/trade\/brokerage-agreements(?:\/[0-9a-f-]{36})?$/i.test(requestUrl.pathname)) {
     const agreementId = requestUrl.pathname.match(/^\/api\/trade\/brokerage-agreements\/([0-9a-f-]{36})$/i)?.[1];
     try {
@@ -761,6 +774,8 @@ if (process.env.NODE_ENV !== "test") {
       await ensureTradeOpportunityTables();
       const { ensureBrokerageAgreementTables } = await import("./trade-brokerage-agreements.mjs");
       await ensureBrokerageAgreementTables();
+      const { ensureBrokerageCommissionTables } = await import("./trade-brokerage-commission-ledger.mjs");
+      await ensureBrokerageCommissionTables();
       const { ensureOfficialStoreTables } = await import("./official-store.mjs");
       await ensureOfficialStoreTables();
       const { ensureOfficialStoreOpportunityTables } = await import("./official-store-opportunities.mjs");
