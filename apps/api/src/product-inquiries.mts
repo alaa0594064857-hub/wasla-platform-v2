@@ -209,7 +209,7 @@ export async function handleProductInquiriesRequest(
 
     const product = await db.query(
       `SELECT p.id AS product_id, p.store_id, s.account_id,
-              COALESCE(store_owner.user_id, account_owner.user_id, account_manager.user_id) AS recipient_user_id
+              COALESCE(store_owner.user_id, store_manager.user_id, account_owner.user_id, account_manager.user_id) AS recipient_user_id
        FROM store_products p
        INNER JOIN stores s ON s.id = p.store_id AND s.status = 'active'
        INNER JOIN accounts a ON a.id = s.account_id AND a.status = 'active'
@@ -221,6 +221,14 @@ export async function handleProductInquiriesRequest(
          WHERE sm.store_id = s.id AND sm.status = 'active' AND r.name = 'store_owner'
          ORDER BY sm.created_at ASC LIMIT 1
        ) store_owner ON TRUE
+       LEFT JOIN LATERAL (
+         SELECT sm.user_id
+         FROM store_members sm
+         INNER JOIN users u ON u.id = sm.user_id AND u.status = 'active' AND u.email_verified = TRUE
+         INNER JOIN roles r ON r.id = sm.role_id AND r.scope_type = sm.role_scope
+         WHERE sm.store_id = s.id AND sm.status = 'active' AND r.name = 'store_manager'
+         ORDER BY sm.created_at ASC LIMIT 1
+       ) store_manager ON TRUE
        LEFT JOIN LATERAL (
          SELECT am.user_id
          FROM account_members am
