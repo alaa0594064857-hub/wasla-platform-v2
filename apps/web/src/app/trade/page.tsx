@@ -70,24 +70,41 @@ export default function TradePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [opportunityType, setOpportunityType] = useState<"buyer_request" | "supplier_offer">("buyer_request");
+  const [opportunityTitle, setOpportunityTitle] = useState("");
+  const [opportunityDescription, setOpportunityDescription] = useState("");
+  const [opportunityCategory, setOpportunityCategory] = useState("");
+  const [opportunityQuantity, setOpportunityQuantity] = useState("");
+  const [opportunityUnit, setOpportunityUnit] = useState("");
+  const [opportunityCountry, setOpportunityCountry] = useState("");
+  const [opportunityDestination, setOpportunityDestination] = useState("");
+  const [opportunityCurrency, setOpportunityCurrency] = useState("USD");
+  const [opportunityPrice, setOpportunityPrice] = useState("");
+  const [opportunityMoq, setOpportunityMoq] = useState("");
+  const [opportunityTerms, setOpportunityTerms] = useState("");
+  const [opportunities, setOpportunities] = useState<any[]>([]);
+
 
   const loadData = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const [accountResponse, dealResponse] = await Promise.all([
+      const [accountResponse, dealResponse, opportunityResponse] = await Promise.all([
         fetch("/api/accounts", { credentials: "include", cache: "no-store" }),
         fetch("/api/trade/deals", { credentials: "include", cache: "no-store" }),
+        fetch("/api/trade/opportunities", { credentials: "include", cache: "no-store" }),
       ]);
       if (accountResponse.status === 401 || dealResponse.status === 401) {
         router.replace("/login");
         return;
       }
-      const [accountData, dealData] = await Promise.all([accountResponse.json(), dealResponse.json()]);
+      const [accountData, dealData, opportunityData] = await Promise.all([accountResponse.json(), dealResponse.json(), opportunityResponse.json()]);
       if (!accountResponse.ok || !accountData.success) throw new Error("accounts");
       if (!dealResponse.ok || !dealData.success) throw new Error("deals");
+      if (!opportunityResponse.ok || !opportunityData.success) throw new Error("opportunities");
       setAccounts(accountData.accounts ?? []);
       setDeals(dealData.deals ?? []);
+      setOpportunities(opportunityData.opportunities ?? []);
       if (accountData.accounts?.length) setInitiatorAccountId(current => current || accountData.accounts[0].id);
     } catch {
       setError(ar ? "تعذر تحميل بيانات التجارة. حاول تحديث الصفحة." : "Could not load trade workspace. Please refresh.");
@@ -226,6 +243,52 @@ export default function TradePage() {
     }
   };
 
+  const submitOpportunity = async () => {
+    if (!initiatorAccountId || opportunityTitle.trim().length < 3 || opportunityDescription.trim().length < 10) {
+      setError(ar ? "اختر حساباً تجارياً وأدخل عنواناً ووصفاً واضحين للطلب أو العرض." : "Choose a business account and enter a clear title and description.");
+      return;
+    }
+    if (opportunityQuantity.trim() && (!Number.isFinite(Number(opportunityQuantity)) || Number(opportunityQuantity) <= 0)) {
+      setError(ar ? "الكمية يجب أن تكون رقماً أكبر من صفر." : "Quantity must be greater than zero.");
+      return;
+    }
+    if (opportunityPrice.trim() && (!Number.isFinite(Number(opportunityPrice)) || Number(opportunityPrice) < 0)) {
+      setError(ar ? "أدخل سعراً صحيحاً." : "Enter a valid price.");
+      return;
+    }
+    if (opportunityMoq.trim() && (!Number.isFinite(Number(opportunityMoq)) || Number(opportunityMoq) <= 0)) {
+      setError(ar ? "الحد الأدنى للطلب يجب أن يكون أكبر من صفر." : "Minimum order quantity must be greater than zero.");
+      return;
+    }
+    setSaving(true); setError(""); setNotice("");
+    try {
+      const response = await fetch("/api/trade/opportunities", {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accountId: initiatorAccountId, opportunityType, title: opportunityTitle.trim(),
+          description: opportunityDescription.trim(), productCategory: opportunityCategory.trim(),
+          quantity: opportunityQuantity.trim() ? Number(opportunityQuantity) : null,
+          quantityUnit: opportunityUnit.trim(), targetCountry: opportunityCountry.trim().toUpperCase(),
+          destinationCountry: opportunityDestination.trim().toUpperCase(),
+          currency: opportunityCurrency,
+          targetUnitPrice: opportunityPrice.trim() ? Number(opportunityPrice) : null,
+          minimumOrderQuantity: opportunityMoq.trim() ? Number(opportunityMoq) : null,
+          deliveryTerms: opportunityTerms.trim(),
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || "submit");
+      setOpportunityTitle(""); setOpportunityDescription(""); setOpportunityCategory("");
+      setOpportunityQuantity(""); setOpportunityUnit(""); setOpportunityCountry("");
+      setOpportunityDestination(""); setOpportunityPrice(""); setOpportunityMoq(""); setOpportunityTerms("");
+      setNotice(ar ? "وصل طلبك إلى WASLA للمراجعة الخاصة. لن يظهر للمطابقة قبل اعتماده." : "Your opportunity was privately submitted to WASLA for review. It will not enter matching until approved.");
+      await loadData();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : (ar ? "تعذر إرسال الطلب." : "Could not submit opportunity."));
+    } finally { setSaving(false); }
+  };
+
   const inputStyle = { width: "100%", minWidth: 0, border: "1px solid rgba(115,128,146,.35)", borderRadius: 10, padding: "11px 12px", background: "transparent", color: "inherit" } as const;
   const buttonStyle = { border: "1px solid #c6a15b", borderRadius: 10, padding: "9px 13px", background: "#14243a", color: "#f7f4ed", fontWeight: 700, cursor: "pointer" } as const;
 
@@ -240,6 +303,71 @@ export default function TradePage() {
 
       {error && <p role="alert" style={{ padding: 12, borderRadius: 10, background: "#f8e7e5", color: "#8f302d" }}>{error}</p>}
       {notice && <p role="status" style={{ padding: 12, borderRadius: 10, background: "#e8f0e9", color: "#245b3b" }}>{notice}</p>}
+
+      <section style={{ background: "#fff", border: "1px solid rgba(115,128,146,.2)", borderRadius: 16, padding: 20, marginBottom: 26 }}>
+        <h2 style={{ color: "#14243a", marginTop: 0 }}>{ar ? "طلب شراء أو فرصة توريد عبر WASLA" : "Buyer request or supplier opportunity"}</h2>
+        <p style={{ fontSize: 13, opacity: .75, lineHeight: 1.7 }}>{ar ? "أرسل طلب شراء شركتك أو فرصة التوريد المتاحة لديك. ستراجع WASLA المعلومات بشكل خاص قبل أي مطابقة أو مشاركة مع طرف آخر." : "Submit your company's buying requirement or supplier capacity. WASLA reviews it privately before any matching or disclosure to another party."}</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))", gap: 12 }}>
+          <label style={{ display: "grid", gap: 6 }}>{ar ? "نوع الفرصة" : "Opportunity type"}
+            <select value={opportunityType} onChange={e => setOpportunityType(e.target.value as "buyer_request" | "supplier_offer")} style={inputStyle}>
+              <option value="buyer_request">{ar ? "أبحث عن شراء / توريد" : "I need to buy / source"}</option>
+              <option value="supplier_offer">{ar ? "لدي منتج أو قدرة توريد" : "I can supply a product"}</option>
+            </select>
+          </label>
+          <label style={{ display: "grid", gap: 6 }}>{ar ? "الحساب التجاري" : "Business account"}
+            <select value={initiatorAccountId} onChange={e => setInitiatorAccountId(e.target.value)} style={inputStyle}>
+              <option value="">{ar ? "اختر الحساب" : "Choose account"}</option>
+              {accounts.map(account => <option key={account.id} value={account.id}>{account.display_name}</option>)}
+            </select>
+          </label>
+          <label style={{ display: "grid", gap: 6 }}>{ar ? "عنوان الطلب أو العرض" : "Opportunity title"}
+            <input value={opportunityTitle} onChange={e => setOpportunityTitle(e.target.value)} maxLength={180} style={inputStyle} />
+          </label>
+          <label style={{ display: "grid", gap: 6 }}>{ar ? "فئة المنتج" : "Product category"}
+            <input value={opportunityCategory} onChange={e => setOpportunityCategory(e.target.value)} maxLength={120} style={inputStyle} />
+          </label>
+          <label style={{ display: "grid", gap: 6 }}>{ar ? "الكمية المطلوبة / المتاحة" : "Required / available quantity"}
+            <input inputMode="decimal" value={opportunityQuantity} onChange={e => setOpportunityQuantity(e.target.value)} style={inputStyle} />
+          </label>
+          <label style={{ display: "grid", gap: 6 }}>{ar ? "وحدة الكمية" : "Quantity unit"}
+            <input value={opportunityUnit} onChange={e => setOpportunityUnit(e.target.value)} placeholder={ar ? "قطعة، طن، كرتون..." : "Pieces, tonnes, cartons..."} style={inputStyle} />
+          </label>
+          <label style={{ display: "grid", gap: 6 }}>{ar ? "بلد المورد / المنشأ (رمز بلد من حرفين)" : "Supplier / origin country (2-letter code)"}
+            <input value={opportunityCountry} onChange={e => setOpportunityCountry(e.target.value.toUpperCase())} maxLength={2} placeholder="TR" style={inputStyle} />
+          </label>
+          <label style={{ display: "grid", gap: 6 }}>{ar ? "بلد التسليم (رمز بلد من حرفين)" : "Destination country (2-letter code)"}
+            <input value={opportunityDestination} onChange={e => setOpportunityDestination(e.target.value.toUpperCase())} maxLength={2} placeholder="AE" style={inputStyle} />
+          </label>
+          <label style={{ display: "grid", gap: 6 }}>{ar ? "العملة" : "Currency"}
+            <select value={opportunityCurrency} onChange={e => setOpportunityCurrency(e.target.value)} style={inputStyle}>{["USD", "EUR", "TRY", "GBP", "AED", "SAR"].map(code => <option key={code}>{code}</option>)}</select>
+          </label>
+          <label style={{ display: "grid", gap: 6 }}>{ar ? "السعر المستهدف / الاسترشادي للوحدة" : "Target / indicative unit price"}
+            <input inputMode="decimal" value={opportunityPrice} onChange={e => setOpportunityPrice(e.target.value)} style={inputStyle} />
+          </label>
+          <label style={{ display: "grid", gap: 6 }}>{ar ? "الحد الأدنى للطلب (للمورد)" : "Minimum order quantity (supplier)"}
+            <input inputMode="decimal" value={opportunityMoq} onChange={e => setOpportunityMoq(e.target.value)} style={inputStyle} />
+          </label>
+          <label style={{ display: "grid", gap: 6 }}>{ar ? "شروط التسليم" : "Delivery terms"}
+            <input value={opportunityTerms} onChange={e => setOpportunityTerms(e.target.value)} maxLength={40} placeholder="EXW / FOB / CIF / DDP" style={inputStyle} />
+          </label>
+        </div>
+        <label style={{ display: "grid", gap: 6, marginTop: 12 }}>{ar ? "المواصفات والتفاصيل والشروط" : "Specifications, details and terms"}
+          <textarea value={opportunityDescription} onChange={e => setOpportunityDescription(e.target.value)} maxLength={8000} rows={4} style={inputStyle} />
+        </label>
+        <button type="button" disabled={saving || loading} onClick={() => void submitOpportunity()} style={{ ...buttonStyle, marginTop: 14, opacity: saving || loading ? .6 : 1 }}>
+          {saving ? (ar ? "جارٍ الإرسال..." : "Submitting...") : (ar ? "إرسال إلى WASLA للمراجعة" : "Submit to WASLA for review")}
+        </button>
+        <div style={{ marginTop: 16 }}>
+          <strong>{ar ? "طلباتك وفرصك السابقة" : "Your submitted opportunities"}</strong>
+          {opportunities.length === 0 ? <p style={{ opacity: .65, fontSize: 13 }}>{ar ? "لا توجد طلبات بعد." : "No opportunities submitted yet."}</p> :
+            <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
+              {opportunities.map(item => <div key={item.id} style={{ padding: 10, borderRadius: 10, background: "#f7f4ed", display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                <span><strong>{item.title}</strong><small style={{ display: "block", opacity: .65 }}>{item.opportunity_type === "buyer_request" ? (ar ? "طلب شراء" : "Buyer request") : (ar ? "عرض مورد" : "Supplier offer")}</small></span>
+                <strong style={{ fontSize: 12 }}>{item.review_status === "pending_review" ? (ar ? "قيد المراجعة" : "Pending review") : item.review_status === "approved" ? (ar ? "معتمد" : "Approved") : item.review_status === "rejected" ? (ar ? "مرفوض" : "Rejected") : (ar ? "مغلق" : "Closed")}</strong>
+              </div>)}
+            </div>}
+        </div>
+      </section>
 
       <section style={{ background: "#fff", border: "1px solid rgba(115,128,146,.2)", borderRadius: 16, padding: 20, marginBottom: 26 }}>
         <h2 style={{ color: "#14243a", marginTop: 0 }}>{ar ? "إنشاء مسودة صفقة" : "Create a deal draft"}</h2>
