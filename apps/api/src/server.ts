@@ -74,6 +74,19 @@ async function handleRequest(
     return;
   }
 
+  if (/^\\/api\\/trade\\/brokerage-agreements(?:\\/[0-9a-f-]{36})?$/i.test(requestUrl.pathname)) {
+    const agreementId = requestUrl.pathname.match(/^\\/api\\/trade\\/brokerage-agreements\\/([0-9a-f-]{36})$/i)?.[1];
+    try {
+      const { handleBrokerageAgreements } = await import("./trade-brokerage-agreements.mjs");
+      await handleBrokerageAgreements(request, response, agreementId);
+    } catch (error) {
+      console.error("WASLA brokerage agreement route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Brokerage agreement service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (/^\/api\/trade\/opportunities(?:\/(?:review|matches|[0-9a-f-]{36}))?$/i.test(requestUrl.pathname)) {
     const opportunityId = requestUrl.pathname.match(/^\/api\/trade\/opportunities\/(review|matches|[0-9a-f-]{36})$/i)?.[1];
     try {
@@ -746,6 +759,8 @@ if (process.env.NODE_ENV !== "test") {
       await ensureTradeTables();
       const { ensureTradeOpportunityTables } = await import("./trade-opportunities.mjs");
       await ensureTradeOpportunityTables();
+      const { ensureBrokerageAgreementTables } = await import("./trade-brokerage-agreements.mjs");
+      await ensureBrokerageAgreementTables();
       const { ensureOfficialStoreTables } = await import("./official-store.mjs");
       await ensureOfficialStoreTables();
       const { ensureOfficialStoreOpportunityTables } = await import("./official-store-opportunities.mjs");
