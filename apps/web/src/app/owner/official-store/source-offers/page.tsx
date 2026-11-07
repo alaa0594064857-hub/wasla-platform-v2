@@ -51,7 +51,7 @@ export default function OfficialStoreSourceOffersPage() {
   const [enrichmentBusyId, setEnrichmentBusyId] = useState("");
   const [enrichmentResults, setEnrichmentResults] = useState<Record<string, { category: string; classificationConfidence: number; facts: Record<string,string>; missingRequiredReviewFields: string[]; warnings: string[]; sourceEvidence?: Array<{ type: string; url?: string; value?: string; rightsStatus: string; verificationStatus: string }> }>>({});
 
-  const [importResult, setImportResult] = useState<{ importedCount: number; candidates: Array<{ id: string; proposed_title: string; supplier_name?: string; proposed_price?: string | null; currency?: string | null; source_platform?: string; source_product_url?: string; review_status?: string; verification_status?: string }> } | null>(null);
+  const [importResult, setImportResult] = useState<{ importedCount: number; candidates: Array<{ id: string; proposed_title: string; supplier_name?: string; proposed_price?: string | null; currency?: string | null; source_platform?: string; source_product_url?: string; review_status?: string; verification_status?: string; supplier_identity_verified?: boolean; specifications_verified?: boolean; supplier_dropship_confirmed?: boolean; minimum_order_quantity?: number | null }> } | null>(null);
   const [candidateReviewBusyId, setCandidateReviewBusyId] = useState("");
   const [sourcingCandidateId, setSourcingCandidateId] = useState("");
   const [pricingForm, setPricingForm] = useState({ supplierCost: "", supplierCurrency: "USD", supplierFxRate: "", supplierFxRateAsOf: "", supplierFxSource: "", shippingCost: "", shippingCurrency: "USD", shippingFxRate: "", shippingFxRateAsOf: "", shippingFxSource: "", displayCurrency: "USD", marginPercent: "20", fixedMargin: "0", additionalCost: "", additionalCostCurrency: "USD", additionalCostFxRate: "", additionalCostFxRateAsOf: "", additionalCostFxSource: "", additionalCostType: "other_cost" });
@@ -115,7 +115,7 @@ export default function OfficialStoreSourceOffersPage() {
     setProducts(Array.isArray(pd.products) ? pd.products : []);
     setOffers(Array.isArray(od.offers) ? od.offers : []);
     const candidates = Array.isArray(cd.candidates) ? cd.candidates : [];
-    setImportResult(candidates.length ? { importedCount: candidates.length, candidates: candidates.map((item: any) => ({ id: item.id, proposed_title: item.proposed_title || "", supplier_name: item.supplier_name, proposed_price: item.proposed_price, currency: item.currency, source_platform: item.source_platform, source_product_url: item.source_product_url, review_status: item.review_status, verification_status: item.verification_status })) } : null);
+    setImportResult(candidates.length ? { importedCount: candidates.length, candidates: candidates.map((item: any) => ({ id: item.id, proposed_title: item.proposed_title || "", supplier_name: item.supplier_name, proposed_price: item.proposed_price, currency: item.currency, source_platform: item.source_platform, source_product_url: item.source_product_url, review_status: item.review_status, verification_status: item.verification_status, supplier_identity_verified: item.supplier_identity_verified, specifications_verified: item.specifications_verified, supplier_dropship_confirmed: item.supplier_dropship_confirmed, minimum_order_quantity: item.minimum_order_quantity })) } : null);
     setEnrichmentResults(Object.fromEntries(candidates.filter((item: any) => item.enrichment).map((item: any) => [item.id, item.enrichment])));
   }
 
@@ -357,7 +357,7 @@ export default function OfficialStoreSourceOffersPage() {
           <p style={{ fontSize: 12, opacity: .75 }}>{item.supplier_name || ""}{item.source_platform ? ` · ${item.source_platform}` : ""}{item.proposed_price ? ` · ${item.proposed_price} ${item.currency || ""}` : ""}</p>
           <p style={{ fontSize: 12, fontWeight: 700 }}>{ar ? "حالة المراجعة:" : "Review status:"} {item.review_status || "needs_owner_review"} · {ar ? "التحقق:" : "Verification:"} {item.verification_status || "unverified"}</p>
           {item.source_product_url && <a href={item.source_product_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#9b762c" }}>{ar ? "فتح صفحة المنتج الأصلية" : "Open original product listing"}</a>}
-          {item.review_status !== "rejected" && item.review_status !== "converted" && <button type="button" onClick={() => {
+          {item.review_status === "approved" && item.verification_status === "verified" && item.supplier_identity_verified === true && item.specifications_verified === true && item.supplier_dropship_confirmed === true && item.minimum_order_quantity === 1 && <button type="button" onClick={() => {
             setSourcingCandidateId(item.id);
             const sourceEvidence = enrichmentResults[item.id]?.sourceEvidence ?? [];
             const supplierProof = sourceEvidence.find(entry => entry.type === "supplier_evidence_url" && entry.url)?.url ?? "";
