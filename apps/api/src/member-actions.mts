@@ -76,12 +76,17 @@ export async function handleMemberAction(
         id: string;
         user_id: string;
         status: string;
+        invited_by: string | null;
+        account_name: string;
+        member_name: string;
       }>(
-        `SELECT id, user_id, status
-         FROM account_members
-         WHERE id = $1
-           AND account_id = $2
-         FOR UPDATE`,
+        `SELECT am.id, am.user_id, am.status, am.invited_by,
+                a.display_name AS account_name, u.name AS member_name
+         FROM account_members am
+         INNER JOIN accounts a ON a.id = am.account_id
+         INNER JOIN users u ON u.id = am.user_id
+         WHERE am.id = $1 AND am.account_id = $2
+         FOR UPDATE OF am`,
         [membershipId, accountId],
       );
 
@@ -213,6 +218,30 @@ export async function handleMemberAction(
           }),
         ],
       );
+
+      if ((action === "accept" || action === "decline") &&
+          membership.invited_by && membership.invited_by !== session.user.id) {
+        await client.query(
+          `INSERT INTO notifications (
+             user_id, type, title_ar, title_en, body_ar, body_en,
+             action_url, resource_id, metadata
+           )
+           VALUES ($1, 'account_invitation', $2, $3, $4, $5, '/business', $6, $7::jsonb)`,
+          [
+            membership.invited_by,
+            action === "accept" ? "تم قبول دعوة الحساب" : "تم رفض دعوة الحساب",
+            action === "accept" ? "Business invitation accepted" : "Business invitation declined",
+            action === "accept"
+              ? `انضم ${membership.member_name} إلى حساب ${membership.account_name}.`
+              : `رفض ${membership.member_name} دعوة الانضمام إلى حساب ${membership.account_name}.`,
+            action === "accept"
+              ? `${membership.member_name} joined the ${membership.account_name} account.`
+              : `${membership.member_name} declined the invitation to join the ${membership.account_name} account.`,
+            membershipId,
+            JSON.stringify({ accountId, membershipId, memberUserId: membership.user_id, action }),
+          ],
+        );
+      }
 
       await client.query("COMMIT");
 
