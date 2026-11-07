@@ -104,21 +104,36 @@ export async function handleOfficialStoreCandidateEnrichment(req: IncomingMessag
         reply(res, 400, { success: false, error: "A valid candidateId and supported review decision are required" }); return;
       }
       const nextStatus = decision === "reject" ? "rejected" : "needs_owner_review";
-      const updated = await db.query(
-        `UPDATE official_store_sourcing_candidates
-         SET review_status = $1, reviewed_by_user_id = $2, reviewed_at = NOW(), updated_at = NOW()
-         WHERE id = $3
-         RETURNING id, review_status, verification_status, reviewed_at`,
-        [nextStatus, access.userId, candidateId],
-      );
-      if (!updated.rows.length) { reply(res, 404, { success: false, error: "Sourcing candidate not found" }); return; }
-      await db.query(
-        `INSERT INTO official_store_activity_log (product_id, actor_type, actor_user_id, action, details)
-         SELECT product_id, 'human', $1, 'sourcing_candidate_reviewed', $2::jsonb
-         FROM official_store_sourcing_candidates WHERE id = $3`,
-        [access.userId, JSON.stringify({ candidateId, decision, reviewStatus: nextStatus }), candidateId],
-      );
-      reply(res, 200, { success: true, candidate: updated.rows[0], note: decision === "reject"
+      const client = await db.connect();
+      try {
+        await client.query("BEGIN");
+        const updated = await client.query(
+          `UPDATE official_store_sourcing_candidates
+           SET review_status = $1, reviewed_by_user_id = $2, reviewed_at = NOW(), updated_at = NOW()
+           WHERE id = $3 AND review_status NOT IN ('converted', 'rejected')
+           RETURNING id, product_id, review_status, verification_status, reviewed_at`,
+          [nextStatus, access.userId, candidateId],
+        );
+        if (!updated.rows.length) {
+          const existing = await client.query(
+            "SELECT id, review_status FROM official_store_sourcing_candidates WHERE id = $1",
+            [candidateId],
+          );
+          await client.query("ROLLBACK");
+          if (!existing.rows.length) {
+            reply(res, 404, { success: false, error: "Sourcing candidate not found" });
+          } else {
+            reply(res, 409, { success: false, error: "Rejected or converted candidates are locked from further review changes" });
+          }
+          return;
+        }
+        await client.query(
+          `INSERT INTO official_store_activity_log (product_id, actor_type, actor_user_id, action, details)
+           VALUES ($1, 'human', $2, 'sourcing_candidate_reviewed', $3::jsonb)`,
+          [updated.rows[0].product_id, access.userId, JSON.stringify({ candidateId, decision, reviewStatus: nextStatus })],
+        );
+        await client.query("COMMIT");
+              reply(res, 200, { success: true, candidate: updated.rows[0], note: decision === "reject"
         ? "Candidate rejected. No product was published and no supplier order was placed."
         : "Candidate returned for more evidence. It remains private and unpublished." });
       return;
