@@ -93,6 +93,60 @@ export async function ensureTradeOpportunityTables(): Promise<void> {
   `);
 }
 
+type MatchOpportunity = {
+  id: string; account_id: string; account_name?: string; opportunity_type: OpportunityType;
+  title: string; product_category: string | null; quantity: string | number | null;
+  quantity_unit: string | null; target_country: string | null; destination_country: string | null;
+  currency: string | null; target_unit_price: string | number | null;
+  minimum_order_quantity: string | number | null; review_status: ReviewStatus; expires_at: string | null;
+};
+
+export function buildTradeOpportunityMatches(rows: MatchOpportunity[]) {
+  const buyers = rows.filter(row => row.opportunity_type === "buyer_request");
+  const suppliers = rows.filter(row => row.opportunity_type === "supplier_offer");
+  const matches: Array<Record<string, unknown>> = [];
+  for (const buyer of buyers) for (const supplier of suppliers) {
+    if (buyer.account_id === supplier.account_id) continue;
+    const reasons: string[] = [];
+    const warnings: string[] = [];
+    let score = 0;
+    const buyerCategory = (buyer.product_category ?? "").trim().toLocaleLowerCase();
+    const supplierCategory = (supplier.product_category ?? "").trim().toLocaleLowerCase();
+    if (!buyerCategory || !supplierCategory || buyerCategory !== supplierCategory) continue;
+    score += 35; reasons.push("Exact product category");
+    if (buyer.target_country && supplier.target_country) {
+      if (buyer.target_country !== supplier.target_country) continue;
+      score += 15; reasons.push("Origin country matches");
+    } else warnings.push("Origin country needs confirmation");
+    if (buyer.destination_country && supplier.destination_country) {
+      if (buyer.destination_country !== supplier.destination_country) continue;
+      score += 20; reasons.push("Delivery destination matches");
+    } else warnings.push("Delivery destination needs confirmation");
+    if (buyer.quantity !== null && buyer.quantity !== undefined && supplier.minimum_order_quantity !== null && supplier.minimum_order_quantity !== undefined) {
+      const required = Number(buyer.quantity);
+      const minimum = Number(supplier.minimum_order_quantity);
+      if (!Number.isFinite(required) || !Number.isFinite(minimum) || minimum > required) continue;
+      if (supplier.quantity !== null && supplier.quantity !== undefined && Number(supplier.quantity) < required) continue;
+      score += 15; reasons.push("Quantity fits supplier minimum and stated capacity");
+    } else warnings.push("Quantity or supplier minimum needs confirmation");
+    if (buyer.currency && supplier.currency) {
+      if (buyer.currency !== supplier.currency) continue;
+      score += 5; reasons.push("Currency matches");
+    } else warnings.push("Comparable currency quote is missing");
+    if (buyer.target_unit_price !== null && buyer.target_unit_price !== undefined && supplier.target_unit_price !== null && supplier.target_unit_price !== undefined) {
+      if (Number(supplier.target_unit_price) > Number(buyer.target_unit_price)) continue;
+      score += 10; reasons.push("Supplier indicative unit price is within buyer target");
+    } else warnings.push("Comparable price evidence is missing");
+    matches.push({
+      buyer: { id: buyer.id, accountId: buyer.account_id, accountName: buyer.account_name, title: buyer.title },
+      supplier: { id: supplier.id, accountId: supplier.account_id, accountName: supplier.account_name, title: supplier.title },
+      score, reasons, warnings,
+      readiness: warnings.length === 0 ? "review_ready" : "needs_information",
+    });
+  }
+  return matches.sort((a, b) => Number(b.score) - Number(a.score));
+}
+
 export async function handleTradeOpportunitiesRequest(
   request: IncomingMessage,
   response: ServerResponse,
@@ -107,6 +161,26 @@ export async function handleTradeOpportunitiesRequest(
     if (!session) { reply(response, 401, { success: false, error: "Authentication required" }); return; }
     const userId = session.user.id;
     const db = getDatabasePool();
+
+    if (request.method === "GET" && opportunityId === "matches") {
+      const owner = await authorizePlatformPermission(request, response, "platform.manage");
+      if (!owner) return;
+      const result = await db.query(
+        `SELECT o.id, o.account_id, a.display_name AS account_name, o.opportunity_type, o.title,
+                o.product_category, o.quantity::text AS quantity, o.quantity_unit,
+                o.target_country, o.destination_country, o.currency,
+                o.target_unit_price::text AS target_unit_price,
+                o.minimum_order_quantity::text AS minimum_order_quantity,
+                o.review_status, o.expires_at
+         FROM trade_opportunities o
+         INNER JOIN accounts a ON a.id=o.account_id
+         WHERE o.review_status='approved' AND (o.expires_at IS NULL OR o.expires_at > NOW())
+         ORDER BY o.updated_at DESC LIMIT 500`
+      );
+      const matches = buildTradeOpportunityMatches(result.rows as MatchOpportunity[]);
+      reply(response, 200, { success: true, matches, sourceCount: result.rowCount ?? result.rows.length, generatedAt: new Date().toISOString(), note: "Indicative internal matches only. Verify identity, specifications, capacity, quote and shipping before introduction." });
+      return;
+    }
 
     if (request.method === "GET") {
       if (opportunityId === "review") {
