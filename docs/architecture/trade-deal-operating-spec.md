@@ -31,7 +31,7 @@ WASLA Trade manages commercial deal proposals and negotiation between two active
 
 Alternative terminal paths: `declined` or `cancelled`.
 
-- Draft: visible only to authorized members of the initiator account; terms may be edited.
+- Draft: visible only to authorized members of the initiator account. In the initial V1 workflow, terms are fixed after creation; cancel and recreate a draft to change them before proposal.
 - Proposed: the initiator has explicitly sent the current terms to the counterparty; the counterparty becomes the pending responder.
 - Negotiating: the pending responder may submit a counter-proposal. Each counter-proposal changes the pending responder to the other account and appends an immutable event.
 - Accepted: the account currently designated as pending responder explicitly accepts the current terms. This records an acceptance event and timestamp only.
@@ -47,7 +47,7 @@ Every state transition must be validated server-side and written in the same tra
 - Line items record the product/service description, optional SKU, positive quantity, unit price and currency.
 - A counter-proposal is a new version/event; the prior proposal remains visible in history.
 - Totals are calculated from line items when present; clients cannot submit a contradictory total.
-- Terms and line items are editable only while the deal is a draft. After proposal, changes are made as counter-proposals and recorded as events.
+- In the initial V1 workflow, terms and line items are fixed after draft creation. Before proposal, cancel and recreate a draft to change them. After proposal, changes are made as counter-proposals and recorded as events. A dedicated draft-edit action remains a follow-up enhancement.
 
 ## Audit and notifications
 
