@@ -17,6 +17,7 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
   const [menuOpen, setMenuOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [isPlatformOwner, setIsPlatformOwner] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchText, setSearchText] = useState("");
   const { data: session, isPending } = authClient.useSession();
@@ -29,6 +30,16 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!session?.user) { setUnreadNotifications(0); return; }
+    let active = true;
+    fetch("/api/notifications", { credentials: "include", cache: "no-store" })
+      .then(async response => response.ok ? response.json() : null)
+      .then(data => { if (active) setUnreadNotifications(Number(data?.success ? data.unreadCount ?? 0 : 0)); })
+      .catch(() => { if (active) setUnreadNotifications(0); });
+    return () => { active = false; };
+  }, [session?.user?.id, pathname]);
 
   useEffect(() => {
     if (!session?.user) { setProfile(null); setIsPlatformOwner(false); return; }
@@ -93,6 +104,10 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
         <Link href="/inquiries" aria-current={pathname === "/inquiries" ? "page" : undefined}>{ar ? "الاستفسارات" : "Inquiries"}</Link>
       </nav>
       <div className="wasla-workspace-actions">
+        <Link href="/notifications" aria-label={ar ? `الإشعارات، ${unreadNotifications} غير مقروء` : `Notifications, ${unreadNotifications} unread`} title={ar ? "الإشعارات" : "Notifications"} style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 38, height: 38, borderRadius: 10, color: "inherit", textDecoration: "none" }}>
+          <span aria-hidden="true" style={{ fontSize: 22 }}>♢</span>
+          {unreadNotifications > 0 && <span style={{ position: "absolute", top: 0, insetInlineEnd: 0, minWidth: 17, height: 17, padding: "0 4px", borderRadius: 99, background: "#c6a15b", color: "#14243a", fontSize: 10, fontWeight: 800, display: "grid", placeItems: "center" }}>{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>}
+        </Link>
         <button type="button" className="wasla-search-trigger" aria-label={ar ? "فتح البحث" : "Open search"} aria-expanded={searchOpen} title={ar ? "البحث الشامل" : "Universal search"} onClick={() => setSearchOpen(value => !value)}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
         </button>
@@ -119,7 +134,7 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
       </div>
       <div className="wasla-drawer-label">{ar ? "مساحتك في وصلة" : "YOUR WASLA SPACE"}</div>
       <nav className="wasla-drawer-links">
-        {items.map(item => <Link href={item.href} key={item.href} aria-current={pathname === item.href ? "page" : undefined}><span>{item.icon}</span>{item.label}<b>↗</b></Link>)}
+        {items.map(item => <Link href={item.href} key={item.href} aria-current={pathname === item.href ? "page" : undefined}><span>{item.icon}</span>{item.label}{item.href === "/notifications" && unreadNotifications > 0 && <small style={{ marginInlineStart: "auto", borderRadius: 99, padding: "2px 7px", background: "#c6a15b", color: "#14243a", fontWeight: 800 }}>{unreadNotifications > 99 ? "99+" : unreadNotifications}</small>}<b>↗</b></Link>)}
         {isPlatformOwner && <Link href="/owner" aria-current={pathname === "/owner" ? "page" : undefined}><span>◆</span>{ar ? "لوحة مالك المنصة" : "Platform owner console"}<b>↗</b></Link>}
       </nav>
       <div className="wasla-drawer-bottom">
