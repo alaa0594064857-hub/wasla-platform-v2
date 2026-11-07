@@ -51,6 +51,7 @@ export default function OfficialStoreSourceOffersPage() {
 
   const [importResult, setImportResult] = useState<{ importedCount: number; candidates: Array<{ id: string; proposed_title: string; supplier_name?: string; proposed_price?: string | null; currency?: string | null; source_platform?: string; source_product_url?: string; review_status?: string; verification_status?: string }> } | null>(null);
   const [candidateReviewBusyId, setCandidateReviewBusyId] = useState("");
+  const [sourcingCandidateId, setSourcingCandidateId] = useState("");
   const [pricingForm, setPricingForm] = useState({ supplierCost: "", supplierCurrency: "USD", supplierFxRate: "", supplierFxRateAsOf: "", supplierFxSource: "", shippingCost: "", shippingCurrency: "USD", shippingFxRate: "", shippingFxRateAsOf: "", shippingFxSource: "", displayCurrency: "USD", marginPercent: "20", fixedMargin: "0", additionalCost: "", additionalCostCurrency: "USD", additionalCostFxRate: "", additionalCostFxRateAsOf: "", additionalCostFxSource: "", additionalCostType: "other_cost" });
   const [pricingBusy, setPricingBusy] = useState(false);
   const [pricingResult, setPricingResult] = useState<{ currency: string; breakdown: { costSubtotal: number; margin: { total: number }; finalCustomerPrice: number }; warnings: string[] } | null>(null);
@@ -270,6 +271,7 @@ export default function OfficialStoreSourceOffersPage() {
         body: JSON.stringify({
           productId: form.productId, supplierName: form.supplierName.trim(),
           sourcePlatform: form.sourcePlatform.trim(), sourceProductUrl: form.sourceProductUrl.trim(),
+          ...(sourcingCandidateId ? { sourcingCandidateId } : {}),
           variantAttributes: form.variantDescription.trim() ? { description: form.variantDescription.trim() } : {},
           supplierPrice: Number(form.supplierPrice), supplierCurrency: form.supplierCurrency.trim().toUpperCase(),
           shippingCost: form.shippingCost === "" ? null : Number(form.shippingCost),
@@ -283,7 +285,7 @@ export default function OfficialStoreSourceOffersPage() {
       });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error("save");
-      setForm({ ...initial }); setNotice(t.saved); await load();
+      setForm({ ...initial }); setSourcingCandidateId(""); setNotice(t.saved); await load();
     } catch { setError(t.error); }
     finally { setSaving(false); }
   }
@@ -339,6 +341,11 @@ export default function OfficialStoreSourceOffersPage() {
           <p style={{ fontSize: 12, opacity: .75 }}>{item.supplier_name || ""}{item.source_platform ? ` · ${item.source_platform}` : ""}{item.proposed_price ? ` · ${item.proposed_price} ${item.currency || ""}` : ""}</p>
           <p style={{ fontSize: 12, fontWeight: 700 }}>{ar ? "حالة المراجعة:" : "Review status:"} {item.review_status || "needs_owner_review"} · {ar ? "التحقق:" : "Verification:"} {item.verification_status || "unverified"}</p>
           {item.source_product_url && <a href={item.source_product_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#9b762c" }}>{ar ? "فتح صفحة المنتج الأصلية" : "Open original product listing"}</a>}
+          {item.review_status !== "rejected" && item.review_status !== "converted" && <button type="button" onClick={() => {
+            setSourcingCandidateId(item.id);
+            setForm(current => ({ ...current, supplierName: item.supplier_name || "", sourcePlatform: item.source_platform || "", sourceProductUrl: item.source_product_url || "", supplierPrice: item.proposed_price || "", supplierCurrency: item.currency || "USD" }));
+            document.getElementById("source-offer-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }} style={{ display: "block", marginTop: 8, padding: "8px 11px", border: "1px solid #b18a3c", borderRadius: 8, background: "white", color: "#72551f", fontWeight: 700 }}>{ar ? "ربط بعرض مورد" : "Link to supplier offer"}</button>}
           <button type="button" disabled={enrichmentBusyId === item.id} onClick={() => void enrichCandidate(item.id)} style={{ display: "block", marginTop: 8, padding: "8px 11px", border: 0, borderRadius: 8, background: "#27344d", color: "white", fontWeight: 700 }}>
             {enrichmentBusyId === item.id ? (ar ? "جارٍ تحليل المنتج..." : "Analyzing product...") : (ar ? "حلّل وصنّف المنتج" : "Analyze and classify product")}
           </button>
@@ -374,8 +381,9 @@ export default function OfficialStoreSourceOffersPage() {
         <p style={{ fontSize: 12, opacity: .7 }}>{ar ? "هذه اقتراحات للمراجعة فقط؛ لا يتم دمج السجلات تلقائياً." : "Suggestions only; records are never merged automatically."}</p>
       </div>}
     </section>
-    <section style={{ padding: 18, border: "1px solid #d8dce5", borderRadius: 16, marginTop: 22 }}>
+    <section id="source-offer-form" style={{ padding: 18, border: "1px solid #d8dce5", borderRadius: 16, marginTop: 22 }}>
       <h2 style={{ fontSize: 19, marginTop: 0 }}>{t.add}</h2>
+      {sourcingCandidateId && <p role="status" style={{ padding: 10, background: "#f6f4ee", borderRadius: 9, fontSize: 13 }}>{ar ? "العرض مرتبط بمرشح مستورد. يجب أن تطابق بيانات المورد والسعر والرابط بيانات المرشح." : "This offer is linked to an imported candidate. Supplier, price and source URL must match the candidate."} <button type="button" onClick={() => setSourcingCandidateId("")} style={{ marginInlineStart: 8 }}>{ar ? "إلغاء الربط" : "Unlink"}</button></p>}
       <form onSubmit={save} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 13 }}>
         <label style={labelStyle}>{t.product}<select required value={form.productId} onChange={e => update("productId", e.target.value)} style={inputStyle}>
           <option value="">{ar ? "اختر المنتج" : "Select product"}</option>
