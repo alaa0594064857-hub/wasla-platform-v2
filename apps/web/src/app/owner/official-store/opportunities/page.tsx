@@ -43,7 +43,8 @@ export default function ProductOpportunitiesPage() {
     try {
       const response = await fetch("/api/platform/official-store/opportunities/assess", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, demandSignalStrength: Number(form.demandSignalStrength), sellingPrice: Number(form.sellingPrice), supplierCost: Number(form.supplierCost), shippingCost: Number(form.shippingCost), extraCosts: Number(form.extraCosts) }) });
       const data = await response.json(); if (!response.ok || !data.success || !data.assessmentOnly) throw new Error("assessment");
-      setResult(data);\n      if (data.opportunityId) setHistory(items => [{ id: data.opportunityId, title: data.title, market: data.market, currency: data.currency, score: data.score.total, recommendation: data.recommendation, created_at: data.createdAt }, ...items].slice(0,100));
+      setResult(data);
+      if (data.opportunityId) setHistory(items => [{ id: data.opportunityId, title: data.title, market: data.market, currency: data.currency, score: data.score.total, recommendation: data.recommendation, created_at: data.createdAt }, ...items].slice(0,100));
     } catch { setError(t.errorText); } finally { setBusy(false); }
   }
   const field = (key: keyof typeof initial, label: string, type = "text") => <label className="grid gap-1 text-sm font-medium">{label}<input className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900" type={type} value={String(form[key])} onChange={e => update(key, e.target.value)} required /></label>;
