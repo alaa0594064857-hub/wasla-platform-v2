@@ -282,3 +282,14 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Production database confirms all three trade tables and the trade notification type constraint exist. The live trade tables contain zero deal/item/event rows; no fake commercial activity was inserted.
 - Render API and Web deployments for commit `64eac6fa9c498af528409a841071458a9f4f0fa5` are confirmed Live. A follow-up API hardening change ensures cancelling an unproposed private draft does not notify or reveal it to the counterparty; that deployment is queued.
 - Remaining Trade release gates: authenticated two-account end-to-end tests, review of real counterparty onboarding and deal permissions, richer line-item editing/counter-proposal history UI, and legal review before anyone treats a recorded acceptance as a binding contract.
+
+
+## Platform audit viewer checkpoint — 2026-11-07
+
+- Added `GET /api/platform/audit`, protected by the server-side `platform.audit.read` permission and bounded to a maximum of 100 recent entries.
+- Added bilingual `/owner/audit` read-only page and a link from the owner security panel.
+- The viewer displays action, resource type, account/store labels, actor email and timestamp. It deliberately omits raw metadata so unrelated private details are not surfaced by default.
+- Regression tests verify the permission check, query bound and that denied requests do not read audit data.
+- GitHub Actions run `42404850292` passed API tests, migrations, authorization seed, database constraints, TypeScript checks and API/Web builds.
+- Render API deployment for commit `8fa91273e74c57524faa2df91d65a88ea64b28bf` is Live; runtime logs confirm the API listener started. Web deployment for commit `0df8e311bcc0d768a0b41f7590a76c11dbe614a9` is Live.
+- The production audit table contains real historical entries; the endpoint has not been exercised in an authenticated browser session yet.
