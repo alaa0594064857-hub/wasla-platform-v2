@@ -7,6 +7,7 @@ import { authClient } from "@/lib/auth-client";
 import { useLocale } from "../../../../components/locale-provider";
 
 type Product = { id: string; title_ar: string; title_en: string };
+type MatchResult = { productId: string; titleAr: string; titleEn: string; score: number; reasons: string[] };
 type Offer = {
   id: string; product_id: string; title_ar: string; title_en: string;
   supplier_name: string; source_platform: string; source_product_url: string;
@@ -38,9 +39,14 @@ export default function OfficialStoreSourceOffersPage() {
   const [busyId, setBusyId] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [matchInput, setMatchInput] = useState({ title: "", brand: "", model: "", gtin: "", mpn: "" });
+  const [matchResults, setMatchResults] = useState<MatchResult[]>([]);
+  const [matching, setMatching] = useState(false);
+  const [matchDecision, setMatchDecision] = useState("");
 
   const t = ar ? {
     title: "عروض الموردين للمنتجات الموحدة",
+    matchTitle: "مطابقة منتج من موقع خارجي", matchHelp: "أدخل بيانات المنتج من الموقع الآخر لمعرفة هل هو موجود لدينا باسم أو سجل مختلف.", match: "مطابقة المنتجات", matchRun: "ابحث عن منتج مطابق", matchBusy: "جارٍ فحص المنتجات...", brand: "العلامة التجارية", model: "الموديل", gtin: "GTIN / الباركود", mpn: "رقم القطعة", matches: "المنتجات المحتملة", noMatch: "لم نجد تطابقاً موثوقاً. يلزم مراجعة أو إنشاء منتج جديد.",
     subtitle: "اربط عدة عروض توريد بالمنتج نفسه، مع الاحتفاظ بسعر وشحن ومصدر كل مورد بشكل مستقل.",
     back: "العودة إلى متجر WASLA", add: "إضافة عرض توريد", product: "منتج WASLA",
     supplier: "اسم المورد", platform: "الموقع أو المنصة", url: "رابط المنتج الأصلي HTTPS",
@@ -60,6 +66,7 @@ export default function OfficialStoreSourceOffersPage() {
     note: "لا يؤدي تسجيل العرض إلى نشر المنتج أو شراءه. لا يُعتمد العرض إلا بعد توثيق الهوية والمواصفات والسعر والشحن وتأكيد التوفر.",
   } : {
     title: "Supplier offers for unified products",
+    matchTitle: "Match a product from another website", matchHelp: "Enter product details from an external listing to check whether it already exists under another title or record.", match: "Product matching", matchRun: "Find matching products", matchBusy: "Comparing products...", brand: "Brand", model: "Model", gtin: "GTIN / barcode", mpn: "Part number", matches: "Possible matches", noMatch: "No confident match found. Review manually or create a new product.",
     subtitle: "Link multiple supplier offers to one WASLA product while keeping each source, price and shipping terms separate.",
     back: "Back to official WASLA Store", add: "Add supplier offer", product: "WASLA product",
     supplier: "Supplier name", platform: "Source site or marketplace", url: "Original product URL HTTPS",
@@ -113,6 +120,21 @@ export default function OfficialStoreSourceOffersPage() {
 
   function update<K extends keyof typeof initial>(key: K, value: typeof initial[K]) {
     setForm(current => ({ ...current, [key]: value }));
+  }
+
+  async function runMatch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setMatching(true); setMatchResults([]); setMatchDecision(""); setError("");
+    try {
+      const response = await fetch("/api/platform/official-store/product-matches", {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(matchInput),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error("match");
+      setMatchResults(Array.isArray(data.matches) ? data.matches : []);
+      setMatchDecision(String(data.decision || ""));
+    } catch { setError(t.error); }
+    finally { setMatching(false); }
   }
 
   async function save(event: FormEvent<HTMLFormElement>) {
@@ -173,6 +195,24 @@ export default function OfficialStoreSourceOffersPage() {
     <Link href="/owner/official-store" style={{ color: "#9b762c", textDecoration: "none", fontWeight: 700 }}>{t.back}</Link>
     <h1 style={{ fontSize: 28, margin: "18px 0 8px" }}>{t.title}</h1>
     <p style={{ opacity: .78, marginTop: 0 }}>{t.subtitle}</p>
+    <section style={{ padding: 18, border: "1px solid #d8dce5", borderRadius: 16, marginTop: 22 }}>
+      <h2 style={{ fontSize: 19, marginTop: 0 }}>{t.matchTitle}</h2>
+      <p style={{ fontSize: 13, opacity: .75 }}>{t.matchHelp}</p>
+      <form onSubmit={runMatch} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 12 }}>
+        <label style={labelStyle}>{ar ? "اسم المنتج" : "Product title"}<input required minLength={3} value={matchInput.title} onChange={e => setMatchInput(s => ({ ...s, title: e.target.value }))} style={inputStyle}/></label>
+        <label style={labelStyle}>{t.brand}<input value={matchInput.brand} onChange={e => setMatchInput(s => ({ ...s, brand: e.target.value }))} style={inputStyle}/></label>
+        <label style={labelStyle}>{t.model}<input value={matchInput.model} onChange={e => setMatchInput(s => ({ ...s, model: e.target.value }))} style={inputStyle}/></label>
+        <label style={labelStyle}>{t.gtin}<input value={matchInput.gtin} onChange={e => setMatchInput(s => ({ ...s, gtin: e.target.value }))} style={inputStyle}/></label>
+        <label style={labelStyle}>{t.mpn}<input value={matchInput.mpn} onChange={e => setMatchInput(s => ({ ...s, mpn: e.target.value }))} style={inputStyle}/></label>
+        <button disabled={matching} type="submit" style={{ padding: "11px 15px", border: 0, borderRadius: 10, background: "#27344d", color: "white", fontWeight: 700 }}>{matching ? t.matchBusy : t.matchRun}</button>
+      </form>
+      {matchDecision && <div style={{ marginTop: 14 }}><strong>{t.matches}</strong>
+        {matchResults.length === 0 ? <p>{t.noMatch}</p> : matchResults.map(item => <p key={item.productId} style={{ borderBottom: "1px solid #e5e7eb", paddingBottom: 8 }}>
+          <strong>{ar ? item.titleAr : item.titleEn}</strong> · {item.score}% · {item.reasons.join(", ")}
+        </p>)}
+        <p style={{ fontSize: 12, opacity: .7 }}>{ar ? "هذه اقتراحات للمراجعة فقط؛ لا يتم دمج السجلات تلقائياً." : "Suggestions only; records are never merged automatically."}</p>
+      </div>}
+    </section>
     <section style={{ padding: 18, border: "1px solid #d8dce5", borderRadius: 16, marginTop: 22 }}>
       <h2 style={{ fontSize: 19, marginTop: 0 }}>{t.add}</h2>
       <form onSubmit={save} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 13 }}>
