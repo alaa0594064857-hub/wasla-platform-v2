@@ -199,8 +199,8 @@ export async function handleOfficialStoreSourceOffersRequest(
       );
       if (!result.rows.length) { reply(response, 404, { success: false, error: "Source offer not found" }); return; }
       await db.query(
-        `INSERT INTO official_store_activity_log (product_id, actor_type, action, details)
-         VALUES ($1, 'human', $2, $3::jsonb)`,
+        `INSERT INTO official_store_activity_log (product_id, actor_type, actor_user_id, action, details)
+         VALUES ($1, 'human', $2, 'source_offer_updated', $3::jsonb)`,
         [result.rows[0].product_id, access.userId, JSON.stringify({ offerId, changedFields: updates.map(x => x.split(" = ")[0]) })],
       );
       reply(response, 200, { success: true, offer: result.rows[0] });
