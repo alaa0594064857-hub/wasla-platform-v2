@@ -406,3 +406,15 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Owner order desk API now exposes only the destination country; the full shipping address, customer note and supplier order/tracking URLs remain excluded from the generic owner details panel.
 - API and Web deployments for commit `5b8f197f4d5e6d594e589adf48984e73435c81c2` are both verified Live.
 - GitHub Actions run `42410548912` passed all checks, including API tests, database migrations/constraints, API TypeScript/build and Web build.
+
+
+## Owner supplier confirmation review and customer notifications — 2026-11-07
+
+- Added owner-only `PATCH /api/platform/official-store/orders/:id/supplier-confirmation`.
+- Owner must enter a review note; an acceptance requires an HTTPS evidence URL and revalidation of the exact original source offer, approved status, stock/availability, verified supplier identity/specifications, direct-shipping flag, MOQ, current quote validity and destination.
+- Acceptance is blocked if the original offer, supplier identity, supplier cost, shipping cost/currencies or destination coverage changed. The customer must approve any materially changed quote through a future explicit flow; no silent supplier or price substitution.
+- Accepted supplier confirmation moves the request to `awaiting_payment` while payment remains `not_enabled`, supplier purchase remains `not_placed`, and owner review remains required. Rejected/expired requests are closed without payment or procurement.
+- Owner decision is recorded as a human-attributed order event with note and evidence URL. Customer receives an in-app notification linking to `/account/orders`.
+- Added separate supplier item-cost currency and supplier-shipping currency fields; both are persisted and compared independently to avoid mixing currencies.
+- Added API tests for owner permission, required evidence, exact-offer revalidation, price-change rejection, payment/purchase remaining disabled, and customer notifications.
+- Functional API and Web code is deployed Live on Render; final CI run `42411107317` has passed API tests, DB migration/constraints and API TypeScript/build; Web build is still completing at the time of this update.
