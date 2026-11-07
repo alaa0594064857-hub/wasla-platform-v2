@@ -28,9 +28,13 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function validOptionalUrl(value: unknown): value is string | null | undefined {
-  return value === undefined || value === null ||
-    (typeof value === "string" && value.length <= 2048 &&
-      /^https:\/\/(?!\s)/i.test(value));
+  if (value === undefined || value === null) return true;
+  if (typeof value !== "string" || value.length > 2048) return false;
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 function canManageSql() {
   return `(
