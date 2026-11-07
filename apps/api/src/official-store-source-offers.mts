@@ -109,6 +109,13 @@ export async function handleOfficialStoreSourceOffersRequest(
            body.shipsToCountries.some(x => typeof x !== "string" || !/^[A-Z]{2}$/.test(x)))) {
         reply(response, 400, { success: false, error: "Shipping countries must be ISO country codes" }); return;
       }
+      if (body.evidence !== undefined &&
+          (!Array.isArray(body.evidence) || body.evidence.length > 20 ||
+           body.evidence.some(item => !item || typeof item !== "object" || Array.isArray(item) ||
+             !["supplier_evidence_url", "product_specification", "availability_confirmation", "shipping_quote"].includes(String((item as Record<string, unknown>).type)) ||
+             !httpsUrl((item as Record<string, unknown>).url)))) {
+        reply(response, 400, { success: false, error: "Evidence must contain supported HTTPS proof URLs" }); return;
+      }
       const product = await db.query("SELECT id FROM official_store_products WHERE id = $1", [productId]);
       if (!product.rows.length) { reply(response, 404, { success: false, error: "WASLA product not found" }); return; }
 
@@ -193,8 +200,8 @@ export async function handleOfficialStoreSourceOffersRequest(
       if (!result.rows.length) { reply(response, 404, { success: false, error: "Source offer not found" }); return; }
       await db.query(
         `INSERT INTO official_store_activity_log (product_id, actor_type, action, details)
-         VALUES ($1, 'human', 'source_offer_updated', $2::jsonb)`,
-        [result.rows[0].product_id, JSON.stringify({ offerId, changedFields: updates.map(x => x.split(" = ")[0]) })],
+         VALUES ($1, 'human', $2, $3::jsonb)`,
+        [result.rows[0].product_id, access.userId, JSON.stringify({ offerId, changedFields: updates.map(x => x.split(" = ")[0]) })],
       );
       reply(response, 200, { success: true, offer: result.rows[0] });
       return;
