@@ -145,7 +145,7 @@ export default function TradePage() {
     }
     if (itemTitle.trim() && (
       !Number.isFinite(Number(itemQuantity)) || Number(itemQuantity) <= 0 ||
-      !Number.isFinite(Number(itemUnitPrice)) || Number(itemUnitPrice) < 0
+      !itemUnitPrice.trim() || !Number.isFinite(Number(itemUnitPrice)) || Number(itemUnitPrice) < 0
     )) {
       setError(ar ? "أدخل كمية وسعراً صحيحين لبند الصفقة." : "Enter a valid quantity and unit price for the deal item.");
       return;
@@ -263,7 +263,7 @@ export default function TradePage() {
               {["USD", "EUR", "TRY", "GBP", "AED", "SAR"].map(code => <option key={code}>{code}</option>)}
             </select>
           </label>
-          <label style={{ display: "grid", gap: 6 }}>{ar ? "القيمة المقترحة (اختياري)" : "Proposed amount (optional)"}
+          <label style={{ display: "grid", gap: 6 }}>{ar ? "القيمة المقترحة (اختياري؛ مجموع البنود يُعتمد عند إضافتها)" : "Proposed amount (optional; line-item total applies when items are added)"}
             <input inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" style={inputStyle} />
           </label>
         </div>
