@@ -300,3 +300,14 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Added `docs/architecture/orders-and-fulfillment-operating-spec.md` to define separate member-store and official-store order models, no-central-inventory boundaries, verified payment rules, supplier-direct fulfillment evidence and release gates.
 - Order/payment execution remains intentionally unimplemented. The payment provider, merchant-of-record model, settlement countries/currencies and approved legal entity are not yet selected. No payment or order status may be fabricated before a verified provider/merchant event exists.
 - This is a genuine launch dependency, not a coding task to guess around. The schema/API can be implemented against the approved provider-neutral lifecycle, but live checkout and paid-state transitions remain blocked until provider credentials, signed webhook specifications and jurisdiction decisions are available.
+
+
+## Privacy regression coverage checkpoint — 2026-11-07
+
+- Added public-catalog regression tests proving the product and store-listing projections do not select or expose private supplier/source-offer fields and only return active public records.
+- Added private-message regression coverage proving a non-participant receives no conversation content and the handler stops after the participant-membership check.
+- Added product-inquiry regression coverage proving replies are restricted to inquiry participants, status changes are restricted to the assigned seller recipient, and the inbox is scoped to the signed-in seller.
+- Included all new tests in the API CI test command.
+- GitHub Actions run `42405555405` passed: API tests, database migrations/authorization seed/constraints, API TypeScript check, API build and Web build.
+- Render API deployment for commit `8a2befac29f46ab7c07fc8766c6ccb7b3ff92fb4` is Live. The matching Web deployment is being checked separately; these commits change tests only, not customer-facing Web functionality.
+- These are automated authorization/privacy regression tests; authenticated multi-user production browser testing remains a separate release gate.
