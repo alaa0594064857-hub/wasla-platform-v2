@@ -90,7 +90,7 @@ describe("WASLA Trade deal creation", () => {
     expect(mocks.release).toHaveBeenCalledOnce();
   });
 
-  it("does not create a deal for a counterparty with no authorized reader", async () => {
+  it("does not create a deal for a counterparty with no authorized negotiator", async () => {
     mocks.query
       .mockResolvedValueOnce({})
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ allowed: true }] })
