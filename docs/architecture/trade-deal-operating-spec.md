@@ -32,7 +32,7 @@ WASLA Trade manages commercial deal proposals and negotiation between two active
 
 Alternative terminal paths: `declined` or `cancelled`.
 
-- Draft: visible only to authorized members of the initiator account. A draft that is cancelled before proposal remains private and is never revealed to the counterparty. In the initial V1 workflow, terms are fixed after creation; cancel and recreate a draft to change them before proposal.
+- Draft: visible only to authorized members of the initiator account. A draft that is cancelled before proposal remains private and is never revealed to the counterparty. In the initial V2 workflow, terms are fixed after creation; cancel and recreate a draft to change them before proposal.
 - Proposed: the initiator has explicitly sent the current terms to the counterparty; the counterparty becomes the pending responder.
 - Negotiating: the pending responder may submit a counter-proposal. Each counter-proposal changes the pending responder to the other account and appends an immutable event.
 - Accepted: the account currently designated as pending responder explicitly accepts the current terms. This records an acceptance event and timestamp only.
@@ -44,11 +44,12 @@ Every state transition must be validated server-side and written in the same tra
 
 ## Commercial terms
 
-- Each deal has a title, description, ISO 4217 currency, optional proposed total, optional expiry and zero or more line items.
-- Line items record the product/service description, optional SKU, positive quantity, unit price and currency.
+- Each deal has a title, description, ISO 4217 currency, optional proposed total, optional expiry and zero or more line items (maximum 50).
+- The draft form supports adding/removing multiple line items before creation; each item records product/service description, optional SKU, positive quantity, unit price and the deal currency.
+- The UI requires a title, quantity and unit price for every non-empty item. The server independently validates item count, quantity, unit price and currency, then calculates the total from the saved line items.
 - A counter-proposal is a new version/event; the prior proposal remains visible in history.
 - Totals are calculated from line items when present; clients cannot submit a contradictory total.
-- In the initial V1 workflow, terms and line items are fixed after draft creation. Before proposal, cancel and recreate a draft to change them. After proposal, changes are made as counter-proposals and recorded as events. A dedicated draft-edit action remains a follow-up enhancement.
+- In the initial V2 workflow, terms and line items are fixed after draft creation. Before proposal, cancel and recreate a draft to change them. After proposal, changes are made as counter-proposals and recorded as events. A dedicated draft-edit action remains a follow-up enhancement.
 
 ## Audit and notifications
 
