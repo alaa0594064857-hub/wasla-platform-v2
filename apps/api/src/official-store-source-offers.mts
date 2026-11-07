@@ -6,15 +6,19 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const STATUSES = ["draft", "needs_review", "approved", "paused", "rejected", "expired"] as const;
 const AVAILABILITY = ["available", "limited", "unavailable", "needs_confirmation", "expired"] as const;
 
-export function shouldRequireOfferReReview(
-  currentStatus: string,
-  body: Record<string, unknown>,
-): boolean {
-  if (currentStatus !== "approved" || body.offerStatus !== undefined) return false;
+export function hasMaterialOfferChanges(body: Record<string, unknown>): boolean {
   return [
     "supplierPrice", "quoteValidUntil", "availabilityStatus",
     "supplierIdentityVerified", "specificationsVerified", "directToCustomerConfirmed",
   ].some((key) => Object.hasOwn(body, key));
+}
+
+export function shouldRequireOfferReReview(
+  currentStatus: string,
+  body: Record<string, unknown>,
+): boolean {
+  return currentStatus === "approved" && body.offerStatus === undefined &&
+    hasMaterialOfferChanges(body);
 }
 
 function reply(response: ServerResponse, status: number, data: Record<string, unknown>): void {
@@ -238,6 +242,10 @@ export async function handleOfficialStoreSourceOffersRequest(
         if (body.availabilityStatus !== undefined && !AVAILABILITY.includes(body.availabilityStatus as typeof AVAILABILITY[number])) {
           await client.query("ROLLBACK");
           reply(response, 400, { success: false, error: "Invalid availability status" }); return;
+        }
+        if (body.offerStatus === "approved" && hasMaterialOfferChanges(body)) {
+          await client.query("ROLLBACK");
+          reply(response, 409, { success: false, error: "Save material offer changes first, then approve the updated offer in a separate review action" }); return;
         }
         if (body.offerStatus === "approved") {
           const identity = Object.hasOwn(body, "supplierIdentityVerified") ? body.supplierIdentityVerified === true : row.supplier_identity_verified;
