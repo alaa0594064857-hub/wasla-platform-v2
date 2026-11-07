@@ -288,6 +288,122 @@ export async function ensureOfficialStoreTables(): Promise<void> {
         ADD COLUMN IF NOT EXISTS sample_inspected boolean NOT NULL DEFAULT FALSE
     `);
 
+    await client.query(`
+      ALTER TABLE official_store_products
+        ADD COLUMN IF NOT EXISTS canonical_gtin varchar(32),
+        ADD COLUMN IF NOT EXISTS manufacturer_part_number varchar(120),
+        ADD COLUMN IF NOT EXISTS brand_name varchar(180),
+        ADD COLUMN IF NOT EXISTS model_name varchar(180),
+        ADD COLUMN IF NOT EXISTS variant_attributes jsonb NOT NULL DEFAULT '{}'::jsonb,
+        ADD COLUMN IF NOT EXISTS normalized_specifications jsonb NOT NULL DEFAULT '{}'::jsonb,
+        ADD COLUMN IF NOT EXISTS content_provenance jsonb NOT NULL DEFAULT '{}'::jsonb,
+        ADD COLUMN IF NOT EXISTS image_rights_status varchar(24) NOT NULL DEFAULT 'unreviewed'
+          CHECK (image_rights_status IN ('unreviewed', 'authorized', 'original', 'restricted', 'rejected'))
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS official_store_products_gtin_idx
+      ON official_store_products (canonical_gtin)
+      WHERE canonical_gtin IS NOT NULL
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS official_store_products_mpn_brand_idx
+      ON official_store_products (brand_name, manufacturer_part_number)
+      WHERE manufacturer_part_number IS NOT NULL
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS official_store_product_source_offers (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        product_id uuid NOT NULL REFERENCES official_store_products(id) ON DELETE CASCADE,
+        sourcing_candidate_id uuid REFERENCES official_store_sourcing_candidates(id) ON DELETE SET NULL,
+        source_platform varchar(80) NOT NULL,
+        source_product_url text NOT NULL,
+        supplier_name varchar(180) NOT NULL,
+        supplier_reference varchar(180),
+        variant_attributes jsonb NOT NULL DEFAULT '{}'::jsonb,
+        supplier_price numeric(12,2) NOT NULL CHECK (supplier_price >= 0),
+        supplier_currency varchar(3) NOT NULL CHECK (supplier_currency ~ '^[A-Z]{3}
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+),
+        shipping_cost numeric(12,2) CHECK (shipping_cost IS NULL OR shipping_cost >= 0),
+        shipping_currency varchar(3) CHECK (shipping_currency IS NULL OR shipping_currency ~ '^[A-Z]{3}
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+),
+        minimum_order_quantity integer CHECK (minimum_order_quantity IS NULL OR minimum_order_quantity >= 1),
+        ships_to_countries jsonb NOT NULL DEFAULT '[]'::jsonb,
+        direct_to_customer_confirmed boolean NOT NULL DEFAULT FALSE,
+        availability_status varchar(24) NOT NULL DEFAULT 'needs_confirmation'
+          CHECK (availability_status IN ('available', 'limited', 'unavailable', 'needs_confirmation', 'expired')),
+        estimated_shipping_days_min integer CHECK (estimated_shipping_days_min IS NULL OR estimated_shipping_days_min >= 0),
+        estimated_shipping_days_max integer CHECK (estimated_shipping_days_max IS NULL OR estimated_shipping_days_max >= 0),
+        quote_valid_until timestamptz,
+        last_verified_at timestamptz,
+        supplier_identity_verified boolean NOT NULL DEFAULT FALSE,
+        specifications_verified boolean NOT NULL DEFAULT FALSE,
+        evidence jsonb NOT NULL DEFAULT '[]'::jsonb,
+        offer_status varchar(20) NOT NULL DEFAULT 'draft'
+          CHECK (offer_status IN ('draft', 'needs_review', 'approved', 'paused', 'rejected', 'expired')),
+        created_at timestamptz NOT NULL DEFAULT NOW(),
+        updated_at timestamptz NOT NULL DEFAULT NOW(),
+        CONSTRAINT official_store_source_offer_url_https CHECK (source_product_url ~* '^https://'),
+        CONSTRAINT official_store_source_offer_shipping_days_check CHECK (
+          estimated_shipping_days_min IS NULL OR estimated_shipping_days_max IS NULL
+          OR estimated_shipping_days_max >= estimated_shipping_days_min
+        )
+      )
+    `);
+
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS official_store_source_offer_url_unique
+      ON official_store_product_source_offers (source_product_url)
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS official_store_source_offer_product_status_idx
+      ON official_store_product_source_offers (product_id, offer_status, updated_at DESC)
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS official_store_source_offer_supplier_idx
+      ON official_store_product_source_offers (supplier_name, updated_at DESC)
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS official_store_product_media (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        product_id uuid NOT NULL REFERENCES official_store_products(id) ON DELETE CASCADE,
+        media_url text NOT NULL,
+        media_type varchar(16) NOT NULL DEFAULT 'image'
+          CHECK (media_type IN ('image', 'video')),
+        source_url text,
+        rights_status varchar(24) NOT NULL DEFAULT 'unreviewed'
+          CHECK (rights_status IN ('unreviewed', 'authorized', 'original', 'restricted', 'rejected')),
+        authorization_evidence_url text,
+        attribution_text text,
+        is_primary boolean NOT NULL DEFAULT FALSE,
+        review_status varchar(16) NOT NULL DEFAULT 'pending'
+          CHECK (review_status IN ('pending', 'approved', 'rejected')),
+        created_at timestamptz NOT NULL DEFAULT NOW(),
+        updated_at timestamptz NOT NULL DEFAULT NOW(),
+        CONSTRAINT official_store_product_media_https CHECK (media_url ~* '^https://')
+      )
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS official_store_product_media_product_idx
+      ON official_store_product_media (product_id, is_primary DESC, created_at ASC)
+    `);
+
     await client.query("COMMIT");
   } catch (error) {
     await client.query("ROLLBACK");
