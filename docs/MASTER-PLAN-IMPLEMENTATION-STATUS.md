@@ -349,3 +349,13 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Added a homepage link to the plans catalogue.
 - GitHub Actions run `42406790981` passed API tests, migration/authorization/constraint checks, TypeScript checks and API/Web builds.
 - Render Web deployment for these latest homepage and plans changes is still pending verification. Do not treat the code commit or successful build as proof that the live site has updated.
+
+
+## Official WASLA Store order desk checkpoint — 2026-11-07
+
+- Added an owner-only read-only API at `/api/platform/official-store/orders` with bounded list (100 orders) and detail/event-history lookup (250 events).
+- API requires `platform.manage`, rejects write methods, validates order IDs, uses no-store/security headers and does not change order/payment/fulfillment state.
+- Added bilingual owner page at `/owner/official-store/orders`, linked from official-store administration. It displays operational status and internal order/event details and explicitly warns that payment, supplier purchase and shipping are not enabled.
+- Added regression tests for permission enforcement, bounded read-only listing, event history and write-method rejection; included them in the API CI test command.
+- This is an operational visibility layer only. It does not create customer orders, collect payments, contact suppliers, purchase goods, generate tracking or confirm delivery. The production database currently has order tables but no live order workflow; keep checkout disabled until provider/legal/fulfillment gates are implemented.
+- Deployment and CI status for this checkpoint: pending final verification.
