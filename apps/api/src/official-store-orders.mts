@@ -61,6 +61,7 @@ export async function handleOfficialStoreOrdersRequest(
                 o.supplier_unit_cost::text AS "supplierUnitCost",
                 o.supplier_shipping_cost::text AS "supplierShippingCost",
                 o.supplier_cost_currency AS "supplierCostCurrency",
+                o.supplier_shipping_currency AS "supplierShippingCurrency",
                 o.supplier_order_url AS "supplierOrderUrl",
                 o.supplier_tracking_url AS "supplierTrackingUrl",
                 o.created_at AS "createdAt", o.updated_at AS "updatedAt"
