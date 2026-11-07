@@ -33,6 +33,23 @@ afterEach(async () => {
 });
 
 describe("private product inquiry access", () => {
+  it("considers store and account administrators when resolving an inquiry recipient", async () => {
+    mocks.query.mockResolvedValueOnce({ rowCount: 1, rows: [{ product_id: "11111111-1111-4111-8111-111111111111", recipient_user_id: null }] });
+    const base = await startServer();
+    const response = await fetch(base, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productId: "11111111-1111-4111-8111-111111111111", message: "Is this product available?" }),
+    });
+
+    expect(response.status).toBe(404);
+    const sql = String(mocks.query.mock.calls[0][0]);
+    expect(sql).toContain("COALESCE(store_owner.user_id, store_admin.user_id, store_manager.user_id");
+    expect(sql).toContain(") account_admin ON TRUE");
+    expect(sql).toContain("r.name = 'store_admin'");
+    expect(sql).toContain("r.name = 'account_admin'");
+  });
+
   it("does not expose inquiry replies to users outside the inquiry", async () => {
     mocks.query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
     const baseUrl = await startServer();
