@@ -170,4 +170,40 @@ describe("WASLA Trade deal creation", () => {
     expect(mocks.query.mock.calls.some(call => String(call[0]).includes("INSERT INTO notifications"))).toBe(false);
     expect(mocks.query.mock.calls[6][0]).toBe("COMMIT");
   });
+
+  it("allows only the pending responder to accept a proposal", async () => {
+    mocks.query
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{
+          id: "deal-id",
+          initiator_account_id: "11111111-1111-4111-8111-111111111111",
+          counterparty_account_id: "22222222-2222-4222-8222-222222222222",
+          pending_response_account_id: "22222222-2222-4222-8222-222222222222",
+          status: "proposed",
+          proposed_amount: "100.00",
+        }],
+      })
+      .mockResolvedValueOnce({});
+
+    const dealId = "33333333-3333-4333-8333-333333333333";
+    const baseUrl = await startServer(dealId);
+    const response = await fetch(`${baseUrl}/api/trade/deals/${dealId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "accept",
+        accountId: "11111111-1111-4111-8111-111111111111",
+      }),
+    });
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({
+      success: false,
+      error: "Only the pending responder can accept or decline",
+    });
+    expect(mocks.query).toHaveBeenCalledTimes(3);
+    expect(mocks.query.mock.calls[2][0]).toBe("ROLLBACK");
+  });
 });
