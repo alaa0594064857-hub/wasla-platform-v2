@@ -109,6 +109,11 @@ export async function handleOfficialStoreImportCandidatesRequest(request: Incomi
     if (!supplierName || !https(productUrl) || !body.payload || typeof body.payload !== "object" || Array.isArray(body.payload)) {
       reply(response, 400, { success: false, error: "Supplier, HTTPS product URL and provider payload are required" }); return;
     }
+    const supplierEvidenceUrl = body.supplierEvidenceUrl ? body.supplierEvidenceUrl : null;
+    const specificationEvidenceUrl = body.specificationEvidenceUrl ? body.specificationEvidenceUrl : null;
+    if ((supplierEvidenceUrl && !https(supplierEvidenceUrl)) || (specificationEvidenceUrl && !https(specificationEvidenceUrl))) {
+      reply(response, 400, { success: false, error: "Evidence links must use HTTPS" }); return;
+    }
     const raw = body.payload as Record<string, unknown>;
     let candidates: Candidate[];
     try {
@@ -123,6 +128,8 @@ export async function handleOfficialStoreImportCandidatesRequest(request: Incomi
     for (const item of candidates) {
       const evidence = [
         { type: "source_product_url", url: productUrl, provider },
+        ...(supplierEvidenceUrl ? [{ type: "supplier_evidence_url", url: supplierEvidenceUrl }] : []),
+        ...(specificationEvidenceUrl ? [{ type: "product_specification", url: specificationEvidenceUrl }] : []),
         ...item.imageUrls.map(url => ({ type: "image_reference", url, rights_status: "unreviewed" })),
         ...(item.barcode ? [{ type: "gtin_candidate", value: item.barcode }] : []),
         ...(item.sku ? [{ type: "sku_candidate", value: item.sku }] : []),
