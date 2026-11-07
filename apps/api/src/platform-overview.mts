@@ -78,7 +78,7 @@ export async function handlePlatformOverviewRequest(
       ),
       db.query<{ total: number; active: number }>(
         `SELECT COUNT(*)::int AS total,
-                COUNT(*) FILTER (WHERE status = 'active')::int AS active
+                COUNT(*) FILTER (WHERE is_active = TRUE)::int AS active
          FROM subscription_plans`,
       ),
       db.query<{ total: number; active: number }>(
