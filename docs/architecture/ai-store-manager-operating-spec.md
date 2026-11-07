@@ -189,3 +189,52 @@ The copy must be persuasive but truthful. It must not copy protected supplier te
 10. Revalidate offer, price, stock, destination and rights periodically and before checkout.
 
 Implementation status: product sourcing candidates, authorized source registry, deterministic identity matching, manual evidence-based opportunity assessment and supplier price preview are foundations. A live discovery connector, category-specific extraction/classification pipeline, evidence-level attribute store, AI-generated bilingual listing drafts, rights-aware media workflow, and publish/refresh automation are not yet implemented.
+
+
+## 10. Continuous trend intelligence and opportunity radar
+
+The manager must operate an always-on commercial opportunity radar, not wait for a customer or owner to name a product. Its objective is to identify promising demand early, validate whether WASLA can fulfil it profitably and safely, and prepare the best opportunities for owner approval.
+
+### Signals to monitor
+- Approved trend/search sources: Google Trends or equivalent authorized trend APIs, licensed social-listening providers, approved marketplace trend/category feeds, retailer or merchant feeds, supplier catalogues and owner-authorized research.
+- Social and editorial signals where access is licensed: accelerating mentions, creator/content momentum, engagement quality and geographic spread. A viral post alone is not proof of purchase demand.
+- Commercial signals: search interest, marketplace category/rank movement where legitimately available, observed price ranges, competitor availability, review velocity where authorized, repeat demand and supplier quote movement.
+- WASLA first-party signals: on-site searches, product views, wishlists, add-to-cart, abandoned carts, conversion, customer inquiries and completed orders, subject to privacy notice, consent and data minimization.
+- Seasonal, regional and event signals: weather/season, holidays, school calendars, gifting periods and local market needs, using reliable permitted data.
+
+### Opportunity scoring and prioritization
+For each candidate opportunity, calculate a transparent score with separately visible dimensions:
+1. Demand strength and acceleration, including signal source, coverage and confidence.
+2. Trend velocity and estimated remaining trend window; distinguish emerging, accelerating, mature and declining.
+3. Market fit by country, language, customer segment and destination.
+4. Competition and price pressure, including comparable exact variants rather than superficially similar products.
+5. Expected contribution margin after supplier cost, shipping, payment fees, taxes/duties where known, returns allowance and other explicit costs.
+6. Supplier readiness: identity, specification evidence, sample/quality checks, quote validity, stock, direct-shipping capability and destination coverage.
+7. Delivery feasibility, regulatory/safety risk, authenticity/IP risk, warranty/returns complexity and seasonality.
+8. Evidence quality, freshness, source permissions and uncertainty.
+
+Do not collapse unknown values into optimistic assumptions. Missing or stale inputs lower confidence and can block recommendation. Show the owner the score breakdown, evidence, assumptions, downside scenario and reasons to reject as well as reasons to pursue.
+
+### Trend-to-listing action loop
+1. Detect a meaningful change in an approved signal and create a timestamped trend observation.
+2. Group related observations and resolve the likely product/category/market; avoid treating every viral post as a separate opportunity.
+3. Check whether the signal is broadening across independent sources and whether it represents purchase intent, not just attention.
+4. Identify exact products and variants, then match against existing WASLA listings to avoid duplicates.
+5. Find and compare eligible suppliers and calculate realistic landed cost and contribution margin.
+6. Estimate trend stage and risk of arriving after demand has peaked; include supplier lead time in the decision.
+7. Prepare an opportunity brief and, when evidence is sufficient, a bilingual private product draft with verified facts and authorized media.
+8. Rank the opportunity in the owner dashboard with a clear action: investigate, request sample/quote, prepare draft, approve listing, monitor, or reject.
+9. Refresh signals and supplier facts at a source-appropriate cadence; automatically pause recommendations when evidence becomes stale or the opportunity deteriorates.
+
+### Automation boundaries
+- The radar may automatically collect and normalize data only from approved connectors and authorized first-party events.
+- It may automatically score, rank, alert the owner and prepare private drafts within configured limits.
+- It must not fabricate sales volume, demand, ranking, reviews, stock or trend metrics; every metric needs a definition, source, observation time, market and coverage note.
+- It must not buy inventory, place supplier orders, publish unreviewed products, change live prices or make unsupported scarcity/urgency claims merely because a trend is rising.
+- The owner may define market priorities, minimum margin, maximum risk, allowed categories, trend thresholds, budget and approval rules. The AI cannot change these controls.
+- Avoid trend-chasing products with counterfeit, safety, restricted-goods, IP, privacy or regulatory concerns even when engagement is high.
+
+### Required owner dashboard
+Show a ranked opportunity radar with product/category, target market, trend stage, signal acceleration, source freshness, confidence, competition, estimated landed cost, expected margin, supplier readiness, fulfilment lead time, risk flags, recommended next action and evidence links. Provide filters by market, category, margin, confidence and trend stage, plus an auditable history of score changes.
+
+Implementation status: this section is an approved requirement. The existing manual opportunity assessment and approved-source registry do not yet provide continuous trend ingestion, cross-source signal aggregation, trend velocity/stage estimation, first-party analytics scoring or an automated opportunity radar. Those require authorized data connectors, event instrumentation, persistence, scoring tests and owner dashboard work before they can be described as live.
