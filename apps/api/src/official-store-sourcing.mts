@@ -186,8 +186,10 @@ export async function handleOfficialStoreSourcingRequest(
         const specifications = value("specificationsVerified", row?.specifications_verified);
         const price = value("proposedPrice", row?.proposed_price);
         const currency = value("currency", row?.currency);
-        const sourceUrl = value("sourceProductUrl", row?.source_product_url) || value("supplierWebsite", row?.supplier_website);
         const proofItems = Array.isArray(evidence) ? evidence as Array<{ type?: string; url?: string }> : [];
+        const sourceUrl = value("sourceProductUrl", row?.source_product_url) ||
+          value("supplierWebsite", row?.supplier_website) ||
+          proofItems.find(item => item?.type === "supplier_evidence_url" && typeof item.url === "string")?.url;
         const hasSupplierProof = proofItems.some(item => item?.type === "supplier_evidence_url" && typeof item.url === "string");
         const hasSpecificationProof = proofItems.some(item => item?.type === "product_specification" && typeof item.url === "string");
         const quoteTime = quote instanceof Date ? quote.getTime() : typeof quote === "string" ? Date.parse(quote) : NaN;
