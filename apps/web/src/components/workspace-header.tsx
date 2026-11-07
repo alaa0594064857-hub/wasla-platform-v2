@@ -34,11 +34,18 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
   useEffect(() => {
     if (!session?.user) { setUnreadNotifications(0); return; }
     let active = true;
-    fetch("/api/notifications", { credentials: "include", cache: "no-store" })
-      .then(async response => response.ok ? response.json() : null)
-      .then(data => { if (active) setUnreadNotifications(Number(data?.success ? data.unreadCount ?? 0 : 0)); })
-      .catch(() => { if (active) setUnreadNotifications(0); });
-    return () => { active = false; };
+    const refreshUnread = () => {
+      fetch("/api/notifications", { credentials: "include", cache: "no-store" })
+        .then(async response => response.ok ? response.json() : null)
+        .then(data => { if (active) setUnreadNotifications(Number(data?.success ? data.unreadCount ?? 0 : 0)); })
+        .catch(() => { if (active) setUnreadNotifications(0); });
+    };
+    refreshUnread();
+    window.addEventListener("wasla:notifications-updated", refreshUnread);
+    return () => {
+      active = false;
+      window.removeEventListener("wasla:notifications-updated", refreshUnread);
+    };
   }, [session?.user?.id, pathname]);
 
   useEffect(() => {
