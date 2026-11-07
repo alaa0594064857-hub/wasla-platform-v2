@@ -73,6 +73,16 @@ describe("official store source offer approval", () => {
   });
 
   it("does not permit approval in the same request as material offer changes", async () => {
+    mocks.clientQuery
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{
+        id: "offer-id", product_id: "product-id", offer_status: "approved",
+        supplier_identity_verified: true, specifications_verified: true,
+        direct_to_customer_confirmed: true, minimum_order_quantity: 1,
+        availability_status: "available", quote_valid_until: "2026-12-01T00:00:00Z",
+        evidence: [{ type: "supplier_evidence_url" }, { type: "product_specification" }],
+      }] })
+      .mockResolvedValueOnce({ rows: [] });
     const baseUrl = await startServer("11111111-1111-4111-8111-111111111111");
     const response = await fetch(baseUrl, {
       method: "PATCH",
@@ -81,6 +91,7 @@ describe("official store source offer approval", () => {
     });
 
     expect(response.status).toBe(409);
-    expect(mocks.connect).not.toHaveBeenCalled();
+    expect(mocks.clientQuery.mock.calls[2][0]).toBe("ROLLBACK");
+    expect(mocks.clientQuery).toHaveBeenCalledTimes(3);
   });
 });
