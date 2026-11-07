@@ -127,7 +127,7 @@ describe("WASLA Trade deal creation", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ success: true, deals: [] });
     const sql = String(mocks.query.mock.calls[0][0]);
-    expect(sql).toContain("d.status <> 'draft' OR EXISTS");
+    expect(sql).toContain("proposed_event.event_type = 'proposed'");
     expect(sql).toContain("draft_member.account_id = d.initiator_account_id");
     expect(sql).toContain("account.trade.read");
     expect(mocks.query.mock.calls[0][1]).toEqual(["trade-creator"]);
