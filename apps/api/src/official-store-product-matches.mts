@@ -2,6 +2,8 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { getDatabasePool } from "./database.js";
 import { authorizePlatformPermission } from "./platform-security.mjs";
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 function reply(response: ServerResponse, status: number, data: Record<string, unknown>): void {
   response.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
@@ -74,6 +76,28 @@ export async function handleOfficialStoreProductMatchesRequest(
       reply(response, 400, { success: false, error: "GTIN must contain 8 to 14 digits" }); return;
     }
     const db = getDatabasePool();
+    if (body.saveIdentity === true) {
+      const productId = clean(body.productId, 36);
+      if (!UUID.test(productId)) {
+        reply(response, 400, { success: false, error: "A valid WASLA product ID is required" }); return;
+      }
+      const saved = await db.query(
+        `INSERT INTO official_store_product_identity
+           (product_id, brand, model, gtin, mpn, normalized_title, key_attributes, updated_at)
+         SELECT id, $2, $3, $4, $5, $6, $7::jsonb, NOW()
+         FROM official_store_products WHERE id = $1
+         ON CONFLICT (product_id) DO UPDATE SET
+           brand = EXCLUDED.brand, model = EXCLUDED.model, gtin = EXCLUDED.gtin,
+           mpn = EXCLUDED.mpn, normalized_title = EXCLUDED.normalized_title,
+           key_attributes = EXCLUDED.key_attributes, updated_at = NOW()
+         RETURNING product_id`,
+        [productId, brand || null, model || null, gtin || null, mpn || null,
+         normalize(title), JSON.stringify(attributes)],
+      );
+      if (!saved.rows.length) { reply(response, 404, { success: false, error: "WASLA product not found" }); return; }
+      reply(response, 200, { success: true, productId, identitySaved: true });
+      return;
+    }
     const result = await db.query(
       `SELECT p.id, p.title_ar, p.title_en, p.description_en, p.image_url,
               i.brand, i.model, i.gtin, i.mpn, i.normalized_title, i.key_attributes
@@ -131,7 +155,8 @@ export async function handleOfficialStoreProductMatchesRequest(
     });
   } catch (error) {
     console.error("WASLA official store product matching error:", error);
-    if (!response.headersSent) reply(response, 500, { success: false, error: "Product matching service error" });
+    if (!response.headersSent && (error as { code?: string })?.code === "23505") reply(response, 409, { success: false, error: "This GTIN is already assigned to another WASLA product" });
+    else if (!response.headersSent) reply(response, 500, { success: false, error: "Product matching service error" });
     else response.destroy(error instanceof Error ? error : undefined);
   }
 }
