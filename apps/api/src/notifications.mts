@@ -117,7 +117,7 @@ export async function handleNotificationsRequest(request: IncomingMessage, respo
       return;
     }
 
-    const match = path.match(/^\/api\/notifications\/([0-9a-f-]{36})\/read$/i);
+    const match = path.match(/^\/api\/notifications\/([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\/read$/i);
     if (!match) {
       reply(response, 404, { success: false, error: "Notification not found" });
       return;
