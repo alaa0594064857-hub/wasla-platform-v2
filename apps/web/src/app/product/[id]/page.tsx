@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import { useLocale } from "@/components/locale-provider";
 
-type Product = { id: string; title: string; description?: string; price: string; currency: string; imageUrl?: string; videoUrl?: string; sellerCheckoutUrl?: string | null; storeName: string; storeSlug: string; sellerUserId: string | null };
+type Product = { id: string; title: string; description?: string; price: string; currency: string; imageUrl?: string; videoUrl?: string; sellerCheckoutUrl?: string | null; storeName: string; storeSlug: string };
 
 export default function PublicProductPage() {
   const params = useParams<{ id: string }>();
@@ -33,10 +33,9 @@ export default function PublicProductPage() {
   }
   async function contactSeller() {
     if (!product || busy || !(await requireLogin())) return;
-    if (!product.sellerUserId) { setMessage(ar ? "لا يوجد مسؤول متاح لهذا المنتج حالياً." : "No seller contact is currently available."); return; }
     setBusy(true); setMessage("");
     try {
-      const response = await fetch("/api/messages", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ recipientId: product.sellerUserId }) });
+      const response = await fetch("/api/messages", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: product.id }) });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error("message");
       router.push("/messages");
