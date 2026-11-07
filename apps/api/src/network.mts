@@ -285,20 +285,43 @@ export async function handleNetworkRequest(request: IncomingMessage, response: S
         return;
       }
       const isIncomingAction = action === "accept_request" || action === "decline_request";
-      const result = await db.query(
-        `UPDATE network_friendships
-         SET status = $1, accepted_at = CASE WHEN $1 = 'accepted' THEN NOW() ELSE NULL END, updated_at = NOW()
-         WHERE requester_user_id = $2 AND addressee_user_id = $3 AND status = 'pending'
-         RETURNING id`,
-        [action === "accept_request" ? "accepted" : action === "decline_request" ? "declined" : "cancelled",
-          isIncomingAction ? body.userId : userId,
-          isIncomingAction ? userId : body.userId],
-      );
-      if (!result.rowCount) {
-        respond(response, 404, { success: false, error: "Pending request not found" });
-        return;
+      const client = await db.connect();
+      try {
+        await client.query("BEGIN");
+        const result = await client.query(
+          `UPDATE network_friendships
+           SET status = $1, accepted_at = CASE WHEN $1 = 'accepted' THEN NOW() ELSE NULL END, updated_at = NOW()
+           WHERE requester_user_id = $2 AND addressee_user_id = $3 AND status = 'pending'
+           RETURNING id`,
+          [action === "accept_request" ? "accepted" : action === "decline_request" ? "declined" : "cancelled",
+            isIncomingAction ? body.userId : userId,
+            isIncomingAction ? userId : body.userId],
+        );
+        if (!result.rowCount) {
+          await client.query("ROLLBACK");
+          respond(response, 404, { success: false, error: "Pending request not found" });
+          return;
+        }
+        if (action === "accept_request") {
+          await client.query(
+            `INSERT INTO notifications (
+               user_id, type, title_ar, title_en, body_ar, body_en,
+               action_url, resource_id, metadata
+             )
+             VALUES ($1, 'friend_request', 'تم قبول طلب صداقتك', 'Your friend request was accepted',
+                     'أصبح بإمكانك التواصل مع هذا العضو عبر شبكة وصلة.', 'You can now connect with this member on WASLA Network.',
+                     '/network', $2, $3::jsonb)`,
+            [body.userId, result.rows[0].id, JSON.stringify({ friendshipId: result.rows[0].id, acceptedBy: userId })],
+          );
+        }
+        await client.query("COMMIT");
+        respond(response, 200, { success: true });
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        client.release();
       }
-      respond(response, 200, { success: true });
       return;
     }
 
