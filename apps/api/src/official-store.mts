@@ -240,6 +240,47 @@ export async function ensureOfficialStoreTables(): Promise<void> {
       ON official_store_order_events (order_id, created_at ASC)
     `);
 
+    await client.query(`
+      ALTER TABLE official_store_products
+        ADD COLUMN IF NOT EXISTS source_platform varchar(60),
+        ADD COLUMN IF NOT EXISTS source_product_url text,
+        ADD COLUMN IF NOT EXISTS supplier_dropship_confirmed boolean NOT NULL DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS supplier_minimum_quantity integer,
+        ADD COLUMN IF NOT EXISTS supplier_quote_valid_until timestamptz,
+        ADD COLUMN IF NOT EXISTS shipping_countries jsonb NOT NULL DEFAULT '[]'::jsonb,
+        ADD COLUMN IF NOT EXISTS estimated_shipping_days_min integer,
+        ADD COLUMN IF NOT EXISTS estimated_shipping_days_max integer,
+        ADD COLUMN IF NOT EXISTS landed_cost numeric(12,2),
+        ADD COLUMN IF NOT EXISTS landed_cost_currency varchar(3)
+    `);
+
+    await client.query(`
+      ALTER TABLE official_store_sourcing_candidates
+        ADD COLUMN IF NOT EXISTS source_platform varchar(60),
+        ADD COLUMN IF NOT EXISTS source_product_url text,
+        ADD COLUMN IF NOT EXISTS supplier_dropship_confirmed boolean NOT NULL DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS minimum_order_quantity integer,
+        ADD COLUMN IF NOT EXISTS shipping_countries jsonb NOT NULL DEFAULT '[]'::jsonb,
+        ADD COLUMN IF NOT EXISTS shipping_cost numeric(12,2),
+        ADD COLUMN IF NOT EXISTS shipping_currency varchar(3),
+        ADD COLUMN IF NOT EXISTS estimated_shipping_days_min integer,
+        ADD COLUMN IF NOT EXISTS estimated_shipping_days_max integer,
+        ADD COLUMN IF NOT EXISTS quote_valid_until timestamptz
+    `);
+
+    await client.query(`
+      ALTER TABLE official_store_orders
+        ADD COLUMN IF NOT EXISTS source_platform varchar(60),
+        ADD COLUMN IF NOT EXISTS supplier_purchase_reference varchar(240),
+        ADD COLUMN IF NOT EXISTS supplier_purchase_status varchar(20) NOT NULL DEFAULT 'not_placed'
+          CHECK (supplier_purchase_status IN ('not_placed', 'pending', 'placed', 'accepted', 'rejected', 'cancelled', 'refunded')),
+        ADD COLUMN IF NOT EXISTS supplier_unit_cost numeric(12,2),
+        ADD COLUMN IF NOT EXISTS supplier_shipping_cost numeric(12,2),
+        ADD COLUMN IF NOT EXISTS supplier_cost_currency varchar(3),
+        ADD COLUMN IF NOT EXISTS supplier_order_url text,
+        ADD COLUMN IF NOT EXISTS supplier_tracking_url text
+    `);
+
     await client.query("COMMIT");
   } catch (error) {
     await client.query("ROLLBACK");
