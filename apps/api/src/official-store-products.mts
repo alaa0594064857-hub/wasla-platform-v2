@@ -84,12 +84,13 @@ export async function handleOfficialStoreProductsRequest(
       if (request.method !== "GET") { reply(response, 405, { success: false, error: "Method not allowed" }); return; }
       const result = await db.query(
         `SELECT p.id, p.title_ar, p.title_en, p.description_ar, p.description_en,
-                p.price::text AS price, p.currency, p.supplier_name,
-                p.availability_status, p.fulfillment_notes, p.image_url, p.created_at
+                p.price::text AS price, p.currency, p.availability_status,
+                p.image_url, p.created_at
          FROM official_store_products p
          INNER JOIN official_store_settings s ON s.singleton_id = TRUE
          WHERE p.status = 'published' AND s.status = 'active'
-           AND p.availability_status <> 'unavailable'
+           AND p.availability_status IN ('available', 'limited')
+           AND p.supplier_dropship_confirmed = TRUE
          ORDER BY p.created_at DESC
          LIMIT 100`,
       );
