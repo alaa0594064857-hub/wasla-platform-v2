@@ -44,13 +44,13 @@ export default function OfficialStoreSourceOffersPage() {
   const [matching, setMatching] = useState(false);
   const [matchDecision, setMatchDecision] = useState("");
   const [identityBusy, setIdentityBusy] = useState("");
-  const [importForm, setImportForm] = useState({ provider: "shopify", supplierName: "", productUrl: "", payload: "" });
+  const [importForm, setImportForm] = useState({ provider: "shopify", supplierName: "", productUrl: "", supplierEvidenceUrl: "", specificationEvidenceUrl: "", payload: "" });
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ importedCount: number; candidates: Array<{ id: string; proposed_title: string }> } | null>(null);
 
   const t = ar ? {
     title: "عروض الموردين للمنتجات الموحدة",
-    importTitle: "استيراد بيانات منتج من مصدر موثوق", importHelp: "الصق بيانات منتج حصلت عليها من واجهة المورد الرسمية أو ملف كتالوج مصرح به. ستدخل المنتجات للمراجعة فقط.", provider: "نوع المصدر", shopify: "Shopify", feed: "كتالوج مورد", importSupplier: "اسم المورد", importUrl: "رابط المنتج الأصلي HTTPS", payload: "بيانات المنتج بصيغة JSON", importRun: "استيراد للمراجعة", importing: "جارٍ الاستيراد...", imported: "عدد المنتجات التي أضيفت للمراجعة", importRights: "الصور لا تُنسخ ولا تُنشر تلقائياً؛ يجب مراجعة حقوق استخدامها والتحقق من المورد والتوفر والشحن.",
+    importTitle: "استيراد بيانات منتج من مصدر موثوق", importHelp: "الصق بيانات منتج حصلت عليها من واجهة المورد الرسمية أو ملف كتالوج مصرح به. ستدخل المنتجات للمراجعة فقط.", provider: "نوع المصدر", shopify: "Shopify", feed: "كتالوج مورد", importSupplier: "اسم المورد", importUrl: "رابط المنتج الأصلي HTTPS", payload: "بيانات المنتج بصيغة JSON", importRun: "استيراد للمراجعة", importing: "جارٍ الاستيراد...", imported: "عدد المنتجات التي أضيفت للمراجعة", importRights: "الصور لا تُنسخ ولا تُنشر تلقائياً؛ يجب مراجعة حقوق استخدامها والتحقق من المورد والتوفر والشحن.", supplierProof: "رابط إثبات هوية المورد HTTPS", specificationProof: "رابط إثبات مواصفات المنتج HTTPS",
     saveIdentity: "اعتماد بيانات المنتج الموحد", identitySaved: "تم حفظ هوية المنتج.", matchTitle: "مطابقة منتج من موقع خارجي", matchHelp: "أدخل بيانات المنتج من الموقع الآخر لمعرفة هل هو موجود لدينا باسم أو سجل مختلف.", match: "مطابقة المنتجات", matchRun: "ابحث عن منتج مطابق", matchBusy: "جارٍ فحص المنتجات...", brand: "العلامة التجارية", model: "الموديل", gtin: "GTIN / الباركود", mpn: "رقم القطعة", matches: "المنتجات المحتملة", noMatch: "لم نجد تطابقاً موثوقاً. يلزم مراجعة أو إنشاء منتج جديد.",
     subtitle: "اربط عدة عروض توريد بالمنتج نفسه، مع الاحتفاظ بسعر وشحن ومصدر كل مورد بشكل مستقل.",
     back: "العودة إلى متجر WASLA", add: "إضافة عرض توريد", product: "منتج WASLA",
@@ -71,7 +71,7 @@ export default function OfficialStoreSourceOffersPage() {
     note: "لا يؤدي تسجيل العرض إلى نشر المنتج أو شراءه. لا يُعتمد العرض إلا بعد توثيق الهوية والمواصفات والسعر والشحن وتأكيد التوفر.",
   } : {
     title: "Supplier offers for unified products",
-    importTitle: "Import product data from an authorized source", importHelp: "Paste product data obtained from the merchant’s official API or an authorized catalog feed. Imported records enter review only.", provider: "Source type", shopify: "Shopify", feed: "Merchant feed", importSupplier: "Supplier name", importUrl: "Original HTTPS product URL", payload: "Product data (JSON)", importRun: "Import for review", importing: "Importing...", imported: "Products added to review", importRights: "Images are not copied or published automatically. Image rights, supplier identity, availability and shipping must be verified.",
+    importTitle: "Import product data from an authorized source", importHelp: "Paste product data obtained from the merchant’s official API or an authorized catalog feed. Imported records enter review only.", provider: "Source type", shopify: "Shopify", feed: "Merchant feed", importSupplier: "Supplier name", importUrl: "Original HTTPS product URL", payload: "Product data (JSON)", importRun: "Import for review", importing: "Importing...", imported: "Products added to review", importRights: "Images are not copied or published automatically. Image rights, supplier identity, availability and shipping must be verified.", supplierProof: "Supplier identity evidence URL HTTPS", specificationProof: "Exact product specification evidence URL HTTPS",
     saveIdentity: "Save canonical product identity", identitySaved: "Canonical product identity saved.", matchTitle: "Match a product from another website", matchHelp: "Enter product details from an external listing to check whether it already exists under another title or record.", match: "Product matching", matchRun: "Find matching products", matchBusy: "Comparing products...", brand: "Brand", model: "Model", gtin: "GTIN / barcode", mpn: "Part number", matches: "Possible matches", noMatch: "No confident match found. Review manually or create a new product.",
     subtitle: "Link multiple supplier offers to one WASLA product while keeping each source, price and shipping terms separate.",
     back: "Back to official WASLA Store", add: "Add supplier offer", product: "WASLA product",
@@ -164,7 +164,7 @@ export default function OfficialStoreSourceOffersPage() {
       if (!payload || typeof payload !== "object" || Array.isArray(payload)) throw new Error("json");
       const response = await fetch("/api/platform/official-store/import-candidates", {
         method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: importForm.provider, supplierName: importForm.supplierName.trim(), productUrl: importForm.productUrl.trim(), payload }),
+        body: JSON.stringify({ provider: importForm.provider, supplierName: importForm.supplierName.trim(), productUrl: importForm.productUrl.trim(), supplierEvidenceUrl: importForm.supplierEvidenceUrl.trim() || null, specificationEvidenceUrl: importForm.specificationEvidenceUrl.trim() || null, payload }),
       });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error("import");
@@ -241,6 +241,8 @@ export default function OfficialStoreSourceOffersPage() {
           <label style={labelStyle}>{t.provider}<select value={importForm.provider} onChange={e => setImportForm(s => ({ ...s, provider: e.target.value }))} style={inputStyle}><option value="shopify">{t.shopify}</option><option value="merchant_feed">{t.feed}</option></select></label>
           <label style={labelStyle}>{t.importSupplier}<input required value={importForm.supplierName} onChange={e => setImportForm(s => ({ ...s, supplierName: e.target.value }))} style={inputStyle}/></label>
           <label style={labelStyle}>{t.importUrl}<input required type="url" placeholder="https://..." value={importForm.productUrl} onChange={e => setImportForm(s => ({ ...s, productUrl: e.target.value }))} style={inputStyle}/></label>
+          <label style={labelStyle}>{t.supplierProof}<input type="url" placeholder="https://..." value={importForm.supplierEvidenceUrl} onChange={e => setImportForm(s => ({ ...s, supplierEvidenceUrl: e.target.value }))} style={inputStyle}/></label>
+          <label style={labelStyle}>{t.specificationProof}<input type="url" placeholder="https://..." value={importForm.specificationEvidenceUrl} onChange={e => setImportForm(s => ({ ...s, specificationEvidenceUrl: e.target.value }))} style={inputStyle}/></label>
         </div>
         <label style={labelStyle}>{t.payload}<textarea required rows={8} value={importForm.payload} onChange={e => setImportForm(s => ({ ...s, payload: e.target.value }))} placeholder={importForm.provider === "shopify" ? '{"product":{"title":"Product name","vendor":"Brand","variants":[{"sku":"SKU-1","price":"19.99","available":true}]}}' : '{"title":"Product name","brand":"Brand","sku":"SKU-1","price":"19.99","currency":"USD","available":true,"images":[]}' } style={{ ...inputStyle, fontFamily: "monospace", resize: "vertical" }}/></label>
         <button disabled={importing} type="submit" style={{ padding: "11px 15px", border: 0, borderRadius: 10, background: "#27344d", color: "white", fontWeight: 700 }}>{importing ? t.importing : t.importRun}</button>
