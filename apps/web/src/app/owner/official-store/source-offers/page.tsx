@@ -47,7 +47,7 @@ export default function OfficialStoreSourceOffersPage() {
   const [importForm, setImportForm] = useState({ provider: "shopify", supplierName: "", productUrl: "", supplierEvidenceUrl: "", specificationEvidenceUrl: "", payload: "" });
   const [importing, setImporting] = useState(false);
   const [enrichmentBusyId, setEnrichmentBusyId] = useState("");
-  const [enrichmentResults, setEnrichmentResults] = useState<Record<string, { category: string; classificationConfidence: number; facts: Record<string,string>; missingRequiredReviewFields: string[]; warnings: string[] }>>({});
+  const [enrichmentResults, setEnrichmentResults] = useState<Record<string, { category: string; classificationConfidence: number; facts: Record<string,string>; missingRequiredReviewFields: string[]; warnings: string[]; sourceEvidence?: Array<{ type: string; url?: string; value?: string; rightsStatus: string; verificationStatus: string }> }>>({});
 
   const [importResult, setImportResult] = useState<{ importedCount: number; candidates: Array<{ id: string; proposed_title: string }> } | null>(null);
   const [pricingForm, setPricingForm] = useState({ supplierCost: "", supplierCurrency: "USD", supplierFxRate: "", supplierFxRateAsOf: "", supplierFxSource: "", shippingCost: "", shippingCurrency: "USD", shippingFxRate: "", shippingFxRateAsOf: "", shippingFxSource: "", displayCurrency: "USD", marginPercent: "20", fixedMargin: "0", additionalCost: "", additionalCostCurrency: "USD", additionalCostFxRate: "", additionalCostFxRateAsOf: "", additionalCostFxSource: "", additionalCostType: "other_cost" });
@@ -324,6 +324,7 @@ export default function OfficialStoreSourceOffersPage() {
             <p><strong>{ar ? "التصنيف:" : "Category:"}</strong> {enrichmentResults[item.id].category} · {Math.round(enrichmentResults[item.id].classificationConfidence * 100)}%</p>
             <p><strong>{ar ? "المواصفات المستخرجة من المصدر (غير مؤكدة):" : "Extracted source claims (unverified):"}</strong> {Object.keys(enrichmentResults[item.id].facts).length ? Object.entries(enrichmentResults[item.id].facts).map(([k,v]) => `${k}: ${v}`).join(" · ") : (ar ? "لم تُستخرج مواصفات مؤكدة من النص." : "No attributes could be extracted from the text.")}</p>
             <p><strong>{ar ? "حقول تحتاج مراجعة:" : "Fields needing review:"}</strong> {enrichmentResults[item.id].missingRequiredReviewFields.join(", ") || (ar ? "لا توجد حقول ناقصة في قائمة الفحص الأولية." : "No missing fields in the initial checklist.")}</p>
+            {!!enrichmentResults[item.id].sourceEvidence?.length && <div><strong>{ar ? "أدلة المصدر المستوردة:" : "Imported source evidence:"}</strong><ul>{enrichmentResults[item.id].sourceEvidence!.map((entry,i) => <li key={`${entry.type}-${i}`}>{entry.type}{entry.value ? `: ${entry.value}` : ""}{entry.url ? <> · <a href={entry.url} target="_blank" rel="noreferrer">{ar ? "فتح المصدر" : "Open source"}</a></> : ""} · {entry.type === "image_reference" ? (ar ? "حقوق الصورة غير مراجعة" : "Image rights unreviewed") : (ar ? "غير متحقق" : "Unverified")}</li>)}</ul></div>}
             <ul>{enrichmentResults[item.id].warnings.map((warning,i) => <li key={i}>{warning}</li>)}</ul>
           </div>}
         </div>)}
