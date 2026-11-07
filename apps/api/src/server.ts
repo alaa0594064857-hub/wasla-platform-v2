@@ -346,6 +346,18 @@ async function handleRequest(
     return;
   }
 
+  if (requestUrl.pathname === "/api/platform/ai/product-drafts") {
+    try {
+      const { handleAiProductDraftRequest } = await import("./platform-ai-product-drafts.mjs");
+      await handleAiProductDraftRequest(request, response);
+    } catch (error) {
+      console.error("WASLA AI product draft route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "AI product draft service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/platform/security") {
     try {
       const { handlePlatformSecurityRequest } = await import("./platform-security.mjs");
