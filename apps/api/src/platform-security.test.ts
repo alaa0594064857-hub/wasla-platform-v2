@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createServer, type Server } from "node:http";
 
 const mocks = vi.hoisted(() => ({
@@ -18,7 +18,11 @@ vi.mock("./database.js", async (importOriginal) => {
   };
 });
 
-import { authorizePlatformPermission } from "./platform-security.mjs";
+let authorizePlatformPermission: typeof import("./platform-security.mjs").authorizePlatformPermission;
+
+beforeEach(async () => {
+  ({ authorizePlatformPermission } = await import("./platform-security.mjs"));
+});
 
 let server: Server | undefined;
 
