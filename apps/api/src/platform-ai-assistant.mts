@@ -28,14 +28,14 @@ export async function handlePlatformAiAssistantRequest(req: IncomingMessage, res
   try {
     const access = await authorizePlatformPermission(req, res, "platform.manage");
     if (!access) return;
-    const apiKey = process.env.OPENAI_API_KEY?.trim();
-    const model = process.env.OPENAI_MODEL?.trim() || "gpt-4.1-mini";
+    const apiKey = process.env.GEMINI_API_KEY?.trim();
+    const model = process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash-lite";
     if (req.method === "GET") {
-      reply(res, 200, { success: true, configured: Boolean(apiKey), model: apiKey ? model : null, capabilities: ["advisory_chat", "product_opportunity_analysis", "supplier_evidence_review", "pricing_risk_guidance"], limitations: ["no_live_marketplace_access", "no_supplier_contact", "no_product_publication", "no_orders_or_payments"] });
+      reply(res, 200, { success: true, configured: Boolean(apiKey), provider: "Google Gemini", engine: "gemini-free-tier", model: apiKey ? model : null, capabilities: ["arabic_english_chat", "product_opportunity_analysis", "supplier_evidence_review", "pricing_risk_guidance"], limitations: ["free_tier_quota_applies", "no_live_marketplace_access", "no_supplier_contact", "no_product_publication", "no_orders_or_payments", "do_not_send_sensitive_customer_data"] });
       return;
     }
     if (req.method !== "POST") { reply(res, 405, { success: false, error: "Method not allowed" }); return; }
-    if (!apiKey) { reply(res, 503, { success: false, code: "AI_PROVIDER_NOT_CONFIGURED", error: "AI provider is not configured. Set OPENAI_API_KEY in the server environment; no key belongs in the browser." }); return; }
+    if (!apiKey) { reply(res, 503, { success: false, code: "AI_PROVIDER_NOT_CONFIGURED", error: "Gemini is not configured. Add GEMINI_API_KEY as a server secret. Never place it in browser code." }); return; }
     let body: Record<string, unknown> | null;
     try { body = await readBody(req); } catch (error) { reply(res, error instanceof Error && error.message === "BODY_TOO_LARGE" ? 413 : 400, { success: false, error: "Invalid JSON body" }); return; }
     const rawMessages = body?.messages;
@@ -48,20 +48,25 @@ export async function handlePlatformAiAssistantRequest(req: IncomingMessage, res
       messages.push({ role: value.role, content: value.content.trim() });
     }
     if (messages[messages.length - 1].role !== "user") { reply(res, 400, { success: false, error: "The latest message must be from the user." }); return; }
-    const upstream = await fetch("https://api.openai.com/v1/responses", {
+    const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model, instructions: SYSTEM_INSTRUCTIONS, input: messages.map(message => ({ role: message.role, content: [{ type: "input_text", text: message.content }] })), max_output_tokens: 900, store: false }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTIONS }] },
+        contents: messages.map(message => ({ role: message.role === "assistant" ? "model" : "user", parts: [{ text: message.content }] })),
+        generationConfig: { maxOutputTokens: 900, temperature: 0.4 },
+      }),
       signal: AbortSignal.timeout(45000),
     });
     if (!upstream.ok) {
       const status = upstream.status;
-      console.error("WASLA AI provider request failed:", status);
-      reply(res, 502, { success: false, error: status === 401 ? "AI provider credentials were rejected. Check the server secret." : status === 429 ? "AI provider rate limit or quota reached." : "AI provider request failed." });
+      const providerBody = await upstream.text().catch(() => "");
+      console.error("WASLA Gemini request failed:", status, providerBody.slice(0, 500));
+      reply(res, status === 429 ? 429 : 502, { success: false, error: status === 400 || status === 401 || status === 403 ? "Gemini rejected the API key or request. Check the server secret and model access." : status === 429 ? "Gemini free-tier quota or rate limit reached. Wait for the quota reset; no paid fallback is enabled." : "Gemini request failed." });
       return;
     }
-    const payload = await upstream.json() as { output?: Array<{ content?: Array<{ type?: string; text?: string }> }> };
-    const answer = (payload.output || []).flatMap(item => item.content || []).filter(part => part.type === "output_text" && typeof part.text === "string").map(part => part.text).join("\n").trim();
+    const payload = await upstream.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> }; finishReason?: string }> };
+    const answer = (payload.candidates?.[0]?.content?.parts || []).map(part => typeof part.text === "string" ? part.text : "").join("\n").trim();
     if (!answer) { reply(res, 502, { success: false, error: "The AI provider returned no text response." }); return; }
     await ensureAiAuditTable();
     await getDatabasePool().query(
