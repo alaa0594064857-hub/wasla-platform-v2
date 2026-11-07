@@ -93,12 +93,13 @@ describe("official-store supplier candidate import safeguards", () => {
 
     expect(response.status).toBe(403);
     expect(await response.json()).toMatchObject({ success: false });
-    expect(String(mocks.clientQuery.mock.calls[0][0])).toContain("permission_status='approved'");
-    expect(mocks.clientQuery.mock.calls[0][1]).toEqual([
+    expect(mocks.clientQuery.mock.calls[0][0]).toBe("BEGIN");
+    expect(String(mocks.clientQuery.mock.calls[1][0])).toContain("permission_status='approved'");
+    expect(mocks.clientQuery.mock.calls[1][1]).toEqual([
       "11111111-1111-4111-8111-111111111111", "platform-owner", "merchant_feed",
     ]);
-    expect(mocks.clientQuery.mock.calls[1][0]).toBe("ROLLBACK");
-    expect(mocks.clientQuery).toHaveBeenCalledTimes(2);
+    expect(mocks.clientQuery.mock.calls[2][0]).toBe("ROLLBACK");
+    expect(mocks.clientQuery).toHaveBeenCalledTimes(3);
     expect(mocks.release).toHaveBeenCalledOnce();
   });
 });
