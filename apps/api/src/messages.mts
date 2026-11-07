@@ -93,13 +93,13 @@ export async function handleMessagesRequest(
                     'business'::text AS entity_type, a.account_type::text AS category,
                     ROW_NUMBER() OVER (
                       PARTITION BY a.id
-                      ORDER BY CASE WHEN r.name = 'account_owner' THEN 0 ELSE 1 END
+                      ORDER BY CASE r.name WHEN 'account_owner' THEN 0 WHEN 'account_admin' THEN 1 ELSE 2 END
                     ) AS rn
              FROM accounts a
              INNER JOIN account_members am ON am.account_id = a.id AND am.status = 'active'
              INNER JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
              INNER JOIN users u ON u.id = am.user_id AND u.status = 'active' AND u.email_verified = TRUE
-             WHERE a.status = 'active' AND r.name IN ('account_owner', 'account_manager')
+             WHERE a.status = 'active' AND r.name IN ('account_owner', 'account_admin', 'account_manager')
                AND a.display_name ILIKE $1
            ),
            store_contacts AS (
@@ -107,14 +107,13 @@ export async function handleMessagesRequest(
                     'store'::text AS entity_type, 'store'::text AS category,
                     ROW_NUMBER() OVER (
                       PARTITION BY s.id
-                      ORDER BY CASE WHEN r.name = 'account_owner' THEN 0 ELSE 1 END
+                      ORDER BY CASE r.name WHEN 'store_owner' THEN 0 WHEN 'store_admin' THEN 1 ELSE 2 END
                     ) AS rn
              FROM stores s
-             INNER JOIN accounts a ON a.id = s.account_id AND a.status = 'active'
-             INNER JOIN account_members am ON am.account_id = a.id AND am.status = 'active'
-             INNER JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
-             INNER JOIN users u ON u.id = am.user_id AND u.status = 'active' AND u.email_verified = TRUE
-             WHERE s.status = 'active' AND r.name IN ('account_owner', 'account_manager')
+             INNER JOIN store_members sm ON sm.store_id = s.id AND sm.status = 'active'
+             INNER JOIN roles r ON r.id = sm.role_id AND r.scope_type = sm.role_scope
+             INNER JOIN users u ON u.id = sm.user_id AND u.status = 'active' AND u.email_verified = TRUE
+             WHERE s.status = 'active' AND r.name IN ('store_owner', 'store_admin', 'store_manager')
                AND s.name ILIKE $1
            ),
            candidates AS (
@@ -195,7 +194,7 @@ export async function handleMessagesRequest(
           return;
         }
         const seller = await db.query(
-          `SELECT COALESCE(store_owner.user_id, store_manager.user_id, account_owner.user_id, account_manager.user_id) AS recipient_id
+          `SELECT COALESCE(store_owner.user_id, store_admin.user_id, store_manager.user_id, account_owner.user_id, account_admin.user_id, account_manager.user_id) AS recipient_id
            FROM store_products p
            INNER JOIN stores s ON s.id = p.store_id AND s.status = 'active'
            INNER JOIN accounts a ON a.id = s.account_id AND a.status = 'active'
@@ -206,6 +205,13 @@ export async function handleMessagesRequest(
              WHERE sm.store_id = s.id AND sm.status = 'active'
              ORDER BY sm.created_at ASC LIMIT 1
            ) store_owner ON TRUE
+           LEFT JOIN LATERAL (
+             SELECT sm.user_id FROM store_members sm
+             INNER JOIN users u ON u.id = sm.user_id AND u.status = 'active' AND u.email_verified = TRUE
+             INNER JOIN roles r ON r.id = sm.role_id AND r.scope_type = sm.role_scope AND r.name = 'store_admin'
+             WHERE sm.store_id = s.id AND sm.status = 'active'
+             ORDER BY sm.created_at ASC LIMIT 1
+           ) store_admin ON TRUE
            LEFT JOIN LATERAL (
              SELECT sm.user_id FROM store_members sm
              INNER JOIN users u ON u.id = sm.user_id AND u.status = 'active' AND u.email_verified = TRUE
@@ -220,6 +226,13 @@ export async function handleMessagesRequest(
              WHERE am.account_id = a.id AND am.status = 'active'
              ORDER BY am.created_at ASC LIMIT 1
            ) account_owner ON TRUE
+           LEFT JOIN LATERAL (
+             SELECT am.user_id FROM account_members am
+             INNER JOIN users u ON u.id = am.user_id AND u.status = 'active' AND u.email_verified = TRUE
+             INNER JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope AND r.name = 'account_admin'
+             WHERE am.account_id = a.id AND am.status = 'active'
+             ORDER BY am.created_at ASC LIMIT 1
+           ) account_admin ON TRUE
            LEFT JOIN LATERAL (
              SELECT am.user_id FROM account_members am
              INNER JOIN users u ON u.id = am.user_id AND u.status = 'active' AND u.email_verified = TRUE
