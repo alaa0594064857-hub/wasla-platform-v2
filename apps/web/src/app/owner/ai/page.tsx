@@ -45,7 +45,7 @@ export default function OwnerAiAssistantPage() {
     {status && !status.configured ? <section className="space-y-2 rounded-2xl border border-amber-200 bg-amber-50 p-5">
       <h2 className="font-bold">{ar ? "مفتاح Gemini المجاني مطلوب" : "Gemini free-tier key required"}</h2>
       <p className="text-sm">{ar ? "أنشئ مفتاحاً مجانياً من Google AI Studio، ثم أضفه في Render كمتغير سري باسم GEMINI_API_KEY لخدمة wasla-api. لا ترسل المفتاح في المحادثة ولا تضعه في كود الموقع." : "Create a free API key in Google AI Studio, then add it in Render as a secret named GEMINI_API_KEY for the wasla-api service. Never share the key in chat or place it in website code."}</p>
-      <p className="text-xs text-slate-600">{ar ? "النموذج الافتراضي: gemini-2.5-flash-lite. سنستخدم الطبقة المجانية فقط؛ عند بلوغ الحصة سيتوقف الرد حتى تتجدد، ولن يحدث تحويل إلى خطة مدفوعة." : "Default model: gemini-2.5-flash-lite. Free tier only; if its quota is reached, replies pause until reset. No paid fallback is enabled."}</p>
+      <p className="text-xs text-slate-600">{ar ? "النموذج الافتراضي: gemini-3.5-flash-lite. سنستخدم الطبقة المجانية فقط؛ عند بلوغ الحصة سيتوقف الرد حتى تتجدد، ولن يحدث تحويل إلى خطة مدفوعة." : "Default model: gemini-3.5-flash-lite. Free tier only; if its quota is reached, replies pause until reset. No paid fallback is enabled."}</p>
     </section> : null}
     <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {[
