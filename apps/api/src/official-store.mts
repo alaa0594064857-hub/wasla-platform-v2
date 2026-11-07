@@ -206,6 +206,20 @@ export async function ensureOfficialStoreTables(): Promise<void> {
     `);
 
     await client.query(`
+      ALTER TABLE official_store_orders
+        DROP CONSTRAINT IF EXISTS official_store_orders_order_status_check
+    `);
+    await client.query(`
+      ALTER TABLE official_store_orders
+        ADD CONSTRAINT official_store_orders_order_status_check
+        CHECK (order_status IN (
+          'draft', 'awaiting_supplier', 'supplier_confirmed',
+          'awaiting_payment', 'paid', 'confirmed', 'preparing',
+          'shipped', 'delivered', 'cancelled', 'refunded', 'exception'
+        ))
+    `);
+
+    await client.query(`
       CREATE INDEX IF NOT EXISTS official_store_orders_customer_created_idx
       ON official_store_orders (customer_user_id, created_at DESC)
     `);
