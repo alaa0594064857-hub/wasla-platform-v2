@@ -49,7 +49,8 @@ export default function OfficialStoreSourceOffersPage() {
   const [enrichmentBusyId, setEnrichmentBusyId] = useState("");
   const [enrichmentResults, setEnrichmentResults] = useState<Record<string, { category: string; classificationConfidence: number; facts: Record<string,string>; missingRequiredReviewFields: string[]; warnings: string[]; sourceEvidence?: Array<{ type: string; url?: string; value?: string; rightsStatus: string; verificationStatus: string }> }>>({});
 
-  const [importResult, setImportResult] = useState<{ importedCount: number; candidates: Array<{ id: string; proposed_title: string }> } | null>(null);
+  const [importResult, setImportResult] = useState<{ importedCount: number; candidates: Array<{ id: string; proposed_title: string; supplier_name?: string; proposed_price?: string | null; currency?: string | null; source_platform?: string; source_product_url?: string; review_status?: string; verification_status?: string }> } | null>(null);
+  const [candidateReviewBusyId, setCandidateReviewBusyId] = useState("");
   const [pricingForm, setPricingForm] = useState({ supplierCost: "", supplierCurrency: "USD", supplierFxRate: "", supplierFxRateAsOf: "", supplierFxSource: "", shippingCost: "", shippingCurrency: "USD", shippingFxRate: "", shippingFxRateAsOf: "", shippingFxSource: "", displayCurrency: "USD", marginPercent: "20", fixedMargin: "0", additionalCost: "", additionalCostCurrency: "USD", additionalCostFxRate: "", additionalCostFxRateAsOf: "", additionalCostFxSource: "", additionalCostType: "other_cost" });
   const [pricingBusy, setPricingBusy] = useState(false);
   const [pricingResult, setPricingResult] = useState<{ currency: string; breakdown: { costSubtotal: number; margin: { total: number }; finalCustomerPrice: number }; warnings: string[] } | null>(null);
@@ -109,7 +110,7 @@ export default function OfficialStoreSourceOffersPage() {
     setProducts(Array.isArray(pd.products) ? pd.products : []);
     setOffers(Array.isArray(od.offers) ? od.offers : []);
     const candidates = Array.isArray(cd.candidates) ? cd.candidates : [];
-    setImportResult(candidates.length ? { importedCount: candidates.length, candidates: candidates.map((item: any) => ({ id: item.id, proposed_title: item.proposed_title || "" })) } : null);
+    setImportResult(candidates.length ? { importedCount: candidates.length, candidates: candidates.map((item: any) => ({ id: item.id, proposed_title: item.proposed_title || "", supplier_name: item.supplier_name, proposed_price: item.proposed_price, currency: item.currency, source_platform: item.source_platform, source_product_url: item.source_product_url, review_status: item.review_status, verification_status: item.verification_status })) } : null);
     setEnrichmentResults(Object.fromEntries(candidates.filter((item: any) => item.enrichment).map((item: any) => [item.id, item.enrichment])));
   }
 
@@ -197,6 +198,24 @@ export default function OfficialStoreSourceOffersPage() {
       setNotice(ar ? "تم تحليل بيانات المنتج وحفظ النتيجة للمراجعة." : "Product data analyzed and saved for review.");
     } catch { setError(ar ? "تعذر تحليل المنتج. تأكد من نشر الخدمة وصلاحيات الحساب." : "Could not analyze this product. Check deployment and account permissions."); }
     finally { setEnrichmentBusyId(""); }
+  }
+
+  async function reviewCandidate(candidateId: string, decision: "request_evidence" | "reject") {
+    setCandidateReviewBusyId(candidateId); setError(""); setNotice("");
+    try {
+      const response = await fetch("/api/platform/official-store/candidates/enrich", {
+        method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ candidateId, decision }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error("review");
+      setImportResult(current => current ? { ...current, candidates: current.candidates.map(item =>
+        item.id === candidateId ? { ...item, review_status: data.candidate.review_status } : item) } : current);
+      setNotice(decision === "reject"
+        ? (ar ? "تم رفض المرشح. لم يُنشر أي منتج." : "Candidate rejected. No product was published.")
+        : (ar ? "أُعيد المرشح لاستكمال الأدلة." : "Candidate returned for additional evidence."));
+    } catch { setError(ar ? "تعذرت مراجعة المرشح." : "Could not save the candidate review."); }
+    finally { setCandidateReviewBusyId(""); }
   }
 
   async function calculatePrice(event: FormEvent<HTMLFormElement>) {
@@ -317,6 +336,9 @@ export default function OfficialStoreSourceOffersPage() {
         <strong>{t.imported}: {importResult.importedCount}</strong>
         {importResult.candidates.map(item => <div key={item.id} style={{ margin: "10px 0", padding: 10, background: "white", border: "1px solid #e5e7eb", borderRadius: 9 }}>
           <strong>{item.proposed_title}</strong>
+          <p style={{ fontSize: 12, opacity: .75 }}>{item.supplier_name || ""}{item.source_platform ? ` · ${item.source_platform}` : ""}{item.proposed_price ? ` · ${item.proposed_price} ${item.currency || ""}` : ""}</p>
+          <p style={{ fontSize: 12, fontWeight: 700 }}>{ar ? "حالة المراجعة:" : "Review status:"} {item.review_status || "needs_owner_review"} · {ar ? "التحقق:" : "Verification:"} {item.verification_status || "unverified"}</p>
+          {item.source_product_url && <a href={item.source_product_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#9b762c" }}>{ar ? "فتح صفحة المنتج الأصلية" : "Open original product listing"}</a>}
           <button type="button" disabled={enrichmentBusyId === item.id} onClick={() => void enrichCandidate(item.id)} style={{ display: "block", marginTop: 8, padding: "8px 11px", border: 0, borderRadius: 8, background: "#27344d", color: "white", fontWeight: 700 }}>
             {enrichmentBusyId === item.id ? (ar ? "جارٍ تحليل المنتج..." : "Analyzing product...") : (ar ? "حلّل وصنّف المنتج" : "Analyze and classify product")}
           </button>
@@ -326,6 +348,10 @@ export default function OfficialStoreSourceOffersPage() {
             <p><strong>{ar ? "حقول تحتاج مراجعة:" : "Fields needing review:"}</strong> {enrichmentResults[item.id].missingRequiredReviewFields.join(", ") || (ar ? "لا توجد حقول ناقصة في قائمة الفحص الأولية." : "No missing fields in the initial checklist.")}</p>
             {!!enrichmentResults[item.id].sourceEvidence?.length && <div><strong>{ar ? "أدلة المصدر المستوردة:" : "Imported source evidence:"}</strong><ul>{enrichmentResults[item.id].sourceEvidence!.map((entry,i) => <li key={`${entry.type}-${i}`}>{entry.type}{entry.value ? `: ${entry.value}` : ""}{entry.url ? <> · <a href={entry.url} target="_blank" rel="noreferrer">{ar ? "فتح المصدر" : "Open source"}</a></> : ""} · {entry.type === "image_reference" ? (ar ? "حقوق الصورة غير مراجعة" : "Image rights unreviewed") : (ar ? "غير متحقق" : "Unverified")}</li>)}</ul></div>}
             <ul>{enrichmentResults[item.id].warnings.map((warning,i) => <li key={i}>{warning}</li>)}</ul>
+          </div>}
+          {item.review_status !== "rejected" && <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+            <button type="button" disabled={candidateReviewBusyId === item.id} onClick={() => void reviewCandidate(item.id, "request_evidence")} style={{ padding: "8px 10px", border: "1px solid #b18a3c", borderRadius: 8, background: "white", color: "#72551f" }}>{candidateReviewBusyId === item.id ? "..." : (ar ? "إعادة لاستكمال الأدلة" : "Return for more evidence")}</button>
+            <button type="button" disabled={candidateReviewBusyId === item.id} onClick={() => { if (window.confirm(ar ? "هل تريد رفض هذا المرشح؟" : "Reject this candidate?")) void reviewCandidate(item.id, "reject"); }} style={{ padding: "8px 10px", border: "1px solid #b42318", borderRadius: 8, background: "white", color: "#b42318" }}>{ar ? "رفض المرشح" : "Reject candidate"}</button>
           </div>}
         </div>)}
       </div>}
