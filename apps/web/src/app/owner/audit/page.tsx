@@ -57,6 +57,50 @@ export default function PlatformAuditPage() {
     cell: { padding: "12px 10px", borderBottom: "1px solid rgba(115,128,146,.16)", textAlign: ar ? "right" as const : "left" as const, verticalAlign: "top" as const } as const,
   };
 
+  const sourceLabel = (source: string) => {
+    const labels: Record<string, string> = {
+      platform: ar ? "إدارة المنصة" : "Platform",
+      trade_opportunity: ar ? "فرص التجارة" : "Trade opportunities",
+      trade_brokerage_agreement: ar ? "اتفاقيات الوساطة" : "Brokerage agreements",
+      trade_commission: ar ? "سجل العمولات" : "Commission ledger",
+      trade_commission_invoice: ar ? "فواتير العمولات" : "Commission invoices",
+    };
+    return labels[source] || source;
+  };
+  const eventLabel = (event: string) => {
+    const labels: Record<string, string> = {
+      submitted: ar ? "تم التقديم" : "Submitted",
+      approved: ar ? "تمت الموافقة" : "Approved",
+      rejected: ar ? "مرفوض" : "Rejected",
+      closed: ar ? "مغلق" : "Closed",
+      created: ar ? "تم الإنشاء" : "Created",
+      buyer_accepted: ar ? "موافقة المشتري" : "Buyer accepted",
+      supplier_accepted: ar ? "موافقة المورد" : "Supplier accepted",
+      expired: ar ? "منتهي" : "Expired",
+      recorded: ar ? "تم التسجيل" : "Recorded",
+      status_changed: ar ? "تغيير الحالة" : "Status changed",
+      invoice_created: ar ? "إنشاء فاتورة" : "Invoice created",
+      invoice_status_changed: ar ? "تغيير حالة الفاتورة" : "Invoice status changed",
+      platform: ar ? "حدث إداري" : "Administrative event",
+    };
+    return labels[event] || event.replaceAll("_", " ");
+  };
+  const statusLabel = (value: unknown) => {
+    if (typeof value !== "string") return "—";
+    const labels: Record<string, string> = {
+      draft: ar ? "مسودة" : "Draft",
+      issued: ar ? "صادرة" : "Issued",
+      paid: ar ? "مدفوعة" : "Paid",
+      cancelled: ar ? "ملغاة" : "Cancelled",
+      recorded: ar ? "مسجلة" : "Recorded",
+      invoiced: ar ? "مفوترَة" : "Invoiced",
+      waived: ar ? "متنازل عنها" : "Waived",
+      active: ar ? "نشطة" : "Active",
+      pending_acceptance: ar ? "بانتظار الموافقة" : "Pending acceptance",
+    };
+    return labels[value] || value;
+  };
+
   return <main dir={ar ? "rtl" : "ltr"} lang={locale} style={styles.page}>
     <div style={styles.shell}>
       <Link href="/owner" style={{ color: "#9b783d", fontWeight: 700, textDecoration: "none" }}>← {ar ? "العودة إلى مركز المالك" : "Back to owner center"}</Link>
@@ -78,8 +122,8 @@ export default function PlatformAuditPage() {
            <tbody>
              {entries.map(entry => <tr key={entry.id}>
                <td style={styles.cell}><time dateTime={entry.createdAt}>{new Date(entry.createdAt).toLocaleString(ar ? "ar" : "en")}</time></td>
-               <td style={styles.cell}>{entry.source}</td>
-               <td style={styles.cell}><strong>{entry.event}</strong><div style={{ color: "#738092", fontSize: 12 }}>{typeof entry.details?.fromStatus === "string" || typeof entry.details?.toStatus === "string" ? String(entry.details?.fromStatus || "—") + " → " + String(entry.details?.toStatus || "—") : ""}</div></td>
+               <td style={styles.cell}>{sourceLabel(entry.source)}</td>
+               <td style={styles.cell}><strong>{eventLabel(entry.event)}</strong><div style={{ color: "#738092", fontSize: 12 }}>{typeof entry.details?.fromStatus === "string" || typeof entry.details?.toStatus === "string" ? statusLabel(entry.details?.fromStatus) + " → " + statusLabel(entry.details?.toStatus) : ""}</div></td>
                <td style={styles.cell}>{entry.resourceType || "—"}<div style={{ color: "#738092", fontSize: 11 }}>{entry.resourceId || ""}</div></td>
                <td style={styles.cell}>{entry.context || "—"}{typeof entry.details?.note === "string" && entry.details.note ? <div style={{ color: "#738092", fontSize: 12 }}>{entry.details.note}</div> : null}</td>
                <td style={styles.cell}>{entry.actorEmail || (ar ? "النظام" : "System")}</td>
