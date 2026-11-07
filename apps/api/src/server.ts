@@ -112,6 +112,18 @@ async function handleRequest(
     return;
   }
 
+  if (requestUrl.pathname === "/api/platform/official-store/product-matches") {
+    try {
+      const { handleOfficialStoreProductMatchesRequest } = await import("./official-store-product-matches.mjs");
+      await handleOfficialStoreProductMatchesRequest(request, response);
+    } catch (error) {
+      console.error("WASLA official store product matching route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Product matching service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const officialStoreSourceOfferMatch = requestUrl.pathname.match(/^\/api\/platform\/official-store\/source-offers(?:\/([0-9a-f-]{36}))?$/i);
   if (officialStoreSourceOfferMatch) {
     try {
