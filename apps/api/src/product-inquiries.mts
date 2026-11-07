@@ -124,17 +124,27 @@ export async function handleProductInquiriesRequest(
         respond(response, 404, { success: false, error: "Open inquiry not found for this seller" });
         return;
       }
-      const inserted = await db.query(
-        `INSERT INTO product_inquiry_replies (inquiry_id, sender_user_id, body)
-         VALUES ($1, $2, $3) RETURNING id, sender_user_id AS "senderUserId",
-         body, created_at AS "createdAt"`,
-        [replyMatch[1], userId, replyBody.message.trim()],
-      );
-      await db.query(
-        `UPDATE product_inquiries SET status = 'replied', updated_at = NOW() WHERE id = $1`,
-        [replyMatch[1]],
-      );
-      respond(response, 201, { success: true, reply: inserted.rows[0] });
+      const client = await db.connect();
+      try {
+        await client.query("BEGIN");
+        const inserted = await client.query(
+          `INSERT INTO product_inquiry_replies (inquiry_id, sender_user_id, body)
+           VALUES ($1, $2, $3) RETURNING id, sender_user_id AS "senderUserId",
+           body, created_at AS "createdAt"`,
+          [replyMatch[1], userId, replyBody.message.trim()],
+        );
+        await client.query(
+          `UPDATE product_inquiries SET status = 'replied', updated_at = NOW() WHERE id = $1`,
+          [replyMatch[1]],
+        );
+        await client.query("COMMIT");
+        respond(response, 201, { success: true, reply: inserted.rows[0] });
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        client.release();
+      }
       return;
     }
 
