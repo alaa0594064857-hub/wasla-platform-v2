@@ -16,10 +16,13 @@ This is an evidence-based implementation tracker, not a claim that the platform 
 - Official WASLA Store is separate from member-owned stores and is intended to be managed by an AI operations manager under the human platform owner's authority.
 - Private member messages are not automatically visible to platform administrators or the official-store AI.
 
-## Official-store customer experience — approved principle
+## Official-store customer experience and sourcing — approved principles
 
 - Customers see WASLA as the store and their direct point of contact. Supplier marketplace names, supplier identities, supplier product URLs, sourcing notes, supplier purchase references, supplier costs and internal fulfilment communications are private operational data and must never appear in public product APIs, customer pages, receipts, order tracking or customer support messages.
+- Supplier discovery is source-agnostic: local Turkish manufacturers, wholesalers, shops and distributors are eligible, as are verified suppliers in other countries and marketplaces such as Alibaba. Choose by product match, supplier reliability, landed cost, delivery and legal feasibility—not by marketplace brand.
 - Suppliers may fulfil orders directly to customers, but the customer-facing experience, order communications and after-sales support remain branded and managed by WASLA.
+- A product may only be listed with specifications supported by evidence. Verify supplier identity, exact model/variant/material/size/compatibility and other material attributes, current price and availability, shipping terms and direct-shipping commitment. Sample inspection or an independent inspection is preferred for material/high-risk products.
+- Do not silently substitute a different model, material, size, configuration or quality grade. If the exact advertised item is unavailable, pause the offer or obtain the customer's explicit agreement to a clearly described alternative before payment/dispatch.
 - Show only confirmed product availability to customers. Do not expose internal states such as awaiting supplier confirmation. Provide legally required seller, shipping, customs, returns and consumer-rights disclosures; brand consistency must never become concealment of legally material information.
 
 ## Status by area
