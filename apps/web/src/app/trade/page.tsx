@@ -35,6 +35,15 @@ const statusLabels: Record<string, [string, string]> = {
   cancelled: ["ملغاة", "Cancelled"],
   completed: ["مكتملة", "Completed"],
 };
+const eventLabels: Record<string, [string, string]> = {
+  created: ["إنشاء المسودة", "Draft created"],
+  proposed: ["إرسال العرض", "Proposal sent"],
+  countered: ["تعديل العرض", "Counter-proposal"],
+  accepted: ["قبول العرض", "Proposal accepted"],
+  declined: ["رفض العرض", "Proposal declined"],
+  cancelled: ["إلغاء الصفقة", "Deal cancelled"],
+  completed: ["إتمام الصفقة", "Deal completed"],
+};
 
 export default function TradePage() {
   const { locale } = useLocale();
@@ -316,10 +325,10 @@ export default function TradePage() {
                     <strong>{ar ? "سجل التغييرات والقرارات" : "Activity and decisions"}</strong>
                     {dealDetails[deal.id].events.map(event => <div key={event.id} style={{ padding: "8px 0", borderBottom: "1px solid rgba(115,128,146,.2)" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                        <strong>{event.eventType}</strong>
+                        <strong>{(eventLabels[event.eventType] ?? [event.eventType, event.eventType])[ar ? 0 : 1]}</strong>
                         <small style={{ opacity: .65 }}>{new Date(event.createdAt).toLocaleString(ar ? "ar" : "en")}</small>
                       </div>
-                      <small>{event.fromStatus ? `${event.fromStatus} → ${event.toStatus}` : event.toStatus}</small>
+                      <small>{event.fromStatus ? `${(statusLabels[event.fromStatus] ?? [event.fromStatus, event.fromStatus])[ar ? 0 : 1]} → ${(statusLabels[event.toStatus] ?? [event.toStatus, event.toStatus])[ar ? 0 : 1]}` : (statusLabels[event.toStatus] ?? [event.toStatus, event.toStatus])[ar ? 0 : 1]}</small>
                       {event.body && <p style={{ margin: "5px 0" }}>{event.body}</p>}
                     </div>)}
                   </div>
