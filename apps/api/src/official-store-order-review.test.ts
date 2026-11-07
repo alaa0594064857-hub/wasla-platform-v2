@@ -24,7 +24,7 @@ async function startServer(): Promise<string> {
 
 function orderRow() {
   return {
-    id: orderId, productId,
+    id: orderId, customerUserId: "customer-42", productId,
     supplierConfirmationStatus: "pending", orderStatus: "awaiting_supplier",
     sourcePlatform: "authorized_feed", supplierName: "Supplier A",
     supplierUnitCost: "12.00", supplierShippingCost: "3.00",
@@ -101,6 +101,7 @@ describe("owner supplier confirmation review", () => {
       success: true,
       order: { orderStatus: "supplier_confirmed", paymentStatus: "not_enabled", supplierPurchaseStatus: "not_placed" },
     });
+    expect(String(client.query.mock.calls[1][0])).toContain('o.customer_user_id AS "customerUserId"');
     expect(String(client.query.mock.calls[2][0])).toContain("quote_valid_until > NOW()");
     expect(String(client.query.mock.calls[3][0])).toContain("supplier_confirmation_status = 'pending'");
     expect(client.query.mock.calls[3][1]).toEqual([orderId, "accepted", "supplier_confirmed"]);
@@ -110,6 +111,7 @@ describe("owner supplier confirmation review", () => {
     });
     expect(String(client.query.mock.calls[5][0])).toContain("official_store_order");
     expect(String(client.query.mock.calls[5][0])).toContain("'/account/orders'");
+    expect(client.query.mock.calls[5][1][0]).toBe("customer-42");
     expect(client.query.mock.calls[5][1][5]).toBe(orderId);
     expect(client.query.mock.calls.at(-1)?.[0]).toBe("COMMIT");
     expect(client.release).toHaveBeenCalledOnce();
