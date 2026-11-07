@@ -118,24 +118,34 @@ export async function handleStoreProductsRequest(
       respond(response, 400, { success: false, error: "Check product name, price, currency, stock, status, and secure media URLs" });
       return;
     }
-    const result = await pool.query(
-      `INSERT INTO store_products
-        (store_id, title, description, sku, price, currency, stock_quantity, image_url, video_url, seller_checkout_url, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-       RETURNING id, store_id AS "storeId", title, description, sku,
-         price::text AS price, currency, stock_quantity AS "stockQuantity",
-         image_url AS "imageUrl", video_url AS "videoUrl", seller_checkout_url AS "sellerCheckoutUrl", status,
-         created_at AS "createdAt", updated_at AS "updatedAt"`,
-      [store.id, title, description || null, sku || null, price, currency,
-       stock, body.imageUrl || null, body.videoUrl || null, body.sellerCheckoutUrl || null, status],
-    );
-    await pool.query(
-      `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, account_id, store_id, metadata)
-       VALUES ($1, 'product.created', 'product', $2, $3, $4, $5)`,
-      [session.user.id, result.rows[0].id, store.account_id, store.id,
-       JSON.stringify({ title, status })],
-    );
-    respond(response, 201, { success: true, product: result.rows[0] });
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const result = await client.query(
+        `INSERT INTO store_products
+          (store_id, title, description, sku, price, currency, stock_quantity, image_url, video_url, seller_checkout_url, status)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+         RETURNING id, store_id AS "storeId", title, description, sku,
+           price::text AS price, currency, stock_quantity AS "stockQuantity",
+           image_url AS "imageUrl", video_url AS "videoUrl", seller_checkout_url AS "sellerCheckoutUrl", status,
+           created_at AS "createdAt", updated_at AS "updatedAt"`,
+        [store.id, title, description || null, sku || null, price, currency,
+         stock, body.imageUrl || null, body.videoUrl || null, body.sellerCheckoutUrl || null, status],
+      );
+      await client.query(
+        `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, account_id, store_id, metadata)
+         VALUES ($1, 'product.created', 'product', $2, $3, $4, $5)`,
+        [session.user.id, result.rows[0].id, store.account_id, store.id,
+         JSON.stringify({ title, status })],
+      );
+      await client.query("COMMIT");
+      respond(response, 201, { success: true, product: result.rows[0] });
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
   } catch (error) {
     console.error("WASLA store products API error:", error);
     respond(response, 500, { success: false, error: "Could not process product request" });
