@@ -18,7 +18,7 @@ type Offer = {
 
 const initial = {
   productId: "", supplierName: "", sourcePlatform: "", sourceProductUrl: "",
-  supplierPrice: "", supplierCurrency: "USD", shippingCost: "",
+  variantDescription: "", supplierPrice: "", supplierCurrency: "USD", shippingCost: "",
   shippingCurrency: "USD", minimumOrderQuantity: "1", shipsToCountries: "TR,US,GB,DE",
   directToCustomerConfirmed: false, availabilityStatus: "needs_confirmation",
   evidenceUrl: "", specificationEvidenceUrl: "", quoteValidUntil: "",
@@ -45,7 +45,7 @@ export default function OfficialStoreSourceOffersPage() {
     back: "العودة إلى متجر WASLA", add: "إضافة عرض توريد", product: "منتج WASLA",
     supplier: "اسم المورد", platform: "الموقع أو المنصة", url: "رابط المنتج الأصلي HTTPS",
     availability: "حالة التوفر بعد التأكد", available: "متوفر", limited: "توفر محدود", needsConfirmation: "بانتظار التأكيد", unavailable: "غير متوفر",
-    price: "سعر المورد", currency: "عملة المورد", shipping: "تكلفة الشحن",
+    variant: "المقاس أو اللون أو الموديل", price: "سعر المورد", currency: "عملة المورد", shipping: "تكلفة الشحن",
     shippingCurrency: "عملة الشحن", moq: "الحد الأدنى للطلب",
     countries: "الدول المتاح الشحن إليها (رموز مثل TR,US)",
     dropship: "المورد أكد الشحن مباشرة للعميل",
@@ -64,7 +64,7 @@ export default function OfficialStoreSourceOffersPage() {
     back: "Back to official WASLA Store", add: "Add supplier offer", product: "WASLA product",
     supplier: "Supplier name", platform: "Source site or marketplace", url: "Original product URL HTTPS",
     availability: "Verified availability", available: "Available", limited: "Limited", needsConfirmation: "Needs confirmation", unavailable: "Unavailable",
-    price: "Supplier price", currency: "Supplier currency", shipping: "Shipping cost",
+    variant: "Size, colour or model variant", price: "Supplier price", currency: "Supplier currency", shipping: "Shipping cost",
     shippingCurrency: "Shipping currency", moq: "Minimum order quantity",
     countries: "Shipping destinations (ISO codes e.g. TR,US)",
     dropship: "Supplier confirmed direct-to-customer shipping",
@@ -128,6 +128,7 @@ export default function OfficialStoreSourceOffersPage() {
         body: JSON.stringify({
           productId: form.productId, supplierName: form.supplierName.trim(),
           sourcePlatform: form.sourcePlatform.trim(), sourceProductUrl: form.sourceProductUrl.trim(),
+          variantAttributes: form.variantDescription.trim() ? { description: form.variantDescription.trim() } : {},
           supplierPrice: Number(form.supplierPrice), supplierCurrency: form.supplierCurrency.trim().toUpperCase(),
           shippingCost: form.shippingCost === "" ? null : Number(form.shippingCost),
           shippingCurrency: form.shippingCurrency.trim().toUpperCase(),
@@ -182,6 +183,7 @@ export default function OfficialStoreSourceOffersPage() {
         <label style={labelStyle}>{t.supplier}<input required value={form.supplierName} onChange={e => update("supplierName", e.target.value)} style={inputStyle}/></label>
         <label style={labelStyle}>{t.platform}<input required value={form.sourcePlatform} onChange={e => update("sourcePlatform", e.target.value)} style={inputStyle}/></label>
         <label style={{ ...labelStyle, gridColumn: "1 / -1" }}>{t.url}<input required type="url" value={form.sourceProductUrl} onChange={e => update("sourceProductUrl", e.target.value)} style={inputStyle}/></label>
+        <label style={labelStyle}>{t.variant}<input value={form.variantDescription} onChange={e => update("variantDescription", e.target.value)} style={inputStyle}/></label>
         <label style={labelStyle}>{t.price}<input required type="number" min="0" step="0.01" value={form.supplierPrice} onChange={e => update("supplierPrice", e.target.value)} style={inputStyle}/></label>
         <label style={labelStyle}>{t.currency}<input required maxLength={3} value={form.supplierCurrency} onChange={e => update("supplierCurrency", e.target.value)} style={inputStyle}/></label>
         <label style={labelStyle}>{t.shipping}<input type="number" min="0" step="0.01" value={form.shippingCost} onChange={e => update("shippingCost", e.target.value)} style={inputStyle}/></label>
