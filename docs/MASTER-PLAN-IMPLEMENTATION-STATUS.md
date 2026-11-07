@@ -225,3 +225,18 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Evidence remains explicitly unverified. The owner must open and review the evidence and make the required identity/specification/direct-shipping confirmations. Prefill does not verify a supplier, approve an offer, publish a product or place an order.
 - Verification boundary: CI and production deployment are confirmed. Authenticated owner-session browser/database end-to-end testing remains outstanding.
 
+
+
+## QA hardening checkpoint — 2026-11-07 (member stores, messages, profile and audit integrity)
+
+- Product-based private messaging now resolves the seller on the server from an active product; the public product payload no longer exposes an internal seller user ID. The resolution supports an active verified store owner, then store manager, then account owner/manager. The caller cannot start a conversation with themselves.
+- Added automated tests for product-based seller resolution, self-conversation rejection and mutually exclusive recipient/product inputs.
+- Member product creation and updates now commit the product mutation and audit-log row in the same database transaction.
+- Store detail updates now commit the store mutation and audit-log row atomically.
+- Product inquiry replies and their transition to `replied` are now atomic.
+- Store listing now includes a store-only member even when that user has no separate account membership. Added a regression test for this authorization/visibility case.
+- Product media and seller checkout URLs now pass strict URL parsing and must use HTTPS.
+- Profile fields `bio`, `website` and `social_links` are represented in the Drizzle schema and added through migration `0004_extend_profiles.sql`. Runtime profile requests no longer execute schema-changing ALTER TABLE statements. Production already contains these columns; the migration is idempotent.
+- GitHub Actions run `42399529081` passed all quality steps, including API tests, migrations, database constraints, TypeScript checks and API/web builds. Runs `42400123571`, `42400180878` and `42400200853` also passed all quality steps after the subsequent hardening changes.
+- Render API and Web deployments for commit `9a9f114771e374fd132b562b34cae65e87581b0d` were confirmed Live. Later seller-manager routing and URL-validation changes are in the deployment queue and must be checked before being marked Live.
+- Verification boundary: CI tests and deployment checks do not replace authenticated two-account browser testing. No fake customer, product, inquiry or order records were created. Supplier private data remains restricted to owner-side workflows; public catalog and legal disclosure review remain separate launch gates.
