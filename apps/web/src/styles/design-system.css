@@ -129,3 +129,41 @@ body { color: var(--wasla-text); }
 .shops-back { margin-top:24px; }
 .shops-back a { color:var(--wasla-color-navy-800); text-decoration:none; font-weight:700; }
 @media(max-width:760px) { .shops-detail-layout { grid-template-columns:1fr; } }
+
+
+/* Global responsive safety: prevent clipped content on laptops and phones. */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { width: 100%; max-width: 100%; }
+body { margin: 0; overflow-x: clip; }
+main, section, article, aside, header, footer, nav, form,
+[class], [class] > * { min-width: 0; }
+img, picture, video, canvas, svg, iframe { max-width: 100%; }
+img, video { height: auto; }
+input, select, textarea, button { max-width: 100%; font: inherit; }
+p, h1, h2, h3, h4, a, strong, span, label { overflow-wrap: anywhere; }
+pre, code { max-width: 100%; }
+pre { overflow-x: auto; }
+table { max-width: 100%; }
+:where(.table-wrap, .table-responsive, [data-table-scroll]) { max-width: 100%; overflow-x: auto; }
+.wasla-container { padding-inline: 0; }
+
+@media (max-width: 1024px) {
+  :root { --wasla-content-width: 100%; }
+  .wasla-container { width: calc(100% - 40px); }
+}
+
+@media (max-width: 768px) {
+  .wasla-container { width: calc(100% - 32px); }
+  button, input, select, textarea { min-height: 44px; }
+  [class*="grid"] { min-width: 0; }
+  [class*="sidebar"] { max-width: 100%; }
+  [class*="page"], [class*="content"], [class*="container"], [class*="panel"] {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .wasla-container { width: calc(100% - 24px); }
+  h1 { font-size: clamp(1.45rem, 7vw, 2rem); }
+  h2 { font-size: clamp(1.2rem, 5.5vw, 1.6rem); }
+}
