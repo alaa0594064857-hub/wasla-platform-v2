@@ -68,6 +68,8 @@ describe("product-based private messaging", () => {
     expect(mocks.query.mock.calls[0][1]).toEqual(["11111111-1111-4111-8111-111111111111"]);
     expect(mocks.query.mock.calls[1][1]).toEqual(["buyer-user", "seller-user"]);
     expect(String(mocks.query.mock.calls[0][0])).toContain("p.status = 'active'");
+    expect(String(mocks.query.mock.calls[0][0])).toContain("r.name = 'store_manager'");
+    expect(String(mocks.query.mock.calls[0][0])).toContain("COALESCE(store_owner.user_id, store_manager.user_id");
   });
 
   it("prevents a seller from starting a conversation with themselves through their product", async () => {
