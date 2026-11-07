@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createServer, type Server } from "node:http";
 
+const nativeFetch = globalThis.fetch.bind(globalThis);
+
 const mocks = vi.hoisted(() => ({ authorize: vi.fn(), query: vi.fn() }));
 vi.mock("./platform-security.mjs", () => ({ authorizePlatformPermission: mocks.authorize }));
 vi.mock("./database.js", () => ({ getDatabasePool: () => ({ query: mocks.query }) }));
@@ -68,7 +70,7 @@ describe("WASLA owner AI order context", () => {
     });
     vi.stubGlobal("fetch", upstreamFetch);
     const base = await startServer();
-    const response = await fetch(base, {
+    const response = await nativeFetch(base, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ messages: [{ role: "user", content: "Summarize pending requests" }] }),
