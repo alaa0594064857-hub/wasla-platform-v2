@@ -492,3 +492,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - The production Render database contains all nine source tables, and the unified read-only SQL query executed successfully against production. Current event counts are platform (excluding repeated bootstrap noise): 3; Trade opportunities: 0; brokerage agreements: 0; commission ledger: 0; commission invoices: 0. The zero Trade counts reflect no real lifecycle records yet, not missing tables.
 - Fixed owner-role bootstrap so an already-active assignment is not rewritten or logged on every API startup; the audit feed retains only the latest bootstrap event to prevent historical startup noise from hiding operational events.
 - Render deployment for the unified audit API and Web page was verified Live for the initial code commit; subsequent noise-filter and bootstrap-idempotency fixes are deploying. Authenticated owner-session UI testing remains outstanding.
+
+
+## Authentication and customer-order review checkpoint — 2026-11-08
+
+- Corrected Better Auth production defaults: API base URL now falls back to the deployed Render API URL, and trusted origins include the current deployed WASLA web origin plus localhost for local development. Explicit environment values still take precedence. The purchased custom domain must be added to `BETTER_AUTH_URL` and `BETTER_AUTH_TRUSTED_ORIGINS` when connected.
+- Corrected the authentication architecture document: email verification is enabled and required in code, while actual verification/password-reset delivery remains dependent on Resend configuration and a verified sender/domain. No claim of successful external email delivery is made.
+- Fixed supplier confirmation review: its locked order query now selects the customer user ID used by the notification insert. Added regression assertions for the selected field and notification recipient.
+- Existing customer order history page is present at `/account/orders`; owner order desk remains read-only except for evidence-backed manual supplier confirmation/rejection. Payment, supplier purchase and shipping remain disabled.
+- API Render deployment for the auth defaults is confirmed live; the subsequent supplier-review/test update was still deploying at checkpoint time. Authenticated customer/owner end-to-end tests and real email delivery remain outstanding.
