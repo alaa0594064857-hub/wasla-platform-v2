@@ -117,7 +117,7 @@ export async function handleProductInquiriesRequest(
         return;
       }
       const access = await db.query(
-        `SELECT id FROM product_inquiries WHERE id = $1 AND recipient_user_id = $2 AND status <> 'closed'`,
+        `SELECT id, sender_user_id FROM product_inquiries WHERE id = $1 AND recipient_user_id = $2 AND status <> 'closed'`,
         [replyMatch[1], userId],
       );
       if (!access.rowCount) {
@@ -136,6 +136,16 @@ export async function handleProductInquiriesRequest(
         await client.query(
           `UPDATE product_inquiries SET status = 'replied', updated_at = NOW() WHERE id = $1`,
           [replyMatch[1]],
+        );
+        await client.query(
+          `INSERT INTO notifications (
+             user_id, type, title_ar, title_en, body_ar, body_en,
+             action_url, resource_id, metadata
+           )
+           VALUES ($1, 'product_inquiry', 'رد جديد على استفسارك', 'New reply to your product inquiry',
+                   'وصل رد جديد من المتجر على استفسارك.', 'The store has replied to your product inquiry.',
+                   '/inquiries', $2, $3::jsonb)`,
+          [access.rows[0].sender_user_id, replyMatch[1], JSON.stringify({ inquiryId: replyMatch[1] })],
         );
         await client.query("COMMIT");
         respond(response, 201, { success: true, reply: inserted.rows[0] });
@@ -259,15 +269,36 @@ export async function handleProductInquiriesRequest(
       return;
     }
 
-    const inserted = await db.query(
-      `INSERT INTO product_inquiries
-         (product_id, store_id, sender_user_id, recipient_user_id, body)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, product_id AS "productId", status, created_at AS "createdAt"`,
-      [product.rows[0].product_id, product.rows[0].store_id, userId,
-       product.rows[0].recipient_user_id, body.message.trim()],
-    );
-    respond(response, 201, { success: true, inquiry: inserted.rows[0] });
+    const client = await db.connect();
+    try {
+      await client.query("BEGIN");
+      const inserted = await client.query(
+        `INSERT INTO product_inquiries
+           (product_id, store_id, sender_user_id, recipient_user_id, body)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING id, product_id AS "productId", status, created_at AS "createdAt"`,
+        [product.rows[0].product_id, product.rows[0].store_id, userId,
+         product.rows[0].recipient_user_id, body.message.trim()],
+      );
+      await client.query(
+        `INSERT INTO notifications (
+           user_id, type, title_ar, title_en, body_ar, body_en,
+           action_url, resource_id, metadata
+         )
+         VALUES ($1, 'product_inquiry', 'استفسار جديد عن منتج', 'New product inquiry',
+                 'وصل استفسار جديد عن أحد منتجات متجرك.', 'A customer sent a new inquiry about one of your products.',
+                 '/inquiries', $2, $3::jsonb)`,
+        [product.rows[0].recipient_user_id, inserted.rows[0].id,
+         JSON.stringify({ inquiryId: inserted.rows[0].id, productId: product.rows[0].product_id })],
+      );
+      await client.query("COMMIT");
+      respond(response, 201, { success: true, inquiry: inserted.rows[0] });
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
   } catch (error) {
     console.error("WASLA product inquiries API error:", error);
     respond(response, 500, { success: false, error: "Could not process product inquiry" });
