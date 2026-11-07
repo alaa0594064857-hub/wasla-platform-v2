@@ -50,7 +50,7 @@ This is an evidence-based implementation tracker, not a claim that the platform 
 | Official-store AI operations manager | Not implemented — sourcing policy and manual owner review foundation deployed | Source-agnostic policy supports Turkish local suppliers and global suppliers; the owner console captures supplier evidence, exact-specification evidence, supplier identity/specification verification flags, MOQ, direct shipping, shipping terms and quote expiry. This is a manual review queue, not AI research or verification. Planned next: external-source discovery, canonical product matching and variant separation, multi-supplier offer aggregation, bilingual content enrichment, authorized image provenance, owner-controlled sale pricing and offer refresh. No AI runtime, supplier search/contact automation, negotiation, pricing engine, order API, payment, or autonomous purchasing exists yet. |
 | Official-store orders, checkout and fulfilment | Schema foundation added; APIs/workflow not implemented | Added order/event tables and fields for source marketplace, supplier purchase reference/status, direct-ship tracking, supplier cost and shipping. Need order APIs, supplier acceptance, dedicated official-store payment provider, seller-of-record, tax/import duties, returns and shipping integrations. Live checkout stays disabled until legal/provider arrangements are approved. |
 | Orders and order management | Not implemented | Member sales remain outside WASLA payment custody; platform can optionally coordinate order information without becoming payment intermediary. |
-| Trade/deal management | Not implemented | Requires deal records, participants, negotiation stages, documents, permissions and audit trail. |
+| Trade/deal management | Implemented foundation in repository; production/e2e verification pending | `apps/api/src/trade.mts` defines `trade_deals`, `trade_deal_items`, `trade_deal_events`, account-scoped permissions, negotiation actions (propose/counter/accept/decline/cancel/complete), audit events and notifications; `apps/web/src/app/trade/page.tsx` provides the bilingual deal workspace. This is a deal negotiation foundation, not automated buyer/supplier discovery or managed brokerage. Confirm route registration, DB initialization, deployment, two-account isolation and lifecycle tests before calling it production-verified. Managed opportunity intake, authorized discovery, brokerage engagement acceptance, commission ledger and fee collection remain unimplemented.
 | Notifications | Not implemented / incomplete | No complete notification delivery and unread-state workflow verified. |
 | Ratings and reviews | Not implemented | No production module verified. |
 | Complaints and disputes | Not implemented | No production module verified. |
@@ -80,7 +80,7 @@ This is an evidence-based implementation tracker, not a claim that the platform 
 7. Complete the owner command center for subscriptions, official store, security and audit.
 8. Test messaging and inquiries with two distinct accounts and verify that each party can access only their own records.
 9. Test member product publishing and seller-owned checkout link end to end.
-10. Add order/Trade modules, notifications, ratings and complaints according to the approved roadmap.
+10. Extend the existing Trade foundation with buyer requests, supplier opportunities, authorized matching, human-reviewed introductions, brokerage agreements and a separate commission ledger; then complete order workflows, notifications, ratings and complaints.
 11. Run full security, privacy, performance, accessibility, bilingual and deployment checks.
 12. Only then prepare legal/provider onboarding, public launch, domain purchase and investor/accelerator presentation.
 
@@ -455,3 +455,11 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Corrected the subscription-plan active metric to use the real `is_active` schema field.
 - Production database snapshot at this checkpoint: member products 0, conversations 0, product inquiries 0, Trade deals 0, subscription plans 0, subscriptions 0. No fabricated activity was inserted.
 - GitHub Actions run `42412206991` passed API tests, migrations, authorization seeding, DB constraints, TypeScript checks and API/Web builds. API and Web deployments for commit `237f5dd8e8d29bf1bbef792f93e88f61aea8e638` are both verified Live.
+
+
+## WASLA Trade brokerage direction — architecture approved (2026-11-08)
+
+- Added `docs/architecture/wasla-trade-brokerage-and-opportunity-engine.md` defining the managed B2B brokerage workflow: buyer/supplier opportunity intake, authorized source discovery, evidence provenance, matching, human-reviewed introductions, explicit fee agreements, commission milestones, invoicing and dispute handling.
+- Added architecture decision 23. Ordinary self-managed member-to-member deals remain commission-free. A fee applies only to a separate WASLA-sourced brokerage engagement with explicit, advance acceptance by the responsible payer(s); no hidden or retroactive commission.
+- Initial brokerage model excludes escrow, custody, split payments, trade finance and WASLA acting as importer/exporter. Underlying buyer/supplier settlement remains outside WASLA until a separately approved legal/payment design exists.
+- Corrected the Trade status above: a deal negotiation API and bilingual workspace exist in the repository, but this does not prove production deployment or end-to-end operation. Automated discovery, brokerage agreements, commission ledger and fee collection are not implemented.
