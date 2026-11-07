@@ -1,5 +1,15 @@
-import { describe, expect, it } from "vitest";
-import { hasMaterialOfferChanges, shouldRequireOfferReReview } from "./official-store-source-offers.mjs";
+import { beforeEach, describe, expect, it } from "vitest";
+
+type MaterialChangeCheck = (body: Record<string, unknown>) => boolean;
+type ReReviewCheck = (currentStatus: string, body: Record<string, unknown>) => boolean;
+let hasMaterialOfferChanges: MaterialChangeCheck;
+let shouldRequireOfferReReview: ReReviewCheck;
+
+beforeEach(async () => {
+  const module = await import("./official-store-source-offers.mjs");
+  hasMaterialOfferChanges = module.hasMaterialOfferChanges;
+  shouldRequireOfferReReview = module.shouldRequireOfferReReview;
+});
 
 describe("supplier source offer review transitions", () => {
   it("returns an approved offer to review when its price changes", () => {
