@@ -74,6 +74,19 @@ async function handleRequest(
     return;
   }
 
+  if (/^\/api\/trade\/deals(?:\/[0-9a-f-]{36})?$/i.test(requestUrl.pathname)) {
+    const dealId = requestUrl.pathname.match(/^\/api\/trade\/deals\/([0-9a-f-]{36})$/i)?.[1];
+    try {
+      const { handleTradeRequest } = await import("./trade.mjs");
+      await handleTradeRequest(request, response, dealId);
+    } catch (error) {
+      console.error("WASLA trade route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Trade service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (/^\/api\/notifications(?:\/read-all|\/[0-9a-f-]{36}\/read)?$/i.test(requestUrl.pathname)) {
     try {
       const { handleNotificationsRequest } = await import("./notifications.mjs");
@@ -654,6 +667,8 @@ if (process.env.NODE_ENV !== "test") {
       await ensureSubscriptionBillingTables();
       const { ensureNotificationsTable } = await import("./notifications.mjs");
       await ensureNotificationsTable();
+      const { ensureTradeTables } = await import("./trade.mjs");
+      await ensureTradeTables();
       const { ensureOfficialStoreTables } = await import("./official-store.mjs");
       await ensureOfficialStoreTables();
       const { ensureOfficialStoreOpportunityTables } = await import("./official-store-opportunities.mjs");
