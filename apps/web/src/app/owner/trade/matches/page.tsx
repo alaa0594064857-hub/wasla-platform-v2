@@ -38,6 +38,24 @@ export default function TradeMatchesPage() {
 
   useEffect(() => { void load(); }, [load]);
 
+  const localize = (value: string) => {
+    if (!ar) return value;
+    const labels: Record<string, string> = {
+      "Exact product category": "فئة المنتج متطابقة",
+      "Origin country matches": "بلد المنشأ متطابق",
+      "Delivery destination matches": "بلد التسليم متطابق",
+      "Quantity fits supplier minimum and stated capacity": "الكمية تناسب الحد الأدنى والقدرة المعلنة",
+      "Currency matches": "العملة متطابقة",
+      "Supplier indicative unit price is within buyer target": "السعر الاسترشادي ضمن ميزانية المشتري",
+      "Origin country needs confirmation": "بلد المنشأ يحتاج إلى تأكيد",
+      "Delivery destination needs confirmation": "بلد التسليم يحتاج إلى تأكيد",
+      "Quantity or supplier minimum needs confirmation": "الكمية أو الحد الأدنى للطلب يحتاج إلى تأكيد",
+      "Comparable currency quote is missing": "لا توجد عملة عرض قابلة للمقارنة",
+      "Comparable price evidence is missing": "لا يوجد إثبات سعر قابل للمقارنة",
+    };
+    return labels[value] ?? value;
+  };
+
   return <main dir={ar ? "rtl" : "ltr"} lang={locale} style={{ minHeight: "100vh", background: "#f7f4ed", color: "#263448" }}>
     <WorkspaceHeader section="account" />
     <div style={{ width: "min(1080px, calc(100% - 32px))", margin: "0 auto", padding: "28px 0 56px" }}>
@@ -75,11 +93,11 @@ export default function TradeMatchesPage() {
             </div>
             <div>
               <strong>{ar ? "أسباب المطابقة" : "Match reasons"}</strong>
-              <ul>{match.reasons.map(reason => <li key={reason}>{reason}</li>)}</ul>
+              <ul>{match.reasons.map(reason => <li key={reason}>{localize(reason)}</li>)}</ul>
             </div>
             {match.warnings.length > 0 && <div style={{ borderInlineStart: "3px solid #c6a15b", paddingInlineStart: 12 }}>
               <strong>{ar ? "نواقص يجب التحقق منها" : "Information to verify"}</strong>
-              <ul>{match.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul>
+              <ul>{match.warnings.map(warning => <li key={warning}>{localize(warning)}</li>)}</ul>
             </div>}
           </article>)}
         </div>}
