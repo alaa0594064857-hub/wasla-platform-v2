@@ -287,6 +287,8 @@ export async function ensurePlatformOwnerRole(): Promise<void> {
          VALUES ($1, $2, 'platform', 'active', $1)
          ON CONFLICT (user_id, role_id)
          DO UPDATE SET status = 'active', role_scope = 'platform'
+         WHERE platform_role_assignments.status <> 'active'
+            OR platform_role_assignments.role_scope <> 'platform'
          RETURNING id`,
         [ownerId, roleResult.rows[0].id],
       );
