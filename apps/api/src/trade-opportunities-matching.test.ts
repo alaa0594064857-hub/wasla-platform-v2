@@ -39,6 +39,12 @@ describe("WASLA Trade opportunity matching", () => {
     expect((matches[0].warnings as string[]).length).toBeGreaterThan(0);
   });
 
+  it("does not create a broker match between two opportunities owned by the same account", () => {
+    const buyer = { ...base, id: "buyer", opportunity_type: "buyer_request" as const, minimum_order_quantity: null };
+    const supplier = { ...base, id: "supplier", opportunity_type: "supplier_offer" as const, quantity: "150", target_unit_price: "850" };
+    expect(buildTradeOpportunityMatches([buyer, supplier])).toHaveLength(0);
+  });
+
   it("never matches different product categories", () => {
     const buyer = { ...base, id: "buyer", opportunity_type: "buyer_request" as const, minimum_order_quantity: null };
     const supplier = { ...base, id: "supplier", account_id: "account-b", opportunity_type: "supplier_offer" as const, product_category: "Aluminium" };
