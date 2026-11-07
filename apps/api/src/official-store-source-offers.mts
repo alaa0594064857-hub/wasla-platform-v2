@@ -122,18 +122,33 @@ export async function handleOfficialStoreSourceOffersRequest(
       }
       const product = await db.query("SELECT id FROM official_store_products WHERE id = $1", [productId]);
       if (!product.rows.length) { reply(response, 404, { success: false, error: "WASLA product not found" }); return; }
+      const candidateId = body.sourcingCandidateId === undefined || body.sourcingCandidateId === null || body.sourcingCandidateId === "" ? null : body.sourcingCandidateId;
+      if (candidateId !== null) {
+        if (typeof candidateId !== "string" || !UUID.test(candidateId)) { reply(response, 400, { success: false, error: "Invalid sourcing candidate reference" }); return; }
+        const candidate = await db.query(
+          "SELECT supplier_name, source_platform, source_product_url, proposed_price::text AS proposed_price, currency, review_status FROM official_store_sourcing_candidates WHERE id = $1",
+          [candidateId],
+        );
+        if (!candidate.rows.length) { reply(response, 404, { success: false, error: "Sourcing candidate not found" }); return; }
+        const c = candidate.rows[0];
+        if (["rejected", "converted"].includes(c.review_status) || c.supplier_name !== supplierName || c.source_platform !== platform ||
+            c.source_product_url !== body.sourceProductUrl || (c.currency && c.currency !== currency) ||
+            (c.proposed_price !== null && Number(c.proposed_price) !== Number(body.supplierPrice))) {
+          reply(response, 409, { success: false, error: "Offer details do not match the selected sourcing candidate" }); return;
+        }
+      }
 
       try {
         const inserted = await db.query(
           `INSERT INTO official_store_product_source_offers
-             (product_id, source_platform, source_product_url, supplier_name,
+             (product_id, sourcing_candidate_id, source_platform, source_product_url, supplier_name,
               supplier_reference, variant_attributes, supplier_price, supplier_currency,
               shipping_cost, shipping_currency, minimum_order_quantity, ships_to_countries,
               direct_to_customer_confirmed, availability_status, quote_valid_until, offer_status, evidence)
-           VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11,$12::jsonb,$13,$14,$15,'needs_review',$16::jsonb)
-           RETURNING id, product_id, source_platform, source_product_url, supplier_name,
+           VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12,$13::jsonb,$14,$15,$16,'needs_review',$17::jsonb)
+           RETURNING id, product_id, sourcing_candidate_id, source_platform, source_product_url, supplier_name,
                      supplier_price::text AS supplier_price, supplier_currency, offer_status, created_at`,
-          [productId, platform, body.sourceProductUrl, supplierName,
+          [productId, candidateId, platform, body.sourceProductUrl, supplierName,
            typeof body.supplierReference === "string" ? body.supplierReference.slice(0,180) : null,
            JSON.stringify(body.variantAttributes ?? {}), body.supplierPrice, currency,
            body.shippingCost ?? null,
@@ -144,7 +159,13 @@ export async function handleOfficialStoreSourceOffersRequest(
            body.quoteValidUntil ?? null,
            JSON.stringify(Array.isArray(body.evidence) ? body.evidence.slice(0,20) : [])],
         );
-        reply(response, 201, { success: true, offer: inserted.rows[0] });
+        if (candidateId) {
+          await db.query(
+            "UPDATE official_store_sourcing_candidates SET review_status = 'converted', reviewed_by_user_id = $1, reviewed_at = NOW(), updated_at = NOW() WHERE id = $2",
+            [access.userId, candidateId],
+          );
+        }
+        reply(response, 201, { success: true, offer: inserted.rows[0], note: candidateId ? "Candidate linked to a private source offer. No public listing or purchase was created." : undefined });
       } catch (error) {
         if ((error as { code?: string })?.code === "23505") {
           reply(response, 409, { success: false, error: "This source listing is already linked to a WASLA product" }); return;
