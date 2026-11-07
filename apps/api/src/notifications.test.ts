@@ -78,4 +78,18 @@ describe("private in-app notifications", () => {
     expect(mocks.query.mock.calls[0][1]).toEqual(["notification-owner"]);
     expect(String(mocks.query.mock.calls[0][0])).toContain("WHERE user_id = $1");
   });
+
+  it("does not let a user mark another user's notification as read", async () => {
+    mocks.query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
+
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/notifications/11111111-1111-4111-8111-111111111111/read`, {
+      method: "PATCH",
+    });
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ success: false, error: "Notification not found" });
+    expect(mocks.query.mock.calls[0][1]).toEqual(["11111111-1111-4111-8111-111111111111", "notification-owner"]);
+    expect(String(mocks.query.mock.calls[0][0])).toContain("WHERE id = $1 AND user_id = $2");
+  });
 });
