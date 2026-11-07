@@ -293,3 +293,10 @@ Do not describe the platform as commercially launch-ready based only on successf
 - GitHub Actions run `42404850292` passed API tests, migrations, authorization seed, database constraints, TypeScript checks and API/Web builds.
 - Render API deployment for commit `8fa91273e74c57524faa2df91d65a88ea64b28bf` is Live; runtime logs confirm the API listener started. Web deployment for commit `0df8e311bcc0d768a0b41f7590a76c11dbe614a9` is Live.
 - The production audit table contains real historical entries; the endpoint has not been exercised in an authenticated browser session yet.
+
+
+## Orders and fulfillment readiness checkpoint — 2026-11-07
+
+- Added `docs/architecture/orders-and-fulfillment-operating-spec.md` to define separate member-store and official-store order models, no-central-inventory boundaries, verified payment rules, supplier-direct fulfillment evidence and release gates.
+- Order/payment execution remains intentionally unimplemented. The payment provider, merchant-of-record model, settlement countries/currencies and approved legal entity are not yet selected. No payment or order status may be fabricated before a verified provider/merchant event exists.
+- This is a genuine launch dependency, not a coding task to guess around. The schema/API can be implemented against the approved provider-neutral lifecycle, but live checkout and paid-state transitions remain blocked until provider credentials, signed webhook specifications and jurisdiction decisions are available.
