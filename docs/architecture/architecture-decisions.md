@@ -540,3 +540,86 @@ catalogue and owner console are only foundations. Automated
 supplier discovery, AI product operations, order management,
 payment integration, shipment tracking, customer sales workflow,
 and AI oversight controls remain to be implemented and tested.
+
+
+## 21. Third-Party Supplier Direct-to-Customer Fulfilment
+
+Decision:
+
+The official WASLA Store may curate products sourced from third-party
+marketplaces and suppliers, including Alibaba.com, and offer eligible
+products for direct shipment from the supplier to the end customer.
+This is a supplier-fulfilled / dropshipping model, not WASLA-owned
+central inventory.
+
+Supplier and listing requirements:
+- A product may be listed as supplier-fulfilled only after the supplier
+  explicitly confirms single-order fulfilment, direct shipment to the
+  customer's destination country, applicable minimum order quantity,
+  current unit price, shipping cost, handling time, delivery estimate,
+  tracking availability, packaging/branding options, and return terms.
+- Marketplace listing data is a lead, not proof of stock, quality,
+  shipping eligibility, or permission to resell images/content.
+- Prefer eligible suppliers and orders with platform-provided buyer
+  protection such as Alibaba.com Trade Assurance; record the actual
+  protection terms and never imply that a marketplace badge guarantees
+  every risk is covered.
+- The AI must distinguish ready-to-ship products from inquiry-only or
+  bulk/MOQ products. Products that cannot be supplied as single units
+  with direct customer delivery must not be advertised as ordinary
+  single-item dropship products.
+- Product prices must include a reviewed landed-cost calculation:
+  supplier price, shipping, marketplace/payment fees, customs/duties
+  where estimable, currency conversion, taxes where applicable, and
+  WASLA's approved margin. Uncertain costs must be disclosed or
+  require owner review.
+- Listings must show accurate seller/fulfilment disclosures, realistic
+  delivery ranges, destination restrictions, and applicable return
+  conditions. Do not copy supplier photos or descriptions unless
+  their use is authorized.
+
+Order and money flow:
+- The customer places an order with the official WASLA Store under
+  the approved seller-of-record and consumer terms.
+- The order is only submitted to the supplier after the store's
+  payment/authorization rules are satisfied and supplier stock,
+  price, destination, and delivery terms are reconfirmed.
+- The supplier ships directly to the customer and provides tracking.
+  WASLA's AI manager tracks the supplier purchase and customer order
+  as linked but distinct records.
+- The customer pays WASLA only through a dedicated, approved official-
+  store payment setup. WASLA pays the supplier through an approved
+  purchasing method. This is distinct from member-store payments
+  and subscription billing.
+- Do not assume that a customer can safely pay Alibaba directly while
+  WASLA separately collects a markup: that arrangement changes the
+  contracting, payment, refund, tax, and customer-support model and
+  must be explicitly designed before use.
+- Until the seller-of-record, jurisdiction, tax/import duties, payment,
+  refund/return, product safety, and supplier contracting model are
+  approved, listings may be researched or shown as non-purchasable
+  previews/enquiries only; no automatic paid order or supplier
+  purchase is enabled.
+
+AI controls:
+- The AI may discover candidates and prepare draft listings.
+  It may publish and place supplier orders only within explicit
+  owner-approved supplier, category, destination, price, margin,
+  order-value, and exception limits.
+- New suppliers, high-risk/restricted products, unverified claims,
+  unusual delivery terms, high order values, and refund/chargeback
+  disputes require human approval.
+- Maintain source URL, supplier identity, confirmation evidence,
+  quote validity, shipping quote, MOQ, destination, and all price
+  calculations in the audit trail.
+- The platform owner can disable a supplier, pause a product, stop
+  new orders, and take over a customer case at any time.
+
+Implementation status:
+
+Approved business and architecture model. Alibaba.com has a documented
+dropshipping workflow through partner integrations for eligible
+products, but each supplier/product still requires verification.
+WASLA's supplier marketplace integration, sourcing automation,
+landed-cost engine, checkout, purchasing, and fulfilment automation
+are not implemented by this decision.
