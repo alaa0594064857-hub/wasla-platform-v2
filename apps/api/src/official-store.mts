@@ -312,39 +312,43 @@ export async function ensureOfficialStoreTables(): Promise<void> {
       WHERE manufacturer_part_number IS NOT NULL
     `);
 
-    await client.query([
-      "CREATE TABLE IF NOT EXISTS official_store_product_source_offers (",
-      "  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),",
-      "  product_id uuid NOT NULL REFERENCES official_store_products(id) ON DELETE CASCADE,",
-      "  sourcing_candidate_id uuid REFERENCES official_store_sourcing_candidates(id) ON DELETE SET NULL,",
-      "  source_platform varchar(80) NOT NULL,",
-      "  source_product_url text NOT NULL,",
-      "  supplier_name varchar(180) NOT NULL,",
-      "  supplier_reference varchar(180),",
-      "  variant_attributes jsonb NOT NULL DEFAULT '{}'::jsonb,",
-      "  supplier_price numeric(12,2) NOT NULL CHECK (supplier_price >= 0),",
-      "  supplier_currency varchar(3) NOT NULL CHECK (length(supplier_currency) = 3 AND supplier_currency = upper(supplier_currency)),",
-      "  shipping_cost numeric(12,2) CHECK (shipping_cost IS NULL OR shipping_cost >= 0),",
-      "  shipping_currency varchar(3) CHECK (shipping_currency IS NULL OR (length(shipping_currency) = 3 AND shipping_currency = upper(shipping_currency))),",
-      "  minimum_order_quantity integer CHECK (minimum_order_quantity IS NULL OR minimum_order_quantity >= 1),",
-      "  ships_to_countries jsonb NOT NULL DEFAULT '[]'::jsonb,",
-      "  direct_to_customer_confirmed boolean NOT NULL DEFAULT FALSE,",
-      "  availability_status varchar(24) NOT NULL DEFAULT 'needs_confirmation' CHECK (availability_status IN ('available', 'limited', 'unavailable', 'needs_confirmation', 'expired')),",
-      "  estimated_shipping_days_min integer CHECK (estimated_shipping_days_min IS NULL OR estimated_shipping_days_min >= 0),",
-      "  estimated_shipping_days_max integer CHECK (estimated_shipping_days_max IS NULL OR estimated_shipping_days_max >= 0),",
-      "  quote_valid_until timestamptz,",
-      "  last_verified_at timestamptz,",
-      "  supplier_identity_verified boolean NOT NULL DEFAULT FALSE,",
-      "  specifications_verified boolean NOT NULL DEFAULT FALSE,",
-      "  evidence jsonb NOT NULL DEFAULT '[]'::jsonb,",
-      "  offer_status varchar(20) NOT NULL DEFAULT 'draft' CHECK (offer_status IN ('draft', 'needs_review', 'approved', 'paused', 'rejected', 'expired')),",
-      "  created_at timestamptz NOT NULL DEFAULT NOW(),",
-      "  updated_at timestamptz NOT NULL DEFAULT NOW(),",
-      "  CONSTRAINT official_store_source_offer_url_https CHECK (source_product_url ~* '^https://'),",
-      "  CONSTRAINT official_store_source_offer_shipping_days_check CHECK (estimated_shipping_days_min IS NULL OR estimated_shipping_days_max IS NULL OR estimated_shipping_days_max >= estimated_shipping_days_min)",
-      ")"
-    ].join(String.fromCharCode(10)));
-
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS official_store_product_source_offers (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        product_id uuid NOT NULL REFERENCES official_store_products(id) ON DELETE CASCADE,
+        sourcing_candidate_id uuid REFERENCES official_store_sourcing_candidates(id) ON DELETE SET NULL,
+        source_platform varchar(80) NOT NULL,
+        source_product_url text NOT NULL,
+        supplier_name varchar(180) NOT NULL,
+        supplier_reference varchar(180),
+        variant_attributes jsonb NOT NULL DEFAULT '{}'::jsonb,
+        supplier_price numeric(12,2) NOT NULL CHECK (supplier_price >= 0),
+        supplier_currency varchar(3) NOT NULL CHECK (length(supplier_currency) = 3 AND supplier_currency = upper(supplier_currency)),
+        shipping_cost numeric(12,2) CHECK (shipping_cost IS NULL OR shipping_cost >= 0),
+        shipping_currency varchar(3) CHECK (shipping_currency IS NULL OR (length(shipping_currency) = 3 AND shipping_currency = upper(shipping_currency))),
+        minimum_order_quantity integer CHECK (minimum_order_quantity IS NULL OR minimum_order_quantity >= 1),
+        ships_to_countries jsonb NOT NULL DEFAULT '[]'::jsonb,
+        direct_to_customer_confirmed boolean NOT NULL DEFAULT FALSE,
+        availability_status varchar(24) NOT NULL DEFAULT 'needs_confirmation'
+          CHECK (availability_status IN ('available', 'limited', 'unavailable', 'needs_confirmation', 'expired')),
+        estimated_shipping_days_min integer CHECK (estimated_shipping_days_min IS NULL OR estimated_shipping_days_min >= 0),
+        estimated_shipping_days_max integer CHECK (estimated_shipping_days_max IS NULL OR estimated_shipping_days_max >= 0),
+        quote_valid_until timestamptz,
+        last_verified_at timestamptz,
+        supplier_identity_verified boolean NOT NULL DEFAULT FALSE,
+        specifications_verified boolean NOT NULL DEFAULT FALSE,
+        evidence jsonb NOT NULL DEFAULT '[]'::jsonb,
+        offer_status varchar(20) NOT NULL DEFAULT 'draft'
+          CHECK (offer_status IN ('draft', 'needs_review', 'approved', 'paused', 'rejected', 'expired')),
+        created_at timestamptz NOT NULL DEFAULT NOW(),
+        updated_at timestamptz NOT NULL DEFAULT NOW(),
+        CONSTRAINT official_store_source_offer_url_https CHECK (source_product_url ~* '^https://'),
+        CONSTRAINT official_store_source_offer_shipping_days_check CHECK (
+          estimated_shipping_days_min IS NULL OR estimated_shipping_days_max IS NULL
+          OR estimated_shipping_days_max >= estimated_shipping_days_min
+        )
+      )
+    `);
 
     await client.query(`
       CREATE UNIQUE INDEX IF NOT EXISTS official_store_source_offer_url_unique
