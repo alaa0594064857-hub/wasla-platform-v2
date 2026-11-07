@@ -185,7 +185,7 @@ export async function handleBrokerageAgreements(request: IncomingMessage, respon
       if (agreement[column]) { await client.query("ROLLBACK"); send(response,409,{success:false,error:"Your party has already accepted these terms."}); return; }
       const updated=await client.query(`UPDATE trade_brokerage_agreements
         SET ${column}=NOW(),${actorColumn}=$2,
-            status=CASE WHEN ${buyerParty?"supplier_accepted_at":"buyer_accepted_at"} IS NOT NULL THEN 'active' ELSE 'pending_acceptance' END,
+            status=CASE WHEN ${buyerPartyActing?"supplier_accepted_at":"buyer_accepted_at"} IS NOT NULL THEN 'active' ELSE 'pending_acceptance' END,
             updated_at=NOW() WHERE id=$1 RETURNING *`,[agreementId,userId]);
       await client.query(`INSERT INTO trade_brokerage_agreement_events (agreement_id,actor_user_id,actor_account_id,event_type)
         VALUES ($1,$2,$3,$4)`,[agreementId,userId,actingAccount,buyerPartyActing?"buyer_accepted":"supplier_accepted"]);
