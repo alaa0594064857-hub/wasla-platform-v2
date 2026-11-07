@@ -10,6 +10,7 @@ type Order = {
   quantity: number; unitPrice: string; currency: string; supplierName: string | null;
   supplierConfirmationStatus: string; orderStatus: string; paymentStatus: string;
   shippingCarrier: string | null; trackingReference: string | null; shippingStatus: string;
+  destinationCountry: string | null;
   ownerReviewRequired: boolean; supplierPurchaseStatus: string; createdAt: string;
 };
 type Event = { id: string; actorType: string; eventType: string; details: Record<string, unknown>; createdAt: string };
@@ -73,7 +74,7 @@ export default function OfficialStoreOrdersPage() {
       {loading ? <p>{ar ? "جارٍ تحميل الطلبات..." : "Loading orders..."}</p> :
        orders.length === 0 ? <section style={{ background: "#fff", padding: 26, borderRadius: 14, border: "1px solid #e3e5e8" }}>
          <h2 style={{ color: navy, marginTop: 0 }}>{ar ? "لا توجد طلبات حتى الآن" : "No orders yet"}</h2>
-         <p style={{ color: muted, lineHeight: 1.8, marginBottom: 0 }}>{ar ? "لن ننشئ طلبات تجريبية أو وهمية. ستظهر الطلبات الحقيقية هنا بعد بناء مسار الطلب المعتمد." : "No sample or fake orders are created. Real orders will appear here after the approved order workflow is implemented."}</p>
+         <p style={{ color: muted, lineHeight: 1.8, marginBottom: 0 }}>{ar ? "لن ننشئ طلبات تجريبية أو وهمية. ستظهر هنا طلبات العملاء الحقيقية بعد إرسالها للتحقق من المورد." : "No sample or fake orders are created. Real customer requests appear here after they are submitted for supplier confirmation."}</p>
        </section> :
        <div style={{ display: "grid", gap: 10 }}>
          {orders.map(order => <article key={order.id} style={{ background: "#fff", border: "1px solid #e3e5e8", borderRadius: 13, padding: 15 }}>
@@ -83,6 +84,7 @@ export default function OfficialStoreOrdersPage() {
            </div>
            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12, color: muted, fontSize: 13 }}>
              <span>{ar ? "الدفع" : "Payment"}: {label(order.paymentStatus)}</span>
+             <span>·</span><span>{ar ? "دولة التوصيل" : "Destination"}: {label(order.destinationCountry)}</span>
              <span>·</span><span>{ar ? "المورد" : "Supplier"}: {label(order.supplierConfirmationStatus)}</span>
              <span>·</span><span>{ar ? "الشحن" : "Shipping"}: {label(order.shippingStatus)}</span>
            </div>
