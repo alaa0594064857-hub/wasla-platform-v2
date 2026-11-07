@@ -95,3 +95,29 @@ WASLA must not be described as commercially ready until all of the following are
 - Do not route member merchant payments through WASLA.
 - Do not activate subscriptions or trials without an approved policy and trusted evidence.
 - Do not claim that an architecture decision is an implemented feature.
+
+## Product opportunity discovery — strategic target approved (2026-11-07)
+
+WASLA's official-store sourcing roadmap includes a reverse-sourcing / product-opportunity capability: begin with evidence of customer demand or product traction in relevant markets, identify the exact product and variants, then discover and compare suitable manufacturers, wholesalers, distributors and authorized marketplace suppliers. The goal is a WASLA-branded customer experience with supplier identity, sourcing links, supplier costs and internal fulfilment notes kept private, while preserving legally required seller, origin, shipping, customs, returns and consumer disclosures.
+
+### Required workflow and safeguards
+
+1. **Demand discovery:** collect product and category signals from permitted, documented sources (official marketplace APIs, licensed data providers, authorized merchant feeds, supplier catalogs and owner-provided research). Do not assume Amazon provides unrestricted access to sales rank, sales volume, reviews or competitor data; do not scrape or bypass access controls, rate limits, CAPTCHAs or terms.
+2. **Evidence and freshness:** store each signal with source, retrieval time, market/country, currency, metric definition, coverage and confidence. Clearly distinguish observed facts, estimates and owner-entered assumptions. Never invent sales volume, demand, trend or profit.
+3. **Canonical product identity:** match exact GTIN/brand/model/MPN and material attributes; preserve size, color, model and bundle variants separately. Similar-looking products are not interchangeable.
+4. **Supplier discovery:** search local Turkish suppliers and international manufacturers, wholesalers, distributors and marketplaces without preferring a marketplace brand. Preserve independent offers and source evidence for each supplier.
+5. **Landed-cost and margin analysis:** include supplier price, shipping, currency conversion with timestamp/source, customs, taxes, duties, payment and fulfilment costs where applicable. Flag missing costs; never label gross margin as net profit.
+6. **Risk and feasibility:** assess supplier identity, specification match, quote validity, MOQ, stock, direct-shipping commitment, destination coverage, delivery estimate, returns capability, product restrictions and legal/import feasibility.
+7. **Human approval gates:** AI may research, normalize, compare, summarize and recommend. It may not publish listings, promise availability, contact/commit to suppliers, place purchase orders, charge customers or pay suppliers without explicit owner policy and appropriate human approval.
+8. **Customer experience:** WASLA remains the customer's store and support contact; internal supplier details remain private, but legally material disclosures are always provided.
+
+### Delivery stages (not yet implemented)
+
+- Stage A: documented source connectors and evidence model; manual/authorized imports first.
+- Stage B: demand-signal ingestion and freshness/confidence tracking by target market.
+- Stage C: product opportunity scoring with transparent factor breakdown and missing-data warnings.
+- Stage D: canonical product/variant matching and multi-supplier comparison.
+- Stage E: landed-cost, margin, risk and delivery feasibility ranking.
+- Stage F: owner review queue and approved listing workflow; later order orchestration after legal/payment/returns readiness.
+
+**Current implementation status:** this is an approved strategic target and design requirement only. Existing Shopify/authorized merchant-feed candidate import, deterministic product matching, supplier offer administration and pricing preview are groundwork; they do not yet provide Amazon data access, live market research, autonomous supplier discovery, AI scoring or automated purchasing.
