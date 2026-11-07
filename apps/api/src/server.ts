@@ -74,6 +74,18 @@ async function handleRequest(
     return;
   }
 
+  if (/^\/api\/notifications(?:\/read-all|\/[0-9a-f-]{36}\/read)?$/i.test(requestUrl.pathname)) {
+    try {
+      const { handleNotificationsRequest } = await import("./notifications.mjs");
+      await handleNotificationsRequest(request, response);
+    } catch (error) {
+      console.error("WASLA notifications route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Notifications service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (/^\/api\/product-inquiries(?:\/[0-9a-f-]{36}\/(?:replies|status))?$/i.test(requestUrl.pathname)) {
     try {
       const { handleProductInquiriesRequest } = await import("./product-inquiries.mjs");
@@ -640,6 +652,8 @@ if (process.env.NODE_ENV !== "test") {
       await ensureMessagesTables();
       await ensureProductInquiryTables();
       await ensureSubscriptionBillingTables();
+      const { ensureNotificationsTable } = await import("./notifications.mjs");
+      await ensureNotificationsTable();
       const { ensureOfficialStoreTables } = await import("./official-store.mjs");
       await ensureOfficialStoreTables();
       const { ensureOfficialStoreOpportunityTables } = await import("./official-store-opportunities.mjs");
