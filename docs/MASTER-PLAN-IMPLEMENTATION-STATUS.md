@@ -267,3 +267,18 @@ Do not describe the platform as commercially launch-ready based only on successf
 - GitHub Actions run `42403323245` passed API tests, migrations on a fresh database, authorization seeding, database constraints, TypeScript checks and API/Web builds.
 - Render API deployment for commit `0186745fb41f219468ca0fc2f65c3042dea5790b` is Live and its logs confirm successful startup. The notification schema and message read-receipt columns were verified in the production database.
 - Scope boundary: this is an in-app notification system. Push notifications and email delivery for these event types are not implemented. No synthetic production notifications were created; the live notification table currently contains no event rows because there has been no real invitation/message/inquiry/friend activity yet.
+
+
+## WASLA Trade foundation checkpoint — 2026-11-07
+
+- Added the initial two-account trade-deal model: initiator and counterparty accounts, deal terms, optional line items, pending responder, lifecycle status and append-only event history.
+- Added permissioned API endpoints to list deals, create private drafts, view authorized deal details and perform server-validated propose/counter/accept/decline/cancel/complete transitions.
+- Drafts are private to the initiating account until proposed. Counterparties must have an active verified account member with `account.trade.read` before a deal can be created for them.
+- Scoped permissions are enforced for deal creation, negotiation, acceptance, cancellation and completion. Every state transition, event, audit entry and counterparty notification is written in a transaction.
+- Trade acceptance is an internal human decision only. It does not create an order, charge a payment, reserve inventory, contact a supplier or trigger fulfillment.
+- Added the bilingual `/trade` workspace and navigation entry. It supports business search, creating drafts, proposing, countering, accepting, declining, cancelling and marking an accepted deal complete.
+- Added trade notification type support and migrations `0007_trade_deals.sql` and `0008_trade_notifications.sql`.
+- Automated tests cover permissioned draft creation, counterparty readiness and draft privacy. GitHub Actions run `42404147925` passed API tests, migrations, authorization seeding, database constraints, TypeScript checks and API/Web builds.
+- Production database confirms all three trade tables and the trade notification type constraint exist. The live trade tables contain zero deal/item/event rows; no fake commercial activity was inserted.
+- Render API and Web deployments for commit `64eac6fa9c498af528409a841071458a9f4f0fa5` are confirmed Live. A follow-up API hardening change ensures cancelling an unproposed private draft does not notify or reveal it to the counterparty; that deployment is queued.
+- Remaining Trade release gates: authenticated two-account end-to-end tests, review of real counterparty onboarding and deal permissions, richer line-item editing/counter-proposal history UI, and legal review before anyone treats a recorded acceptance as a binding contract.
