@@ -67,6 +67,30 @@ export async function handleOfficialStoreCandidateEnrichment(req: IncomingMessag
   try {
     const access = await authorizePlatformPermission(req, res, "platform.manage");
     if (!access) return;
+    const db = getDatabasePool();
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS official_store_candidate_enrichments (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        candidate_id uuid NOT NULL REFERENCES official_store_sourcing_candidates(id) ON DELETE CASCADE,
+        owner_user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        category varchar(40) NOT NULL,
+        enrichment jsonb NOT NULL,
+        created_at timestamptz NOT NULL DEFAULT NOW(),
+        updated_at timestamptz NOT NULL DEFAULT NOW(),
+        UNIQUE(candidate_id, owner_user_id)
+      )`);
+    if (req.method === "GET") {
+      const result = await db.query(`
+        SELECT c.id, c.proposed_title,
+               e.enrichment, e.updated_at AS enrichment_updated_at
+        FROM official_store_sourcing_candidates c
+        LEFT JOIN official_store_candidate_enrichments e
+          ON e.candidate_id = c.id AND e.owner_user_id = $1
+        ORDER BY c.created_at DESC
+        LIMIT 250`, [access.userId]);
+      reply(res, 200, { success: true, candidates: result.rows });
+      return;
+    }
     if (req.method !== "POST") { reply(res, 405, { success: false, error: "Method not allowed" }); return; }
     let body: Record<string, unknown> | null;
     try { body = await readBody(req); } catch { reply(res, 400, { success: false, error: "Invalid JSON body" }); return; }
@@ -101,17 +125,6 @@ export async function handleOfficialStoreCandidateEnrichment(req: IncomingMessag
         ...(detected.category === "skincare_cosmetics" || detected.category === "perfume" ? ["Cosmetics/perfume require ingredient or composition, batch/expiry, authenticity, destination compliance and safety review before listing."] : []),
       ],
     };
-    await db.query(`
-      CREATE TABLE IF NOT EXISTS official_store_candidate_enrichments (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        candidate_id uuid NOT NULL REFERENCES official_store_sourcing_candidates(id) ON DELETE CASCADE,
-        owner_user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        category varchar(40) NOT NULL,
-        enrichment jsonb NOT NULL,
-        created_at timestamptz NOT NULL DEFAULT NOW(),
-        updated_at timestamptz NOT NULL DEFAULT NOW(),
-        UNIQUE(candidate_id, owner_user_id)
-      )`);
     const saved = await db.query(`
       INSERT INTO official_store_candidate_enrichments (candidate_id, owner_user_id, category, enrichment)
       VALUES ($1,$2,$3,$4::jsonb)
