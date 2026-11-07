@@ -279,3 +279,36 @@ This model is an intended capability. Existing supplier offers, import candidate
 ### Category-specific guardrails for cosmetics and skincare in supplier-direct listings
 
 For creams, moisturizers, perfumes and other cosmetics/personal-care products, the AI must additionally verify and retain, where applicable and legally required: manufacturer/responsible person, full ingredient list (INCI), product identity and intended use, batch/lot traceability, manufacturing/expiry or period-after-opening information, country of origin, packaging/seal condition, warnings, allergens, storage instructions, required local notification/registration and import eligibility for the destination market. Claims such as treating eczema, acne or other diseases must not be invented or presented as medical claims without the applicable authorization and evidence. Do not list counterfeit, decanted, unsealed, expired, recalled, untraceable or inadequately documented products. Supplier-direct fulfilment must preserve batch traceability and ensure the item shipped is the exact approved product and variant.
+
+
+## 12. Destination-first product discovery and market validation
+
+WASLA should collect the customer's destination country (and city/postal code only when needed for shipping/tax accuracy) before presenting destination-sensitive products or final prices. The customer should not be asked for a full street address merely to browse; collect the minimum location data required, and request the delivery address only at checkout.
+
+### Destination-first workflow
+1. Resolve the customer's destination market and currency.
+2. Search approved, permissioned sources for the exact product and variant available in that market first. Prefer local-market inventory or suppliers that can fulfil domestically when this improves total cost and delivery reliability.
+3. Compare exact-match offers, not visually similar substitutes. Retain source, observed time, variant identity, price, availability evidence, shipping terms and any source-use restrictions.
+4. Calculate destination-specific landed cost: supplier price, shipping, taxes/duties where determinable, payment and FX fees, fulfilment costs, expected returns/refunds and other known charges.
+5. Apply the owner-approved margin floor, risk allowance and currency/rounding rules. Unknown material costs or missing destination eligibility must produce an indeterminate result, not an invented profit.
+6. If no eligible offer meets the margin and reliability rules, suppress the product for that destination or show a clear unavailable message. Do not enable checkout or payment.
+7. If an eligible candidate passes, show the product image only when WASLA has documented image rights or uses independently created/licensed media. A public supplier image is not automatically reusable.
+8. Before checkout/payment, refresh the exact variant, stock, supplier price, shipping, destination eligibility and quote validity. Obtain supplier confirmation when the source cannot provide sufficiently fresh and reliable evidence.
+9. If any material value changes, recalculate the price and margin, then obtain renewed customer consent before proceeding. If the margin floor fails, stop checkout and do not capture payment.
+10. After customer confirmation and verified payment, use the approved supplier-purchase workflow and approval gates. Never claim supplier acceptance or dispatch until independently evidenced.
+
+### Supplier contact minimization
+- Do not contact a supplier merely to create an initial private candidate or perform an indicative market comparison when reliable, authorized source data already exists.
+- Supplier contact is deferred until it is necessary to resolve a material unknown, refresh an expiring quote, confirm a first order, verify direct-to-customer shipping, obtain image/media permission, or satisfy the approved purchase workflow.
+- A marketplace listing or automated search result is not proof that the supplier accepts one-unit orders, direct shipping, resale, the destination country, or the displayed delivery estimate.
+- Do not expose the supplier's identity, private source URL, cost or internal margin to customers except where legal disclosure requires it.
+
+### Customer-facing price states
+- Indicative: market research estimate only; not a confirmed offer and not payable.
+- Verified quote: exact variant, destination, shipping and material costs have current evidence and a defined expiry.
+- Checkout eligible: all required checks passed and the customer has seen and accepted the final total and disclosures.
+- Blocked: no eligible offer, insufficient evidence, stale quote, failed margin floor, unsupported destination or material cost uncertainty.
+
+The system must distinguish these states in the API and UI. It must never convert an indicative estimate into a payable checkout price without revalidation.
+
+This destination-first workflow is a product requirement, not a claim that automated multi-country supplier search, local market coverage, tax calculation or supplier confirmation is already deployed.
