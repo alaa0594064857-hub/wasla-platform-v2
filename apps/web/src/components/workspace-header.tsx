@@ -18,6 +18,7 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
   const [signingOut, setSigningOut] = useState(false);
   const [isPlatformOwner, setIsPlatformOwner] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchText, setSearchText] = useState("");
   const { data: session, isPending } = authClient.useSession();
@@ -45,6 +46,23 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
     return () => {
       active = false;
       window.removeEventListener("wasla:notifications-updated", refreshUnread);
+    };
+  }, [session?.user?.id, pathname]);
+
+  useEffect(() => {
+    if (!session?.user) { setUnreadMessages(0); return; }
+    let active = true;
+    const refreshUnreadMessages = () => {
+      fetch("/api/messages", { credentials: "include", cache: "no-store" })
+        .then(async response => response.ok ? response.json() : null)
+        .then(data => { if (active) setUnreadMessages(Number(data?.success ? data.unreadCount ?? 0 : 0)); })
+        .catch(() => { if (active) setUnreadMessages(0); });
+    };
+    refreshUnreadMessages();
+    window.addEventListener("wasla:messages-updated", refreshUnreadMessages);
+    return () => {
+      active = false;
+      window.removeEventListener("wasla:messages-updated", refreshUnreadMessages);
     };
   }, [session?.user?.id, pathname]);
 
@@ -107,7 +125,10 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
         <Link href="/shops">{ar ? "المتاجر" : "Shops"}</Link>
         <Link href="/business">{ar ? "الأعمال" : "Business"}</Link>
         <Link href="/network" aria-current={pathname === "/network" ? "page" : undefined}>{ar ? "شبكتي" : "My network"}</Link>
-        <Link href={messagesHref}>{pathname === "/messages" ? (ar ? "الرئيسية" : "Home") : (ar ? "الرسائل" : "Messages")}</Link>
+        <Link href={messagesHref} style={{ position: "relative" }}>
+          {pathname === "/messages" ? (ar ? "الرئيسية" : "Home") : (ar ? "الرسائل" : "Messages")}
+          {pathname !== "/messages" && unreadMessages > 0 && <small style={{ marginInlineStart: 6, borderRadius: 99, padding: "1px 6px", background: "#c6a15b", color: "#14243a", fontSize: 10, fontWeight: 800 }}>{unreadMessages > 99 ? "99+" : unreadMessages}</small>}
+        </Link>
         <Link href="/inquiries" aria-current={pathname === "/inquiries" ? "page" : undefined}>{ar ? "الاستفسارات" : "Inquiries"}</Link>
       </nav>
       <div className="wasla-workspace-actions">
@@ -141,7 +162,7 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
       </div>
       <div className="wasla-drawer-label">{ar ? "مساحتك في وصلة" : "YOUR WASLA SPACE"}</div>
       <nav className="wasla-drawer-links">
-        {items.map(item => <Link href={item.href} key={item.href} aria-current={pathname === item.href ? "page" : undefined}><span>{item.icon}</span>{item.label}{item.href === "/notifications" && unreadNotifications > 0 && <small style={{ marginInlineStart: "auto", borderRadius: 99, padding: "2px 7px", background: "#c6a15b", color: "#14243a", fontWeight: 800 }}>{unreadNotifications > 99 ? "99+" : unreadNotifications}</small>}<b>↗</b></Link>)}
+        {items.map(item => <Link href={item.href} key={item.href} aria-current={pathname === item.href ? "page" : undefined}><span>{item.icon}</span>{item.label}{item.href === "/notifications" && unreadNotifications > 0 && <small style={{ marginInlineStart: "auto", borderRadius: 99, padding: "2px 7px", background: "#c6a15b", color: "#14243a", fontWeight: 800 }}>{unreadNotifications > 99 ? "99+" : unreadNotifications}</small>}{item.href === "/messages" && unreadMessages > 0 && <small style={{ marginInlineStart: "auto", borderRadius: 99, padding: "2px 7px", background: "#c6a15b", color: "#14243a", fontWeight: 800 }}>{unreadMessages > 99 ? "99+" : unreadMessages}</small>}<b>↗</b></Link>)}
         {isPlatformOwner && <Link href="/owner" aria-current={pathname === "/owner" ? "page" : undefined}><span>◆</span>{ar ? "لوحة مالك المنصة" : "Platform owner console"}<b>↗</b></Link>}
       </nav>
       <div className="wasla-drawer-bottom">
