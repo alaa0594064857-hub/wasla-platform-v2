@@ -69,13 +69,13 @@ export default function TradePage() {
       if (!dealResponse.ok || !dealData.success) throw new Error("deals");
       setAccounts(accountData.accounts ?? []);
       setDeals(dealData.deals ?? []);
-      if (!initiatorAccountId && accountData.accounts?.length) setInitiatorAccountId(accountData.accounts[0].id);
+      if (accountData.accounts?.length) setInitiatorAccountId(current => current || accountData.accounts[0].id);
     } catch {
       setError(ar ? "تعذر تحميل بيانات التجارة. حاول تحديث الصفحة." : "Could not load trade workspace. Please refresh.");
     } finally {
       setLoading(false);
     }
-  }, [ar, router, initiatorAccountId]);
+  }, [ar, router]);
 
   useEffect(() => { void loadData(); }, [loadData]);
 
