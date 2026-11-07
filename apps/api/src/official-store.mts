@@ -137,6 +137,109 @@ export async function ensureOfficialStoreTables(): Promise<void> {
       CREATE INDEX IF NOT EXISTS official_store_activity_created_idx
       ON official_store_activity_log (created_at DESC)
     `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS official_store_sourcing_candidates (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        product_id uuid REFERENCES official_store_products(id) ON DELETE SET NULL,
+        supplier_name varchar(180) NOT NULL,
+        supplier_website text,
+        supplier_contact text,
+        supplier_product_reference varchar(180),
+        proposed_title text,
+        proposed_description text,
+        proposed_price numeric(12,2) CHECK (proposed_price IS NULL OR proposed_price >= 0),
+        currency varchar(3),
+        availability_claim text,
+        fulfilment_claim text,
+        evidence jsonb NOT NULL DEFAULT '[]'::jsonb,
+        verification_status varchar(20) NOT NULL DEFAULT 'unverified'
+          CHECK (verification_status IN ('unverified', 'awaiting_supplier', 'partially_verified', 'verified', 'rejected')),
+        review_status varchar(20) NOT NULL DEFAULT 'draft'
+          CHECK (review_status IN ('draft', 'needs_owner_review', 'approved', 'rejected', 'converted')),
+        reviewed_by_user_id uuid REFERENCES users(id) ON DELETE SET NULL,
+        reviewed_at timestamptz,
+        created_at timestamptz NOT NULL DEFAULT NOW(),
+        updated_at timestamptz NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS official_store_sourcing_review_created_idx
+      ON official_store_sourcing_candidates (review_status, created_at DESC)
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS official_store_sourcing_verification_idx
+      ON official_store_sourcing_candidates (verification_status, updated_at DESC)
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS official_store_orders (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        order_number varchar(32) NOT NULL UNIQUE,
+        customer_user_id uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+        product_id uuid REFERENCES official_store_products(id) ON DELETE SET NULL,
+        product_title_snapshot varchar(360) NOT NULL,
+        quantity integer NOT NULL CHECK (quantity > 0 AND quantity <= 100000),
+        unit_price numeric(12,2) NOT NULL CHECK (unit_price >= 0),
+        currency varchar(3) NOT NULL,
+        supplier_name_snapshot varchar(180),
+        supplier_account_id uuid REFERENCES accounts(id) ON DELETE SET NULL,
+        supplier_contact_user_id uuid REFERENCES users(id) ON DELETE SET NULL,
+        supplier_confirmation_status varchar(20) NOT NULL DEFAULT 'pending'
+          CHECK (supplier_confirmation_status IN ('pending', 'accepted', 'rejected', 'expired')),
+        order_status varchar(24) NOT NULL DEFAULT 'awaiting_supplier'
+          CHECK (order_status IN ('draft', 'awaiting_supplier', 'awaiting_payment', 'paid', 'confirmed', 'preparing', 'shipped', 'delivered', 'cancelled', 'refunded', 'exception')),
+        payment_status varchar(20) NOT NULL DEFAULT 'not_enabled'
+          CHECK (payment_status IN ('not_enabled', 'pending', 'paid', 'failed', 'refunded')),
+        payment_provider_reference varchar(240),
+        shipping_carrier varchar(120),
+        tracking_reference varchar(180),
+        shipping_status varchar(24) NOT NULL DEFAULT 'not_shipped'
+          CHECK (shipping_status IN ('not_shipped', 'preparing', 'shipped', 'in_transit', 'delivered', 'exception')),
+        shipping_address jsonb,
+        customer_note text,
+        owner_review_required boolean NOT NULL DEFAULT FALSE,
+        created_at timestamptz NOT NULL DEFAULT NOW(),
+        updated_at timestamptz NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS official_store_orders_customer_created_idx
+      ON official_store_orders (customer_user_id, created_at DESC)
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS official_store_orders_status_updated_idx
+      ON official_store_orders (order_status, updated_at DESC)
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS official_store_orders_supplier_idx
+      ON official_store_orders (supplier_account_id, created_at DESC)
+      WHERE supplier_account_id IS NOT NULL
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS official_store_order_events (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        order_id uuid NOT NULL REFERENCES official_store_orders(id) ON DELETE RESTRICT,
+        actor_type varchar(16) NOT NULL
+          CHECK (actor_type IN ('system', 'ai', 'human', 'customer', 'supplier')),
+        actor_user_id uuid REFERENCES users(id) ON DELETE RESTRICT,
+        event_type varchar(120) NOT NULL,
+        details jsonb NOT NULL DEFAULT '{}'::jsonb,
+        created_at timestamptz NOT NULL DEFAULT NOW(),
+        CONSTRAINT official_store_order_event_actor_check CHECK (
+          (actor_type IN ('human', 'customer', 'supplier') AND actor_user_id IS NOT NULL)
+          OR (actor_type IN ('system', 'ai') AND actor_user_id IS NULL)
+        )
+      )
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS official_store_order_events_order_created_idx
+      ON official_store_order_events (order_id, created_at ASC)
+    `);
+
     await client.query("COMMIT");
   } catch (error) {
     await client.query("ROLLBACK");
