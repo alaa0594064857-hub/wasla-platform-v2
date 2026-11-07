@@ -23,13 +23,6 @@ async function readBody(request: IncomingMessage): Promise<unknown> {
   return JSON.parse(body);
 }
 
-async function ensureProfileColumns(): Promise<void> {
-  const db = getDatabasePool();
-  await db.query('ALTER TABLE "profiles" ADD COLUMN IF NOT EXISTS "bio" text');
-  await db.query('ALTER TABLE "profiles" ADD COLUMN IF NOT EXISTS "website" text');
-  await db.query(`ALTER TABLE "profiles" ADD COLUMN IF NOT EXISTS "social_links" jsonb NOT NULL DEFAULT '{}'::jsonb`);
-}
-
 function safeOptionalUrl(value: unknown, max = 2048): string | null | undefined {
   if (value === undefined) return undefined;
   if (value === null || value === "") return null;
@@ -55,7 +48,6 @@ export async function handleProfileRequest(request: IncomingMessage, response: S
       return;
     }
 
-    await ensureProfileColumns();
     const db = getDatabasePool();
 
     if (request.method === "GET") {
