@@ -86,9 +86,7 @@ describe("WASLA database role permission scope integrity", () => {
       await pool.query("DELETE FROM roles WHERE id = $1", [roleId]);
       await pool.query("DELETE FROM permissions WHERE id = $1", [permissionId]);
     }
-  });
-});
-  it("bootstraps the full account/store role matrix idempotently", async () => {
+    it("bootstraps the full account/store role matrix idempotently", async () => {
     await ensureAuthorizationRoles();
     await ensureAuthorizationRoles();
 
@@ -108,4 +106,5 @@ describe("WASLA database role permission scope integrity", () => {
     expect(grants.has("store_employee:store.product.read")).toBe(true);
     expect(grants.has("store_employee:store.product.create")).toBe(false);
   });
+});
 
