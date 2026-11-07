@@ -463,3 +463,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Added architecture decision 23. Ordinary self-managed member-to-member deals remain commission-free. A fee applies only to a separate WASLA-sourced brokerage engagement with explicit, advance acceptance by the responsible payer(s); no hidden or retroactive commission.
 - Initial brokerage model excludes escrow, custody, split payments, trade finance and WASLA acting as importer/exporter. Underlying buyer/supplier settlement remains outside WASLA until a separately approved legal/payment design exists.
 - Corrected the Trade status above: a deal negotiation API and bilingual workspace exist in the repository, but this does not prove production deployment or end-to-end operation. Automated discovery, brokerage agreements, commission ledger and fee collection are not implemented.
+
+
+## WASLA Trade brokerage commission ledger — implementation checkpoint (2026-11-08)
+
+- Added an owner-only commission register linked to mutually accepted active brokerage agreements. Each entry captures a trade reference, trade value/currency, the agreed rate and payer snapshot, and a database-calculated commission amount.
+- Duplicate trade references are blocked per agreement. Trade currency must match the agreement commission currency; no unverified FX conversion is performed. Amounts are stored to six decimal places.
+- Added a bilingual owner page at `/owner/trade/commission-ledger`, linked from brokerage agreement administration. Statuses are recorded, invoiced, paid or waived; marking paid requires an HTTPS evidence URL and is a manual owner attestation.
+- Added an event history table for entry creation and status changes. This is an internal ledger only: WASLA does not invoice externally, collect, transfer, split or hold funds. It does not independently verify the underlying completed trade; the owner must review evidence before recording.
+- Production deployment and authenticated end-to-end testing remain pending verification.
