@@ -20,7 +20,7 @@ async function readBody(request: IncomingMessage): Promise<Record<string, unknow
   let size = 0;
   for await (const chunk of request) {
     size += Buffer.byteLength(chunk);
-    if (size > 30_000) throw new Error("Request body too large");
+    if (size > 150_000) throw new Error("Request body too large");
     body += chunk.toString();
   }
   const parsed: unknown = JSON.parse(body || "{}");
