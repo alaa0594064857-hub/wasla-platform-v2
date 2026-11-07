@@ -54,9 +54,9 @@ const worlds = [
     descriptionAr: "مساحة متخصصة للعروض والتفاوض وإدارة الصفقات التجارية.",
     descriptionEn: "A dedicated space for offers, negotiation and commercial deals.",
     category: "GLOBAL TRADE", categoryAr: "التجارة العالمية", nameAr: "وصلة للتجارة",
-    href: null,
-    statusAr: "قريبًا",
-    statusEn: "Coming soon",
+    href: "/trade",
+    statusAr: "متاح",
+    statusEn: "Available",
     theme: "trade",
     symbol: "↗",
   },
@@ -68,9 +68,9 @@ const worlds = [
     descriptionAr: "محادثات الأعمال والملفات والتواصل بين أطراف التجارة.",
     descriptionEn: "Business conversations, files and communication between trading partners.",
     category: "CONNECT", categoryAr: "التواصل", nameAr: "وصلة للرسائل",
-    href: null,
-    statusAr: "قريبًا",
-    statusEn: "Coming soon",
+    href: "/messages",
+    statusAr: "متاح",
+    statusEn: "Available",
     theme: "messages",
     symbol: "•••",
   },
@@ -82,9 +82,9 @@ const worlds = [
     descriptionAr: "مساعد ذكي لدعم القرارات وتبسيط العمليات التجارية.",
     descriptionEn: "Intelligent assistance for better decisions and simpler operations.",
     category: "INTELLIGENCE", categoryAr: "الذكاء", nameAr: "وصلة للذكاء",
-    href: null,
-    statusAr: "قريبًا",
-    statusEn: "Coming soon",
+    href: "/owner/ai",
+    statusAr: "خاص بالمالك",
+    statusEn: "Owner only",
     theme: "ai",
     symbol: "✧",
   },
@@ -223,7 +223,7 @@ export default function HomePage() {
                   <h4>{title}</h4>
                   <p>{description}</p>
                   {world.href ? (
-                    <a className="world-enter" href={world.href}>{world.theme === "store" ? (locale === "ar" ? "استكشف المتجر الرسمي" : "Explore official store") : t.enter}<span>↗</span></a>
+                    <a className="world-enter" href={world.href}>{world.theme === "store" ? (locale === "ar" ? "استكشف المتجر الرسمي" : "Explore official store") : world.theme === "trade" ? (locale === "ar" ? "افتح مساحة الصفقات" : "Open trade workspace") : world.theme === "messages" ? (locale === "ar" ? "افتح الرسائل" : "Open messages") : world.theme === "ai" ? (locale === "ar" ? "غرفة الذكاء للمالك" : "Owner AI room") : t.enter}<span>↗</span></a>
                   ) : (
                     <span className="world-enter world-enter-disabled" aria-disabled="true">{status}<span>◌</span></span>
                   )}
@@ -270,6 +270,7 @@ export default function HomePage() {
           <article className="wasla-plan-card"><span className="wasla-plan-mark">04</span><small>ENTERPRISE</small><h3>{locale === "ar" ? "المؤسسات" : "Enterprise"}</h3><p>{locale === "ar" ? "للمؤسسات الكبيرة والاحتياجات المتقدمة." : "For large organizations and advanced needs."}</p><b>{locale === "ar" ? "حسب الاحتياج" : "Tailored needs"}</b><span className="wasla-plan-disabled">{locale === "ar" ? "سيُعلن لاحقًا" : "Launching later"}</span></article>
         </div>
         <p className="wasla-membership-note">{locale === "ar" ? "لن تُفرض ترقية مدفوعة على الحساب الأساسي، وستظهر حدود كل باقة بوضوح قبل الاشتراك." : "The basic account won’t require a paid upgrade. Every plan limit will be clear before subscribing."}</p>
+        <a href="/plans" style={{ display: "inline-flex", marginTop: 14, color: "#9b783d", fontWeight: 800, textDecoration: "none" }}>{locale === "ar" ? "عرض الخطط المعتمدة عند نشرها" : "View approved plans when published"} ↗</a>
       </section>
 
       <footer className="worlds-footer">
