@@ -34,7 +34,7 @@ function validAmount(value: unknown): value is number {
 }
 
 function currencyDigits(currency: string): number {
-  return new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions().maximumFractionDigits ?? 2;
+  return Number(new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions().maximumFractionDigits ?? 2);
 }
 
 function convert(amount: number, currency: string, target: string, rate: unknown): number | null {
