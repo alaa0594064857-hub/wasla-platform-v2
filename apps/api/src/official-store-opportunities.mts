@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { authorizePlatformPermission } from "./platform-security.mjs";
+import { getDatabasePool } from "./database.js";
 
 function reply(response: ServerResponse, status: number, data: Record<string, unknown>): void {
   response.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" });
@@ -23,6 +24,31 @@ export async function handleOfficialStoreOpportunityAssessment(request: Incoming
   try {
     const access = await authorizePlatformPermission(request, response, "platform.manage");
     if (!access) return;
+    await getDatabasePool().query(`
+      CREATE TABLE IF NOT EXISTS official_store_product_opportunities (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        owner_user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        title varchar(240) NOT NULL,
+        market varchar(80) NOT NULL,
+        currency varchar(3) NOT NULL,
+        score integer NOT NULL,
+        recommendation varchar(40) NOT NULL,
+        assessment jsonb NOT NULL,
+        created_at timestamptz NOT NULL DEFAULT NOW()
+      )
+    `);
+    if (request.method === "GET") {
+      const saved = await getDatabasePool().query(
+        `SELECT id, title, market, currency, score, recommendation, assessment, created_at
+         FROM official_store_product_opportunities
+         WHERE owner_user_id = $1
+         ORDER BY created_at DESC
+         LIMIT 100`,
+        [access.userId],
+      );
+      reply(response, 200, { success: true, opportunities: saved.rows });
+      return;
+    }
     if (request.method !== "POST") { reply(response, 405, { success: false, error: "Method not allowed" }); return; }
     let body: Record<string, unknown> | null;
     try { body = await readBody(request); } catch (error) {
@@ -69,14 +95,22 @@ export async function handleOfficialStoreOpportunityAssessment(request: Incoming
     if (!str(body.specificationEvidenceUrl, 2000) || !validHttps(str(body.specificationEvidenceUrl, 2000))) missing.push("product_specification_evidence_required");
     const recommendation = totalScore >= 75 && missing.length === 0 ? "owner_review_recommended" :
       totalScore >= 55 ? "needs_more_evidence" : "low_priority_or_reject";
-    reply(response, 200, {
+    const assessment = {
       success: true, assessmentOnly: true, title, market, currency,
       evidence: { url: evidenceUrl, date: new Date(Date.parse(evidenceDate)).toISOString(), ageDays: Math.round(ageDays), freshnessFactor: freshness, sourceType: str(body.demandSourceType, 40) || "owner_supplied" },
       score: { total: totalScore, maximum: 75, demand: demandScore, demandMaximum: 40, grossMargin: marginScore, grossMarginMaximum: 25, supplierReadiness: riskScore, supplierReadinessMaximum: 10 },
       economics: { landedCost: Math.round(landedCost * 100) / 100, grossProfitBeforeUnenteredCosts: Math.round(grossProfit * 100) / 100, grossMarginPercent: Math.round(grossMarginPercent * 100) / 100, note: "Gross estimate only; taxes, duties, payment fees, returns, advertising and other unentered costs may reduce profit." },
       recommendation, missingChecks: missing, verificationChecks: checks.map(([key, passed]) => ({ key, passed })),
       disclaimer: "Manual evidence-based assessment only. No live marketplace data was fetched, no supplier was independently verified, and no listing, order, payment or purchase was created.",
-    });
+    };
+    const saved = await getDatabasePool().query(
+      `INSERT INTO official_store_product_opportunities
+        (owner_user_id, title, market, currency, score, recommendation, assessment)
+       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
+       RETURNING id, created_at`,
+      [access.userId, title, market, currency, totalScore, recommendation, JSON.stringify(assessment)],
+    );
+    reply(response, 200, { ...assessment, saved: true, opportunityId: saved.rows[0].id, createdAt: saved.rows[0].created_at });
   } catch (error) {
     console.error("Official store opportunity assessment error:", error);
     if (!response.headersSent) reply(response, 500, { success: false, error: "Opportunity assessment failed" });
