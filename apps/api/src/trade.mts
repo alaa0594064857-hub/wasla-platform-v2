@@ -243,7 +243,7 @@ export async function handleTradeRequest(
                INNER JOIN role_permissions rp ON rp.role_id = r.id AND rp.scope_type = r.scope_type
                INNER JOIN permissions p ON p.id = rp.permission_id AND p.scope_type = rp.scope_type
                WHERE am.account_id = a.id AND am.status = 'active'
-                 AND p.permission_key = 'account.trade.read'
+                 AND p.permission_key = 'account.trade.negotiate'
              )
            LIMIT 1`,
           [counterpartyAccountId],
