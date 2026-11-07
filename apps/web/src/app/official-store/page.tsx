@@ -28,6 +28,11 @@ export default function OfficialStorePage() {
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [selected, setSelected] = useState<OfficialProduct | null>(null);
+  const [destinationCountry, setDestinationCountry] = useState("");
+  const [customerNote, setCustomerNote] = useState("");
+  const [requesting, setRequesting] = useState(false);
+  const [requestMessage, setRequestMessage] = useState("");
+  const [requestError, setRequestError] = useState(false);
 
   const copy = ar ? {
     eyebrow: "المتجر الرسمي للمنصة",
@@ -41,6 +46,14 @@ export default function OfficialStorePage() {
     products: "منتجات المتجر الرسمي",
     details: "التفاصيل",
     close: "إغلاق",
+    requestConfirmation: "اطلب تأكيد التوفر والتوصيل",
+    chooseDestination: "اختر دولة التوصيل",
+    customerNote: "ملاحظة (اختياري)",
+    requestPending: "جارٍ إرسال الطلب...",
+    requestSuccess: "تم تسجيل طلبك للمراجعة والتحقق من المورد. لم يتم خصم أي مبلغ ولم يتم شراء المنتج بعد.",
+    requestLogin: "سجّل الدخول أولاً حتى نتمكن من حفظ طلبك.",
+    requestFailure: "تعذر تسجيل الطلب. تحقق من الدولة أو حاول لاحقاً.",
+    requestDisclaimer: "هذا طلب للتحقق من المورد والتوفر فقط، وليس عملية شراء أو دفع.",
     price: "السعر المعروض",
     availability: "التوفر",
     delivery: "الدول التي يشملها التوصيل",
@@ -64,6 +77,14 @@ export default function OfficialStorePage() {
     products: "Official store products",
     details: "Details",
     close: "Close",
+    requestConfirmation: "Request availability and delivery confirmation",
+    chooseDestination: "Choose delivery destination",
+    customerNote: "Note (optional)",
+    requestPending: "Sending request...",
+    requestSuccess: "Your request was recorded for review and supplier confirmation. No payment was taken and the product has not been purchased.",
+    requestLogin: "Please sign in first so we can save your request.",
+    requestFailure: "The request could not be recorded. Check the destination or try again later.",
+    requestDisclaimer: "This only requests supplier and availability confirmation. It is not a purchase or payment.",
     price: "Listed price",
     supplier: "Supplier",
     availability: "Availability",
@@ -77,6 +98,42 @@ export default function OfficialStorePage() {
     storePromise: "A seamless and secure shopping experience from WASLA.",
     footer: "The official store is separate from member stores and their transactions."
   };
+
+  async function submitSupplierConfirmationRequest() {
+    if (!selected || !destinationCountry || requesting) return;
+    setRequesting(true);
+    setRequestMessage("");
+    setRequestError(false);
+    try {
+      const response = await fetch("/api/official-store/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          productId: selected.id,
+          destinationCountry,
+          customerNote,
+          confirmed: true,
+        }),
+      });
+      const data = await response.json();
+      if (response.status === 401) {
+        setRequestError(true);
+        setRequestMessage(copy.requestLogin);
+      } else if (!response.ok || !data.success) {
+        setRequestError(true);
+        setRequestMessage(typeof data.error === "string" ? data.error : copy.requestFailure);
+      } else {
+        setRequestMessage(copy.requestSuccess);
+        setCustomerNote("");
+      }
+    } catch {
+      setRequestError(true);
+      setRequestMessage(copy.requestFailure);
+    } finally {
+      setRequesting(false);
+    }
+  }
 
   function availabilityLabel(value: OfficialProduct["availability_status"]) {
     if (value === "available") return copy.available;
@@ -132,7 +189,7 @@ export default function OfficialStorePage() {
               <p className="mt-2 line-clamp-3 min-h-16 text-sm leading-7 text-slate-600">{(ar ? product.description_ar : product.description_en) || ""}</p>
               <div className="mt-4 flex items-center justify-between gap-3">
                 <strong className="text-lg text-[#8b6828]">{product.price} {product.currency}</strong>
-                <button type="button" onClick={() => setSelected(product)} className="rounded-lg bg-[#17253a] px-4 py-2.5 text-sm font-semibold text-white">{copy.details}</button>
+                <button type="button" onClick={() => { setSelected(product); setDestinationCountry(product.deliveryCountries[0] || ""); setCustomerNote(""); setRequestMessage(""); setRequestError(false); }} className="rounded-lg bg-[#17253a] px-4 py-2.5 text-sm font-semibold text-white">{copy.details}</button>
               </div>
             </div>
           </article>)}
@@ -149,6 +206,19 @@ export default function OfficialStorePage() {
         <div className="mt-4 rounded-xl bg-[#f5f1e8] p-4 text-sm leading-7">
           <p><strong>{copy.delivery}:</strong> {selected.deliveryCountries.join(", ")}</p>
           <p><strong>{copy.deliveryTime}:</strong> {selected.estimatedDeliveryDaysMin}–{selected.estimatedDeliveryDaysMax} {copy.days}</p>
+        </div>
+        <div className="mt-5 space-y-3">
+          <label className="block text-sm font-semibold">{copy.chooseDestination}
+            <select value={destinationCountry} onChange={event => setDestinationCountry(event.target.value)} className="mt-2 w-full rounded-xl border border-[#d9cfbb] bg-white px-3 py-3 text-base text-[#17253a]">
+              {selected.deliveryCountries.map(country => <option key={country} value={country}>{country}</option>)}
+            </select>
+          </label>
+          <label className="block text-sm font-semibold">{copy.customerNote}
+            <textarea value={customerNote} onChange={event => setCustomerNote(event.target.value)} maxLength={1000} rows={2} className="mt-2 w-full rounded-xl border border-[#d9cfbb] bg-white px-3 py-3 text-base text-[#17253a]" />
+          </label>
+          <p className="text-xs leading-6 text-slate-500">{copy.requestDisclaimer}</p>
+          {requestMessage && <p role={requestError ? "alert" : "status"} className={`rounded-xl p-3 text-sm leading-7 ${requestError ? "bg-red-50 text-red-800" : "bg-emerald-50 text-emerald-800"}`}>{requestMessage}</p>}
+          <button type="button" disabled={requesting || !destinationCountry} onClick={submitSupplierConfirmationRequest} className="w-full rounded-xl bg-[#17253a] px-5 py-3 font-semibold text-white disabled:opacity-50">{requesting ? copy.requestPending : copy.requestConfirmation}</button>
         </div>
       </section>
     </div>}
