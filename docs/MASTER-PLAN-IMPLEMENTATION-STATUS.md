@@ -16,6 +16,12 @@ This is an evidence-based implementation tracker, not a claim that the platform 
 - Official WASLA Store is separate from member-owned stores and is intended to be managed by an AI operations manager under the human platform owner's authority.
 - Private member messages are not automatically visible to platform administrators or the official-store AI.
 
+## Official-store customer experience — approved principle
+
+- Customers see WASLA as the store and their direct point of contact. Supplier marketplace names, supplier identities, supplier product URLs, sourcing notes, supplier purchase references, supplier costs and internal fulfilment communications are private operational data and must never appear in public product APIs, customer pages, receipts, order tracking or customer support messages.
+- Suppliers may fulfil orders directly to customers, but the customer-facing experience, order communications and after-sales support remain branded and managed by WASLA.
+- Show only confirmed product availability to customers. Do not expose internal states such as awaiting supplier confirmation. Provide legally required seller, shipping, customs, returns and consumer-rights disclosures; brand consistency must never become concealment of legally material information.
+
 ## Status by area
 
 | Area | Status | Evidence / remaining work |
