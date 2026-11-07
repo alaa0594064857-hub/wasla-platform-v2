@@ -299,6 +299,7 @@ export default function TradePage() {
         <span style={{ color: "#9b783d", fontSize: 12, fontWeight: 800, letterSpacing: ".12em" }}>WASLA TRADE</span>
         <h1 style={{ color: "#14243a", fontSize: "clamp(26px, 4vw, 38px)", margin: "8px 0" }}>{ar ? "إدارة الصفقات التجارية" : "Commercial deal management"}</h1>
         <p style={{ lineHeight: 1.8, maxWidth: 760 }}>{ar ? "أنشئ مسودة، أرسل عرضاً، تفاوض مع الشركة المقابلة، وسجّل قرار الطرفين. القبول هنا لا ينفذ دفعاً أو طلب شراء تلقائياً." : "Create a draft, send a proposal, negotiate with the counterparty and record both parties’ decisions. Acceptance here does not trigger payment or a purchase order."}</p>
+        <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:12}}><a href="/trade/agreements" style={{padding:"9px 13px",border:"1px solid #c6a15b",borderRadius:9,color:"#14243a",textDecoration:"none"}}>{ar?"اتفاقيات الوساطة":"Brokerage agreements"}</a></div>
       </div>
 
       {error && <p role="alert" style={{ padding: 12, borderRadius: 10, background: "#f8e7e5", color: "#8f302d" }}>{error}</p>}
