@@ -160,6 +160,34 @@ export async function handleOfficialStoreSourceOffersRequest(
       const updates: string[] = [];
       const params: unknown[] = [];
       const add = (column: string, value: unknown) => { params.push(value); updates.push(`${column} = $${params.length}`); };
+      if (body.offerStatus === "approved") {
+        const current = await db.query(
+          `SELECT supplier_identity_verified, specifications_verified,
+                  direct_to_customer_confirmed, minimum_order_quantity,
+                  availability_status, quote_valid_until, evidence
+           FROM official_store_product_source_offers WHERE id = $1`,
+          [offerId],
+        );
+        if (!current.rows.length) { reply(response, 404, { success: false, error: "Source offer not found" }); return; }
+        const row = current.rows[0] as {
+          supplier_identity_verified: boolean; specifications_verified: boolean;
+          direct_to_customer_confirmed: boolean; minimum_order_quantity: number | null;
+          availability_status: string; quote_valid_until: Date | string | null; evidence: unknown;
+        };
+        const identity = Object.hasOwn(body, "supplierIdentityVerified") ? body.supplierIdentityVerified === true : row.supplier_identity_verified;
+        const specs = Object.hasOwn(body, "specificationsVerified") ? body.specificationsVerified === true : row.specifications_verified;
+        const dropship = Object.hasOwn(body, "directToCustomerConfirmed") ? body.directToCustomerConfirmed === true : row.direct_to_customer_confirmed;
+        const availability = Object.hasOwn(body, "availabilityStatus") ? String(body.availabilityStatus) : row.availability_status;
+        const expiry = Object.hasOwn(body, "quoteValidUntil") ? body.quoteValidUntil : row.quote_valid_until;
+        const evidence = Array.isArray(row.evidence) ? row.evidence : [];
+        if (!identity || !specs || !dropship || row.minimum_order_quantity === null ||
+            row.minimum_order_quantity > 1 || !["available", "limited"].includes(availability) ||
+            !expiry || !Number.isFinite(Date.parse(String(expiry))) ||
+            Date.parse(String(expiry)) <= Date.now() || evidence.length === 0) {
+          reply(response, 409, { success: false, error: "Offer approval requires verified supplier identity and specifications, confirmed single-unit direct shipping, MOQ of 1 or less, current quote, available stock and evidence" }); return;
+        }
+        add("last_verified_at", new Date().toISOString());
+      }
       if (Object.hasOwn(body, "offerStatus")) {
         if (!STATUSES.includes(body.offerStatus as typeof STATUSES[number])) {
           reply(response, 400, { success: false, error: "Invalid offer status" }); return;
