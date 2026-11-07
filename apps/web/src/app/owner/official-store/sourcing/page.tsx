@@ -71,6 +71,7 @@ export default function OwnerSourcingPage() {
     sourceLabel: "المصدر", priceLabel: "السعر", moqLabel: "الحد الأدنى", shipLabel: "الشحن",
     dropshipYes: "شحن مباشر مؤكد", dropshipNo: "الشحن المباشر غير مؤكد",
     identityVerified: "تم التحقق من هوية المورد", specsVerified: "تم التحقق من مطابقة المواصفات", sampleInspected: "تم فحص عينة المنتج",
+    confirmIdentity: "تأكيد هوية المورد", confirmSpecs: "تأكيد مطابقة المواصفات", confirmSample: "تأكيد فحص العينة",
     actionError: "تعذر تنفيذ الإجراء.", saved: "تم تحديث حالة العرض.",
   } : {
     title: "Supplier & product review", subtitle: "Record supplier offers before converting any item into the official WASLA Store.",
@@ -95,6 +96,7 @@ export default function OwnerSourcingPage() {
     sourceLabel: "Source", priceLabel: "Price", moqLabel: "MOQ", shipLabel: "Shipping",
     dropshipYes: "Direct shipping confirmed", dropshipNo: "Direct shipping not confirmed",
     identityVerified: "Supplier identity verified", specsVerified: "Product specifications verified", sampleInspected: "Product sample inspected",
+    confirmIdentity: "Confirm supplier identity", confirmSpecs: "Confirm product specifications", confirmSample: "Confirm sample inspection",
     actionError: "Could not complete this action.", saved: "Offer status updated.",
   };
 
@@ -254,6 +256,11 @@ export default function OwnerSourcingPage() {
             <span>{candidate.supplier_identity_verified ? t.identityVerified : (ar ? "هوية المورد غير مؤكدة" : "Supplier identity not verified")}</span>
             <span>{candidate.specifications_verified ? t.specsVerified : (ar ? "المواصفات غير مؤكدة" : "Specifications not verified")}</span>
             {candidate.sample_inspected && <span>{t.sampleInspected}</span>}
+          </div>
+          <div style={styles.actions}>
+            {!candidate.supplier_identity_verified && <button type="button" style={styles.secondary} disabled={busyId === candidate.id} onClick={() => patch(candidate, { supplierIdentityVerified: true })}>{t.confirmIdentity}</button>}
+            {!candidate.specifications_verified && <button type="button" style={styles.secondary} disabled={busyId === candidate.id} onClick={() => patch(candidate, { specificationsVerified: true })}>{t.confirmSpecs}</button>}
+            {!candidate.sample_inspected && <button type="button" style={styles.secondary} disabled={busyId === candidate.id} onClick={() => patch(candidate, { sampleInspected: true })}>{t.confirmSample}</button>}
           </div>
           {candidate.source_product_url && <a href={candidate.source_product_url} target="_blank" rel="noreferrer" style={styles.sourceLink}>{t.sourceLabel} ↗</a>}
           <div style={styles.actions}>
