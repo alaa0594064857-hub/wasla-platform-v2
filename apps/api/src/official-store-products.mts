@@ -102,8 +102,11 @@ export async function handleOfficialStoreProductsRequest(
                AND o.minimum_order_quantity = 1
                AND o.shipping_cost IS NOT NULL
                AND o.shipping_currency IS NOT NULL
-               AND jsonb_typeof(o.ships_to_countries) = 'array'
-               AND jsonb_array_length(o.ships_to_countries) > 0
+               AND CASE
+                 WHEN jsonb_typeof(o.ships_to_countries) = 'array'
+                 THEN jsonb_array_length(o.ships_to_countries) > 0
+                 ELSE FALSE
+               END
                AND o.estimated_shipping_days_min IS NOT NULL
                AND o.estimated_shipping_days_max IS NOT NULL
                AND o.quote_valid_until > NOW()
