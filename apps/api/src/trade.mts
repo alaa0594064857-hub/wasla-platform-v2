@@ -529,7 +529,9 @@ export async function handleTradeRequest(
         complete: ["تم إتمام الصفقة", "Trade deal completed", "تم تسجيل الصفقة كمكتملة داخل وصلة.", "The trade deal was marked complete on WASLA."],
       };
       const [titleAr, titleEn, bodyAr, bodyEn] = titles[action];
-      await notifyTradeParty(client, recipientAccount, dealId, titleAr, titleEn, bodyAr, bodyEn);
+      if (!(action === "cancel" && fromStatus === "draft")) {
+        await notifyTradeParty(client, recipientAccount, dealId, titleAr, titleEn, bodyAr, bodyEn);
+      }
       await client.query("COMMIT");
       respond(response, 200, { success: true, dealId, status: toStatus, pendingResponseAccountId: pendingResponse });
     } catch (error) {
