@@ -14,7 +14,8 @@ type Candidate = {
   availability_claim: string | null; fulfilment_claim: string | null;
   evidence: unknown[]; verification_status: string; review_status: string;
   source_platform: string | null; source_product_url: string | null;
-  supplier_dropship_confirmed: boolean; minimum_order_quantity: number | null;
+  supplier_dropship_confirmed: boolean; supplier_identity_verified: boolean;
+  specifications_verified: boolean; sample_inspected: boolean; minimum_order_quantity: number | null;
   shipping_countries: string[] | null; shipping_cost: string | null;
   shipping_currency: string | null; estimated_shipping_days_min: number | null;
   estimated_shipping_days_max: number | null; quote_valid_until: string | null;
@@ -26,7 +27,8 @@ const initial = {
   sourceProductUrl: "", supplierProductReference: "", proposedTitle: "",
   proposedDescription: "", proposedPrice: "", currency: "USD",
   availabilityClaim: "", fulfilmentClaim: "", supplierContact: "",
-  supplierDropshipConfirmed: false, minimumOrderQuantity: "1",
+  supplierDropshipConfirmed: false, supplierIdentityVerified: false,
+  specificationsVerified: false, sampleInspected: false, minimumOrderQuantity: "1",
   shippingCountries: "TR,US,GB,DE", shippingCost: "", shippingCurrency: "USD",
   shippingMin: "", shippingMax: "", quoteValidUntil: "", evidenceUrl: "", specificationEvidenceUrl: "",
 };
@@ -152,6 +154,9 @@ export default function OwnerSourcingPage() {
         availabilityClaim: form.availabilityClaim.trim() || null,
         fulfilmentClaim: form.fulfilmentClaim.trim() || null,
         supplierDropshipConfirmed: form.supplierDropshipConfirmed,
+        supplierIdentityVerified: form.supplierIdentityVerified,
+        specificationsVerified: form.specificationsVerified,
+        sampleInspected: form.sampleInspected,
         minimumOrderQuantity: form.minimumOrderQuantity === "" ? null : Number(form.minimumOrderQuantity),
         shippingCountries: countries,
         shippingCost: form.shippingCost === "" ? null : Number(form.shippingCost),
@@ -222,6 +227,9 @@ export default function OwnerSourcingPage() {
         <label style={styles.full}>{t.description}<textarea rows={3} maxLength={10000} style={styles.input} value={form.proposedDescription} onChange={e => update("proposedDescription", e.target.value)} /></label>
         <label style={styles.full}>{t.availability}<textarea rows={2} maxLength={500} style={styles.input} value={form.availabilityClaim} onChange={e => update("availabilityClaim", e.target.value)} /></label>
         <label style={styles.full}>{t.fulfilment}<textarea rows={3} maxLength={500} style={styles.input} value={form.fulfilmentClaim} onChange={e => update("fulfilmentClaim", e.target.value)} /></label>
+        <label style={styles.check}><input type="checkbox" checked={form.supplierIdentityVerified} onChange={e => update("supplierIdentityVerified", e.target.checked)} /> {t.identityVerified}</label>
+        <label style={styles.check}><input type="checkbox" checked={form.specificationsVerified} onChange={e => update("specificationsVerified", e.target.checked)} /> {t.specsVerified}</label>
+        <label style={styles.check}><input type="checkbox" checked={form.sampleInspected} onChange={e => update("sampleInspected", e.target.checked)} /> {t.sampleInspected}</label>
         <label style={styles.check}><input type="checkbox" checked={form.supplierDropshipConfirmed} onChange={e => update("supplierDropshipConfirmed", e.target.checked)} /> {t.dropship}</label>
         <div style={styles.actions}><button type="submit" style={styles.button} disabled={saving}>{saving ? t.saving : t.save}</button></div>
       </form>
