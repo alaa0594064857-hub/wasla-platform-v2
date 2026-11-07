@@ -45,6 +45,9 @@ describe("official WASLA Store public catalogue", () => {
         price: "20.00",
         currency: "EUR",
         availability_status: "available",
+        deliveryCountries: ["TR", "DE"],
+        estimatedDeliveryDaysMin: 4,
+        estimatedDeliveryDaysMax: 8,
       }],
     });
     const baseUrl = await startServer(true);
@@ -52,7 +55,7 @@ describe("official WASLA Store public catalogue", () => {
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data).toMatchObject({ success: true, products: [{ id: "product-1", title_en: "Product" }] });
+    expect(data).toMatchObject({ success: true, products: [{ id: "product-1", title_en: "Product", deliveryCountries: ["TR", "DE"], estimatedDeliveryDaysMin: 4, estimatedDeliveryDaysMax: 8 }] });
     expect(JSON.stringify(data)).not.toMatch(/supplier_name|supplier_price|supplier_reference|source_product_url|shipping_cost/i);
     const sql = String(mocks.query.mock.calls[0][0]);
     expect(sql).toContain("o.offer_status = 'approved'");
@@ -62,6 +65,11 @@ describe("official WASLA Store public catalogue", () => {
     expect(sql).toContain("o.minimum_order_quantity = 1");
     expect(sql).toContain("o.quote_valid_until > NOW()");
     expect(sql).toContain("o.last_verified_at IS NOT NULL");
+    expect(sql).toContain('offer.ships_to_countries AS "deliveryCountries"');
+    expect(sql).toContain('offer.estimated_shipping_days_min AS "estimatedDeliveryDaysMin"');
+    expect(sql).toContain('ORDER BY o.last_verified_at DESC, o.updated_at DESC');
+    expect(sql).not.toContain("supplier_name");
+    expect(sql).not.toContain("supplier_price");
     expect(sql).not.toContain("p.supplier_dropship_confirmed = TRUE");
   });
 
