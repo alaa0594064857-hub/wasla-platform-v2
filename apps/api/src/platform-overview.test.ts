@@ -74,6 +74,8 @@ describe("platform overview official store metrics", () => {
     expect(data.availableModules.messages).toBe(true);
     expect(data.availableModules.trade).toBe(true);
     expect(data.availableModules.subscriptionManagement).toBe(true);
+    expect(String(mocks.query.mock.calls[11][0])).toContain("is_active = TRUE");
+    expect(String(mocks.query.mock.calls[12][0])).toContain("FROM subscriptions");
     expect(mocks.query).toHaveBeenCalledTimes(13);
   });
 
