@@ -85,7 +85,8 @@ export async function handleOfficialStoreOrderSupplierReview(
     try {
       await client.query("BEGIN");
       const orderResult = await client.query(
-        `SELECT o.id, o.product_id AS "productId",
+        `SELECT o.id, o.customer_user_id AS "customerUserId",
+                o.product_id AS "productId",
                 o.supplier_confirmation_status AS "supplierConfirmationStatus",
                 o.order_status AS "orderStatus",
                 o.source_platform AS "sourcePlatform",
