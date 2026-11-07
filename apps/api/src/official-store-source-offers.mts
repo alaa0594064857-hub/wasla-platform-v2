@@ -196,83 +196,107 @@ export async function handleOfficialStoreSourceOffersRequest(
           { success: false, error: "Invalid request body" }); return;
       }
       if (!body) { reply(response, 400, { success: false, error: "A JSON object is required" }); return; }
-      const updates: string[] = [];
-      const params: unknown[] = [];
-      const add = (column: string, value: unknown) => { params.push(value); updates.push(`${column} = $${params.length}`); };
-      if (body.offerStatus === "approved") {
-        const current = await db.query(
-          `SELECT supplier_identity_verified, specifications_verified,
+
+      const client = await db.connect();
+      try {
+        await client.query("BEGIN");
+        const current = await client.query(
+          `SELECT id, product_id, supplier_identity_verified, specifications_verified,
                   direct_to_customer_confirmed, minimum_order_quantity,
                   availability_status, quote_valid_until, evidence
-           FROM official_store_product_source_offers WHERE id = $1`,
+           FROM official_store_product_source_offers WHERE id = $1 FOR UPDATE`,
           [offerId],
         );
-        if (!current.rows.length) { reply(response, 404, { success: false, error: "Source offer not found" }); return; }
+        if (!current.rows.length) {
+          await client.query("ROLLBACK");
+          reply(response, 404, { success: false, error: "Source offer not found" }); return;
+        }
         const row = current.rows[0] as {
-          supplier_identity_verified: boolean; specifications_verified: boolean;
+          product_id: string; supplier_identity_verified: boolean; specifications_verified: boolean;
           direct_to_customer_confirmed: boolean; minimum_order_quantity: number | null;
           availability_status: string; quote_valid_until: Date | string | null; evidence: unknown;
         };
-        const identity = Object.hasOwn(body, "supplierIdentityVerified") ? body.supplierIdentityVerified === true : row.supplier_identity_verified;
-        const specs = Object.hasOwn(body, "specificationsVerified") ? body.specificationsVerified === true : row.specifications_verified;
-        const dropship = Object.hasOwn(body, "directToCustomerConfirmed") ? body.directToCustomerConfirmed === true : row.direct_to_customer_confirmed;
-        const availability = Object.hasOwn(body, "availabilityStatus") ? String(body.availabilityStatus) : row.availability_status;
-        const expiry = Object.hasOwn(body, "quoteValidUntil") ? body.quoteValidUntil : row.quote_valid_until;
-        const evidence = Array.isArray(row.evidence) ? row.evidence : [];
-        const hasSupplierProof = evidence.some(item => item && typeof item === "object" && (item as Record<string, unknown>).type === "supplier_evidence_url");
-        const hasSpecificationProof = evidence.some(item => item && typeof item === "object" && (item as Record<string, unknown>).type === "product_specification");
-        if (!identity || !specs || !hasSupplierProof || !hasSpecificationProof || !dropship || row.minimum_order_quantity === null ||
-            row.minimum_order_quantity > 1 || !["available", "limited"].includes(availability) ||
-            !expiry || !Number.isFinite(Date.parse(String(expiry))) ||
-            Date.parse(String(expiry)) <= Date.now() || evidence.length === 0) {
-          reply(response, 409, { success: false, error: "Offer approval requires verified supplier identity and specifications, supplier and product proof, confirmed single-unit direct shipping, MOQ of 1 or less, current quote and available stock" }); return;
-        }
-        add("last_verified_at", new Date().toISOString());
-      }
-      if (Object.hasOwn(body, "offerStatus")) {
-        if (!STATUSES.includes(body.offerStatus as typeof STATUSES[number])) {
+        const updates: string[] = [];
+        const params: unknown[] = [];
+        const add = (column: string, value: unknown) => { params.push(value); updates.push(`${column} = $${params.length}`); };
+
+        if (body.offerStatus !== undefined && !STATUSES.includes(body.offerStatus as typeof STATUSES[number])) {
+          await client.query("ROLLBACK");
           reply(response, 400, { success: false, error: "Invalid offer status" }); return;
         }
-        add("offer_status", body.offerStatus);
-      }
-      if (Object.hasOwn(body, "availabilityStatus")) {
-        if (!AVAILABILITY.includes(body.availabilityStatus as typeof AVAILABILITY[number])) {
+        if (body.availabilityStatus !== undefined && !AVAILABILITY.includes(body.availabilityStatus as typeof AVAILABILITY[number])) {
+          await client.query("ROLLBACK");
           reply(response, 400, { success: false, error: "Invalid availability status" }); return;
         }
-        add("availability_status", body.availabilityStatus);
-      }
-      for (const [key, column] of [["supplierIdentityVerified","supplier_identity_verified"],["specificationsVerified","specifications_verified"],["directToCustomerConfirmed","direct_to_customer_confirmed"]] as const) {
-        if (Object.hasOwn(body, key)) {
-          if (typeof body[key] !== "boolean") { reply(response, 400, { success: false, error: `Invalid ${key}` }); return; }
-          add(column, body[key]);
+        if (body.offerStatus === "approved") {
+          const identity = Object.hasOwn(body, "supplierIdentityVerified") ? body.supplierIdentityVerified === true : row.supplier_identity_verified;
+          const specs = Object.hasOwn(body, "specificationsVerified") ? body.specificationsVerified === true : row.specifications_verified;
+          const dropship = Object.hasOwn(body, "directToCustomerConfirmed") ? body.directToCustomerConfirmed === true : row.direct_to_customer_confirmed;
+          const availability = Object.hasOwn(body, "availabilityStatus") ? String(body.availabilityStatus) : row.availability_status;
+          const expiry = Object.hasOwn(body, "quoteValidUntil") ? body.quoteValidUntil : row.quote_valid_until;
+          const evidence = Array.isArray(row.evidence) ? row.evidence : [];
+          const hasSupplierProof = evidence.some(item => item && typeof item === "object" && (item as Record<string, unknown>).type === "supplier_evidence_url");
+          const hasSpecificationProof = evidence.some(item => item && typeof item === "object" && (item as Record<string, unknown>).type === "product_specification");
+          if (!identity || !specs || !hasSupplierProof || !hasSpecificationProof || !dropship ||
+              row.minimum_order_quantity === null || row.minimum_order_quantity > 1 ||
+              !["available", "limited"].includes(availability) || !expiry ||
+              !Number.isFinite(Date.parse(String(expiry))) || Date.parse(String(expiry)) <= Date.now() ||
+              evidence.length === 0) {
+            await client.query("ROLLBACK");
+            reply(response, 409, { success: false, error: "Offer approval requires verified supplier identity and specifications, supplier and product proof, confirmed single-unit direct shipping, MOQ of 1 or less, current quote and available stock" }); return;
+          }
+          add("last_verified_at", new Date().toISOString());
         }
-      }
-      if (Object.hasOwn(body, "supplierPrice")) {
-        if (!validPrice(body.supplierPrice)) { reply(response, 400, { success: false, error: "Invalid supplier price" }); return; }
-        add("supplier_price", body.supplierPrice);
-      }
-      if (Object.hasOwn(body, "quoteValidUntil")) {
-        const expiry = body.quoteValidUntil;
-        if (expiry !== null && (typeof expiry !== "string" || !Number.isFinite(Date.parse(expiry)))) {
-          reply(response, 400, { success: false, error: "Invalid quote expiry" }); return;
+        if (Object.hasOwn(body, "offerStatus")) add("offer_status", body.offerStatus);
+        if (Object.hasOwn(body, "availabilityStatus")) add("availability_status", body.availabilityStatus);
+        for (const [key, column] of [["supplierIdentityVerified","supplier_identity_verified"],["specificationsVerified","specifications_verified"],["directToCustomerConfirmed","direct_to_customer_confirmed"]] as const) {
+          if (Object.hasOwn(body, key)) {
+            if (typeof body[key] !== "boolean") {
+              await client.query("ROLLBACK");
+              reply(response, 400, { success: false, error: `Invalid ${key}` }); return;
+            }
+            add(column, body[key]);
+          }
         }
-        add("quote_valid_until", expiry);
+        if (Object.hasOwn(body, "supplierPrice")) {
+          if (!validPrice(body.supplierPrice)) {
+            await client.query("ROLLBACK");
+            reply(response, 400, { success: false, error: "Invalid supplier price" }); return;
+          }
+          add("supplier_price", body.supplierPrice);
+        }
+        if (Object.hasOwn(body, "quoteValidUntil")) {
+          const expiry = body.quoteValidUntil;
+          if (expiry !== null && (typeof expiry !== "string" || !Number.isFinite(Date.parse(expiry)))) {
+            await client.query("ROLLBACK");
+            reply(response, 400, { success: false, error: "Invalid quote expiry" }); return;
+          }
+          add("quote_valid_until", expiry);
+        }
+        if (!updates.length) {
+          await client.query("ROLLBACK");
+          reply(response, 400, { success: false, error: "No supported offer fields supplied" }); return;
+        }
+        params.push(offerId);
+        const result = await client.query(
+          `UPDATE official_store_product_source_offers SET ${updates.join(", ")}, updated_at = NOW()
+           WHERE id = $${params.length}
+           RETURNING id, product_id, offer_status, availability_status, supplier_price::text AS supplier_price, updated_at`,
+          params,
+        );
+        await client.query(
+          `INSERT INTO official_store_activity_log (product_id, actor_type, actor_user_id, action, details)
+           VALUES ($1, 'human', $2, 'source_offer_updated', $3::jsonb)`,
+          [row.product_id, access.userId, JSON.stringify({ offerId, changedFields: updates.map(x => x.split(" = ")[0]) })],
+        );
+        await client.query("COMMIT");
+        reply(response, 200, { success: true, offer: result.rows[0] });
+      } catch (error) {
+        try { await client.query("ROLLBACK"); } catch { /* transaction may already be closed */ }
+        throw error;
+      } finally {
+        client.release();
       }
-      if (!updates.length) { reply(response, 400, { success: false, error: "No supported offer fields supplied" }); return; }
-      params.push(offerId);
-      const result = await db.query(
-        `UPDATE official_store_product_source_offers SET ${updates.join(", ")}, updated_at = NOW()
-         WHERE id = $${params.length}
-         RETURNING id, product_id, offer_status, availability_status, supplier_price::text AS supplier_price, updated_at`,
-        params,
-      );
-      if (!result.rows.length) { reply(response, 404, { success: false, error: "Source offer not found" }); return; }
-      await db.query(
-        `INSERT INTO official_store_activity_log (product_id, actor_type, actor_user_id, action, details)
-         VALUES ($1, 'human', $2, 'source_offer_updated', $3::jsonb)`,
-        [result.rows[0].product_id, access.userId, JSON.stringify({ offerId, changedFields: updates.map(x => x.split(" = ")[0]) })],
-      );
-      reply(response, 200, { success: true, offer: result.rows[0] });
       return;
     }
 
