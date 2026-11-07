@@ -12,9 +12,9 @@ const worlds = [
     descriptionAr: "اكتشف منتجات وعلامات تجارية من أسواق متعددة حول العالم.",
     descriptionEn: "Discover products and brands across markets around the world.",
     category: "COMMERCE", categoryAr: "التجارة والتسوق", nameAr: "وصلة للتسوق",
-    href: null,
-    statusAr: "قريبًا",
-    statusEn: "Coming soon",
+    href: "/official-store",
+    statusAr: "قيد التجهيز",
+    statusEn: "Preparing",
     theme: "store",
     symbol: "S",
   },
@@ -207,7 +207,7 @@ export default function HomePage() {
           {worlds.map((world) => {
             const title = locale === "ar" ? world.ar : world.en;
             const description = locale === "ar" ? world.descriptionAr : world.descriptionEn;
-            const status = world.href ? t.available : t.soon;
+            const status = locale === "ar" ? world.statusAr : world.statusEn;
             return (
               <article className={`world-card world-${world.theme} ${world.href ? "is-live" : "is-soon"}`} key={world.number}>
                 <div className="world-card-art" aria-hidden="true">
@@ -223,7 +223,7 @@ export default function HomePage() {
                   <h4>{title}</h4>
                   <p>{description}</p>
                   {world.href ? (
-                    <a className="world-enter" href={world.href}>{t.enter}<span>↗</span></a>
+                    <a className="world-enter" href={world.href}>{world.theme === "store" ? (locale === "ar" ? "استكشف المتجر الرسمي" : "Explore official store") : t.enter}<span>↗</span></a>
                   ) : (
                     <span className="world-enter world-enter-disabled" aria-disabled="true">{status}<span>◌</span></span>
                   )}
