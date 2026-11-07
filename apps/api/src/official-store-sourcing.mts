@@ -82,7 +82,7 @@ function validate(input: Record<string, unknown>, partial: boolean): string | nu
       input.shippingCountries.some(value => typeof value !== "string" || !/^[A-Z]{2}$/.test(value)))) return "Shipping countries must be ISO 2-letter country codes";
   if (has("evidence") && (!Array.isArray(input.evidence) || input.evidence.length > 20 || JSON.stringify(input.evidence).length > 12000)) return "Evidence must be an array of up to 20 compact items";
   if (has("verificationStatus") && !["unverified", "awaiting_supplier", "partially_verified", "verified", "rejected"].includes(String(input.verificationStatus))) return "Invalid verification status";
-  if (has("reviewStatus") && !["draft", "needs_owner_review", "approved", "rejected", "converted"].includes(String(input.reviewStatus))) return "Invalid review status";
+  if (has("reviewStatus") && !["draft", "needs_owner_review", "approved", "rejected"].includes(String(input.reviewStatus))) return "Invalid review status";
   if (has("quoteValidUntil") && input.quoteValidUntil !== null && (typeof input.quoteValidUntil !== "string" || !Number.isFinite(Date.parse(input.quoteValidUntil)))) return "Invalid supplier quote expiry";
   if (has("estimatedShippingDaysMin") && has("estimatedShippingDaysMax") &&
       input.estimatedShippingDaysMin !== null && input.estimatedShippingDaysMax !== null &&
@@ -150,6 +150,26 @@ export async function handleOfficialStoreSourcingRequest(
     try {
       await client.query("BEGIN");
       let result;
+      if (request.method === "POST" && ["approved", "rejected"].includes(String(input.reviewStatus ?? ""))) {
+        await client.query("ROLLBACK");
+        reply(response, 400, { success: false, error: "New sourcing candidates must be reviewed after creation" }); return;
+      }
+      if (request.method === "PATCH" && input.reviewStatus === "approved") {
+        const current = await client.query(
+          `SELECT verification_status, supplier_dropship_confirmed, minimum_order_quantity, source_product_url
+           FROM official_store_sourcing_candidates WHERE id = $1 FOR UPDATE`,
+          [candidateId],
+        );
+        const row = current.rows[0] as { verification_status: string; supplier_dropship_confirmed: boolean; minimum_order_quantity: number | null; source_product_url: string | null } | undefined;
+        const verified = input.verificationStatus === undefined ? row?.verification_status : input.verificationStatus;
+        const dropship = input.supplierDropshipConfirmed === undefined ? row?.supplier_dropship_confirmed : input.supplierDropshipConfirmed;
+        const minimum = input.minimumOrderQuantity === undefined ? row?.minimum_order_quantity : input.minimumOrderQuantity;
+        const sourceUrl = input.sourceProductUrl === undefined ? row?.source_product_url : input.sourceProductUrl;
+        if (!row || verified !== "verified" || dropship !== true || (minimum !== null && Number(minimum) > 1) || !sourceUrl) {
+          await client.query("ROLLBACK");
+          reply(response, 409, { success: false, error: "Approval requires verified supplier evidence, confirmed single-unit direct shipping, MOQ of one or less, and a source product URL" }); return;
+        }
+      }
       if (request.method === "POST") {
         const insertKeys = fields.filter(key => Object.prototype.hasOwnProperty.call(input, key));
         const names = insertKeys.map(key => columns[key]);
