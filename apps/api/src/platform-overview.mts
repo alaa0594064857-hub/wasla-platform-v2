@@ -28,7 +28,7 @@ export async function handlePlatformOverviewRequest(
     if (!access) return;
 
     const db = getDatabasePool();
-    const [accounts, stores, verification, users] = await Promise.all([
+    const [accounts, stores, verification, users, officialOrders, officialProducts, sourceOffers] = await Promise.all([
       db.query<{ account_type: string; status: string; total: number }>(
         `SELECT account_type::text AS account_type, status::text AS status, COUNT(*)::int AS total
          FROM accounts GROUP BY account_type, status ORDER BY account_type, status`,
@@ -49,6 +49,19 @@ export async function handlePlatformOverviewRequest(
         `SELECT status::text AS status, COUNT(*)::int AS total
          FROM users GROUP BY status ORDER BY status`,
       ),
+      db.query<{ total: number; needs_review: number }>(
+        `SELECT COUNT(*)::int AS total,
+                COUNT(*) FILTER (WHERE owner_review_required = TRUE OR order_status = 'exception')::int AS needs_review
+         FROM official_store_orders`,
+      ),
+      db.query<{ total: number }>(
+        `SELECT COUNT(*)::int AS total FROM official_store_products`,
+      ),
+      db.query<{ total: number; needs_review: number }>(
+        `SELECT COUNT(*)::int AS total,
+                COUNT(*) FILTER (WHERE offer_status = 'needs_review')::int AS needs_review
+         FROM official_store_product_source_offers`,
+      ),
     ]);
 
     const sum = (rows: Array<{ total: number }>) => rows.reduce((value, row) => value + Number(row.total || 0), 0);
@@ -59,6 +72,11 @@ export async function handlePlatformOverviewRequest(
         accounts: sum(accounts.rows),
         stores: sum(stores.rows),
         users: sum(users.rows),
+        officialStoreOrders: Number(officialOrders.rows[0]?.total ?? 0),
+        officialStoreOrdersNeedingReview: Number(officialOrders.rows[0]?.needs_review ?? 0),
+        officialStoreProducts: Number(officialProducts.rows[0]?.total ?? 0),
+        supplierOffers: Number(sourceOffers.rows[0]?.total ?? 0),
+        supplierOffersNeedingReview: Number(sourceOffers.rows[0]?.needs_review ?? 0),
       },
       accountsByType: accounts.rows,
       storesByStatus: stores.rows,
@@ -67,17 +85,17 @@ export async function handlePlatformOverviewRequest(
       availableModules: {
         stores: true,
         businessAccounts: true,
-        orders: false,
+        orders: true,
         sales: false,
         ratings: false,
         inquiries: false,
         complaints: false,
         aiOperations: false,
-        officialPlatformStore: false,
+        officialPlatformStore: true,
       },
       notes: {
         stores: "Counts represent member-owned stores in the stores table, not the future official WASLA Store.",
-        unavailable: "Orders, sales, ratings, inquiries, complaints, AI activity, and the official WASLA Store do not yet have production data modules.",
+        unavailable: "Member-store orders, sales, ratings, complaints, and autonomous AI operations are not enabled. Official-store order and supplier-offer counts reflect their separate owner-only tables.",
       },
     });
   } catch (error) {
