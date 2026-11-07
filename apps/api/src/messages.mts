@@ -205,11 +205,12 @@ export async function handleMessagesRequest(
            LIMIT 1`,
           [body.productId],
         );
-        recipientId = seller.rows[0]?.recipient_id;
-        if (!recipientId) {
+        const sellerUserId = seller.rows[0]?.recipient_id as string | null | undefined;
+        if (!sellerUserId) {
           respond(response, 404, { success: false, error: "Product seller is unavailable" });
           return;
         }
+        recipientId = sellerUserId;
       } else {
         if (!/^[0-9a-f-]{36}$/i.test(body.recipientId as string)) {
           respond(response, 400, { success: false, error: "Invalid recipientId" });
