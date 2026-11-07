@@ -126,8 +126,10 @@ export function buildTradeOpportunityMatches(rows: MatchOpportunity[]) {
       const required = Number(buyer.quantity);
       const minimum = Number(supplier.minimum_order_quantity);
       if (!Number.isFinite(required) || !Number.isFinite(minimum) || minimum > required) continue;
-      if (supplier.quantity !== null && supplier.quantity !== undefined && Number(supplier.quantity) < required) continue;
-      score += 15; reasons.push("Quantity fits supplier minimum and stated capacity");
+      if (supplier.quantity !== null && supplier.quantity !== undefined) {
+        if (!Number.isFinite(Number(supplier.quantity)) || Number(supplier.quantity) < required) continue;
+        score += 15; reasons.push("Quantity fits supplier minimum and stated capacity");
+      } else warnings.push("Supplier capacity needs confirmation");
     } else warnings.push("Quantity or supplier minimum needs confirmation");
     if (buyer.currency && supplier.currency) {
       if (buyer.currency !== supplier.currency) continue;
