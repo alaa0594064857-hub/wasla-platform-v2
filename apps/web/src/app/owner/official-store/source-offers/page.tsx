@@ -20,7 +20,8 @@ const initial = {
   productId: "", supplierName: "", sourcePlatform: "", sourceProductUrl: "",
   supplierPrice: "", supplierCurrency: "USD", shippingCost: "",
   shippingCurrency: "USD", minimumOrderQuantity: "1", shipsToCountries: "TR,US,GB,DE",
-  directToCustomerConfirmed: false, evidenceUrl: "", specificationEvidenceUrl: "", quoteValidUntil: "",
+  directToCustomerConfirmed: false, availabilityStatus: "needs_confirmation",
+  evidenceUrl: "", specificationEvidenceUrl: "", quoteValidUntil: "",
 };
 
 export default function OfficialStoreSourceOffersPage() {
@@ -43,6 +44,7 @@ export default function OfficialStoreSourceOffersPage() {
     subtitle: "اربط عدة عروض توريد بالمنتج نفسه، مع الاحتفاظ بسعر وشحن ومصدر كل مورد بشكل مستقل.",
     back: "العودة إلى متجر WASLA", add: "إضافة عرض توريد", product: "منتج WASLA",
     supplier: "اسم المورد", platform: "الموقع أو المنصة", url: "رابط المنتج الأصلي HTTPS",
+    availability: "حالة التوفر بعد التأكد", available: "متوفر", limited: "توفر محدود", needsConfirmation: "بانتظار التأكيد", unavailable: "غير متوفر",
     price: "سعر المورد", currency: "عملة المورد", shipping: "تكلفة الشحن",
     shippingCurrency: "عملة الشحن", moq: "الحد الأدنى للطلب",
     countries: "الدول المتاح الشحن إليها (رموز مثل TR,US)",
@@ -61,6 +63,7 @@ export default function OfficialStoreSourceOffersPage() {
     subtitle: "Link multiple supplier offers to one WASLA product while keeping each source, price and shipping terms separate.",
     back: "Back to official WASLA Store", add: "Add supplier offer", product: "WASLA product",
     supplier: "Supplier name", platform: "Source site or marketplace", url: "Original product URL HTTPS",
+    availability: "Verified availability", available: "Available", limited: "Limited", needsConfirmation: "Needs confirmation", unavailable: "Unavailable",
     price: "Supplier price", currency: "Supplier currency", shipping: "Shipping cost",
     shippingCurrency: "Shipping currency", moq: "Minimum order quantity",
     countries: "Shipping destinations (ISO codes e.g. TR,US)",
@@ -130,6 +133,7 @@ export default function OfficialStoreSourceOffersPage() {
           shippingCurrency: form.shippingCurrency.trim().toUpperCase(),
           minimumOrderQuantity: form.minimumOrderQuantity === "" ? null : Number(form.minimumOrderQuantity),
           shipsToCountries: countries, directToCustomerConfirmed: form.directToCustomerConfirmed,
+          availabilityStatus: form.availabilityStatus,
           quoteValidUntil: form.quoteValidUntil ? new Date(form.quoteValidUntil).toISOString() : null,
           evidence,
         }),
@@ -184,6 +188,12 @@ export default function OfficialStoreSourceOffersPage() {
         <label style={labelStyle}>{t.shippingCurrency}<input maxLength={3} value={form.shippingCurrency} onChange={e => update("shippingCurrency", e.target.value)} style={inputStyle}/></label>
         <label style={labelStyle}>{t.moq}<input type="number" min="1" step="1" value={form.minimumOrderQuantity} onChange={e => update("minimumOrderQuantity", e.target.value)} style={inputStyle}/></label>
         <label style={labelStyle}>{t.countries}<input value={form.shipsToCountries} onChange={e => update("shipsToCountries", e.target.value)} style={inputStyle}/></label>
+        <label style={labelStyle}>{t.availability}<select value={form.availabilityStatus} onChange={e => update("availabilityStatus", e.target.value)} style={inputStyle}>
+          <option value="needs_confirmation">{t.needsConfirmation}</option>
+          <option value="available">{t.available}</option>
+          <option value="limited">{t.limited}</option>
+          <option value="unavailable">{t.unavailable}</option>
+        </select></label>
         <label style={labelStyle}>{t.quoteExpiry}<input required type="datetime-local" value={form.quoteValidUntil} onChange={e => update("quoteValidUntil", e.target.value)} style={inputStyle}/></label>
         <label style={labelStyle}>{t.evidence}<input required type="url" value={form.evidenceUrl} onChange={e => update("evidenceUrl", e.target.value)} style={inputStyle}/></label>
         <label style={labelStyle}>{t.specificationEvidence}<input required type="url" value={form.specificationEvidenceUrl} onChange={e => update("specificationEvidenceUrl", e.target.value)} style={inputStyle}/></label>
