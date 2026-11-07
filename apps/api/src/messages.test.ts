@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createServer, type Server } from "node:http";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
@@ -18,7 +18,7 @@ vi.mock("./database.js", async (importOriginal) => {
   };
 });
 
-let handleMessagesRequest: typeof import("./messages.mjs").handleMessagesRequest;
+let handleMessagesRequest: (request: IncomingMessage, response: ServerResponse, conversationId?: string) => Promise<void>;
 let server: Server | undefined;
 
 async function startServer(): Promise<string> {
