@@ -454,4 +454,4 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Added explanatory safeguards: a Trade deal record does not mean settlement/payment; subscription counts do not mean billing is enabled; member checkout remains seller-owned.
 - Corrected the subscription-plan active metric to use the real `is_active` schema field.
 - Production database snapshot at this checkpoint: member products 0, conversations 0, product inquiries 0, Trade deals 0, subscription plans 0, subscriptions 0. No fabricated activity was inserted.
-- GitHub Actions run `42412206991` passed API tests, migrations, authorization seeding, DB constraints, TypeScript checks and API/Web builds. Render deployments for the expanded owner dashboard are being verified.
+- GitHub Actions run `42412206991` passed API tests, migrations, authorization seeding, DB constraints, TypeScript checks and API/Web builds. API and Web deployments for commit `237f5dd8e8d29bf1bbef792f93e88f61aea8e638` are both verified Live.
