@@ -169,7 +169,7 @@ export async function handleOfficialStoreOrderSupplierReview(
         }
       }
 
-      const nextOrderStatus = decision === "accepted" ? "awaiting_payment" : "cancelled";
+      const nextOrderStatus = decision === "accepted" ? "supplier_confirmed" : "cancelled";
       const updated = await client.query(
         `UPDATE official_store_orders
          SET supplier_confirmation_status = $2,
@@ -226,7 +226,7 @@ export async function handleOfficialStoreOrderSupplierReview(
         success: true,
         order: updated.rows[0],
         message: decision === "accepted"
-          ? "Supplier availability was manually confirmed. Payment remains disabled and no supplier purchase was placed."
+          ? "Supplier availability was manually confirmed. A final customer quote is still required; payment remains disabled and no supplier purchase was placed."
           : "Supplier availability was not confirmed. The request was closed without payment or supplier purchase.",
       });
     } catch (error) {
