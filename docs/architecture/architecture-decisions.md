@@ -623,3 +623,61 @@ products, but each supplier/product still requires verification.
 WASLA's supplier marketplace integration, sourcing automation,
 landed-cost engine, checkout, purchasing, and fulfilment automation
 are not implemented by this decision.
+
+
+## 22. Unified Product Catalogue Across External Sources
+
+Decision:
+
+The official WASLA Store may present one normalized product page backed by
+multiple independently verified supplier offers from external marketplaces,
+manufacturers, wholesalers and retailers. This is catalogue aggregation,
+not copying a supplier catalogue blindly.
+
+Product identity and matching:
+- Keep a canonical WASLA product record separate from each source listing
+  and supplier offer. One canonical product may link to multiple source offers.
+- Match using GTIN/EAN/UPC where available, manufacturer part number,
+  brand, model, variant attributes and verified specifications. AI similarity
+  is a discovery aid, never sufficient by itself to merge uncertain products.
+- Preserve material differences such as size, colour, material, generation,
+  compatibility, bundle contents, region, warranty and quality grade as
+  separate variants or products. Never merge merely similar-looking items.
+- Retain each source's original URL, seller identity, source reference,
+  last-checked time, quoted price/currency, stock evidence, MOQ, destination,
+  shipping quote, lead time and return terms independently.
+
+Content, media and pricing:
+- Generate one consistent bilingual WASLA title, description and normalized
+  specification set from verified facts, while retaining provenance for each
+  claim. Do not invent missing attributes or silently remove limitations.
+- Import or display source images only when usage rights or supplier
+  authorization are recorded. Store image provenance, permitted usage scope,
+  attribution requirements and review status; otherwise use authorized
+  supplier-provided media or create original WASLA imagery.
+- Keep supplier prices private. Calculate a configurable WASLA sale price
+  from the selected offer's landed cost, destination, currency conversion,
+  taxes/duties where applicable, payment/marketplace fees and owner-approved
+  margin. The owner controls pricing rules and may override the final price.
+- Recheck the selected supplier offer's price, stock, shipping eligibility
+  and delivery terms before checkout and again before supplier purchase.
+
+Offer selection and fulfilment:
+- Rank offers by exact specification match, verified supplier reliability,
+  landed cost, delivery time, destination eligibility, protection and return
+  terms—not simply the lowest advertised unit price.
+- A canonical product may have several source offers, but each order must
+  identify the exact selected supplier, source listing, variant and confirmed
+  quote. Do not silently switch suppliers or variants after customer consent.
+- If an offer expires, changes materially or becomes unavailable, pause that
+  offer and either select another independently verified offer under the
+  approved policy or request customer approval for a material change.
+- Keep the customer-facing WASLA product experience separate from private
+  source URLs, supplier costs, supplier identities and procurement records,
+  except for legally required seller/fulfilment disclosures.
+
+Implementation status:
+
+Approved architecture decision. Canonical product aggregation, source-offer
+linking, duplicate/variant resolution, image-rights provenance, multi-source
+price comparison and automated offer refresh are not yet implemented.
