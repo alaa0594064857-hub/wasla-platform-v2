@@ -33,6 +33,13 @@ function validAmount(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1_000_000_000;
 }
 
+/** FX evidence must be recent enough for a customer-price preview (maximum age: 24 hours). */
+export function isFreshFxRateTimestamp(value: unknown, now = Date.now()): value is string {
+  if (typeof value !== "string") return false;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) && timestamp <= now + 300000 && timestamp >= now - 24 * 60 * 60 * 1000;
+}
+
 function currencyDigits(currency: string): number {
   return Number(new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions().maximumFractionDigits ?? 2);
 }
@@ -49,8 +56,7 @@ function normalizeLine(line: CostLine, target: string): { type: string; sourceAm
   const rate = line.currency === target ? 1 : line.fxRate;
   const amount = convert(line.amount, line.currency, target, rate);
   if (amount === null) return null;
-  if (line.currency !== target && (typeof line.fxRateAsOf !== "string" || !Number.isFinite(Date.parse(line.fxRateAsOf)) ||
-      Date.parse(line.fxRateAsOf) > Date.now() + 300000 || !line.fxSource || line.fxSource.length > 180)) return null;
+  if (line.currency !== target && (!isFreshFxRateTimestamp(line.fxRateAsOf) || !line.fxSource || line.fxSource.length > 180)) return null;
   return {
     type: line.type, sourceAmount: line.amount, sourceCurrency: line.currency,
     fxRate: Number(rate), targetAmount: amount,
@@ -84,19 +90,17 @@ export async function handleOfficialStorePricingRequest(request: IncomingMessage
     let shippingFxRate = 1;
     if (body.supplierCurrency !== target) {
       if (typeof body.supplierFxRate !== "number" || !Number.isFinite(body.supplierFxRate) || body.supplierFxRate <= 0 ||
-          typeof body.supplierFxRateAsOf !== "string" || !Number.isFinite(Date.parse(body.supplierFxRateAsOf)) ||
-          Date.parse(body.supplierFxRateAsOf) > Date.now() + 300000 ||
+          !isFreshFxRateTimestamp(body.supplierFxRateAsOf) ||
           typeof body.supplierFxSource !== "string" || !body.supplierFxSource.trim() || body.supplierFxSource.length > 180) {
-        reply(response, 400, { success: false, error: "Supplier currency conversion requires an explicit positive FX rate, timestamp and source" }); return;
+        reply(response, 400, { success: false, error: "Supplier currency conversion requires a positive FX rate with a source timestamp no older than 24 hours and a source reference" }); return;
       }
       supplierFxRate = body.supplierFxRate;
     }
     if (body.shippingCurrency !== target) {
       if (typeof body.shippingFxRate !== "number" || !Number.isFinite(body.shippingFxRate) || body.shippingFxRate <= 0 ||
-          typeof body.shippingFxRateAsOf !== "string" || !Number.isFinite(Date.parse(body.shippingFxRateAsOf)) ||
-          Date.parse(body.shippingFxRateAsOf) > Date.now() + 300000 ||
+          !isFreshFxRateTimestamp(body.shippingFxRateAsOf) ||
           typeof body.shippingFxSource !== "string" || !body.shippingFxSource.trim() || body.shippingFxSource.length > 180) {
-        reply(response, 400, { success: false, error: "Shipping currency conversion requires an explicit positive FX rate, timestamp and source" }); return;
+        reply(response, 400, { success: false, error: "Shipping currency conversion requires a positive FX rate with a source timestamp no older than 24 hours and a source reference" }); return;
       }
       shippingFxRate = body.shippingFxRate;
     }
@@ -105,7 +109,7 @@ export async function handleOfficialStorePricingRequest(request: IncomingMessage
     const rawCosts = (body.costs ?? []) as CostLine[];
     const costs = rawCosts.map(line => normalizeLine(line, target));
     if (costs.some(line => line === null)) {
-      reply(response, 400, { success: false, error: "Each additional cost needs a valid amount, ISO currency and explicit FX provenance when conversion is required" }); return;
+      reply(response, 400, { success: false, error: "Each additional cost needs a valid amount, ISO currency and FX provenance no older than 24 hours when conversion is required" }); return;
     }
     const additional = (costs as NonNullable<typeof costs[number]>[]).reduce((sum, line) => sum + line.targetAmount, 0);
     const costSubtotal = supplier + shipping + additional;
@@ -125,8 +129,9 @@ export async function handleOfficialStorePricingRequest(request: IncomingMessage
         additionalCosts: costs, costSubtotal: roundedCost,
         margin: { percent: body.marginPercent, fixedAmount: body.fixedMargin ?? 0, total: roundedMargin },
         finalCustomerPrice: finalPrice,
+        grossMarginPercent,
       },
-      warnings: ["Taxes, customs, duties and payment fees are not estimated; add verified amounts as explicit cost lines.", "FX rates are supplied by the operator; no live exchange-rate feed is assumed.", "This preview does not update the catalogue, expose supplier details to customers, publish products or place orders."],
+      warnings: ["Taxes, customs, duties and payment fees are not estimated; add verified amounts as explicit cost lines.", "FX rates are supplied by the operator and must be timestamped within the last 24 hours; no live exchange-rate feed is assumed.", "This preview does not update the catalogue, expose supplier details to customers, publish products or place orders."],
     });
   } catch (error) {
     console.error("WASLA official store pricing error:", error);
