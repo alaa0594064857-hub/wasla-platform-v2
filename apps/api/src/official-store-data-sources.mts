@@ -49,6 +49,8 @@ export async function ensureOfficialStoreDataSourceTables(): Promise<void> {
       )
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS official_store_data_sources_owner_created_idx ON official_store_data_sources (created_by, created_at DESC)`);
+    await client.query(`ALTER TABLE official_store_sourcing_candidates ADD COLUMN IF NOT EXISTS data_source_id uuid REFERENCES official_store_data_sources(id) ON DELETE SET NULL`);
+    await client.query(`CREATE INDEX IF NOT EXISTS official_store_sourcing_candidates_data_source_idx ON official_store_sourcing_candidates (data_source_id) WHERE data_source_id IS NOT NULL`);
   } finally { client.release(); }
 }
 
