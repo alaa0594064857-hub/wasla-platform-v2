@@ -116,6 +116,10 @@ export async function handleOfficialStoreSourceOffersRequest(
              !httpsUrl((item as Record<string, unknown>).url)))) {
         reply(response, 400, { success: false, error: "Evidence must contain supported HTTPS proof URLs" }); return;
       }
+      if (body.quoteValidUntil !== undefined && body.quoteValidUntil !== null &&
+          (typeof body.quoteValidUntil !== "string" || !Number.isFinite(Date.parse(body.quoteValidUntil)))) {
+        reply(response, 400, { success: false, error: "Invalid supplier quote expiry" }); return;
+      }
       const product = await db.query("SELECT id FROM official_store_products WHERE id = $1", [productId]);
       if (!product.rows.length) { reply(response, 404, { success: false, error: "WASLA product not found" }); return; }
 
@@ -125,8 +129,8 @@ export async function handleOfficialStoreSourceOffersRequest(
              (product_id, source_platform, source_product_url, supplier_name,
               supplier_reference, variant_attributes, supplier_price, supplier_currency,
               shipping_cost, shipping_currency, minimum_order_quantity, ships_to_countries,
-              direct_to_customer_confirmed, availability_status, offer_status, evidence)
-           VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11,$12::jsonb,$13,$14,'needs_review',$15::jsonb)
+              direct_to_customer_confirmed, availability_status, quote_valid_until, offer_status, evidence)
+           VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11,$12::jsonb,$13,$14,$15,'needs_review',$16::jsonb)
            RETURNING id, product_id, source_platform, source_product_url, supplier_name,
                      supplier_price::text AS supplier_price, supplier_currency, offer_status, created_at`,
           [productId, platform, body.sourceProductUrl, supplierName,
@@ -137,6 +141,7 @@ export async function handleOfficialStoreSourceOffersRequest(
            body.minimumOrderQuantity ?? null, JSON.stringify(body.shipsToCountries ?? []),
            body.directToCustomerConfirmed === true,
            AVAILABILITY.includes(body.availabilityStatus as typeof AVAILABILITY[number]) ? body.availabilityStatus : "needs_confirmation",
+           body.quoteValidUntil ?? null,
            JSON.stringify(Array.isArray(body.evidence) ? body.evidence.slice(0,20) : [])],
         );
         reply(response, 201, { success: true, offer: inserted.rows[0] });
@@ -180,11 +185,13 @@ export async function handleOfficialStoreSourceOffersRequest(
         const availability = Object.hasOwn(body, "availabilityStatus") ? String(body.availabilityStatus) : row.availability_status;
         const expiry = Object.hasOwn(body, "quoteValidUntil") ? body.quoteValidUntil : row.quote_valid_until;
         const evidence = Array.isArray(row.evidence) ? row.evidence : [];
-        if (!identity || !specs || !dropship || row.minimum_order_quantity === null ||
+        const hasSupplierProof = evidence.some(item => item && typeof item === "object" && (item as Record<string, unknown>).type === "supplier_evidence_url");
+        const hasSpecificationProof = evidence.some(item => item && typeof item === "object" && (item as Record<string, unknown>).type === "product_specification");
+        if (!identity || !specs || !hasSupplierProof || !hasSpecificationProof || !dropship || row.minimum_order_quantity === null ||
             row.minimum_order_quantity > 1 || !["available", "limited"].includes(availability) ||
             !expiry || !Number.isFinite(Date.parse(String(expiry))) ||
             Date.parse(String(expiry)) <= Date.now() || evidence.length === 0) {
-          reply(response, 409, { success: false, error: "Offer approval requires verified supplier identity and specifications, confirmed single-unit direct shipping, MOQ of 1 or less, current quote, available stock and evidence" }); return;
+          reply(response, 409, { success: false, error: "Offer approval requires verified supplier identity and specifications, supplier and product proof, confirmed single-unit direct shipping, MOQ of 1 or less, current quote and available stock" }); return;
         }
         add("last_verified_at", new Date().toISOString());
       }
