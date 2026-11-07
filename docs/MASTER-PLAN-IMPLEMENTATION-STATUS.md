@@ -359,3 +359,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Added regression tests for permission enforcement, bounded read-only listing, event history and write-method rejection; included them in the API CI test command.
 - This is an operational visibility layer only. It does not create customer orders, collect payments, contact suppliers, purchase goods, generate tracking or confirm delivery. The production database currently has order tables but no live order workflow; keep checkout disabled until provider/legal/fulfillment gates are implemented.
 - Deployment and CI status for this checkpoint: pending final verification.
+
+
+## Owner command-center live official-store indicators — 2026-11-07
+
+- Extended the live owner overview API with real counts from the separate official-store order, product and source-offer tables, including orders/offers needing review.
+- Updated the owner command-center "Orders" room to open the official-store order desk and display these live counts; it is explicitly labelled as official-store-only, not member-store sales.
+- Added tests for the new metrics and permission gate. GitHub Actions run `42409112994` passed API tests, migrations, authorization seed, database constraints, API TypeScript and API/Web builds.
+- Production database check at this checkpoint: 0 official-store orders, 0 official products, 0 source offers, 0 orders needing review, 0 offers needing review. The dashboard therefore reports real zeros, not fabricated activity.
+- Render deployment of the latest overview/dashboard changes is pending verification.
