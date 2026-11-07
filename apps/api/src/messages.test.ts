@@ -69,7 +69,21 @@ describe("product-based private messaging", () => {
     expect(mocks.query.mock.calls[1][1]).toEqual(["buyer-user", "seller-user"]);
     expect(String(mocks.query.mock.calls[0][0])).toContain("p.status = 'active'");
     expect(String(mocks.query.mock.calls[0][0])).toContain("r.name = 'store_manager'");
-    expect(String(mocks.query.mock.calls[0][0])).toContain("COALESCE(store_owner.user_id, store_manager.user_id");
+    expect(String(mocks.query.mock.calls[0][0])).toContain("COALESCE(store_owner.user_id, store_admin.user_id, store_manager.user_id");
+    expect(String(mocks.query.mock.calls[0][0])).toContain("account_admin.user_id");
+  });
+
+  it("finds business admins and store-specific managers as message recipients", async () => {
+    mocks.query.mockResolvedValueOnce({ rows: [{ recipient_id: "store-admin", display_name: "Example Shop", entity_type: "store", category: "store" }] });
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/messages?recipients=Example`);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ success: true, recipients: [{ recipient_id: "store-admin" }] });
+    const sql = String(mocks.query.mock.calls[0][0]);
+    expect(sql).toContain("r.name IN ('account_owner', 'account_admin', 'account_manager')");
+    expect(sql).toContain("INNER JOIN store_members sm ON sm.store_id = s.id");
+    expect(sql).toContain("r.name IN ('store_owner', 'store_admin', 'store_manager')");
   });
 
   it("prevents a seller from starting a conversation with themselves through their product", async () => {
