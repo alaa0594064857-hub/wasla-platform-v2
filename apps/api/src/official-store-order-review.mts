@@ -93,6 +93,7 @@ export async function handleOfficialStoreOrderSupplierReview(
                 o.supplier_unit_cost::text AS "supplierUnitCost",
                 o.supplier_shipping_cost::text AS "supplierShippingCost",
                 o.supplier_cost_currency AS "supplierCostCurrency",
+                o.supplier_shipping_currency AS "supplierShippingCurrency",
                 o.shipping_address->>'country' AS "destinationCountry",
                 (
                   SELECT e.details->>'sourceOfferId'
@@ -126,8 +127,9 @@ export async function handleOfficialStoreOrderSupplierReview(
           `SELECT id, source_platform AS "sourcePlatform",
                   supplier_name AS "supplierName",
                   supplier_price::text AS "supplierUnitCost",
+                  supplier_currency AS "supplierCostCurrency",
                   shipping_cost::text AS "supplierShippingCost",
-                  shipping_currency AS "supplierCostCurrency",
+                  shipping_currency AS "supplierShippingCurrency",
                   ships_to_countries AS "shipsToCountries"
            FROM official_store_product_source_offers
            WHERE id = $1 AND product_id = $2
@@ -154,6 +156,7 @@ export async function handleOfficialStoreOrderSupplierReview(
           offer.supplierUnitCost === order.supplierUnitCost &&
           offer.supplierShippingCost === order.supplierShippingCost &&
           offer.supplierCostCurrency === order.supplierCostCurrency &&
+          offer.supplierShippingCurrency === order.supplierShippingCurrency &&
           destinations.some((country: unknown) =>
             typeof country === "string" && country.toLowerCase() === String(order.destinationCountry).toLowerCase());
         if (!sameQuote) {
