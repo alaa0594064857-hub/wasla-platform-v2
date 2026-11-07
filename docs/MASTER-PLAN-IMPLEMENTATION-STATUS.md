@@ -390,7 +390,7 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Added bilingual storefront request controls and a bilingual `/account/orders` history page. Customer sees that this is a confirmation request, not a completed purchase.
 - Added tests for unauthenticated access, customer data scoping, explicit consent, verified-offer transaction, destination coverage and event logging.
 - GitHub Actions run `42410336574` passed all API tests, migrations, authorization seeding, database constraints, API and Web TypeScript/build checks.
-- API deployment for the request flow is Live at commit `aecb3b56e4df4b46e33a82c90ed0616c273759dd`. Web deployment for the request form is Live at the same commit. The latest customer request-history page build succeeded; final Render Live confirmation is pending.
+- API deployment for the request flow is Live at commit `aecb3b56e4df4b46e33a82c90ed0616c273759dd`. Web deployment for the request form is Live at the same commit. The bilingual customer request-history page is deployed Live. The owner-only order desk now displays the delivery destination country without exposing the full shipping address.
 - Payment, supplier purchasing, confirmed checkout, carrier booking and shipment tracking remain disabled. The flow is a request for verification and owner review only.
 
 ## WASLA Trade implementation status correction — 2026-11-07
@@ -398,3 +398,11 @@ Do not describe the platform as commercially launch-ready based only on successf
 - The repository contains a bilingual `/trade` workspace, `apps/api/src/trade.mts`, API route `/api/trade/deals`, database schema initialization and `trade.test.ts`.
 - Trade is implemented as a deal proposal/negotiation workflow with account-scoped permissions and event history; it is not accurate to label the module "not started".
 - Settlement, payment collection, escrow, legal contract signing and fulfilment integration remain outside the implemented Trade foundation and require separate approved integrations and policies.
+
+
+## Final verification — customer request history and owner destination visibility
+
+- The customer `/account/orders` page is Live on the Web service.
+- Owner order desk API now exposes only the destination country; the full shipping address, customer note and supplier order/tracking URLs remain excluded from the generic owner details panel.
+- API and Web deployments for commit `5b8f197f4d5e6d594e589adf48984e73435c81c2` are both verified Live.
+- GitHub Actions run `42410548912` passed all checks, including API tests, database migrations/constraints, API TypeScript/build and Web build.
