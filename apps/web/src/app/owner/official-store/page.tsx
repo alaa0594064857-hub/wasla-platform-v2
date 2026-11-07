@@ -143,7 +143,10 @@ export default function OwnerOfficialStorePage() {
 
   return <main style={styles.shell} dir={ar ? "rtl" : "ltr"} lang={locale}>
     <header style={styles.header}>
-      <div><Link href="/owner" style={styles.back}>← {t.back}</Link><h1>{t.title}</h1><p>{t.subtitle}</p></div>
+      <div><Link href="/owner" style={styles.back}>← {t.back}</Link><h1>{t.title}</h1><p>{t.subtitle}</p>
+        <Link href="/owner/official-store/source-offers" style={{ ...styles.back, display: "inline-block", marginTop: 10 }}>
+          {ar ? "إدارة عروض الموردين ومصادر المنتجات →" : "Manage supplier offers and product sources →"}
+        </Link></div>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}><Link href="/owner/official-store/sourcing" style={styles.back}>{ar ? "مراجعة الموردين ←" : "Supplier sourcing review →"}</Link><span style={styles.tag}>PLATFORM-OWNED</span></div>
     </header>
     <section style={styles.notice}><strong>{t.inventory}</strong><p>{t.supplierNote}</p><p>{t.payments}</p></section>
