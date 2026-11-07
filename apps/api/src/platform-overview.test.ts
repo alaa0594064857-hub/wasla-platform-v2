@@ -42,7 +42,13 @@ describe("platform overview official store metrics", () => {
       .mockResolvedValueOnce({ rows: [{ status: "active", total: 2 }] })
       .mockResolvedValueOnce({ rows: [{ total: 3, needs_review: 1 }] })
       .mockResolvedValueOnce({ rows: [{ total: 4 }] })
-      .mockResolvedValueOnce({ rows: [{ total: 5, needs_review: 2 }] });
+      .mockResolvedValueOnce({ rows: [{ total: 5, needs_review: 2 }] })
+      .mockResolvedValueOnce({ rows: [{ total: 6, active: 4 }] })
+      .mockResolvedValueOnce({ rows: [{ total: 7 }] })
+      .mockResolvedValueOnce({ rows: [{ total: 8 }] })
+      .mockResolvedValueOnce({ rows: [{ total: 9 }] })
+      .mockResolvedValueOnce({ rows: [{ total: 0, active: 0 }] })
+      .mockResolvedValueOnce({ rows: [{ total: 0, active: 0 }] });
 
     const baseUrl = await startServer();
     const response = await fetch(baseUrl);
@@ -54,10 +60,21 @@ describe("platform overview official store metrics", () => {
       officialStoreProducts: 4,
       supplierOffers: 5,
       supplierOffersNeedingReview: 2,
+      memberProducts: 6,
+      activeMemberProducts: 4,
+      messageConversations: 7,
+      productInquiries: 8,
+      tradeDeals: 9,
+      subscriptionPlans: 0,
+      subscriptions: 0,
     });
     expect(data.availableModules.orders).toBe(true);
     expect(data.availableModules.officialPlatformStore).toBe(true);
-    expect(mocks.query).toHaveBeenCalledTimes(7);
+    expect(data.availableModules.memberCatalog).toBe(true);
+    expect(data.availableModules.messages).toBe(true);
+    expect(data.availableModules.trade).toBe(true);
+    expect(data.availableModules.subscriptionManagement).toBe(true);
+    expect(mocks.query).toHaveBeenCalledTimes(13);
   });
 
   it("requires report permission before reading platform metrics", async () => {
