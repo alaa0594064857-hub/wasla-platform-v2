@@ -62,6 +62,28 @@ describe("store product operation permissions", () => {
     expect(accessSql).not.toContain("'store.product.create'");
   });
 
+  it("rejects insecure, credential-bearing, and local external checkout URLs", async () => {
+    const baseUrl = await startServer();
+    for (const sellerCheckoutUrl of [
+      "http://seller.example/checkout",
+      "https://user:password@seller.example/checkout",
+      "https://localhost/checkout",
+      "https://store.local/checkout",
+    ]) {
+      mocks.query.mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "store-1", account_id: "account-1" }] });
+      const response = await fetch(`${baseUrl}/api/stores/sample-store/products`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "Valid product", price: 10, currency: "USD", stockQuantity: 1,
+          sellerCheckoutUrl,
+        }),
+      });
+      expect(response.status).toBe(400);
+    }
+    expect(mocks.connect).not.toHaveBeenCalled();
+  });
+
   it("requires product-create permission before accepting a new product", async () => {
     mocks.query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
 
