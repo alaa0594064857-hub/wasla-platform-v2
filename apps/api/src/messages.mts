@@ -271,7 +271,7 @@ export async function handleMessagesRequest(
     }
 
     const membership = await db.query(
-      `SELECT id FROM message_conversations
+      `SELECT id, participant_low, participant_high FROM message_conversations
        WHERE id = $1 AND (participant_low = $2 OR participant_high = $2) LIMIT 1`,
       [conversationId, userId],
     );
@@ -279,6 +279,9 @@ export async function handleMessagesRequest(
       respond(response, 404, { success: false, error: "Conversation not found" });
       return;
     }
+    const recipientUserId = membership.rows[0].participant_low === userId
+      ? membership.rows[0].participant_high
+      : membership.rows[0].participant_low;
 
     if (request.method === "GET") {
       await db.query(
@@ -322,6 +325,16 @@ export async function handleMessagesRequest(
       await client.query(
         `UPDATE message_conversations SET updated_at = NOW() WHERE id = $1`,
         [conversationId],
+      );
+      await client.query(
+        `INSERT INTO notifications (
+           user_id, type, title_ar, title_en, body_ar, body_en,
+           action_url, resource_id, metadata
+         )
+         VALUES ($1, 'message_received', 'رسالة جديدة', 'New message',
+                 'لديك رسالة جديدة في محادثاتك.', 'You received a new private message.',
+                 '/messages', $2, $3::jsonb)`,
+        [recipientUserId, conversationId, JSON.stringify({ conversationId, senderUserId: userId })],
       );
       await client.query("COMMIT");
       respond(response, 201, { success: true, message: inserted.rows[0] });
