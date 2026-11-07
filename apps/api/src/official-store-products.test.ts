@@ -58,6 +58,7 @@ describe("official WASLA Store public catalogue", () => {
     expect(data).toMatchObject({ success: true, products: [{ id: "product-1", title_en: "Product", deliveryCountries: ["TR", "DE"], estimatedDeliveryDaysMin: 4, estimatedDeliveryDaysMax: 8 }] });
     expect(JSON.stringify(data)).not.toMatch(/supplier_name|supplier_price|supplier_reference|source_product_url|shipping_cost/i);
     const sql = String(mocks.query.mock.calls[0][0]);
+    expect(sql).toContain("s.status = 'active'");
     expect(sql).toContain("o.offer_status = 'approved'");
     expect(sql).toContain("o.direct_to_customer_confirmed = TRUE");
     expect(sql).toContain("o.supplier_identity_verified = TRUE");
