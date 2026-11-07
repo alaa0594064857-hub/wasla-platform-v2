@@ -366,6 +366,22 @@ export async function handleMembersRequest(
         ],
       );
 
+      await client.query(
+        `INSERT INTO notifications (
+           user_id, type, title_ar, title_en, body_ar, body_en,
+           action_url, resource_id, metadata
+         )
+         VALUES ($1, 'account_invitation', 'دعوة جديدة للانضمام إلى حساب', 'New business account invitation',
+                 $2, $3, '/invitations', $4, $5::jsonb)`,
+        [
+          targetUser.id,
+          `تمت دعوتك للانضمام إلى حساب تجاري بدور ${role}.`,
+          `You have been invited to join a business account as ${role}.`,
+          membership.id,
+          JSON.stringify({ accountId, membershipId: membership.id, assignedRole: role }),
+        ],
+      );
+
       await client.query("COMMIT");
 
       respond(response, 201, {
