@@ -9,11 +9,12 @@ import { useLocale } from "../../../components/locale-provider";
 type AuditEntry = {
   id: string;
   actorEmail: string | null;
-  action: string;
+  event: string;
+  source: string;
   resourceType: string | null;
   resourceId: string | null;
-  accountName: string | null;
-  storeName: string | null;
+  context: string | null;
+  details: Record<string, unknown> | null;
   createdAt: string;
 };
 
@@ -61,7 +62,7 @@ export default function PlatformAuditPage() {
       <Link href="/owner" style={{ color: "#9b783d", fontWeight: 700, textDecoration: "none" }}>← {ar ? "العودة إلى مركز المالك" : "Back to owner center"}</Link>
       <span style={{ display: "block", marginTop: 26, color: "#9b783d", fontSize: 12, fontWeight: 800, letterSpacing: ".12em" }}>WASLA / SECURITY / AUDIT</span>
       <h1 style={{ color: "#14243a", margin: "8px 0" }}>{ar ? "سجل تدقيق المنصة" : "Platform audit log"}</h1>
-      <p style={{ maxWidth: 780, lineHeight: 1.8 }}>{ar ? "سجل قراءة فقط لأحداث الإدارة والتغييرات المسجلة في النظام. لا يعرض محتوى الرسائل الخاصة أو بيانات الموردين الخاصة." : "Read-only record of administrative and system changes. Private message contents and private supplier data are not displayed here."}</p>
+      <p style={{ maxWidth: 780, lineHeight: 1.8 }}>{ar ? "سجل قراءة فقط لأحداث الإدارة والفرص والاتفاقيات والعمولات وفواتيرها. لا يعرض محتوى الرسائل الخاصة أو بيانات الموردين الخاصة." : "Read-only record of administrative changes, trade opportunities, agreements, commissions and invoices. Private message contents and private supplier data are not displayed here."}</p>
       {denied ? <section style={styles.panel}><h2>{ar ? "غير مصرح" : "Access restricted"}</h2><p>{ar ? "هذه الصفحة تتطلب صلاحية قراءة سجل التدقيق." : "This page requires platform audit-read permission."}</p></section> :
        loading ? <p>{ar ? "جارٍ تحميل السجل..." : "Loading audit entries..."}</p> :
        error ? <p role="alert" style={{ color: "#a33d3d" }}>{error}</p> :
@@ -77,10 +78,10 @@ export default function PlatformAuditPage() {
            <tbody>
              {entries.map(entry => <tr key={entry.id}>
                <td style={styles.cell}><time dateTime={entry.createdAt}>{new Date(entry.createdAt).toLocaleString(ar ? "ar" : "en")}</time></td>
-               <td style={styles.cell}><strong>{entry.action}</strong></td>
-               <td style={styles.cell}>{entry.resourceType || "—"}</td>
-               <td style={styles.cell}>{entry.accountName || "—"}</td>
-               <td style={styles.cell}>{entry.storeName || "—"}</td>
+               <td style={styles.cell}>{entry.source}</td>
+               <td style={styles.cell}><strong>{entry.event}</strong><div style={{ color: "#738092", fontSize: 12 }}>{typeof entry.details?.fromStatus === "string" || typeof entry.details?.toStatus === "string" ? String(entry.details?.fromStatus || "—") + " → " + String(entry.details?.toStatus || "—") : ""}</div></td>
+               <td style={styles.cell}>{entry.resourceType || "—"}<div style={{ color: "#738092", fontSize: 11 }}>{entry.resourceId || ""}</div></td>
+               <td style={styles.cell}>{entry.context || "—"}{typeof entry.details?.note === "string" && entry.details.note ? <div style={{ color: "#738092", fontSize: 12 }}>{entry.details.note}</div> : null}</td>
                <td style={styles.cell}>{entry.actorEmail || (ar ? "النظام" : "System")}</td>
              </tr>)}
            </tbody>
