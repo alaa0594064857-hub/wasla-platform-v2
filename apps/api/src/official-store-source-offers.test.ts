@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { shouldRequireOfferReReview } from "./official-store-source-offers.mjs";
+import { hasMaterialOfferChanges, shouldRequireOfferReReview } from "./official-store-source-offers.mjs";
 
 describe("supplier source offer review transitions", () => {
   it("returns an approved offer to review when its price changes", () => {
@@ -10,6 +10,11 @@ describe("supplier source offer review transitions", () => {
     expect(shouldRequireOfferReReview("approved", { quoteValidUntil: "2026-12-01T00:00:00Z" })).toBe(true);
     expect(shouldRequireOfferReReview("approved", { directToCustomerConfirmed: false })).toBe(true);
     expect(shouldRequireOfferReReview("approved", { availabilityStatus: "limited" })).toBe(true);
+  });
+
+  it("detects material changes that require a separate approval action", () => {
+    expect(hasMaterialOfferChanges({ supplierPrice: 9 })).toBe(true);
+    expect(hasMaterialOfferChanges({ note: "internal note" })).toBe(false);
   });
 
   it("does not change a draft or already reviewed offer unless a review status is explicitly supplied", () => {
