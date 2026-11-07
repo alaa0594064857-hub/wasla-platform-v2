@@ -224,12 +224,23 @@ export async function handleTradeRequest(
           return;
         }
         const counterparty = await client.query(
-          `SELECT id FROM accounts WHERE id = $1 AND status = 'active' LIMIT 1`,
+          `SELECT a.id
+           FROM accounts a
+           WHERE a.id = $1 AND a.status = 'active'
+             AND EXISTS (
+               SELECT 1 FROM account_members am
+               INNER JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
+               INNER JOIN role_permissions rp ON rp.role_id = r.id AND rp.scope_type = r.scope_type
+               INNER JOIN permissions p ON p.id = rp.permission_id AND p.scope_type = rp.scope_type
+               WHERE am.account_id = a.id AND am.status = 'active'
+                 AND p.permission_key = 'account.trade.read'
+             )
+           LIMIT 1`,
           [counterpartyAccountId],
         );
         if (!counterparty.rowCount) {
           await client.query("ROLLBACK");
-          respond(response, 404, { success: false, error: "Counterparty account not found" });
+          respond(response, 409, { success: false, error: "Counterparty account is not ready to receive trade deals" });
           return;
         }
 
@@ -387,7 +398,15 @@ export async function handleTradeRequest(
       const fromStatus = deal.status as DealStatus;
       let toStatus: DealStatus = fromStatus;
       let pendingResponse: string | null = deal.pending_response_account_id;
-      let eventType: string = action;
+      const eventTypeMap: Record<TradeAction, string> = {
+        propose: "proposed",
+        counter: "countered",
+        accept: "accepted",
+        decline: "declined",
+        cancel: "cancelled",
+        complete: "completed",
+      };
+      const eventType = eventTypeMap[action];
       let amount: number | null = null;
 
       if (action === "propose") {
