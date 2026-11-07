@@ -149,8 +149,8 @@ export async function handleAiProductDraftRequest(request: IncomingMessage, resp
       product = inserted.rows[0] as Record<string, unknown>;
       await client.query(
         `INSERT INTO official_store_activity_log (actor_type, actor_user_id, product_id, action, details)
-         VALUES ('ai', $1, $2, 'official_store.product.draft_created_by_ai', $3::jsonb)`,
-        [access.userId, product.id, JSON.stringify({ model, missing_information: missing, publication_status: "draft", supplier_offer_created: false })],
+         VALUES ('ai', NULL, $1, 'official_store.product.draft_created_by_ai', $2::jsonb)`,
+        [product.id, JSON.stringify({ model, initiated_by_user_id: access.userId, missing_information: missing, publication_status: "draft", supplier_offer_created: false })],
       );
       await client.query("COMMIT");
     } catch (error) {
