@@ -20,7 +20,7 @@ const initial = {
   productId: "", supplierName: "", sourcePlatform: "", sourceProductUrl: "",
   supplierPrice: "", supplierCurrency: "USD", shippingCost: "",
   shippingCurrency: "USD", minimumOrderQuantity: "1", shipsToCountries: "TR,US,GB,DE",
-  directToCustomerConfirmed: false, evidenceUrl: "",
+  directToCustomerConfirmed: false, evidenceUrl: "", specificationEvidenceUrl: "", quoteValidUntil: "",
 };
 
 export default function OfficialStoreSourceOffersPage() {
@@ -47,7 +47,9 @@ export default function OfficialStoreSourceOffersPage() {
     shippingCurrency: "عملة الشحن", moq: "الحد الأدنى للطلب",
     countries: "الدول المتاح الشحن إليها (رموز مثل TR,US)",
     dropship: "المورد أكد الشحن مباشرة للعميل",
-    evidence: "رابط إثبات المورد أو المواصفات HTTPS",
+    evidence: "رابط إثبات هوية/بيانات المورد HTTPS",
+    specificationEvidence: "رابط إثبات مواصفات المنتج HTTPS",
+    quoteExpiry: "تاريخ انتهاء عرض السعر",
     save: "حفظ العرض", saving: "جارٍ الحفظ...", offers: "العروض المسجلة",
     empty: "لا توجد عروض توريد بعد.", error: "تعذر تنفيذ العملية. تحقق من البيانات.",
     saved: "تم حفظ عرض المورد.", verify: "تأكيد التحقق والاعتماد",
@@ -63,7 +65,9 @@ export default function OfficialStoreSourceOffersPage() {
     shippingCurrency: "Shipping currency", moq: "Minimum order quantity",
     countries: "Shipping destinations (ISO codes e.g. TR,US)",
     dropship: "Supplier confirmed direct-to-customer shipping",
-    evidence: "Supplier or specification proof URL HTTPS",
+    evidence: "Supplier identity/offer proof URL HTTPS",
+    specificationEvidence: "Exact product specification proof URL HTTPS",
+    quoteExpiry: "Supplier quote expiry",
     save: "Save offer", saving: "Saving...", offers: "Recorded offers",
     empty: "No supplier offers yet.", error: "Could not complete the action. Check the fields.",
     saved: "Supplier offer saved.", verify: "Confirm verification and approval",
@@ -112,7 +116,10 @@ export default function OfficialStoreSourceOffersPage() {
     event.preventDefault(); setSaving(true); setError(""); setNotice("");
     try {
       const countries = form.shipsToCountries.split(",").map(x => x.trim().toUpperCase()).filter(Boolean);
-      const evidence = form.evidenceUrl.trim() ? [{ type: "supplier_evidence_url", url: form.evidenceUrl.trim() }] : [];
+      const evidence = [
+        ...(form.evidenceUrl.trim() ? [{ type: "supplier_evidence_url", url: form.evidenceUrl.trim() }] : []),
+        ...(form.specificationEvidenceUrl.trim() ? [{ type: "product_specification", url: form.specificationEvidenceUrl.trim() }] : []),
+      ];
       const response = await fetch("/api/platform/official-store/source-offers", {
         method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -123,6 +130,7 @@ export default function OfficialStoreSourceOffersPage() {
           shippingCurrency: form.shippingCurrency.trim().toUpperCase(),
           minimumOrderQuantity: form.minimumOrderQuantity === "" ? null : Number(form.minimumOrderQuantity),
           shipsToCountries: countries, directToCustomerConfirmed: form.directToCustomerConfirmed,
+          quoteValidUntil: form.quoteValidUntil ? new Date(form.quoteValidUntil).toISOString() : null,
           evidence,
         }),
       });
@@ -176,7 +184,9 @@ export default function OfficialStoreSourceOffersPage() {
         <label style={labelStyle}>{t.shippingCurrency}<input maxLength={3} value={form.shippingCurrency} onChange={e => update("shippingCurrency", e.target.value)} style={inputStyle}/></label>
         <label style={labelStyle}>{t.moq}<input type="number" min="1" step="1" value={form.minimumOrderQuantity} onChange={e => update("minimumOrderQuantity", e.target.value)} style={inputStyle}/></label>
         <label style={labelStyle}>{t.countries}<input value={form.shipsToCountries} onChange={e => update("shipsToCountries", e.target.value)} style={inputStyle}/></label>
-        <label style={{ ...labelStyle, gridColumn: "1 / -1" }}>{t.evidence}<input type="url" value={form.evidenceUrl} onChange={e => update("evidenceUrl", e.target.value)} style={inputStyle}/></label>
+        <label style={labelStyle}>{t.quoteExpiry}<input required type="datetime-local" value={form.quoteValidUntil} onChange={e => update("quoteValidUntil", e.target.value)} style={inputStyle}/></label>
+        <label style={labelStyle}>{t.evidence}<input required type="url" value={form.evidenceUrl} onChange={e => update("evidenceUrl", e.target.value)} style={inputStyle}/></label>
+        <label style={labelStyle}>{t.specificationEvidence}<input required type="url" value={form.specificationEvidenceUrl} onChange={e => update("specificationEvidenceUrl", e.target.value)} style={inputStyle}/></label>
         <label style={{ display: "flex", gap: 9, alignItems: "center", gridColumn: "1 / -1" }}>
           <input type="checkbox" checked={form.directToCustomerConfirmed} onChange={e => update("directToCustomerConfirmed", e.target.checked)}/>{t.dropship}
         </label>
