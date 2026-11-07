@@ -125,3 +125,67 @@ Do not describe the AI manager as operational until:
 - Owner pause/takeover controls are tested.
 
 Until then, any AI feature must be labelled as a prototype or draft-assistance feature, not an autonomous store manager.
+
+
+## 9. Autonomous product discovery, understanding and listing preparation
+
+The AI Store Manager must proactively find candidate products from approved, permissioned sources and turn them into structured WASLA catalogue drafts. This is a required product capability, not a manual-only workflow.
+
+### Discovery sources and search
+- Search approved official APIs, licensed product feeds, supplier/merchant feeds, authorized marketplace integrations and owner-provided research.
+- Search across markets and languages; retain source URL/provider, market, retrieval time, permission record and source freshness.
+- Do not assume unrestricted Amazon sales/rank/review access. Do not scrape sites or bypass access controls/terms. If a source is not approved, the AI may record a manually supplied lead for review but must not automate collection from it.
+- Search by category and customer demand signals, then discover candidate products, manufacturers and supplier offers. Keep demand evidence separate from supplier claims.
+
+### Product understanding and classification
+For every candidate, the AI must identify and normalize, where supported by evidence:
+- Product type/category and subcategory; what it is, what it does, how it is used and the intended user/customer.
+- Main benefits and use cases, compatible devices/systems, limitations and important warnings.
+- Brand, manufacturer, model, MPN/GTIN when available, edition/version/generation and country/market variants.
+- Exact variant attributes: size, dimensions, weight, colour, material, capacity, power/voltage, connector, language, format, bundle contents and other category-relevant properties.
+- Included accessories/components, warranty, certifications and safety/compliance information only when documented.
+- For books: title, author, publisher, ISBN, language, edition, publication date, format, page count, subject and intended audience, only where source evidence provides them.
+- For watches: watch type, movement, case and strap materials, case diameter/thickness, water-resistance rating, glass, display, battery, connectivity, compatibility and functions, only where applicable and verified.
+- For electronics, clothing, home goods, beauty, sports and other categories, use category-specific attribute schemas rather than one generic checklist.
+
+### Evidence, confidence and missing facts
+- Store each important claim with its source reference, evidence URL or document, observed time, source type and confidence.
+- Distinguish verified facts, supplier-provided claims, AI-inferred category suggestions and unknown fields.
+- Never infer a precise specification from a photo alone when it cannot be reliably established. Never invent a book author, ISBN, watch movement, material, certification, dimensions, compatibility or warranty.
+- Detect contradictions between sources and preserve the conflict for review. Ask the supplier or owner for missing critical facts.
+- Match duplicates using GTIN/ISBN/MPN/model and variant attributes. Similar appearance or title is not enough to merge products or variants.
+
+### WASLA listing preparation
+For a validated candidate, prepare a bilingual draft containing:
+- Accurate title and category/subcategory.
+- Short sales summary and detailed description.
+- What the product is, what it is used for, who it suits and key benefits.
+- Structured specifications and included items.
+- Usage instructions or care guidance only when supported by manufacturer/supplier documentation.
+- Compatibility, limitations, warnings, warranty, shipping and return details.
+- Search tags and SEO title/description.
+- Authorized product images/media with rights status, attribution and source provenance.
+- Exact product variants and their independent identifiers, prices and availability.
+- Source/evidence panel for owner review, not exposed as private procurement data to customers.
+
+The copy must be persuasive but truthful. It must not copy protected supplier text or images without permission. It may generate original wording from verified facts and may use authorized media or create original WASLA assets.
+
+### Product publication gates
+- New candidates begin as private drafts, never immediately public.
+- AI may auto-enrich and prepare draft records. Publishing requires all required fields, product identity/variant checks, supplier and fulfilment verification, current landed-cost pricing, media rights, destination and compliance checks.
+- Owner-approved low-risk categories and explicit rules may later allow controlled auto-publication. New suppliers, regulated/high-risk products, uncertain claims, missing rights, material source conflicts and exceptional prices require human review.
+- A listing must be paused when evidence expires, source data materially changes, a supplier withdraws availability, or a credible safety/authenticity complaint is received.
+
+### Required workflow
+1. Discover a candidate from an approved source.
+2. Save source and permission provenance.
+3. Resolve canonical product identity and variants.
+4. Extract category-specific facts and attach evidence.
+5. Check conflicts, unknowns, rights and compliance.
+6. Compare independently verified supplier offers.
+7. Calculate destination-specific landed cost and approved selling price.
+8. Generate Arabic and English listing draft, attributes, SEO and tags.
+9. Submit to owner review (or later an explicitly approved low-risk auto-publish policy).
+10. Revalidate offer, price, stock, destination and rights periodically and before checkout.
+
+Implementation status: product sourcing candidates, authorized source registry, deterministic identity matching, manual evidence-based opportunity assessment and supplier price preview are foundations. A live discovery connector, category-specific extraction/classification pipeline, evidence-level attribute store, AI-generated bilingual listing drafts, rights-aware media workflow, and publish/refresh automation are not yet implemented.
