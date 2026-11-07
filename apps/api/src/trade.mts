@@ -219,7 +219,7 @@ export async function handleTradeRequest(
         return;
       }
       if (expiresAt !== undefined && expiresAt !== null &&
-          (typeof expiresAt !== "string" || !Number.isFinite(Date.parse(expiresAt)))) {
+          (typeof expiresAt !== "string" || !Number.isFinite(Date.parse(expiresAt)) || Date.parse(expiresAt) <= Date.now())) {
         respond(response, 400, { success: false, error: "Invalid expiry date" });
         return;
       }
@@ -269,7 +269,8 @@ export async function handleTradeRequest(
           if (typeof item !== "object" || item === null ||
               typeof item.title !== "string" || item.title.trim().length < 1 ||
               item.title.trim().length > 180 ||
-              typeof item.quantity !== "number" || !Number.isFinite(item.quantity) || item.quantity <= 0 ||
+              typeof item.quantity !== "number" || !Number.isFinite(item.quantity) ||
+              item.quantity <= 0 || item.quantity > 99999999999.999 ||
               typeof item.unitPrice !== "number" || !validAmount(item.unitPrice)) {
             await client.query("ROLLBACK");
             respond(response, 400, { success: false, error: "Invalid trade deal line item" });
