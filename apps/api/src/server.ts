@@ -112,6 +112,18 @@ async function handleRequest(
     return;
   }
 
+  if (requestUrl.pathname === "/api/platform/official-store/candidates/enrich") {
+    try {
+      const { handleOfficialStoreCandidateEnrichment } = await import("./official-store-candidate-enrichment.mjs");
+      await handleOfficialStoreCandidateEnrichment(request, response);
+    } catch (error) {
+      console.error("Official store candidate enrichment route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Product enrichment service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/platform/official-store/import-candidates") {
     try {
       const { handleOfficialStoreImportCandidatesRequest } = await import("./official-store-import-candidates.mjs");
