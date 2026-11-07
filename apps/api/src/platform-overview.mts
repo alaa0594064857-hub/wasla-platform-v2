@@ -28,7 +28,7 @@ export async function handlePlatformOverviewRequest(
     if (!access) return;
 
     const db = getDatabasePool();
-    const [accounts, stores, verification, users, officialOrders, officialProducts, sourceOffers] = await Promise.all([
+    const [accounts, stores, verification, users, officialOrders, officialProducts, sourceOffers, memberProducts, conversations, inquiries, tradeDeals, subscriptionPlans, subscriptions] = await Promise.all([
       db.query<{ account_type: string; status: string; total: number }>(
         `SELECT account_type::text AS account_type, status::text AS status, COUNT(*)::int AS total
          FROM accounts GROUP BY account_type, status ORDER BY account_type, status`,
@@ -62,6 +62,30 @@ export async function handlePlatformOverviewRequest(
                 COUNT(*) FILTER (WHERE offer_status = 'needs_review')::int AS needs_review
          FROM official_store_product_source_offers`,
       ),
+      db.query<{ total: number; active: number }>(
+        `SELECT COUNT(*)::int AS total,
+                COUNT(*) FILTER (WHERE status = 'active')::int AS active
+         FROM store_products`,
+      ),
+      db.query<{ total: number }>(
+        `SELECT COUNT(*)::int AS total FROM message_conversations`,
+      ),
+      db.query<{ total: number }>(
+        `SELECT COUNT(*)::int AS total FROM product_inquiries`,
+      ),
+      db.query<{ total: number }>(
+        `SELECT COUNT(*)::int AS total FROM trade_deals`,
+      ),
+      db.query<{ total: number; active: number }>(
+        `SELECT COUNT(*)::int AS total,
+                COUNT(*) FILTER (WHERE status = 'active')::int AS active
+         FROM subscription_plans`,
+      ),
+      db.query<{ total: number; active: number }>(
+        `SELECT COUNT(*)::int AS total,
+                COUNT(*) FILTER (WHERE status = 'active')::int AS active
+         FROM subscriptions`,
+      ),
     ]);
 
     const sum = (rows: Array<{ total: number }>) => rows.reduce((value, row) => value + Number(row.total || 0), 0);
@@ -77,6 +101,15 @@ export async function handlePlatformOverviewRequest(
         officialStoreProducts: Number(officialProducts.rows[0]?.total ?? 0),
         supplierOffers: Number(sourceOffers.rows[0]?.total ?? 0),
         supplierOffersNeedingReview: Number(sourceOffers.rows[0]?.needs_review ?? 0),
+        memberProducts: Number(memberProducts.rows[0]?.total ?? 0),
+        activeMemberProducts: Number(memberProducts.rows[0]?.active ?? 0),
+        messageConversations: Number(conversations.rows[0]?.total ?? 0),
+        productInquiries: Number(inquiries.rows[0]?.total ?? 0),
+        tradeDeals: Number(tradeDeals.rows[0]?.total ?? 0),
+        subscriptionPlans: Number(subscriptionPlans.rows[0]?.total ?? 0),
+        activeSubscriptionPlans: Number(subscriptionPlans.rows[0]?.active ?? 0),
+        subscriptions: Number(subscriptions.rows[0]?.total ?? 0),
+        activeSubscriptions: Number(subscriptions.rows[0]?.active ?? 0),
       },
       accountsByType: accounts.rows,
       storesByStatus: stores.rows,
@@ -92,10 +125,14 @@ export async function handlePlatformOverviewRequest(
         complaints: false,
         aiOperations: false,
         officialPlatformStore: true,
+        memberCatalog: true,
+        messages: true,
+        trade: true,
+        subscriptionManagement: true,
       },
       notes: {
         stores: "Counts represent member-owned stores in the stores table, not the future official WASLA Store.",
-        unavailable: "Member-store orders, sales, ratings, complaints, and autonomous AI operations are not enabled. Official-store order and supplier-offer counts reflect their separate owner-only tables.",
+        unavailable: "Member-store checkout/payment, sales, ratings, complaints, and autonomous AI operations are not enabled. Trade metrics count deal records but do not imply payment or settlement. Official-store order and supplier-offer counts reflect their separate owner-only tables.",
       },
     });
   } catch (error) {
