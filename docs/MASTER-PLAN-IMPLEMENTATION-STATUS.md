@@ -240,3 +240,16 @@ Do not describe the platform as commercially launch-ready based only on successf
 - GitHub Actions run `42399529081` passed all quality steps, including API tests, migrations, database constraints, TypeScript checks and API/web builds. Runs `42400123571`, `42400180878` and `42400200853` also passed all quality steps after the subsequent hardening changes.
 - Render API and Web deployments for commit `9a9f114771e374fd132b562b34cae65e87581b0d` were confirmed Live. Later seller-manager routing and URL-validation changes are in the deployment queue and must be checked before being marked Live.
 - Verification boundary: CI tests and deployment checks do not replace authenticated two-account browser testing. No fake customer, product, inquiry or order records were created. Supplier private data remains restricted to owner-side workflows; public catalog and legal disclosure review remain separate launch gates.
+
+
+## Production authorization bootstrap checkpoint — 2026-11-07
+
+- Production inspection found that several account/store roles and permission links existed in shared source definitions but had not been provisioned in the live database. This would have prevented normal account invitations and caused operation-level permission checks to deny valid store employees/managers.
+- Added an idempotent startup bootstrap for the complete 14-role/51-permission shared authorization matrix. It updates role/permission definitions and links only; it does not create users, memberships or role assignments. Existing platform-owner bootstrap still runs afterward to grant the owner's additional platform security/audit permissions.
+- The API now runs authorization bootstrap before opening its listener. This avoids relying on a one-time manual seed command in production.
+- Production database verification after deployment confirms account_owner, account_admin, account_manager, account_employee, account_viewer, store_owner, store_admin, store_manager and store_employee role permission links. Employee/viewer read/create boundaries match the shared role definitions. The configured owner account remains active, verified and assigned platform_owner.
+- Store products API now checks the appropriate scoped permission per operation: read for GET, create for POST, update for PATCH. Store detail updates and store listing also use scoped permissions instead of hard-coded role-name allowlists.
+- Integration coverage verifies the role bootstrap is idempotent and that employee/viewer/store roles receive the intended permission boundaries.
+- GitHub Actions run `42401768346` passed API tests, database migrations, authorization seed idempotency, database integration tests, TypeScript checks and API/Web builds.
+- Render API deployment `dep-dbnmtafavr4c73al87l0` for commit `d122cf03738333273981347476eb0c82522fc6bb` is confirmed Live; runtime logs confirm the API listener started successfully. The owner assignment and production permission matrix were re-read after startup.
+- Verification boundary: role data and startup were verified against production. Full browser-based tests of invitation acceptance and every role's UI actions with separate accounts are still required.
