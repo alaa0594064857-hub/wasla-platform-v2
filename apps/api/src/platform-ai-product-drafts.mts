@@ -128,7 +128,7 @@ export async function handleAiProductDraftRequest(request: IncomingMessage, resp
 
     const db = getDatabasePool();
     const client = await db.connect();
-    let product: Record<string, unknown>;
+    let product: Record<string, unknown> = {};
     try {
       await client.query("BEGIN");
       const inserted = await client.query(
