@@ -74,8 +74,8 @@ async function handleRequest(
     return;
   }
 
-  if (/^\\/api\\/trade\\/brokerage-agreements(?:\\/[0-9a-f-]{36})?$/i.test(requestUrl.pathname)) {
-    const agreementId = requestUrl.pathname.match(/^\\/api\\/trade\\/brokerage-agreements\\/([0-9a-f-]{36})$/i)?.[1];
+  if (/^\/api\/trade\/brokerage-agreements(?:\/[0-9a-f-]{36})?$/i.test(requestUrl.pathname)) {
+    const agreementId = requestUrl.pathname.match(/^\/api\/trade\/brokerage-agreements\/([0-9a-f-]{36})$/i)?.[1];
     try {
       const { handleBrokerageAgreements } = await import("./trade-brokerage-agreements.mjs");
       await handleBrokerageAgreements(request, response, agreementId);
