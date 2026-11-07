@@ -382,6 +382,10 @@ export async function handleTradeRequest(
       respond(response, 400, { success: false, error: "Invalid trade action" });
       return;
     }
+    if (action === "counter" && nextAmount !== undefined && !validAmount(nextAmount)) {
+      respond(response, 400, { success: false, error: "Counter amount must be a valid non-negative number" });
+      return;
+    }
 
     const client = await db.connect();
     try {
@@ -447,8 +451,7 @@ export async function handleTradeRequest(
         if ((!message && nextAmount === undefined) ||
             actorAccountId !== deal.pending_response_account_id ||
             !["proposed", "negotiating"].includes(fromStatus) ||
-            !(await hasAccountPermission(client, actorAccountId, userId, "account.trade.negotiate")) ||
-            (nextAmount !== undefined && !validAmount(nextAmount))) {
+            !(await hasAccountPermission(client, actorAccountId, userId, "account.trade.negotiate"))) {
           await client.query("ROLLBACK");
           respond(response, 403, { success: false, error: "The pending responder must have negotiation permission to counter" });
           return;
