@@ -31,7 +31,12 @@ function validOptionalUrl(value: unknown): value is string | null | undefined {
   if (value === undefined || value === null) return true;
   if (typeof value !== "string" || value.length > 2048) return false;
   try {
-    return new URL(value).protocol === "https:";
+    const url = new URL(value);
+    return url.protocol === "https:" &&
+      !url.username && !url.password &&
+      url.hostname !== "localhost" &&
+      !url.hostname.endsWith(".localhost") &&
+      !url.hostname.endsWith(".local");
   } catch {
     return false;
   }
