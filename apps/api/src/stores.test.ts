@@ -70,10 +70,10 @@ describe("member store visibility", () => {
     mocks.connect.mockResolvedValueOnce(client);
     client.query
       .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "account-1" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "33333333-3333-4333-8333-333333333333" }] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "store-owner-role" }] })
       .mockResolvedValueOnce({ rows: [{ exists: false }] })
-      .mockResolvedValueOnce({ rows: [{ id: "store-1", account_id: "account-1", name: "Test Shop", slug: "test-shop", status: "active" }] })
+      .mockResolvedValueOnce({ rows: [{ id: "store-1", account_id: "33333333-3333-4333-8333-333333333333", name: "Test Shop", slug: "test-shop", status: "active" }] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] });
@@ -82,14 +82,14 @@ describe("member store visibility", () => {
     const response = await fetch(`${baseUrl}/api/stores`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ accountId: "account-1", name: "Test Shop" }),
+      body: JSON.stringify({ accountId: "33333333-3333-4333-8333-333333333333", name: "Test Shop" }),
     });
 
     expect(response.status).toBe(201);
     const authorizationSql = String(client.query.mock.calls[1][0]);
     expect(authorizationSql).toContain("p.permission_key = 'account.business.update'");
     expect(authorizationSql).not.toContain("r.name IN ('account_owner', 'account_manager')");
-    expect(client.query.mock.calls[1][1]).toEqual(["account-1", "store-member-user"]);
+    expect(client.query.mock.calls[1][1]).toEqual(["33333333-3333-4333-8333-333333333333", "store-member-user"]);
     expect(client.release).toHaveBeenCalledOnce();
   });
 });
