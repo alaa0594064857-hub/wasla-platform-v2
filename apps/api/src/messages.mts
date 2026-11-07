@@ -159,20 +159,77 @@ export async function handleMessagesRequest(
 
     if (!conversationId && request.method === "POST") {
       const body = await readBody(request);
-      if (!isObject(body) || typeof body.recipientId !== "string" ||
-          !/^[0-9a-f-]{36}$/i.test(body.recipientId) || body.recipientId === userId) {
-        respond(response, 400, { success: false, error: "A valid recipientId is required" });
+      if (!isObject(body)) {
+        respond(response, 400, { success: false, error: "A recipientId or productId is required" });
         return;
       }
-      const recipient = await db.query(
-        `SELECT id FROM users WHERE id = $1 AND status = 'active' AND email_verified = TRUE LIMIT 1`,
-        [body.recipientId],
-      );
-      if (!recipient.rowCount) {
-        respond(response, 404, { success: false, error: "Recipient not found or unavailable" });
+      const hasRecipient = typeof body.recipientId === "string";
+      const hasProduct = typeof body.productId === "string";
+      if (hasRecipient === hasProduct) {
+        respond(response, 400, { success: false, error: "Provide exactly one recipientId or productId" });
         return;
       }
-      const [low, high] = [userId, body.recipientId].sort();
+      let recipientId: string;
+      if (hasProduct) {
+        if (!/^[0-9a-f-]{36}$/i.test(body.productId as string)) {
+          respond(response, 400, { success: false, error: "Invalid productId" });
+          return;
+        }
+        const seller = await db.query(
+          `SELECT COALESCE(store_owner.user_id, account_owner.user_id, account_manager.user_id) AS recipient_id
+           FROM store_products p
+           INNER JOIN stores s ON s.id = p.store_id AND s.status = 'active'
+           INNER JOIN accounts a ON a.id = s.account_id AND a.status = 'active'
+           LEFT JOIN LATERAL (
+             SELECT sm.user_id FROM store_members sm
+             INNER JOIN users u ON u.id = sm.user_id AND u.status = 'active' AND u.email_verified = TRUE
+             INNER JOIN roles r ON r.id = sm.role_id AND r.scope_type = sm.role_scope AND r.name = 'store_owner'
+             WHERE sm.store_id = s.id AND sm.status = 'active'
+             ORDER BY sm.created_at ASC LIMIT 1
+           ) store_owner ON TRUE
+           LEFT JOIN LATERAL (
+             SELECT am.user_id FROM account_members am
+             INNER JOIN users u ON u.id = am.user_id AND u.status = 'active' AND u.email_verified = TRUE
+             INNER JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope AND r.name = 'account_owner'
+             WHERE am.account_id = a.id AND am.status = 'active'
+             ORDER BY am.created_at ASC LIMIT 1
+           ) account_owner ON TRUE
+           LEFT JOIN LATERAL (
+             SELECT am.user_id FROM account_members am
+             INNER JOIN users u ON u.id = am.user_id AND u.status = 'active' AND u.email_verified = TRUE
+             INNER JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope AND r.name = 'account_manager'
+             WHERE am.account_id = a.id AND am.status = 'active'
+             ORDER BY am.created_at ASC LIMIT 1
+           ) account_manager ON TRUE
+           WHERE p.id = $1 AND p.status = 'active'
+           LIMIT 1`,
+          [body.productId],
+        );
+        recipientId = seller.rows[0]?.recipient_id;
+        if (!recipientId) {
+          respond(response, 404, { success: false, error: "Product seller is unavailable" });
+          return;
+        }
+      } else {
+        if (!/^[0-9a-f-]{36}$/i.test(body.recipientId as string)) {
+          respond(response, 400, { success: false, error: "Invalid recipientId" });
+          return;
+        }
+        recipientId = body.recipientId as string;
+        const recipient = await db.query(
+          `SELECT id FROM users WHERE id = $1 AND status = 'active' AND email_verified = TRUE LIMIT 1`,
+          [recipientId],
+        );
+        if (!recipient.rowCount) {
+          respond(response, 404, { success: false, error: "Recipient not found or unavailable" });
+          return;
+        }
+      }
+      if (recipientId === userId) {
+        respond(response, 400, { success: false, error: "You cannot start a conversation with yourself" });
+        return;
+      }
+      const [low, high] = [userId, recipientId].sort();
       const result = await db.query(
         `INSERT INTO message_conversations (participant_low, participant_high)
          VALUES ($1, $2)
