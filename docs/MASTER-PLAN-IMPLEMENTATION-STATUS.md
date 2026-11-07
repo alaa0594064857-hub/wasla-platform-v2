@@ -328,7 +328,7 @@ Do not describe the platform as commercially launch-ready based only on successf
 
 - Added API regression tests proving an offer cannot be approved without verified supplier identity, exact specifications, supplier/product evidence, direct-to-customer shipping, MOQ, current quote and availability.
 - Added a test proving material changes cannot be combined with approval in the same request; the changed offer must be saved and reviewed in a separate action.
-- Added the new tests to the standard API CI command. CI run `42406409120` is in progress; the API test stage has passed, with TypeScript/build checks still running at this checkpoint.
+- Added the new tests to the standard API CI command. GitHub Actions run `42406409120` completed successfully, including API tests, database migration/authorization/constraint checks, API TypeScript check and API/Web builds.
 - No supplier candidates, source offers or official-store products exist in the production database at this time. No fabricated records were added.
 
 
