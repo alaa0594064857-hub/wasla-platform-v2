@@ -82,6 +82,9 @@ export default function TradeOpportunityReviewPage() {
       <p style={{ lineHeight: 1.8, maxWidth: 780 }}>{ar ? "كل طلب هنا خاص وغير متاح للمطابقة قبل مراجعة الإدارة. الاعتماد يعني السماح بالانتقال إلى مرحلة التحقق والمطابقة، وليس إعلان الطرف موثوقاً أو ضمان الصفقة." : "Submissions remain private until reviewed. Approval permits progression to verification and matching; it does not certify a party or guarantee a transaction."}</p>
       {error && <p role="alert" style={{ padding: 12, borderRadius: 10, background: "#f8e7e5", color: "#8f302d" }}>{error}</p>}
       {notice && <p role="status" style={{ padding: 12, borderRadius: 10, background: "#e8f0e9", color: "#245b3b" }}>{notice}</p>}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "16px 0" }}>
+        <a href="/owner/trade/matches" style={{ padding: "9px 12px", borderRadius: 9, border: "1px solid #c6a15b", color: "#14243a", textDecoration: "none" }}>{ar ? "عرض المطابقات الاسترشادية" : "View indicative matches"}</a>
+      </div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, margin: "18px 0" }}>
         <strong>{ar ? `طلبات بانتظار المراجعة: ${items.length}` : `Pending review: ${items.length}`}</strong>
         <button type="button" onClick={() => void load()} disabled={loading} style={{ ...button, background: "transparent", color: "#14243a" }}>{ar ? "تحديث" : "Refresh"}</button>
