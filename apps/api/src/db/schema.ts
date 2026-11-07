@@ -205,6 +205,9 @@ export const profiles = pgTable("profiles", {
     .references(() => users.id, { onDelete: "cascade" }),
   displayName: varchar("display_name", { length: 160 }).notNull(),
   avatarReference: text("avatar_reference"),
+  bio: text("bio"),
+  website: text("website"),
+  socialLinks: jsonb("social_links").$type<Record<string, string>>().notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
