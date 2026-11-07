@@ -90,7 +90,7 @@ export async function handleOfficialStoreProductsRequest(
                 offer.estimated_shipping_days_min AS "estimatedDeliveryDaysMin",
                 offer.estimated_shipping_days_max AS "estimatedDeliveryDaysMax"
          FROM official_store_products p
-         INNER JOIN official_store_settings s ON s.singleton_id = TRUE
+         INNER JOIN official_store_settings s ON s.singleton_id = TRUE AND s.status = 'active'
          INNER JOIN LATERAL (
            SELECT o.ships_to_countries, o.estimated_shipping_days_min,
                   o.estimated_shipping_days_max
