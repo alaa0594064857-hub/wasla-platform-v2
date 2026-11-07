@@ -90,7 +90,25 @@ export async function handleOfficialStoreProductsRequest(
          INNER JOIN official_store_settings s ON s.singleton_id = TRUE
          WHERE p.status = 'published' AND s.status = 'active'
            AND p.availability_status IN ('available', 'limited')
-           AND p.supplier_dropship_confirmed = TRUE
+           AND EXISTS (
+             SELECT 1
+             FROM official_store_product_source_offers o
+             WHERE o.product_id = p.id
+               AND o.offer_status = 'approved'
+               AND o.availability_status IN ('available', 'limited')
+               AND o.direct_to_customer_confirmed = TRUE
+               AND o.supplier_identity_verified = TRUE
+               AND o.specifications_verified = TRUE
+               AND o.minimum_order_quantity = 1
+               AND o.shipping_cost IS NOT NULL
+               AND o.shipping_currency IS NOT NULL
+               AND jsonb_typeof(o.ships_to_countries) = 'array'
+               AND jsonb_array_length(o.ships_to_countries) > 0
+               AND o.estimated_shipping_days_min IS NOT NULL
+               AND o.estimated_shipping_days_max IS NOT NULL
+               AND o.quote_valid_until > NOW()
+               AND o.last_verified_at IS NOT NULL
+           )
          ORDER BY p.created_at DESC
          LIMIT 100`,
       );
