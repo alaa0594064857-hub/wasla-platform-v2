@@ -124,7 +124,23 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
         }
       }
 
-      router.replace("/account");
+      // Resolve the signed-in account's server-verified platform role before choosing its landing page.
+      let destination = "/account";
+      try {
+        const accessResponse = await fetch("/api/platform/security", {
+          credentials: "include",
+          cache: "no-store",
+        });
+        if (accessResponse.ok) {
+          const accessData = await accessResponse.json();
+          if (accessData?.success && accessData.platformAccess?.roles?.includes("platform_owner")) {
+            destination = "/owner";
+          }
+        }
+      } catch {
+        // Keep the normal account landing page if the security check is temporarily unavailable.
+      }
+      router.replace(destination);
       router.refresh();
     } catch {
       setError(isRegister ? t.registerError : t.loginError);
