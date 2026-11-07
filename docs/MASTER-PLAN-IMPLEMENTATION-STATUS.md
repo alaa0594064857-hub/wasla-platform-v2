@@ -444,4 +444,4 @@ Do not describe the platform as commercially launch-ready based only on successf
 - The owner must still prepare a final customer quote and obtain customer approval; payment remains disabled, no purchase is placed, and owner review remains required.
 - Customer history now says the supplier confirmed availability but the final quote is pending. Owner review confirmation message and AI guidance reflect the same boundary.
 - API schema initialization safely replaces the order-status check constraint to include the new state. CI validates the API tests and builds.
-- API deployment for commit `91c2aed900c39b0dce51a1813565804d861594b5` is verified Live; Web deployment is building/starting.
+- API and Web deployments for commit `91c2aed900c39b0dce51a1813565804d861594b5` are both verified Live. GitHub Actions run `42411813187` passed all tests, database migration/constraint checks, TypeScript checks and both builds.
