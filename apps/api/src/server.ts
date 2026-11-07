@@ -136,6 +136,18 @@ async function handleRequest(
     return;
   }
 
+  if (requestUrl.pathname === "/api/platform/official-store/pricing/preview") {
+    try {
+      const { handleOfficialStorePricingRequest } = await import("./official-store-pricing.mjs");
+      await handleOfficialStorePricingRequest(request, response);
+    } catch (error) {
+      console.error("WASLA official store pricing route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Pricing preview service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const officialStoreSourceOfferMatch = requestUrl.pathname.match(/^\/api\/platform\/official-store\/source-offers(?:\/([0-9a-f-]{36}))?$/i);
   if (officialStoreSourceOfferMatch) {
     try {
