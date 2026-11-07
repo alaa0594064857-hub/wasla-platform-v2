@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, describe, expect, it } from "vitest";
 import { Pool } from "pg";
-import { ensureAuthorizationRoles } from "./authorization-bootstrap.mjs";
 import { closeDatabaseConnection } from "./database.js";
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -67,6 +66,7 @@ describe("WASLA database role permission scope integrity", () => {
   });
 
   it("bootstraps the full account/store role matrix idempotently", async () => {
+    const { ensureAuthorizationRoles } = await import("./authorization-bootstrap.mjs");
     await ensureAuthorizationRoles();
     await ensureAuthorizationRoles();
     const result = await pool.query(
