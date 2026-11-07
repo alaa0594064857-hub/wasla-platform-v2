@@ -61,6 +61,10 @@ export default function TradePage() {
   const [description, setDescription] = useState("");
   const [currency, setCurrency] = useState("USD");
   const [amount, setAmount] = useState("");
+  const [itemTitle, setItemTitle] = useState("");
+  const [itemSku, setItemSku] = useState("");
+  const [itemQuantity, setItemQuantity] = useState("1");
+  const [itemUnitPrice, setItemUnitPrice] = useState("");
   const [counterDrafts, setCounterDrafts] = useState<Record<string, { message: string; amount: string }>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -139,6 +143,13 @@ export default function TradePage() {
       setError(ar ? "أدخل قيمة صحيحة غير سالبة." : "Enter a valid non-negative amount.");
       return;
     }
+    if (itemTitle.trim() && (
+      !Number.isFinite(Number(itemQuantity)) || Number(itemQuantity) <= 0 ||
+      !Number.isFinite(Number(itemUnitPrice)) || Number(itemUnitPrice) < 0
+    )) {
+      setError(ar ? "أدخل كمية وسعراً صحيحين لبند الصفقة." : "Enter a valid quantity and unit price for the deal item.");
+      return;
+    }
     setSaving(true);
     setError("");
     setNotice("");
@@ -154,6 +165,13 @@ export default function TradePage() {
           description: description.trim(),
           currency,
           proposedAmount: amount.trim() ? Number(amount) : null,
+          items: itemTitle.trim() ? [{
+            title: itemTitle.trim(),
+            sku: itemSku.trim() || null,
+            quantity: Number(itemQuantity),
+            unitPrice: Number(itemUnitPrice),
+            currency,
+          }] : [],
         }),
       });
       const data = await response.json();
@@ -161,6 +179,10 @@ export default function TradePage() {
       setTitle("");
       setDescription("");
       setAmount("");
+      setItemTitle("");
+      setItemSku("");
+      setItemQuantity("1");
+      setItemUnitPrice("");
       setSelectedCounterparty(null);
       setBusinessQuery("");
       setBusinessResults([]);
@@ -244,6 +266,23 @@ export default function TradePage() {
           <label style={{ display: "grid", gap: 6 }}>{ar ? "القيمة المقترحة (اختياري)" : "Proposed amount (optional)"}
             <input inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" style={inputStyle} />
           </label>
+        </div>
+        <div style={{ marginTop: 14, padding: 14, borderRadius: 12, background: "#f7f4ed", display: "grid", gap: 10 }}>
+          <strong>{ar ? "بند أول (اختياري)" : "First line item (optional)"}</strong>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))", gap: 10 }}>
+            <label style={{ display: "grid", gap: 5 }}>{ar ? "اسم المنتج أو الخدمة" : "Product or service"}
+              <input value={itemTitle} onChange={e => setItemTitle(e.target.value)} maxLength={180} style={inputStyle} />
+            </label>
+            <label style={{ display: "grid", gap: 5 }}>{ar ? "رمز المنتج (اختياري)" : "SKU (optional)"}
+              <input value={itemSku} onChange={e => setItemSku(e.target.value)} maxLength={120} style={inputStyle} />
+            </label>
+            <label style={{ display: "grid", gap: 5 }}>{ar ? "الكمية" : "Quantity"}
+              <input inputMode="decimal" value={itemQuantity} onChange={e => setItemQuantity(e.target.value)} style={inputStyle} />
+            </label>
+            <label style={{ display: "grid", gap: 5 }}>{ar ? "سعر الوحدة" : "Unit price"}
+              <input inputMode="decimal" value={itemUnitPrice} onChange={e => setItemUnitPrice(e.target.value)} placeholder="0.00" style={inputStyle} />
+            </label>
+          </div>
         </div>
         <label style={{ display: "grid", gap: 6, marginTop: 12 }}>{ar ? "وصف وشروط مبدئية" : "Description and initial terms"}
           <textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={5000} rows={3} style={inputStyle} />
