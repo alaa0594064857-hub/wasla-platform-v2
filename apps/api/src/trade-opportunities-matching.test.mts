@@ -19,6 +19,16 @@ describe("WASLA Trade opportunity matching", () => {
     expect(matches[0].readiness).toBe("review_ready");
   });
 
+  it("does not award full quantity fit when supplier capacity is unknown", () => {
+    const buyer = { ...base, id: "buyer", opportunity_type: "buyer_request" as const, minimum_order_quantity: null };
+    const supplier = { ...base, id: "supplier", account_id: "account-b", opportunity_type: "supplier_offer" as const, quantity: null };
+    const matches = buildTradeOpportunityMatches([buyer, supplier]);
+    expect(matches).toHaveLength(1);
+    expect(matches[0].score).toBe(85);
+    expect(matches[0].readiness).toBe("needs_information");
+    expect(matches[0].warnings).toContain("Supplier capacity needs confirmation");
+  });
+
   it("does not match incompatible origin, destination, currency, MOQ, capacity or budget", () => {
     const buyer = { ...base, id: "buyer", opportunity_type: "buyer_request" as const, minimum_order_quantity: null };
     const supplier = { ...base, id: "supplier", account_id: "account-b", opportunity_type: "supplier_offer" as const, quantity: "150", target_unit_price: "850" };
