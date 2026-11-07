@@ -101,4 +101,22 @@ describe("product-based private messaging", () => {
     expect(response.status).toBe(400);
     expect(mocks.query).not.toHaveBeenCalled();
   });
+
+  it("uses public member profile details in conversation lists", async () => {
+    mocks.query.mockResolvedValueOnce({
+      rows: [{ id: "conversation-id", peer_name: "Profile Name", peer_image: "https://example.com/avatar.png" }],
+    });
+
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/messages`);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      success: true,
+      conversations: [{ id: "conversation-id", peer_name: "Profile Name", peer_image: "https://example.com/avatar.png" }],
+    });
+    const sql = String(mocks.query.mock.calls[0][0]);
+    expect(sql).toContain("COALESCE(peer_profile.display_name, peer.name)");
+    expect(sql).toContain("LEFT JOIN profiles peer_profile");
+  });
 });
