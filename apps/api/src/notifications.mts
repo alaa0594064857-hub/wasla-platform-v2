@@ -6,7 +6,7 @@ import { getDatabasePool } from "./database.js";
 
 export type NotificationInput = {
   userId: string;
-  type: "account_invitation" | "message_received" | "product_inquiry" | "friend_request" | "trade_deal";
+  type: "account_invitation" | "message_received" | "product_inquiry" | "friend_request" | "trade_deal" | "official_store_order";
   titleAr: string;
   titleEn: string;
   bodyAr?: string | null;
@@ -51,7 +51,7 @@ export async function ensureNotificationsTable(): Promise<void> {
   `);
   await db.query(`ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check`);
   await db.query(`ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
-    CHECK (type IN ('account_invitation', 'message_received', 'product_inquiry', 'friend_request', 'trade_deal'))`);
+    CHECK (type IN ('account_invitation', 'message_received', 'product_inquiry', 'friend_request', 'trade_deal', 'official_store_order'))`);
   await db.query(`CREATE INDEX IF NOT EXISTS notifications_user_created_idx ON notifications (user_id, created_at DESC)`);
   await db.query(`CREATE INDEX IF NOT EXISTS notifications_user_unread_idx ON notifications (user_id, created_at DESC) WHERE read_at IS NULL`);
 }
