@@ -67,8 +67,8 @@ export default function OfficialStoreOrdersPage() {
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(typeof data.error === "string" ? data.error : "review");
       setReviewMessage(ar
-        ? (decision === "accepted" ? "تم تسجيل تأكيد المورد. الدفع والشراء ما زالا غير مفعّلين." : "تم إغلاق الطلب لعدم تأكيد المورد.")
-        : (decision === "accepted" ? "Supplier confirmation recorded. Payment and purchasing remain disabled." : "Request closed because the supplier could not confirm availability."));
+        ? (decision === "accepted" ? "تم تسجيل تأكيد المورد. يلزم إعداد عرض السعر النهائي وموافقة العميل؛ الدفع والشراء ما زالا غير مفعّلين." : "تم إغلاق الطلب لعدم تأكيد المورد.")
+        : (decision === "accepted" ? "Supplier confirmation recorded. A final quote and customer approval are still required; payment and purchasing remain disabled." : "Request closed because the supplier could not confirm availability."));
       setReviewNote(""); setReviewEvidenceUrl("");
       await load();
       await openOrder(orderId);
