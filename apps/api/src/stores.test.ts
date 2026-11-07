@@ -60,7 +60,8 @@ describe("member store visibility", () => {
     const sql = String(mocks.query.mock.calls[0][0]);
     expect(sql).toContain("LEFT JOIN account_members am");
     expect(sql).toContain("LEFT JOIN store_members sm");
-    expect(sql).toContain("OR sm.id IS NOT NULL");
+    expect(sql).toContain("p.permission_key = 'account.read'");
+    expect(sql).toContain("p.permission_key = 'store.read'");
     expect(mocks.query.mock.calls[0][1]).toEqual(["store-member-user"]);
   });
 });
