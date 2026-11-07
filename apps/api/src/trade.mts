@@ -45,6 +45,7 @@ async function hasAccountPermission(
   const result = await client.query(
     `SELECT 1
      FROM account_members am
+     INNER JOIN accounts a ON a.id = am.account_id AND a.status = 'active'
      INNER JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
      INNER JOIN role_permissions rp ON rp.role_id = r.id AND rp.scope_type = r.scope_type
      INNER JOIN permissions p ON p.id = rp.permission_id AND p.scope_type = rp.scope_type
@@ -419,7 +420,8 @@ export async function handleTradeRequest(
         toStatus = "proposed";
         pendingResponse = deal.counterparty_account_id;
       } else if (action === "counter") {
-        if (actorAccountId !== deal.pending_response_account_id ||
+        if ((!message && nextAmount === undefined) ||
+            actorAccountId !== deal.pending_response_account_id ||
             !["proposed", "negotiating"].includes(fromStatus) ||
             !(await hasAccountPermission(client, actorAccountId, userId, "account.trade.negotiate")) ||
             (nextAmount !== undefined && !validAmount(nextAmount))) {
