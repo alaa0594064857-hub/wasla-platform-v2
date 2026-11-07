@@ -8,7 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run src/server.test.ts src/database.test.ts src/platform-security.test.ts src/official-store-source-offers.test.ts src/messages.test.ts src/stores.test.ts src/store-products.test.ts src/notifications.test.ts",
+    "test": "vitest run src/server.test.ts src/database.test.ts src/platform-security.test.ts src/official-store-source-offers.test.ts src/messages.test.ts src/stores.test.ts src/store-products.test.ts src/notifications.test.ts src/member-actions.test.ts",
     "test:integration": "vitest run src/database.integration.test.ts",
     "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
     "db:migrate": "drizzle-kit migrate --config=drizzle.config.ts",
