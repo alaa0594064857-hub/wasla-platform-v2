@@ -80,7 +80,24 @@ export async function handleStoresRequest(
            AND sm.user_id = $1 AND sm.status = 'active'
          LEFT JOIN roles smr ON smr.id = sm.role_id AND smr.scope_type = sm.role_scope
          WHERE s.status <> 'deactivated'
-           AND (r.name IN ('account_owner', 'account_manager') OR sm.id IS NOT NULL)
+           AND (
+             EXISTS (
+               SELECT 1 FROM account_members member
+               INNER JOIN roles member_role ON member_role.id = member.role_id AND member_role.scope_type = member.role_scope
+               INNER JOIN role_permissions rp ON rp.role_id = member_role.id AND rp.scope_type = member_role.scope_type
+               INNER JOIN permissions p ON p.id = rp.permission_id AND p.scope_type = rp.scope_type
+               WHERE member.account_id = s.account_id AND member.user_id = $1
+                 AND member.status = 'active' AND p.permission_key = 'account.read'
+             )
+             OR EXISTS (
+               SELECT 1 FROM store_members member
+               INNER JOIN roles member_role ON member_role.id = member.role_id AND member_role.scope_type = member.role_scope
+               INNER JOIN role_permissions rp ON rp.role_id = member_role.id AND rp.scope_type = member_role.scope_type
+               INNER JOIN permissions p ON p.id = rp.permission_id AND p.scope_type = rp.scope_type
+               WHERE member.store_id = s.id AND member.user_id = $1
+                 AND member.status = 'active' AND p.permission_key = 'store.read'
+             )
+           )
          ORDER BY s.created_at DESC`,
         [session.user.id],
       );
@@ -209,7 +226,24 @@ export async function handleStoreDetailRequest(
            AND sm.user_id = $2 AND sm.status = 'active'
          LEFT JOIN roles sr ON sr.id = sm.role_id AND sr.scope_type = sm.role_scope
          WHERE s.slug = $1 AND s.status <> 'deactivated'
-           AND (r.name IN ('account_owner', 'account_manager') OR sm.id IS NOT NULL)
+           AND (
+             EXISTS (
+               SELECT 1 FROM account_members member
+               INNER JOIN roles member_role ON member_role.id = member.role_id AND member_role.scope_type = member.role_scope
+               INNER JOIN role_permissions rp ON rp.role_id = member_role.id AND rp.scope_type = member_role.scope_type
+               INNER JOIN permissions p ON p.id = rp.permission_id AND p.scope_type = rp.scope_type
+               WHERE member.account_id = s.account_id AND member.user_id = $2
+                 AND member.status = 'active' AND p.permission_key = 'account.read'
+             )
+             OR EXISTS (
+               SELECT 1 FROM store_members member
+               INNER JOIN roles member_role ON member_role.id = member.role_id AND member_role.scope_type = member.role_scope
+               INNER JOIN role_permissions rp ON rp.role_id = member_role.id AND rp.scope_type = member_role.scope_type
+               INNER JOIN permissions p ON p.id = rp.permission_id AND p.scope_type = rp.scope_type
+               WHERE member.store_id = s.id AND member.user_id = $2
+                 AND member.status = 'active' AND p.permission_key = 'store.read'
+             )
+           )
          LIMIT 1`,
         [slug, session.user.id],
       );
