@@ -238,14 +238,20 @@ export default function TradePage() {
           </div> :
           <div style={{ display: "grid", gap: 12 }}>
             {deals.map(deal => {
+              const accountRole = (accountId: string) => accounts.find(account => account.id === accountId)?.role ?? "";
+              const hasTradePermission = (accountId: string, permission: "create" | "negotiate" | "update") =>
+                ["account_owner", "account_admin", "account_manager"].includes(accountRole(accountId));
               const ownInitiator = accounts.some(account => account.id === deal.initiatorAccountId);
               const ownCounterparty = accounts.some(account => account.id === deal.counterpartyAccountId);
-              const ownPending = accounts.find(account => account.id === deal.pendingResponseAccountId);
-              const ownParty = accounts.find(account => account.id === deal.initiatorAccountId || account.id === deal.counterpartyAccountId);
-              const canPropose = deal.status === "draft" && ownInitiator;
+              const ownPending = accounts.find(account => account.id === deal.pendingResponseAccountId && hasTradePermission(account.id, "negotiate"));
+              const ownParty = accounts.find(account =>
+                (account.id === deal.initiatorAccountId || account.id === deal.counterpartyAccountId) &&
+                hasTradePermission(account.id, "update")
+              );
+              const canPropose = deal.status === "draft" && ownInitiator && hasTradePermission(deal.initiatorAccountId, "create");
               const canRespond = ["proposed", "negotiating"].includes(deal.status) && Boolean(ownPending);
-              const canCancel = ["draft", "proposed", "negotiating"].includes(deal.status) && ownInitiator;
-              const canComplete = deal.status === "accepted" && (ownInitiator || ownCounterparty);
+              const canCancel = ["draft", "proposed", "negotiating"].includes(deal.status) && ownInitiator && hasTradePermission(deal.initiatorAccountId, "update");
+              const canComplete = deal.status === "accepted" && Boolean(ownParty);
               const counter = counterDrafts[deal.id] ?? { message: "", amount: "" };
               return <article key={deal.id} style={{ background: "#fff", border: "1px solid rgba(115,128,146,.2)", borderRadius: 14, padding: 16, display: "grid", gap: 10 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
