@@ -330,3 +330,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Added a test proving material changes cannot be combined with approval in the same request; the changed offer must be saved and reviewed in a separate action.
 - Added the new tests to the standard API CI command. CI run `42406409120` is in progress; the API test stage has passed, with TypeScript/build checks still running at this checkpoint.
 - No supplier candidates, source offers or official-store products exist in the production database at this time. No fabricated records were added.
+
+
+## Trade workspace multi-item checkpoint — 2026-11-07
+
+- Expanded the WASLA Trade draft form from one optional line item to a repeatable multi-item list with add/remove controls and a 50-item UI cap matching the API limit.
+- Each entered item requires a title, positive quantity and valid unit price; blank optional rows are ignored. The API remains authoritative and calculates the deal total from line items.
+- Updated the trade operating specification to describe the V2 workflow (not V1) and the multiple-item limit.
+- GitHub Actions run `42406523238` passed all API tests, database migration/authorization/constraint checks, TypeScript checks and both API and Web builds.
+- The trade UI change is committed and awaiting its Render Web deployment verification.
