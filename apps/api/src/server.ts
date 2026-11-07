@@ -259,6 +259,18 @@ async function handleRequest(
     return;
   }
 
+  if (requestUrl.pathname === "/api/platform/ai/assistant") {
+    try {
+      const { handlePlatformAiAssistantRequest } = await import("./platform-ai-assistant.mjs");
+      await handlePlatformAiAssistantRequest(request, response);
+    } catch (error) {
+      console.error("WASLA platform AI assistant route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "AI assistant service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/platform/security") {
     try {
       const { handlePlatformSecurityRequest } = await import("./platform-security.mjs");
