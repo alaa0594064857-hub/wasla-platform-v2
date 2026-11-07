@@ -124,6 +124,19 @@ async function handleRequest(
     return;
   }
 
+  const officialStoreOrderMatch = requestUrl.pathname.match(/^\/api\/platform\/official-store\/orders(?:\/([0-9a-f-]{36}))?$/i);
+  if (officialStoreOrderMatch) {
+    try {
+      const { handleOfficialStoreOrdersRequest } = await import("./official-store-orders.mjs");
+      await handleOfficialStoreOrdersRequest(request, response, officialStoreOrderMatch[1]);
+    } catch (error) {
+      console.error("WASLA official store order desk route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Official store order desk error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const officialStoreSourcingMatch = requestUrl.pathname.match(/^\/api\/platform\/official-store\/sourcing-candidates(?:\/([0-9a-f-]{36}))?$/i);
   if (officialStoreSourcingMatch) {
     try {
