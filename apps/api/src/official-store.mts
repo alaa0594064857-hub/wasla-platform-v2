@@ -278,6 +278,7 @@ export async function ensureOfficialStoreTables(): Promise<void> {
         ADD COLUMN IF NOT EXISTS supplier_unit_cost numeric(12,2),
         ADD COLUMN IF NOT EXISTS supplier_shipping_cost numeric(12,2),
         ADD COLUMN IF NOT EXISTS supplier_cost_currency varchar(3),
+        ADD COLUMN IF NOT EXISTS supplier_shipping_currency varchar(3),
         ADD COLUMN IF NOT EXISTS supplier_order_url text,
         ADD COLUMN IF NOT EXISTS supplier_tracking_url text
     `);
