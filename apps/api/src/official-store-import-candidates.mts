@@ -124,32 +124,42 @@ export async function handleOfficialStoreImportCandidatesRequest(request: Incomi
       reply(response, 422, { success: false, error: error instanceof Error ? error.message : "Invalid product payload" }); return;
     }
     const db = getDatabasePool();
+    const client = await db.connect();
     const created = [];
-    for (const item of candidates) {
-      const evidence = [
-        { type: "source_product_url", url: productUrl, provider },
-        ...(supplierEvidenceUrl ? [{ type: "supplier_evidence_url", url: supplierEvidenceUrl }] : []),
-        ...(specificationEvidenceUrl ? [{ type: "product_specification", url: specificationEvidenceUrl }] : []),
-        ...item.imageUrls.map(url => ({ type: "image_reference", url, rights_status: "unreviewed" })),
-        ...(item.barcode ? [{ type: "gtin_candidate", value: item.barcode }] : []),
-        ...(item.sku ? [{ type: "sku_candidate", value: item.sku }] : []),
-      ];
-      const availability = item.available === true ? "Merchant feed reports available" :
-        item.available === false ? "Merchant feed reports unavailable" : "Availability not supplied";
-      const result = await db.query(
-        `INSERT INTO official_store_sourcing_candidates
-          (supplier_name, supplier_website, supplier_product_reference, proposed_title, proposed_description,
-           proposed_price, currency, availability_claim, fulfilment_claim, evidence, verification_status,
-           review_status, source_platform, source_product_url, supplier_dropship_confirmed)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, 'unverified',
-                 'needs_owner_review', $11, $12, FALSE)
-         RETURNING id, proposed_title, proposed_price::text AS proposed_price, currency, review_status`,
-        [supplierName, new URL(productUrl).origin, item.sku || item.barcode || null,
-         item.title + (item.variant ? " — " + item.variant : ""), item.description || null,
-         item.price, item.currency, availability, "Direct-to-customer fulfilment not verified",
-         JSON.stringify(evidence), provider, productUrl],
-      );
-      created.push(result.rows[0]);
+    try {
+      await client.query("BEGIN");
+      for (const item of candidates) {
+        const evidence = [
+          { type: "source_product_url", url: productUrl, provider },
+          ...(supplierEvidenceUrl ? [{ type: "supplier_evidence_url", url: supplierEvidenceUrl }] : []),
+          ...(specificationEvidenceUrl ? [{ type: "product_specification", url: specificationEvidenceUrl }] : []),
+          ...item.imageUrls.map(url => ({ type: "image_reference", url, rights_status: "unreviewed" })),
+          ...(item.barcode ? [{ type: "gtin_candidate", value: item.barcode }] : []),
+          ...(item.sku ? [{ type: "sku_candidate", value: item.sku }] : []),
+        ];
+        const availability = item.available === true ? "Merchant feed reports available" :
+          item.available === false ? "Merchant feed reports unavailable" : "Availability not supplied";
+        const result = await client.query(
+          `INSERT INTO official_store_sourcing_candidates
+            (supplier_name, supplier_website, supplier_product_reference, proposed_title, proposed_description,
+             proposed_price, currency, availability_claim, fulfilment_claim, evidence, verification_status,
+             review_status, source_platform, source_product_url, supplier_dropship_confirmed)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, 'unverified',
+                   'needs_owner_review', $11, $12, FALSE)
+           RETURNING id, proposed_title, proposed_price::text AS proposed_price, currency, review_status`,
+          [supplierName, new URL(productUrl).origin, item.sku || item.barcode || null,
+           item.title + (item.variant ? " — " + item.variant : ""), item.description || null,
+           item.price, item.currency, availability, "Direct-to-customer fulfilment not verified",
+           JSON.stringify(evidence), provider, productUrl],
+        );
+        created.push(result.rows[0]);
+      }
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
     }
     reply(response, 201, {
       success: true, provider, importedCount: created.length, candidates: created,
