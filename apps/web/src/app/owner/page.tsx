@@ -216,7 +216,7 @@ export default function PlatformOwnerPage() {
         </section>
 
         <div style={styles.lowerGrid}>
-          <section id="security" style={styles.panel}><span style={styles.panelEyebrow}>02 / SECURITY</span><h2>{copy.securityTitle}</h2><p>{copy.securityNote}</p><div style={styles.securityLine}><span style={styles.onlineDot}/>{copy.verified}</div><div style={styles.permissionCount}>{access.permissions.length} <small>{copy.permissions}</small></div></section>
+          <section id="security" style={styles.panel}><span style={styles.panelEyebrow}>02 / SECURITY</span><h2>{copy.securityTitle}</h2><p>{copy.securityNote}</p><div style={styles.securityLine}><span style={styles.onlineDot}/>{copy.verified}</div><div style={styles.permissionCount}>{access.permissions.length} <small>{copy.permissions}</small></div><Link href="/owner/audit" style={styles.actionLink}>{ar ? "فتح سجل التدقيق" : "Open audit log"} ↗</Link></section>
           <section id="roles" style={styles.panel}><span style={styles.panelEyebrow}>03 / AUTHORIZATION</span><h2>{copy.roles}</h2><p>{ar ? "الصلاحيات الحالية المرتبطة بدور مالك المنصة." : "Current permissions attached to the platform owner role."}</p><div style={styles.permissionList}>{access.permissions.map(permission => <span key={permission}>{permission}</span>)}</div></section>
         </div>
         <section id="settings" style={styles.footerPanel}><div><strong>{copy.owner}</strong><small>{ownerEmail}</small></div><Link href="/account" style={styles.actionLink}>{copy.openAccount} ↗</Link></section>
