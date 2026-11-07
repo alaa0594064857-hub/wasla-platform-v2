@@ -16,13 +16,11 @@ if (process.env.NODE_ENV === "production" && !secret) {
   throw new Error("BETTER_AUTH_SECRET is required in production");
 }
 
-const trustedOrigins = (
-  process.env.BETTER_AUTH_TRUSTED_ORIGINS ??
-  "https://wasla-web-4a64.onrender.com,http://localhost:3000"
-)
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+const trustedOrigins = [...new Set([
+  "https://wasla-web-4a64.onrender.com",
+  "http://localhost:3000",
+  ...(process.env.BETTER_AUTH_TRUSTED_ORIGINS ?? "").split(","),
+].map((origin) => origin.trim()).filter(Boolean))];
 
 async function sendWASLAEmail(
   recipient: string,
