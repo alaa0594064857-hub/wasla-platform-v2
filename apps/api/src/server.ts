@@ -136,6 +136,18 @@ async function handleRequest(
     return;
   }
 
+  if (requestUrl.pathname === "/api/platform/official-store/opportunities/assess") {
+    try {
+      const { handleOfficialStoreOpportunityAssessment } = await import("./official-store-opportunities.mjs");
+      await handleOfficialStoreOpportunityAssessment(request, response);
+    } catch (error) {
+      console.error("Official store opportunity assessment route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Opportunity assessment service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/platform/official-store/pricing/preview") {
     try {
       const { handleOfficialStorePricingRequest } = await import("./official-store-pricing.mjs");
