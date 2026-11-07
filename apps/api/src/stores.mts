@@ -134,10 +134,18 @@ export async function handleStoresRequest(
       const account = await client.query<{ id: string }>(
         `SELECT a.id
          FROM accounts a
-         INNER JOIN account_members am ON am.account_id = a.id
-         INNER JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
-         WHERE a.id = $1 AND am.user_id = $2 AND am.status = 'active'
-           AND r.name IN ('account_owner', 'account_manager')
+         WHERE a.id = $1
+           AND EXISTS (
+             SELECT 1
+             FROM account_members am
+             INNER JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
+             INNER JOIN role_permissions rp ON rp.role_id = r.id AND rp.scope_type = r.scope_type
+             INNER JOIN permissions p ON p.id = rp.permission_id AND p.scope_type = rp.scope_type
+             WHERE am.account_id = a.id
+               AND am.user_id = $2
+               AND am.status = 'active'
+               AND p.permission_key = 'account.business.update'
+           )
          FOR UPDATE OF a`,
         [accountId, session.user.id],
       );
