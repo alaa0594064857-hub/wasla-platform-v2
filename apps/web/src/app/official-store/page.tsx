@@ -13,9 +13,7 @@ type OfficialProduct = {
   description_en: string | null;
   price: string;
   currency: string;
-  supplier_name: string | null;
   availability_status: "available" | "limited" | "unavailable" | "needs_confirmation";
-  fulfillment_notes: string | null;
   image_url: string | null;
   created_at: string;
 };
@@ -41,15 +39,12 @@ export default function OfficialStorePage() {
     details: "التفاصيل",
     close: "إغلاق",
     price: "السعر المعروض",
-    supplier: "المورد",
     availability: "التوفر",
-    available: "متوفر بعد تأكيد المورد",
+    available: "متوفر",
     limited: "توفر محدود",
     unavailableStatus: "غير متوفر حالياً",
-    needs_confirmation: "بانتظار تأكيد المورد",
-    fulfillment: "معلومات التوريد والتسليم",
-    note: "تأكيد التوفر ومدة التسليم يتم قبل إتمام أي طلب.",
-    noCentralInventory: "لا تحتفظ WASLA بمخزون مركزي؛ المنتج لدى المورد أو البائع المسؤول.",
+    note: "ستظهر تفاصيل التوفر والتوصيل بوضوح قبل تأكيد الطلب.",
+    storePromise: "تجربة تسوق موحّدة وآمنة من WASLA.",
     footer: "المتجر الرسمي منفصل عن متاجر الأعضاء ومعاملاتهم."
   } : {
     eyebrow: "THE PLATFORM'S OFFICIAL STORE",
@@ -66,13 +61,11 @@ export default function OfficialStorePage() {
     price: "Listed price",
     supplier: "Supplier",
     availability: "Availability",
-    available: "Available subject to supplier confirmation",
+    available: "Available",
     limited: "Limited availability",
     unavailableStatus: "Currently unavailable",
-    needs_confirmation: "Awaiting supplier confirmation",
-    fulfillment: "Sourcing and fulfilment information",
-    note: "Availability and delivery timing are confirmed before an order is accepted.",
-    noCentralInventory: "WASLA does not hold central inventory; products remain with the supplier or responsible seller.",
+    note: "Availability and delivery details will be clearly shown before an order is confirmed.",
+    storePromise: "A seamless and secure shopping experience from WASLA.",
     footer: "The official store is separate from member stores and their transactions."
   };
 
@@ -80,7 +73,7 @@ export default function OfficialStorePage() {
     if (value === "available") return copy.available;
     if (value === "limited") return copy.limited;
     if (value === "unavailable") return copy.unavailableStatus;
-    return copy.needs_confirmation;
+    return copy.unavailableStatus;
   }
 
   useEffect(() => {
@@ -112,7 +105,7 @@ export default function OfficialStorePage() {
     <section className="mx-auto max-w-6xl px-5 py-12 md:px-8">
       <div className="mb-7 flex flex-wrap items-end justify-between gap-3">
         <div><span className="text-xs font-bold tracking-widest text-[#9a742d]">WASLA OFFICIAL</span><h2 className="mt-2 text-2xl font-bold">{copy.products}</h2></div>
-        <span className="rounded-full border border-[#d7c79f] bg-[#fffaf0] px-4 py-2 text-xs font-semibold text-[#755b29]">{copy.noCentralInventory}</span>
+        <span className="rounded-full border border-[#d7c79f] bg-[#fffaf0] px-4 py-2 text-xs font-semibold text-[#755b29]">{copy.storePromise}</span>
       </div>
       {loading ? <p className="rounded-2xl bg-white p-8 text-center">{copy.loading}</p>
         : failed ? <p role="alert" className="rounded-2xl bg-white p-8 text-center text-[#963f35]">{copy.unavailable}</p>
@@ -144,8 +137,6 @@ export default function OfficialStorePage() {
         <p className="mt-4 whitespace-pre-wrap leading-8 text-slate-700">{(ar ? selected.description_ar : selected.description_en) || ""}</p>
         <p className="mt-5 text-xl font-bold text-[#8b6828]">{selected.price} {selected.currency}</p>
         <p className="mt-3 text-sm">{copy.availability}: {availabilityLabel(selected.availability_status)}</p>
-        {selected.supplier_name && <p className="mt-2 text-sm">{copy.supplier}: {selected.supplier_name}</p>}
-        {selected.fulfillment_notes && <div className="mt-4 rounded-xl bg-[#f5f1e8] p-4"><strong className="text-sm">{copy.fulfillment}</strong><p className="mt-2 whitespace-pre-wrap text-sm leading-7">{selected.fulfillment_notes}</p></div>}
       </section>
     </div>}
   </main>;
