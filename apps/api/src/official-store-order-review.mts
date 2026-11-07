@@ -201,6 +201,26 @@ export async function handleOfficialStoreOrderSupplierReview(
           supplierPurchasePlaced: false,
         })],
       );
+      await client.query(
+        `INSERT INTO notifications (
+           user_id, type, title_ar, title_en, body_ar, body_en,
+           action_url, resource_id, metadata
+         )
+         VALUES ($1,'official_store_order',$2,$3,$4,$5,'/account/orders',$6,$7::jsonb)`,
+        [
+          order.customerUserId,
+          decision === "accepted" ? "تم تأكيد توفر المنتج" : "تعذر تأكيد توفر المنتج",
+          decision === "accepted" ? "Supplier availability confirmed" : "Supplier availability could not be confirmed",
+          decision === "accepted"
+            ? "أكد المورد توفر المنتج مبدئياً. الدفع لم يُفعّل ولم يتم شراء المنتج."
+            : "لم يتمكن المورد من تأكيد توفر المنتج. أُغلق الطلب دون دفع أو شراء.",
+          decision === "accepted"
+            ? "The supplier confirmed availability for review. Payment is still disabled and no purchase was placed."
+            : "The supplier could not confirm availability. The request was closed without payment or purchase.",
+          orderId,
+          JSON.stringify({ orderId, supplierConfirmationStatus: decision, paymentEnabled: false }),
+        ],
+      );
       await client.query("COMMIT");
       reply(response, 200, {
         success: true,
