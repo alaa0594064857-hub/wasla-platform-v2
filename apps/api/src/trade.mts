@@ -175,7 +175,15 @@ export async function handleTradeRequest(
          FROM trade_deals d
          INNER JOIN accounts ia ON ia.id = d.initiator_account_id
          INNER JOIN accounts ca ON ca.id = d.counterparty_account_id
-         WHERE EXISTS (
+         WHERE (d.status <> 'draft' OR EXISTS (
+           SELECT 1 FROM account_members draft_member
+           INNER JOIN roles draft_role ON draft_role.id = draft_member.role_id AND draft_role.scope_type = draft_member.role_scope
+           INNER JOIN role_permissions draft_rp ON draft_rp.role_id = draft_role.id AND draft_rp.scope_type = draft_role.scope_type
+           INNER JOIN permissions draft_permission ON draft_permission.id = draft_rp.permission_id AND draft_permission.scope_type = draft_rp.scope_type
+           WHERE draft_member.user_id = $1 AND draft_member.status = 'active'
+             AND draft_member.account_id = d.initiator_account_id
+             AND draft_permission.permission_key = 'account.trade.read'
+         )) AND EXISTS (
            SELECT 1 FROM account_members am
            INNER JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
            INNER JOIN role_permissions rp ON rp.role_id = r.id AND rp.scope_type = r.scope_type
@@ -331,7 +339,15 @@ export async function handleTradeRequest(
          FROM trade_deals d
          INNER JOIN accounts ia ON ia.id = d.initiator_account_id
          INNER JOIN accounts ca ON ca.id = d.counterparty_account_id
-         WHERE d.id = $1 AND EXISTS (
+         WHERE d.id = $1 AND (d.status <> 'draft' OR EXISTS (
+           SELECT 1 FROM account_members draft_member
+           INNER JOIN roles draft_role ON draft_role.id = draft_member.role_id AND draft_role.scope_type = draft_member.role_scope
+           INNER JOIN role_permissions draft_rp ON draft_rp.role_id = draft_role.id AND draft_rp.scope_type = draft_role.scope_type
+           INNER JOIN permissions draft_permission ON draft_permission.id = draft_rp.permission_id AND draft_permission.scope_type = draft_rp.scope_type
+           WHERE draft_member.user_id = $2 AND draft_member.status = 'active'
+             AND draft_member.account_id = d.initiator_account_id
+             AND draft_permission.permission_key = 'account.trade.read'
+         )) AND EXISTS (
            SELECT 1 FROM account_members am
            INNER JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
            INNER JOIN role_permissions rp ON rp.role_id = r.id AND rp.scope_type = r.scope_type
@@ -372,7 +388,15 @@ export async function handleTradeRequest(
       await client.query("BEGIN");
       const current = await client.query(
         `SELECT * FROM trade_deals
-         WHERE id = $1 AND EXISTS (
+         WHERE id = $1 AND (status <> 'draft' OR EXISTS (
+           SELECT 1 FROM account_members draft_member
+           INNER JOIN roles draft_role ON draft_role.id = draft_member.role_id AND draft_role.scope_type = draft_member.role_scope
+           INNER JOIN role_permissions draft_rp ON draft_rp.role_id = draft_role.id AND draft_rp.scope_type = draft_role.scope_type
+           INNER JOIN permissions draft_permission ON draft_permission.id = draft_rp.permission_id AND draft_permission.scope_type = draft_rp.scope_type
+           WHERE draft_member.user_id = $2 AND draft_member.status = 'active'
+             AND draft_member.account_id = trade_deals.initiator_account_id
+             AND draft_permission.permission_key = 'account.trade.read'
+         )) AND EXISTS (
            SELECT 1 FROM account_members am
            INNER JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
            INNER JOIN role_permissions rp ON rp.role_id = r.id AND rp.scope_type = r.scope_type
