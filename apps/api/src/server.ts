@@ -74,6 +74,19 @@ async function handleRequest(
     return;
   }
 
+  if (/^\/api\/trade\/brokerage-agreements\/commission-invoices(?:\/[0-9a-f-]{36})?$/i.test(requestUrl.pathname)) {
+    const invoiceId = requestUrl.pathname.match(/^\/api\/trade\/brokerage-agreements\/commission-invoices\/([0-9a-f-]{36})$/i)?.[1];
+    try {
+      const { handleBrokerageCommissionInvoices } = await import("./trade-brokerage-commission-invoices.mjs");
+      await handleBrokerageCommissionInvoices(request, response, invoiceId);
+    } catch (error) {
+      console.error("WASLA commission invoice route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Commission invoice service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (/^\/api\/trade\/brokerage-agreements\/commission-ledger(?:\/[0-9a-f-]{36})?$/i.test(requestUrl.pathname)) {
     const entryId = requestUrl.pathname.match(/^\/api\/trade\/brokerage-agreements\/commission-ledger\/([0-9a-f-]{36})$/i)?.[1];
     try {
@@ -776,6 +789,8 @@ if (process.env.NODE_ENV !== "test") {
       await ensureBrokerageAgreementTables();
       const { ensureBrokerageCommissionTables } = await import("./trade-brokerage-commission-ledger.mjs");
       await ensureBrokerageCommissionTables();
+      const { ensureBrokerageInvoiceTables } = await import("./trade-brokerage-commission-invoices.mjs");
+      await ensureBrokerageInvoiceTables();
       const { ensureOfficialStoreTables } = await import("./official-store.mjs");
       await ensureOfficialStoreTables();
       const { ensureOfficialStoreOpportunityTables } = await import("./official-store-opportunities.mjs");
