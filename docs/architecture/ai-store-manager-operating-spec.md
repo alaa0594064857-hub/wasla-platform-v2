@@ -238,3 +238,19 @@ Do not collapse unknown values into optimistic assumptions. Missing or stale inp
 Show a ranked opportunity radar with product/category, target market, trend stage, signal acceleration, source freshness, confidence, competition, estimated landed cost, expected margin, supplier readiness, fulfilment lead time, risk flags, recommended next action and evidence links. Provide filters by market, category, margin, confidence and trend stage, plus an auditable history of score changes.
 
 Implementation status: this section is an approved requirement. The existing manual opportunity assessment and approved-source registry do not yet provide continuous trend ingestion, cross-source signal aggregation, trend velocity/stage estimation, first-party analytics scoring or an automated opportunity radar. Those require authorized data connectors, event instrumentation, persistence, scoring tests and owner dashboard work before they can be described as live.
+
+
+### Reference research tools and connector evaluation shortlist
+
+The product team should evaluate the following as candidate signal providers, not assume that any integration is already connected or that every metric is available through a public API:
+
+- Google Trends: geographic and time-series search-interest comparisons and related/rising queries; treat its index as relative interest, not unit sales.
+- TikTok Creative Center / eligible TikTok commerce tools: trend, keyword, creative and product-opportunity signals where available for the relevant market/account and permitted access.
+- Amazon Product Opportunity Explorer and Amazon category bestseller/movers pages: Amazon-native niche demand, search/purchase, competition and customer-need insights subject to seller-account eligibility, marketplace coverage and Amazon terms. Do not assume these insights are exposed through an unrestricted public API.
+- Exploding Topics: emerging-topic and product-trend discovery; verify plan, metric definitions, market coverage, export/API rights and licensing before integration.
+- Meta Ad Library and other platform ad libraries: competitor creative/advertising activity as a marketing signal only; an active ad is not proof of sales or profitability.
+- Shopify/merchant product feeds and approved supplier catalogues: product identity, attributes, offer and price evidence, subject to merchant authorization.
+
+For each candidate provider, record API/feed availability, permitted use, commercial redistribution rights, markets, refresh cadence, historical depth, metric definitions, costs and limitations in the WASLA authorized data-source registry. Prefer official APIs and licensed feeds. Where no authorized API/feed exists, use owner-reviewed manual research links and do not automate scraping.
+
+The radar should triangulate: search-interest movement + social/creative momentum + marketplace demand evidence + WASLA first-party conversion signals + supplier quote/fulfilment feasibility. A low supplier price is only a sourcing input; the decision must be based on expected contribution margin and risk after destination-specific costs.
