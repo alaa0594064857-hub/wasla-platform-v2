@@ -104,6 +104,9 @@ export async function handleOfficialStoreImportCandidatesRequest(request: Incomi
     }
     if (!body) { reply(response, 400, { success: false, error: "A JSON object is required" }); return; }
     const provider = textValue(body.provider, 32).toLowerCase();
+    const dataSourceId = textValue(body.dataSourceId, 64);
+    const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (dataSourceId && !UUID.test(dataSourceId)) { reply(response, 400, { success: false, error: "Invalid registered data source" }); return; }
     const supplierName = textValue(body.supplierName, 180);
     const productUrl = body.productUrl;
     if (!supplierName || !https(productUrl) || !body.payload || typeof body.payload !== "object" || Array.isArray(body.payload)) {
@@ -128,6 +131,20 @@ export async function handleOfficialStoreImportCandidatesRequest(request: Incomi
     const created = [];
     try {
       await client.query("BEGIN");
+      if (dataSourceId) {
+        const source = await client.query(
+          `SELECT id FROM official_store_data_sources
+           WHERE id=$1 AND created_by=$2 AND permission_status='approved'
+             AND lower(provider)=lower($3)
+           FOR SHARE`,
+          [dataSourceId, access.userId, provider],
+        );
+        if (!source.rows.length) {
+          await client.query("ROLLBACK");
+          reply(response, 403, { success: false, error: "The registered source is not approved for this account/provider" });
+          return;
+        }
+      }
       for (const item of candidates) {
         const evidence = [
           { type: "source_product_url", url: productUrl, provider },
@@ -143,14 +160,14 @@ export async function handleOfficialStoreImportCandidatesRequest(request: Incomi
           `INSERT INTO official_store_sourcing_candidates
             (supplier_name, supplier_website, supplier_product_reference, proposed_title, proposed_description,
              proposed_price, currency, availability_claim, fulfilment_claim, evidence, verification_status,
-             review_status, source_platform, source_product_url, supplier_dropship_confirmed)
+             review_status, source_platform, source_product_url, supplier_dropship_confirmed, data_source_id)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, 'unverified',
-                   'needs_owner_review', $11, $12, FALSE)
+                   'needs_owner_review', $11, $12, FALSE, $13)
            RETURNING id, proposed_title, proposed_price::text AS proposed_price, currency, review_status`,
           [supplierName, new URL(productUrl).origin, item.sku || item.barcode || null,
            item.title + (item.variant ? " — " + item.variant : ""), item.description || null,
            item.price, item.currency, availability, "Direct-to-customer fulfilment not verified",
-           JSON.stringify(evidence), provider, productUrl],
+           JSON.stringify(evidence), provider, productUrl, dataSourceId || null],
         );
         created.push(result.rows[0]);
       }
@@ -163,7 +180,7 @@ export async function handleOfficialStoreImportCandidatesRequest(request: Incomi
     }
     reply(response, 201, {
       success: true, provider, importedCount: created.length, candidates: created,
-      note: "Imported as unverified owner-review candidates only. No images were copied or published; image rights, supplier identity, availability, exact variant and direct shipping require review.",
+      note: "Imported as unverified owner-review candidates only. A registered source is linked only when an approved source owned by the importing account was selected. No images were copied or published; image rights, supplier identity, availability, exact variant and direct shipping require review.",
     });
   } catch (error) {
     console.error("WASLA official store import candidate error:", error);
