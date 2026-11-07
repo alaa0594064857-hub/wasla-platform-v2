@@ -136,6 +136,19 @@ async function handleRequest(
     return;
   }
 
+  const officialStoreDataSourceMatch = requestUrl.pathname.match(/^\\/api\\/platform\\/official-store\\/data-sources(?:\\/([0-9a-f-]{36}))?$/i);
+  if (officialStoreDataSourceMatch) {
+    try {
+      const { handleOfficialStoreDataSourcesRequest } = await import("./official-store-data-sources.mjs");
+      await handleOfficialStoreDataSourcesRequest(request, response, officialStoreDataSourceMatch[1]);
+    } catch (error) {
+      console.error("WASLA official store data source registry route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Data source registry service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/platform/official-store/opportunities/assess") {
     try {
       const { handleOfficialStoreOpportunityAssessment } = await import("./official-store-opportunities.mjs");
@@ -605,6 +618,8 @@ if (process.env.NODE_ENV !== "test") {
       await ensureOfficialStoreTables();
       const { ensureOfficialStoreOpportunityTables } = await import("./official-store-opportunities.mjs");
       await ensureOfficialStoreOpportunityTables();
+      const { ensureOfficialStoreDataSourceTables } = await import("./official-store-data-sources.mjs");
+      await ensureOfficialStoreDataSourceTables();
     })
     .then(() => {
       server.listen(port, "0.0.0.0", () => {
