@@ -38,10 +38,14 @@ afterEach(async () => {
 
 describe("official store order desk", () => {
   it("requires platform management permission before reading order data", async () => {
-    mocks.authorize.mockResolvedValueOnce(null);
+    mocks.authorize.mockImplementationOnce((_request, response) => {
+      response.writeHead(403, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({ success: false, error: "Forbidden" }));
+      return null;
+    });
     const baseUrl = await startServer();
     const response = await fetch(baseUrl);
-    expect(response.status).not.toBe(200);
+    expect(response.status).toBe(403);
     expect(mocks.query).not.toHaveBeenCalled();
   });
 
