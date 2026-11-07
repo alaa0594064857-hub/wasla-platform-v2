@@ -312,3 +312,25 @@ WASLA should collect the customer's destination country (and city/postal code on
 The system must distinguish these states in the API and UI. It must never convert an indicative estimate into a payable checkout price without revalidation.
 
 This destination-first workflow is a product requirement, not a claim that automated multi-country supplier search, local market coverage, tax calculation or supplier confirmation is already deployed.
+
+
+## 13. Multi-marketplace and retailer sourcing network
+
+WASLA should use a connector-based sourcing network rather than depend on a single supplier or marketplace. Each connector must declare its permitted capabilities separately: product discovery, price/availability retrieval, image/media usage, affiliate referral, order placement, shipment tracking, returns, and destination coverage. Access to one capability must never be assumed to grant another.
+
+### Initial connector priorities
+- eBay: investigate the official Buy Browse API for destination-aware item discovery, delivery details and eligible buying flows. Production Buy API access is restricted to approved partners and requires an application/contractual approval; sandbox access is suitable for development, not proof of production permission.
+- Amazon: investigate the applicable official Associates/Product Advertising API for permitted product discovery and affiliate referrals. Do not treat Product Advertising API access as permission for WASLA to purchase goods on behalf of customers or resell Amazon listings. SP-API is primarily an integration for authorized sellers/vendors and requires seller authorization; it is not a general public shopping/reseller feed.
+- Alibaba.com: investigate the Open Platform / approved buyer-sourcing capabilities and seller authorization flows. App registration, platform approval, API permissions and seller authorization may be required. Do not assume every listing supports one-unit dropshipping or destination delivery.
+- Additional retailers, distributors and regional marketplaces may be added through the same connector contract after reviewing their official APIs, commercial terms, geography, image rights and fulfilment model.
+
+### Connector safety and ranking
+- Keep a per-connector permission registry and technical adapter; do not scrape, bypass access controls, or reuse data outside the applicable license.
+- Normalize product identity and variants, destination eligibility, currency, item price, shipping, taxes/duties where supported, availability, delivery estimates, returns and data freshness.
+- Rank only exact or explicitly verified compatible matches. Prefer local stock when total landed cost, delivery reliability and returns are better.
+- Label affiliate/referral results distinctly from WASLA-sold products. A referral link is not a supplier-direct order and does not create WASLA fulfilment control.
+- Never imply that a marketplace listing is a verified supplier relationship. A retailer may prohibit resale, third-party checkout, dropshipping or image reuse; check the relevant terms and obtain permission before enabling those flows.
+- Store evidence and timestamps for every displayed price and availability result. Revalidate at checkout and block payment if the offer is stale, unavailable, destination-ineligible, unlicensed for the intended presentation, or below the owner-approved contribution-margin floor.
+- Maintain a fallback: if a connector is unavailable or production access is not approved, the product is not silently sourced through scraping. Use another authorized connector or mark the item unavailable.
+
+The multi-marketplace network is a target architecture. Individual connectors are not considered live until production credentials/permissions are approved, implemented, tested and monitored.
