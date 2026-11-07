@@ -26,6 +26,9 @@ const columns: Record<Field, string> = {
   shippingCost: "shipping_cost", shippingCurrency: "shipping_currency",
   estimatedShippingDaysMin: "estimated_shipping_days_min",
   estimatedShippingDaysMax: "estimated_shipping_days_max", quoteValidUntil: "quote_valid_until",
+  supplierIdentityVerified: "supplier_identity_verified",
+  specificationsVerified: "specifications_verified",
+  sampleInspected: "sample_inspected",
 };
 
 function reply(response: ServerResponse, status: number, data: Record<string, unknown>): void {
