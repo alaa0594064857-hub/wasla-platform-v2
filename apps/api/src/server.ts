@@ -136,7 +136,7 @@ async function handleRequest(
     return;
   }
 
-  const officialStoreDataSourceMatch = requestUrl.pathname.match(/^\\/api\\/platform\\/official-store\\/data-sources(?:\\/([0-9a-f-]{36}))?$/i);
+  const officialStoreDataSourceMatch = requestUrl.pathname.match(/^\/api\/platform\/official-store\/data-sources(?:\/([0-9a-f-]{36}))?$/i);
   if (officialStoreDataSourceMatch) {
     try {
       const { handleOfficialStoreDataSourcesRequest } = await import("./official-store-data-sources.mjs");
