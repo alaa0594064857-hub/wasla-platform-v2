@@ -254,3 +254,23 @@ The product team should evaluate the following as candidate signal providers, no
 For each candidate provider, record API/feed availability, permitted use, commercial redistribution rights, markets, refresh cadence, historical depth, metric definitions, costs and limitations in the WASLA authorized data-source registry. Prefer official APIs and licensed feeds. Where no authorized API/feed exists, use owner-reviewed manual research links and do not automate scraping.
 
 The radar should triangulate: search-interest movement + social/creative momentum + marketplace demand evidence + WASLA first-party conversion signals + supplier quote/fulfilment feasibility. A low supplier price is only a sourcing input; the decision must be based on expected contribution margin and risk after destination-specific costs.
+
+
+### Supplier-direct retail / no-inventory fulfilment model
+
+WASLA may list eligible supplier products for retail sale without buying or holding inventory in advance. The supplier remains the fulfilment source and ships the exact approved item directly to the customer after a valid customer order and verified payment, subject to the configured approval and purchasing policy.
+
+Required controls:
+- Save the exact supplier product URL, supplier identity, offer/variant identifier, observed supplier price, currency, retrieval time, stock/availability evidence, quote expiry and destination-specific shipping terms.
+- Confirm that the supplier permits resale and direct-to-customer fulfilment, that the product is genuine and compliant, and that the supplier can ship to the target destination with acceptable tracking, packaging, delivery time and returns handling.
+- Match the supplier item to the WASLA listing exactly: brand/model/GTIN/MPN where available, selected variant, dimensions, material, included accessories and all material specifications. Do not substitute a similar-looking product.
+- Product images, videos, text and brand assets may be reused only where WASLA has a documented license, permission or other valid legal basis. A publicly visible supplier listing does not itself grant image/copy rights. If permission is absent, use independently created WASLA media or other properly licensed assets; do not hotlink or copy protected assets.
+- Calculate the customer price from a complete destination-specific cost model: supplier price, supplier-to-customer shipping, payment/FX fees, taxes, duties/customs, fulfilment/handling, expected returns/refunds and other known costs. Clearly label unknown costs and block a confident profit claim where material costs are missing.
+- Present the customer with accurate seller/merchant identity, origin/import/customs, delivery estimate, returns/warranty and any legally required fulfilment disclosures. Internal supplier links, procurement cost and margin remain private where legally permitted; do not conceal disclosures required by law.
+- Before purchase, revalidate stock, exact variant, supplier price, shipping charge, destination eligibility and delivery promise. If any material term changes, pause and obtain the approvals and renewed customer consent required by policy.
+- After verified payment, create a supplier purchase request only through an approved integration and spending policy. Require owner approval for new suppliers, first orders, unusual/high-value orders, quote changes and exceptions. Capture supplier acceptance, tracking, delivery and after-sales status.
+- Never tell the customer an item is in stock, dispatched or delivered until supported by trusted supplier/carrier evidence.
+
+Example used for financial illustration only: supplier item $5 and WASLA customer price $15 gives $10 gross spread before shipping, payment fees, duties/taxes, returns, FX and operating costs. The system must show estimated contribution margin, not call the $10 spread net profit.
+
+This model is an intended capability. Existing supplier offers, import candidates and pricing preview are groundwork; automated supplier purchase, payment, carrier tracking and end-to-end direct fulfilment are not yet live.
