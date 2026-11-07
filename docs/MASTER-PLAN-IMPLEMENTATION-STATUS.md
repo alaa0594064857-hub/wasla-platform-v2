@@ -472,3 +472,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Added a bilingual owner page at `/owner/trade/commission-ledger`, linked from brokerage agreement administration. Statuses are recorded, invoiced, paid or waived; marking paid requires an HTTPS evidence URL and is a manual owner attestation.
 - Added an event history table for entry creation and status changes. This is an internal ledger only: WASLA does not invoice externally, collect, transfer, split or hold funds. It does not independently verify the underlying completed trade; the owner must review evidence before recording.
 - Production deployment and authenticated end-to-end testing remain pending verification.
+
+
+## Brokerage commission invoice register — implementation checkpoint (2026-11-08)
+
+- Added owner-only invoice draft records linked to commission ledger entries, with generated reference numbers, recipient party/name/email, amount/currency snapshot and optional due date.
+- Invoice issuance, cancellation and payment-evidence status are manual. Issuing an invoice updates its linked commission entry to invoiced; recording payment requires an HTTPS evidence URL and updates the linked entry to paid.
+- One open invoice per commission entry is enforced. The invoice recipient party must match the agreement's payer setting. When payer is both, the invoice remains the full total commission and is not split automatically.
+- Added bilingual owner workspace at `/owner/trade/commission-invoices`, linked from the commission ledger. These are internal invoice records, not certified tax invoices, and no email delivery, payment collection, transfer, tax calculation or legal compliance is provided.
+- Production deployment and authenticated end-to-end verification remain pending.
