@@ -27,8 +27,14 @@ function https(value: unknown): value is string {
   try { const u = new URL(value); return u.protocol === "https:" && !!u.hostname && !u.username && !u.password; } catch { return false; }
 }
 function imageList(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value.slice(0, 12).map(item => {
+  let entries: unknown[] = Array.isArray(value) ? value : [];
+  if (!entries.length && value && typeof value === "object") {
+    const edges = (value as Record<string, unknown>).edges;
+    if (Array.isArray(edges)) entries = edges.map(edge =>
+      edge && typeof edge === "object" ? (edge as Record<string, unknown>).node : null
+    );
+  }
+  return entries.slice(0, 12).map(item => {
     if (typeof item === "string") return item;
     if (item && typeof item === "object") {
       const x = item as Record<string, unknown>;
