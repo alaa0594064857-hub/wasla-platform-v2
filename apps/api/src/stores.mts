@@ -232,39 +232,50 @@ export async function handleStoreDetailRequest(
       respond(response, 400, { success: false, error: "Store name must be between 2 and 120 characters" });
       return;
     }
-    const updated = await pool.query(
-      `UPDATE stores s
-       SET name = $1, updated_at = NOW()
-       WHERE s.slug = $2 AND s.status = 'active'
-         AND (
-           EXISTS (
-             SELECT 1 FROM account_members am
-             INNER JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
-             WHERE am.account_id = s.account_id AND am.user_id = $3
-               AND am.status = 'active'
-               AND r.name IN ('account_owner', 'account_manager')
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const updated = await client.query(
+        `UPDATE stores s
+         SET name = $1, updated_at = NOW()
+         WHERE s.slug = $2 AND s.status = 'active'
+           AND (
+             EXISTS (
+               SELECT 1 FROM account_members am
+               INNER JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
+               WHERE am.account_id = s.account_id AND am.user_id = $3
+                 AND am.status = 'active'
+                 AND r.name IN ('account_owner', 'account_manager')
+             )
+             OR EXISTS (
+               SELECT 1 FROM store_members sm
+               INNER JOIN roles sr ON sr.id = sm.role_id AND sr.scope_type = sm.role_scope
+               WHERE sm.store_id = s.id AND sm.user_id = $3
+                 AND sm.status = 'active' AND sr.name = 'store_owner'
+             )
            )
-           OR EXISTS (
-             SELECT 1 FROM store_members sm
-             INNER JOIN roles sr ON sr.id = sm.role_id AND sr.scope_type = sm.role_scope
-             WHERE sm.store_id = s.id AND sm.user_id = $3
-               AND sm.status = 'active' AND sr.name = 'store_owner'
-           )
-         )
-       RETURNING id, account_id, name, slug, status, created_at, updated_at`,
-      [body.name.trim(), slug, session.user.id],
-    );
-    if (updated.rowCount !== 1) {
-      respond(response, 403, { success: false, error: "You cannot manage this store" });
-      return;
+         RETURNING id, account_id, name, slug, status, created_at, updated_at`,
+        [body.name.trim(), slug, session.user.id],
+      );
+      if (updated.rowCount !== 1) {
+        await client.query("ROLLBACK");
+        respond(response, 403, { success: false, error: "You cannot manage this store" });
+        return;
+      }
+      await client.query(
+        `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, account_id, store_id, metadata)
+         VALUES ($1, 'store.updated', 'store', $2, $3, $2, $4)`,
+        [session.user.id, updated.rows[0].id, updated.rows[0].account_id,
+         JSON.stringify({ name: updated.rows[0].name })],
+      );
+      await client.query("COMMIT");
+      respond(response, 200, { success: true, store: updated.rows[0] });
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
     }
-    await pool.query(
-      `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, account_id, store_id, metadata)
-       VALUES ($1, 'store.updated', 'store', $2, $3, $2, $4)`,
-      [session.user.id, updated.rows[0].id, updated.rows[0].account_id,
-       JSON.stringify({ name: updated.rows[0].name })],
-    );
-    respond(response, 200, { success: true, store: updated.rows[0] });
   } catch (error) {
     console.error("WASLA store detail API error:", error);
     respond(response, 500, { success: false, error: "Could not process store request" });
