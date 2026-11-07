@@ -60,12 +60,16 @@ describe("platform audit endpoint", () => {
   });
 
   it("does not query audit data when platform permission is denied", async () => {
-    mocks.authorize.mockResolvedValueOnce(null);
+    mocks.authorize.mockImplementationOnce((_request, response) => {
+      response.writeHead(403, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({ success: false, error: "Insufficient platform permissions" }));
+      return null;
+    });
 
     const baseUrl = await startServer();
     const response = await fetch(`${baseUrl}/api/platform/audit`);
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(403);
     expect(mocks.query).not.toHaveBeenCalled();
   });
 });
