@@ -191,3 +191,15 @@ Both Render services are confirmed live on the latest commit `168b29f63a1bd308a6
 4. Record any blockers clearly. Keep payment collection, supplier purchases and public product publication disabled unless their required controls are independently verified.
 
 Do not describe the platform as commercially launch-ready based only on successful builds or live service status.
+
+## Deployment checkpoint — 2026-11-07 (candidate-link integrity)
+
+- Commit: `f57dddc2fd552ad3fbe3f9c8a5f2fb0fff3a6de3`.
+- Render API deployment `dep-dbnhbgvb9u1s73clvhqg`: confirmed `live`; build succeeded and runtime log reports `WASLA API listening on port 10000`.
+- Render Web deployment `dep-dbnhbgvb9u1s73clvhng`: confirmed `live`; Next.js production build compiled, TypeScript passed, and all 28 static pages generated.
+- Database schema now ensures `official_store_product_source_offers.sourcing_candidate_id` exists and has a partial unique index, preventing more than one source offer from being linked to the same non-null sourcing candidate.
+- Candidate-to-offer creation remains transactional: candidate row lock, field-match validation, offer insert, candidate conversion, and commit/rollback.
+- Scope remains private owner workflow. Offers are created as `needs_review`; no catalogue publication, customer checkout, supplier purchase, or payment is triggered.
+- Verification boundary: deployment/build/runtime were confirmed. An authenticated owner-session end-to-end CRUD test has not yet been completed. Do not mark the candidate-link workflow production-verified until that test and negative authorization/duplicate-link tests pass.
+- Next QA priority: run automated API test suite in CI or a controlled test environment, then execute authenticated owner tests for candidate review/linking, and negative tests for wrong owner, mismatched candidate details, rejected/converted candidates, and duplicate source-offer links.
+
