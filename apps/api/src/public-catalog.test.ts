@@ -1,0 +1,82 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+
+const mocks = vi.hoisted(() => ({ query: vi.fn() }));
+vi.mock("./database.js", () => ({ getDatabasePool: () => ({ query: mocks.query }) }));
+
+let handlePublicCatalogRequest: (
+  request: IncomingMessage, response: ServerResponse, storeSlug?: string, productId?: string
+) => Promise<void>;
+let server: Server | undefined;
+
+async function startServer(route: { storeSlug?: string; productId?: string } = {}): Promise<string> {
+  server = createServer((request, response) => {
+    void handlePublicCatalogRequest(request, response, route.storeSlug, route.productId);
+  });
+  await new Promise<void>((resolve, reject) => {
+    server!.once("error", reject);
+    server!.listen(0, "127.0.0.1", resolve);
+  });
+  const address = server.address();
+  if (!address || typeof address === "string") throw new Error("Test server address unavailable");
+  return `http://127.0.0.1:${address.port}`;
+}
+
+beforeEach(async () => {
+  ({ handlePublicCatalogRequest } = await import("./public-catalog.mjs"));
+});
+
+afterEach(async () => {
+  if (server?.listening) {
+    await new Promise<void>((resolve, reject) => server!.close(error => error ? reject(error) : resolve()));
+  }
+  server = undefined;
+  vi.resetAllMocks();
+});
+
+describe("public catalog privacy and visibility", () => {
+  it("returns only the explicit public product projection, never supplier source details", async () => {
+    mocks.query.mockResolvedValueOnce({
+      rowCount: 1,
+      rows: [{
+        id: "33333333-3333-4333-8333-333333333333",
+        title: "Sample public product",
+        description: "Public description",
+        price: "29.00",
+        currency: "EUR",
+        imageUrl: null,
+        videoUrl: null,
+        sellerCheckoutUrl: "https://merchant.example/checkout",
+        storeId: "44444444-4444-4444-8444-444444444444",
+        storeName: "Member Store",
+        storeSlug: "member-store",
+      }],
+    });
+    const baseUrl = await startServer({ productId: "33333333-3333-4333-8333-333333333333" });
+    const response = await fetch(baseUrl);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(data.product).toMatchObject({ title: "Sample public product", price: "29.00", storeName: "Member Store" });
+    expect(JSON.stringify(data)).not.toMatch(/supplier|source_product_url|supplier_price|supplier_reference/i);
+    const sql = String(mocks.query.mock.calls[0][0]);
+    expect(sql).toContain("p.status = 'active'");
+    expect(sql).not.toMatch(/supplier_name|supplier_price|source_product_url|source_offer/i);
+  });
+
+  it("does not query the database for an invalid product identifier", async () => {
+    const baseUrl = await startServer({ productId: "not-a-uuid" });
+    const response = await fetch(baseUrl);
+    expect(response.status).toBe(404);
+    expect(await response.json()).toMatchObject({ success: false });
+    expect(mocks.query).not.toHaveBeenCalled();
+  });
+
+  it("rejects non-GET requests without reading catalog data", async () => {
+    const baseUrl = await startServer({ storeSlug: "member-store" });
+    const response = await fetch(baseUrl, { method: "POST" });
+    expect(response.status).toBe(405);
+    expect(mocks.query).not.toHaveBeenCalled();
+  });
+});
