@@ -96,8 +96,9 @@ export async function handleOfficialStoreCustomerOrdersRequest(
                 o.id AS "sourceOfferId", o.source_platform AS "sourcePlatform",
                 o.supplier_name AS "supplierName",
                 o.supplier_price::text AS "supplierUnitCost",
+                o.supplier_currency AS "supplierCostCurrency",
                 o.shipping_cost::text AS "supplierShippingCost",
-                o.shipping_currency AS "supplierCostCurrency",
+                o.shipping_currency AS "supplierShippingCurrency",
                 o.ships_to_countries AS "shipsToCountries"
          FROM official_store_products p
          INNER JOIN official_store_settings s ON s.singleton_id = TRUE AND s.status = 'active'
@@ -150,10 +151,10 @@ export async function handleOfficialStoreCustomerOrdersRequest(
            supplier_confirmation_status, order_status, payment_status,
            shipping_address, customer_note, owner_review_required,
            source_platform, supplier_purchase_status, supplier_unit_cost,
-           supplier_shipping_cost, supplier_cost_currency
+           supplier_shipping_cost, supplier_cost_currency, supplier_shipping_currency
          )
          VALUES ($1,$2,$3,$4,1,$5,$6,$7,'pending','awaiting_supplier','not_enabled',
-                 $8::jsonb,$9,TRUE,$10,'not_placed',$11,$12,$13)
+                 $8::jsonb,$9,TRUE,$10,'not_placed',$11,$12,$13,$14)
          RETURNING id, order_number AS "orderNumber",
                    product_title_snapshot AS "productTitle",
                    unit_price::text AS "unitPrice", currency,
@@ -167,7 +168,7 @@ export async function handleOfficialStoreCustomerOrdersRequest(
           JSON.stringify({ country: destinationCountry }),
           typeof body.customerNote === "string" ? body.customerNote.trim() || null : null,
           offer.sourcePlatform, offer.supplierUnitCost, offer.supplierShippingCost,
-          offer.supplierCostCurrency,
+          offer.supplierCostCurrency, offer.supplierShippingCurrency,
         ],
       );
       const order = inserted.rows[0];
