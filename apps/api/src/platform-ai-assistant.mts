@@ -77,7 +77,7 @@ export async function handlePlatformAiAssistantRequest(req: IncomingMessage, res
     const apiKey = process.env.GEMINI_API_KEY?.trim();
     const model = process.env.GEMINI_MODEL?.trim() || "gemini-3.5-flash-lite";
     if (req.method === "GET") {
-      reply(res, 200, { success: true, configured: Boolean(apiKey), provider: "Google Gemini", engine: "gemini-free-tier", model: apiKey ? model : null, readOnlyDataAccess: true, capabilities: ["arabic_english_chat", "read_recent_official_store_products", "read_recent_supplier_offers", "read_recent_official_store_orders", "product_opportunity_analysis", "supplier_evidence_review", "pricing_risk_guidance"], limitations: ["read_only_snapshot_limited_to_30_products_50_supplier_offers_and_50_orders", "free_tier_quota_applies", "no_live_marketplace_access", "no_supplier_contact", "no_product_publication", "no_orders_or_payments", "do_not_send_sensitive_customer_data"] });
+      reply(res, 200, { success: true, configured: Boolean(apiKey), provider: "Google Gemini", engine: "gemini-free-tier", model: apiKey ? model : null, readOnlyDataAccess: true, capabilities: ["arabic_english_chat", "read_recent_official_store_products", "read_recent_supplier_offers", "read_recent_official_store_orders", "product_opportunity_analysis", "supplier_evidence_review", "pricing_risk_guidance"], limitations: ["read_only_snapshot_limited_to_30_products_50_supplier_offers_and_50_orders", "free_tier_quota_applies", "no_live_marketplace_access", "no_supplier_contact", "no_product_publication", "no_order_creation_or_payments", "do_not_send_sensitive_customer_data"] });
       return;
     }
     if (req.method !== "POST") { reply(res, 405, { success: false, error: "Method not allowed" }); return; }
