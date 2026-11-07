@@ -85,33 +85,39 @@ export async function handleOfficialStoreProductsRequest(
       const result = await db.query(
         `SELECT p.id, p.title_ar, p.title_en, p.description_ar, p.description_en,
                 p.price::text AS price, p.currency, p.availability_status,
-                p.image_url, p.created_at
+                p.image_url, p.created_at,
+                offer.ships_to_countries AS "deliveryCountries",
+                offer.estimated_shipping_days_min AS "estimatedDeliveryDaysMin",
+                offer.estimated_shipping_days_max AS "estimatedDeliveryDaysMax"
          FROM official_store_products p
          INNER JOIN official_store_settings s ON s.singleton_id = TRUE
+         INNER JOIN LATERAL (
+           SELECT o.ships_to_countries, o.estimated_shipping_days_min,
+                  o.estimated_shipping_days_max
+           FROM official_store_product_source_offers o
+           WHERE o.product_id = p.id
+             AND o.offer_status = 'approved'
+             AND o.availability_status IN ('available', 'limited')
+             AND o.direct_to_customer_confirmed = TRUE
+             AND o.supplier_identity_verified = TRUE
+             AND o.specifications_verified = TRUE
+             AND o.minimum_order_quantity = 1
+             AND o.shipping_cost IS NOT NULL
+             AND o.shipping_currency IS NOT NULL
+             AND CASE
+               WHEN jsonb_typeof(o.ships_to_countries) = 'array'
+               THEN jsonb_array_length(o.ships_to_countries) > 0
+               ELSE FALSE
+             END
+             AND o.estimated_shipping_days_min IS NOT NULL
+             AND o.estimated_shipping_days_max IS NOT NULL
+             AND o.quote_valid_until > NOW()
+             AND o.last_verified_at IS NOT NULL
+           ORDER BY o.last_verified_at DESC, o.updated_at DESC
+           LIMIT 1
+         ) offer ON TRUE
          WHERE p.status = 'published' AND s.status = 'active'
            AND p.availability_status IN ('available', 'limited')
-           AND EXISTS (
-             SELECT 1
-             FROM official_store_product_source_offers o
-             WHERE o.product_id = p.id
-               AND o.offer_status = 'approved'
-               AND o.availability_status IN ('available', 'limited')
-               AND o.direct_to_customer_confirmed = TRUE
-               AND o.supplier_identity_verified = TRUE
-               AND o.specifications_verified = TRUE
-               AND o.minimum_order_quantity = 1
-               AND o.shipping_cost IS NOT NULL
-               AND o.shipping_currency IS NOT NULL
-               AND CASE
-                 WHEN jsonb_typeof(o.ships_to_countries) = 'array'
-                 THEN jsonb_array_length(o.ships_to_countries) > 0
-                 ELSE FALSE
-               END
-               AND o.estimated_shipping_days_min IS NOT NULL
-               AND o.estimated_shipping_days_max IS NOT NULL
-               AND o.quote_valid_until > NOW()
-               AND o.last_verified_at IS NOT NULL
-           )
          ORDER BY p.created_at DESC
          LIMIT 100`,
       );
