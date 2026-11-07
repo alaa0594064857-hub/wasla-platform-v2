@@ -29,7 +29,7 @@ export async function handlePlatformAiAssistantRequest(req: IncomingMessage, res
     const access = await authorizePlatformPermission(req, res, "platform.manage");
     if (!access) return;
     const apiKey = process.env.GEMINI_API_KEY?.trim();
-    const model = process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash-lite";
+    const model = process.env.GEMINI_MODEL?.trim() || "gemini-3.5-flash-lite";
     if (req.method === "GET") {
       reply(res, 200, { success: true, configured: Boolean(apiKey), provider: "Google Gemini", engine: "gemini-free-tier", model: apiKey ? model : null, capabilities: ["arabic_english_chat", "product_opportunity_analysis", "supplier_evidence_review", "pricing_risk_guidance"], limitations: ["free_tier_quota_applies", "no_live_marketplace_access", "no_supplier_contact", "no_product_publication", "no_orders_or_payments", "do_not_send_sensitive_customer_data"] });
       return;
@@ -48,9 +48,9 @@ export async function handlePlatformAiAssistantRequest(req: IncomingMessage, res
       messages.push({ role: value.role, content: value.content.trim() });
     }
     if (messages[messages.length - 1].role !== "user") { reply(res, 400, { success: false, error: "The latest message must be from the user." }); return; }
-    const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+    const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTIONS }] },
         contents: messages.map(message => ({ role: message.role === "assistant" ? "model" : "user", parts: [{ text: message.content }] })),
