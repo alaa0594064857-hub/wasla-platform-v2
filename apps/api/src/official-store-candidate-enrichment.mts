@@ -98,7 +98,6 @@ export async function handleOfficialStoreCandidateEnrichment(req: IncomingMessag
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(candidateId)) {
       reply(res, 400, { success: false, error: "A valid candidateId is required" }); return;
     }
-    const db = getDatabasePool();
     const found = await db.query(
       `SELECT id, proposed_title, proposed_description, source_product_url, evidence
        FROM official_store_sourcing_candidates WHERE id=$1 LIMIT 1`, [candidateId]);
