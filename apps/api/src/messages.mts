@@ -168,7 +168,11 @@ export async function handleMessagesRequest(
          LIMIT 100`,
         [userId],
       );
-      respond(response, 200, { success: true, conversations: result.rows });
+      respond(response, 200, {
+        success: true,
+        conversations: result.rows,
+        unreadCount: result.rows.reduce((total, conversation) => total + Number(conversation.unread_count ?? 0), 0),
+      });
       return;
     }
 
