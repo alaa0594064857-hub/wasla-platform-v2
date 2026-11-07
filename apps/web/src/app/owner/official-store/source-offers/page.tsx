@@ -56,7 +56,7 @@ export default function OfficialStoreSourceOffersPage() {
     empty: "لا توجد عروض توريد بعد.", error: "تعذر تنفيذ العملية. تحقق من البيانات.",
     saved: "تم حفظ عرض المورد.", verify: "تأكيد التحقق والاعتماد",
     identity: "هوية المورد", specs: "مطابقة المواصفات", direct: "الشحن المباشر",
-    approve: "اعتماد العرض", needs: "بانتظار المراجعة", available: "متوفر",
+    approve: "اعتماد العرض", needs: "بانتظار المراجعة",
     note: "لا يؤدي تسجيل العرض إلى نشر المنتج أو شراءه. لا يُعتمد العرض إلا بعد توثيق الهوية والمواصفات والسعر والشحن وتأكيد التوفر.",
   } : {
     title: "Supplier offers for unified products",
@@ -75,7 +75,7 @@ export default function OfficialStoreSourceOffersPage() {
     empty: "No supplier offers yet.", error: "Could not complete the action. Check the fields.",
     saved: "Supplier offer saved.", verify: "Confirm verification and approval",
     identity: "Supplier identity", specs: "Specifications", direct: "Direct shipping",
-    approve: "Approve offer", needs: "Needs review", available: "Available",
+    approve: "Approve offer", needs: "Needs review",
     note: "Recording an offer does not publish or purchase the product. Approval requires evidence for supplier identity, exact specifications, price, shipping and availability.",
   };
 
