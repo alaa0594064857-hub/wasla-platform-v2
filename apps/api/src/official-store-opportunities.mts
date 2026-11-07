@@ -19,12 +19,12 @@ const str = (v: unknown, max = 240) => typeof v === "string" ? v.trim().slice(0,
 const num = (v: unknown) => typeof v === "number" ? v : typeof v === "string" && v.trim() ? Number(v) : NaN;
 const validHttps = (v: string) => { try { const u = new URL(v); return u.protocol === "https:" && !!u.hostname && !u.username && !u.password; } catch { return false; } };
 
-/** Transparent, owner-only product opportunity assessment. It does not fetch, publish or purchase products. */
-export async function handleOfficialStoreOpportunityAssessment(request: IncomingMessage, response: ServerResponse): Promise<void> {
+
+/** Persist the platform owner's evidence-based product opportunity assessments. */
+export async function ensureOfficialStoreOpportunityTables(): Promise<void> {
+  const client = await getDatabasePool().connect();
   try {
-    const access = await authorizePlatformPermission(request, response, "platform.manage");
-    if (!access) return;
-    await getDatabasePool().query(`
+    await client.query(`
       CREATE TABLE IF NOT EXISTS official_store_product_opportunities (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         owner_user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -37,6 +37,20 @@ export async function handleOfficialStoreOpportunityAssessment(request: Incoming
         created_at timestamptz NOT NULL DEFAULT NOW()
       )
     `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS official_store_product_opportunities_owner_created_idx
+      ON official_store_product_opportunities (owner_user_id, created_at DESC)
+    `);
+  } finally {
+    client.release();
+  }
+}
+
+/** Transparent, owner-only product opportunity assessment. It does not fetch, publish or purchase products. */
+export async function handleOfficialStoreOpportunityAssessment(request: IncomingMessage, response: ServerResponse): Promise<void> {
+  try {
+    const access = await authorizePlatformPermission(request, response, "platform.manage");
+    if (!access) return;
     if (request.method === "GET") {
       const saved = await getDatabasePool().query(
         `SELECT id, title, market, currency, score, recommendation, assessment, created_at
