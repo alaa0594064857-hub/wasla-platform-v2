@@ -67,6 +67,7 @@ export default function TradeMatchesPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, margin: "18px 0" }}>
         <strong>{ar ? `النتائج: ${matches.length}` : `Results: ${matches.length}`}</strong>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <a href="/owner/trade/agreements" style={{ padding: "9px 12px", borderRadius: 9, border: "1px solid #c6a15b", color: "#14243a", textDecoration: "none" }}>{ar ? "إعداد اتفاقية وساطة" : "Prepare brokerage agreement"}</a>
           <a href="/owner/trade/opportunities" style={{ padding: "9px 12px", borderRadius: 9, border: "1px solid #c6a15b", color: "#14243a", textDecoration: "none" }}>{ar ? "مراجعة الطلبات" : "Review submissions"}</a>
           <button type="button" onClick={() => void load()} disabled={loading} style={{ border: "1px solid #c6a15b", borderRadius: 9, padding: "9px 13px", background: "#14243a", color: "#f7f4ed", fontWeight: 700 }}>{ar ? "تحديث" : "Refresh"}</button>
         </div>
