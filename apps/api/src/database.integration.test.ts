@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, describe, expect, it } from "vitest";
 import { Pool } from "pg";
+import { ensureAuthorizationRoles } from "./authorization-bootstrap.mjs";
+import { closeDatabaseConnection } from "./database.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -16,6 +18,7 @@ const pool = new Pool({
 describe("WASLA database role permission scope integrity", () => {
   afterAll(async () => {
     await pool.end();
+    await closeDatabaseConnection();
   });
 
   it("allows a role and permission with the same scope", async () => {
@@ -85,3 +88,24 @@ describe("WASLA database role permission scope integrity", () => {
     }
   });
 });
+  it("bootstraps the full account/store role matrix idempotently", async () => {
+    await ensureAuthorizationRoles();
+    await ensureAuthorizationRoles();
+
+    const result = await pool.query(
+      `SELECT r.name AS role, p.permission_key
+       FROM roles r
+       INNER JOIN role_permissions rp ON rp.role_id = r.id AND rp.scope_type = r.scope_type
+       INNER JOIN permissions p ON p.id = rp.permission_id AND p.scope_type = rp.scope_type
+       WHERE (r.scope_type = 'account' AND r.name IN ('account_owner', 'account_admin', 'account_manager', 'account_employee', 'account_viewer'))
+          OR (r.scope_type = 'store' AND r.name IN ('store_owner', 'store_admin', 'store_manager', 'store_employee'))`,
+    );
+    const grants = new Set(result.rows.map((row) => `${row.role}:${row.permission_key}`));
+
+    expect(grants.has("account_employee:account.product.create")).toBe(true);
+    expect(grants.has("account_viewer:account.product.read")).toBe(true);
+    expect(grants.has("store_manager:store.product.create")).toBe(true);
+    expect(grants.has("store_employee:store.product.read")).toBe(true);
+    expect(grants.has("store_employee:store.product.create")).toBe(false);
+  });
+
