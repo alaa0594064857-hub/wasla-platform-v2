@@ -112,6 +112,18 @@ async function handleRequest(
     return;
   }
 
+  if (requestUrl.pathname === "/api/platform/official-store/import-candidates") {
+    try {
+      const { handleOfficialStoreImportCandidatesRequest } = await import("./official-store-import-candidates.mjs");
+      await handleOfficialStoreImportCandidatesRequest(request, response);
+    } catch (error) {
+      console.error("WASLA official store import route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Import candidate service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/platform/official-store/product-matches") {
     try {
       const { handleOfficialStoreProductMatchesRequest } = await import("./official-store-product-matches.mjs");
