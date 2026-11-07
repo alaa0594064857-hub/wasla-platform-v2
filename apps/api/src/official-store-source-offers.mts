@@ -6,6 +6,17 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const STATUSES = ["draft", "needs_review", "approved", "paused", "rejected", "expired"] as const;
 const AVAILABILITY = ["available", "limited", "unavailable", "needs_confirmation", "expired"] as const;
 
+export function shouldRequireOfferReReview(
+  currentStatus: string,
+  body: Record<string, unknown>,
+): boolean {
+  if (currentStatus !== "approved" || body.offerStatus !== undefined) return false;
+  return [
+    "supplierPrice", "quoteValidUntil", "availabilityStatus",
+    "supplierIdentityVerified", "specificationsVerified", "directToCustomerConfirmed",
+  ].some((key) => Object.hasOwn(body, key));
+}
+
 function reply(response: ServerResponse, status: number, data: Record<string, unknown>): void {
   response.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
@@ -201,7 +212,7 @@ export async function handleOfficialStoreSourceOffersRequest(
       try {
         await client.query("BEGIN");
         const current = await client.query(
-          `SELECT id, product_id, supplier_identity_verified, specifications_verified,
+          `SELECT id, product_id, offer_status, supplier_identity_verified, specifications_verified,
                   direct_to_customer_confirmed, minimum_order_quantity,
                   availability_status, quote_valid_until, evidence
            FROM official_store_product_source_offers WHERE id = $1 FOR UPDATE`,
@@ -212,7 +223,7 @@ export async function handleOfficialStoreSourceOffersRequest(
           reply(response, 404, { success: false, error: "Source offer not found" }); return;
         }
         const row = current.rows[0] as {
-          product_id: string; supplier_identity_verified: boolean; specifications_verified: boolean;
+          product_id: string; offer_status: string; supplier_identity_verified: boolean; specifications_verified: boolean;
           direct_to_customer_confirmed: boolean; minimum_order_quantity: number | null;
           availability_status: string; quote_valid_until: Date | string | null; evidence: unknown;
         };
@@ -247,7 +258,11 @@ export async function handleOfficialStoreSourceOffersRequest(
           }
           add("last_verified_at", new Date().toISOString());
         }
-        if (Object.hasOwn(body, "offerStatus")) add("offer_status", body.offerStatus);
+        if (shouldRequireOfferReReview(row.offer_status, body)) {
+          add("offer_status", "needs_review");
+        } else if (Object.hasOwn(body, "offerStatus")) {
+          add("offer_status", body.offerStatus);
+        }
         if (Object.hasOwn(body, "availabilityStatus")) add("availability_status", body.availabilityStatus);
         for (const [key, column] of [["supplierIdentityVerified","supplier_identity_verified"],["specificationsVerified","specifications_verified"],["directToCustomerConfirmed","direct_to_customer_confirmed"]] as const) {
           if (Object.hasOwn(body, key)) {
