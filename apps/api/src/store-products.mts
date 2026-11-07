@@ -224,21 +224,39 @@ export async function handleStoreProductDetailRequest(
     }
     const pool = getDatabasePool();
     const queryValues = [slug, session.user.id, productId, ...values];
-    const result = await pool.query(
-      `UPDATE store_products p SET ${fields.join(", ")}, updated_at = NOW()
-       FROM stores s
-       WHERE p.id = $3 AND p.store_id = s.id AND s.slug = $1
-         AND s.status = 'active' AND ${canManageSql()}
-       RETURNING p.id, p.store_id AS "storeId", p.title, p.description, p.sku,
-         p.price::text AS price, p.currency, p.stock_quantity AS "stockQuantity",
-         p.image_url AS "imageUrl", p.video_url AS "videoUrl", p.seller_checkout_url AS "sellerCheckoutUrl", p.status,
-         p.created_at AS "createdAt", p.updated_at AS "updatedAt"`,
-      queryValues,
-    );
-    if (result.rowCount !== 1) {
-      respond(response, 404, { success: false, error: "Product not found or access denied" }); return;
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const result = await client.query(
+        `UPDATE store_products p SET ${fields.join(", ")}, updated_at = NOW()
+         FROM stores s
+         WHERE p.id = $3 AND p.store_id = s.id AND s.slug = $1
+           AND s.status = 'active' AND ${canManageSql()}
+         RETURNING p.id, p.store_id AS "storeId", p.title, p.description, p.sku,
+           p.price::text AS price, p.currency, p.stock_quantity AS "stockQuantity",
+           p.image_url AS "imageUrl", p.video_url AS "videoUrl", p.seller_checkout_url AS "sellerCheckoutUrl", p.status,
+           p.created_at AS "createdAt", p.updated_at AS "updatedAt"`,
+        queryValues,
+      );
+      if (result.rowCount !== 1) {
+        await client.query("ROLLBACK");
+        respond(response, 404, { success: false, error: "Product not found or access denied" });
+        return;
+      }
+      await client.query(
+        `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, account_id, store_id, metadata)
+         SELECT $1, 'product.updated', 'product', $2, s.account_id, s.id, $3::jsonb
+         FROM stores s WHERE s.id = $4`,
+        [session.user.id, result.rows[0].id, JSON.stringify({ changed_fields: Object.keys(body), status: result.rows[0].status }), result.rows[0].storeId],
+      );
+      await client.query("COMMIT");
+      respond(response, 200, { success: true, product: result.rows[0] });
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
     }
-    respond(response, 200, { success: true, product: result.rows[0] });
   } catch (error) {
     console.error("WASLA store product update API error:", error);
     respond(response, 500, { success: false, error: "Could not update product" });
