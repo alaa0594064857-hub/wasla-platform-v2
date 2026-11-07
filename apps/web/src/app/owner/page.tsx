@@ -141,7 +141,7 @@ export default function PlatformOwnerPage() {
     { id: "supplier", icon: "⇄", ar: "الموردون", en: "Suppliers", count: countType("supplier"), available: true },
     { id: "brand", icon: "✧", ar: "العلامات التجارية", en: "Brands", count: countType("brand"), available: true },
     { id: "trader", icon: "◇", ar: "التجار", en: "Traders", count: countType("trader"), available: true },
-    { id: "ai", icon: "✳", ar: "غرفة الذكاء الاصطناعي", en: "AI operations room", available: false },
+    { id: "ai", icon: "✳", ar: "غرفة الذكاء الاصطناعي", en: "AI operations room", available: true },
     { id: "orders", icon: "▤", ar: "الطلبات والمبيعات", en: "Orders & sales", available: false },
     { id: "ratings", icon: "☆", ar: "التقييمات", en: "Ratings & reviews", available: false },
     { id: "inquiries", icon: "✉", ar: "الاستفسارات", en: "Inquiries", available: false },
@@ -191,8 +191,8 @@ export default function PlatformOwnerPage() {
         <section style={styles.roomSection}>
           <div style={styles.roomHeading}><div><span style={styles.panelEyebrow}>PLATFORM DEPARTMENTS</span><h2>{ar ? "غرف إدارة المنصة" : "Platform management rooms"}</h2><p>{ar ? "كل قسم له غرفة مستقلة لعرض أرقامه ومتابعة أعماله." : "Each department has its own room for metrics and operational oversight."}</p></div><span style={styles.readOnly}>{ar ? "مركز المالك" : "OWNER CONTROL"}</span></div>
           {overviewError ? <p style={styles.notice}>{ar ? "تعذر تحميل الإحصاءات المباشرة." : "Could not load live platform metrics."}</p> : null}
-          <div style={styles.roomGrid}>{roomDefs.map(room => <button key={room.id} type="button" onClick={() => setSelectedRoom(room.id)} style={{ ...styles.roomCard, ...(selectedRoom === room.id ? styles.roomCardSelected : {}) }}>
-            <span style={styles.roomIcon}>{room.icon}</span><strong>{ar ? room.ar : room.en}</strong><span style={styles.roomCount}>{room.available ? (room.count ?? "—") : (ar ? "قريباً" : "PLANNED")}</span><small>{room.available ? (ar ? "بيانات من قاعدة البيانات" : "Live database records") : (ar ? "بانتظار بناء وربط الوحدة" : "Module integration pending")}</small>
+          <div style={styles.roomGrid}>{roomDefs.map(room => <button key={room.id} type="button" onClick={() => room.id === "ai" ? router.push("/owner/ai") : setSelectedRoom(room.id)} style={{ ...styles.roomCard, ...(selectedRoom === room.id ? styles.roomCardSelected : {}) }}>
+            <span style={styles.roomIcon}>{room.icon}</span><strong>{ar ? room.ar : room.en}</strong><span style={styles.roomCount}>{room.available ? (room.count ?? "—") : (ar ? "قريباً" : "PLANNED")}</span><small>{room.available ? (room.id === "ai" ? (ar ? "افتح مدير WASLA الذكي" : "Open WASLA AI Manager") : (ar ? "بيانات من قاعدة البيانات" : "Live database records")) : (ar ? "بانتظار بناء وربط الوحدة" : "Module integration pending")}</small>
           </button>)}</div>
         </section>
 
