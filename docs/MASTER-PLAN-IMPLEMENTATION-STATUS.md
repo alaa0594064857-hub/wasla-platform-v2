@@ -510,3 +510,13 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Product inquiry recipient routing now includes store administrators and account administrators in addition to store owners/managers and account owners/managers. Regression coverage added.
 - Added direct owner-console navigation to WASLA AI, unified audit, Trade commission ledger and commission invoices.
 - Store-creation permission update and the owner-console navigation change are deploying; message routing code is deployed live, while the inquiry-routing test/code update is in the current deployment queue. No two-account live browser test has yet been performed.
+
+
+## Supplier candidate-to-offer safety gate — 2026-11-08
+
+- Strengthened the transactional candidate-to-source-offer link: a linked candidate must already be owner-approved and verified, with explicit supplier identity and exact specification attestations, confirmed direct-to-customer shipping, MOQ exactly one, a future-valid quote, supplier and specification HTTPS evidence, and exact supplier/platform/source URL/price/currency match with the new offer.
+- Candidate rows remain locked during validation and linking; duplicate source-offer linkage remains protected by the existing unique constraint. The source offer is still created as `needs_review`; linking does not publish the product or initiate a purchase.
+- Added positive and negative validator tests for unapproved, unverified, mismatched, expired, missing-evidence and MOQ>1 candidates.
+- Updated the owner source-offer screen to show the link action only after the imported candidate's approved/verified/single-unit conditions are present.
+- An intermediate API build failed on a strict TypeScript function signature mismatch; that typing issue was corrected in commit `0226c083f04e703f3c5e67bf0f4ab1e2eac99878`. The corrected API and web deployments were still in progress/queued at the last check; do not mark this checkpoint live until both are confirmed.
+- No authenticated owner end-to-end conversion test has been completed yet.
