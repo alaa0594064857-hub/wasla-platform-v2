@@ -272,6 +272,18 @@ async function handleRequest(
     return;
   }
 
+  if (requestUrl.pathname === "/api/platform/audit") {
+    try {
+      const { handlePlatformAuditRequest } = await import("./platform-audit.mjs");
+      await handlePlatformAuditRequest(request, response);
+    } catch (error) {
+      console.error("WASLA platform audit route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Platform audit service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/platform/overview") {
     try {
       const { handlePlatformOverviewRequest } = await import("./platform-overview.mjs");
