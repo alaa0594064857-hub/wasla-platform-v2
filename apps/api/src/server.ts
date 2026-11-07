@@ -112,7 +112,7 @@ async function handleRequest(
     return;
   }
 
-  const officialStoreSourceOfferMatch = requestUrl.pathname.match(/^\\/api\\/platform\\/official-store\\/source-offers(?:\\/([0-9a-f-]{36}))?$/i);
+  const officialStoreSourceOfferMatch = requestUrl.pathname.match(/^\/api\/platform\/official-store\/source-offers(?:\/([0-9a-f-]{36}))?$/i);
   if (officialStoreSourceOfferMatch) {
     try {
       const { handleOfficialStoreSourceOffersRequest } = await import("./official-store-source-offers.mjs");
