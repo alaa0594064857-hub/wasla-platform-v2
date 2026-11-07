@@ -322,8 +322,7 @@ export async function ensureOfficialStoreTables(): Promise<void> {
         normalized_title text NOT NULL,
         key_attributes jsonb NOT NULL DEFAULT '{}'::jsonb,
         updated_at timestamptz NOT NULL DEFAULT NOW(),
-        CONSTRAINT official_store_product_identity_gtin_check
-          CHECK (gtin IS NULL OR gtin ~ '^[0-9]{8,14}
+        CONSTRAINT official_store_product_identity_gtin_check CHECK (gtin IS NULL OR gtin ~ '^[0-9]{8,14}
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         product_id uuid NOT NULL REFERENCES official_store_products(id) ON DELETE CASCADE,
         sourcing_candidate_id uuid REFERENCES official_store_sourcing_candidates(id) ON DELETE SET NULL,
