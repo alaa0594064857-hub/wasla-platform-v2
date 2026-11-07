@@ -311,3 +311,14 @@ Do not describe the platform as commercially launch-ready based only on successf
 - GitHub Actions run `42405555405` passed: API tests, database migrations/authorization seed/constraints, API TypeScript check, API build and Web build.
 - Render API deployment for commit `8a2befac29f46ab7c07fc8766c6ccb7b3ff92fb4` is Live. The matching Web deployment is being checked separately; these commits change tests only, not customer-facing Web functionality.
 - These are automated authorization/privacy regression tests; authenticated multi-user production browser testing remains a separate release gate.
+
+
+## Official-store supplier and publication gate checkpoint — 2026-11-07
+
+- Found and fixed a publication-path gap: the old public catalogue depended on a product-level `supplier_dropship_confirmed` flag that no owner product API could set. That could leave otherwise reviewed products permanently invisible, or encourage an unsafe manual database workaround.
+- Public visibility now requires an actual linked `official_store_product_source_offers` row that is approved, currently available/limited, direct-to-customer confirmed, supplier-identity verified, specification verified, MOQ exactly one, has shipping cost/currency, non-empty destination-country array, delivery estimates, a future-valid quote and a verification timestamp.
+- The public response still selects only customer-facing product fields; supplier name, source URL, supplier cost, shipping cost and private evidence are not returned.
+- JSON destination validation uses a guarded CASE expression to avoid errors if legacy/malformed JSON is not an array.
+- Added tests for the official-store public gate, approved data-source ownership/evidence rules, supplier imports remaining unverified and owner-review-only, and the earlier member-catalog/message/inquiry privacy checks.
+- GitHub Actions run `42406174257` passed API tests, migrations/authorization seed/database constraints, API TypeScript check and API/Web builds. Earlier source import tests passed in run `42405875587`; data-source registry tests passed in run `42405772990`; official-store public-gate tests passed in run `42406066645`.
+- Confirmed both official-store product and source-offer tables exist in the production Render database. No actual products or supplier offers are present yet, so the new publication gate has been verified by automated tests, not by a live customer product listing.
