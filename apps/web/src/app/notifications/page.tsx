@@ -60,6 +60,7 @@ export default function NotificationsPage() {
     if (!response.ok) return;
     setItems(current => current.map(item => item.id === id ? { ...item, readAt: item.readAt ?? new Date().toISOString() } : item));
     setUnreadCount(current => Math.max(0, current - (items.find(item => item.id === id && !item.readAt) ? 1 : 0)));
+    window.dispatchEvent(new Event("wasla:notifications-updated"));
   };
 
   const markAllRead = async () => {
@@ -74,6 +75,7 @@ export default function NotificationsPage() {
     }
     setItems(current => current.map(item => ({ ...item, readAt: item.readAt ?? new Date().toISOString() })));
     setUnreadCount(0);
+    window.dispatchEvent(new Event("wasla:notifications-updated"));
   };
 
   const title = ar ? "مركز الإشعارات" : "Notification center";
