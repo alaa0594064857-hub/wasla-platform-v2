@@ -25,6 +25,7 @@ type DealDetail = {
   items: { id: string; title: string; description: string | null; quantity: string; unitPrice: string; currency: string }[];
   events: { id: string; eventType: string; fromStatus: string | null; toStatus: string; body: string | null; createdAt: string }[];
 };
+type DraftLineItem = { title: string; sku: string; quantity: string; unitPrice: string };
 
 const statusLabels: Record<string, [string, string]> = {
   draft: ["مسودة", "Draft"],
@@ -61,10 +62,9 @@ export default function TradePage() {
   const [description, setDescription] = useState("");
   const [currency, setCurrency] = useState("USD");
   const [amount, setAmount] = useState("");
-  const [itemTitle, setItemTitle] = useState("");
-  const [itemSku, setItemSku] = useState("");
-  const [itemQuantity, setItemQuantity] = useState("1");
-  const [itemUnitPrice, setItemUnitPrice] = useState("");
+  const [lineItems, setLineItems] = useState<DraftLineItem[]>([
+    { title: "", sku: "", quantity: "1", unitPrice: "" },
+  ]);
   const [counterDrafts, setCounterDrafts] = useState<Record<string, { message: string; amount: string }>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -143,11 +143,16 @@ export default function TradePage() {
       setError(ar ? "أدخل قيمة صحيحة غير سالبة." : "Enter a valid non-negative amount.");
       return;
     }
-    if (itemTitle.trim() && (
-      !Number.isFinite(Number(itemQuantity)) || Number(itemQuantity) <= 0 ||
-      !itemUnitPrice.trim() || !Number.isFinite(Number(itemUnitPrice)) || Number(itemUnitPrice) < 0
+    const enteredItems = lineItems.filter(item =>
+      item.title.trim() || item.sku.trim() || item.unitPrice.trim() ||
+      (item.quantity.trim() && item.quantity.trim() !== "1")
+    );
+    if (enteredItems.length > 50 || enteredItems.some(item =>
+      !item.title.trim() || !item.unitPrice.trim() ||
+      !Number.isFinite(Number(item.quantity)) || Number(item.quantity) <= 0 ||
+      !Number.isFinite(Number(item.unitPrice)) || Number(item.unitPrice) < 0
     )) {
-      setError(ar ? "أدخل كمية وسعراً صحيحين لبند الصفقة." : "Enter a valid quantity and unit price for the deal item.");
+      setError(ar ? "راجع بنود الصفقة: كل بند يحتاج اسماً وكمية وسعر وحدة صحيحاً، والحد الأقصى 50 بنداً." : "Check the line items: each needs a title, valid quantity and unit price; maximum 50 items.");
       return;
     }
     setSaving(true);
@@ -165,13 +170,13 @@ export default function TradePage() {
           description: description.trim(),
           currency,
           proposedAmount: amount.trim() ? Number(amount) : null,
-          items: itemTitle.trim() ? [{
-            title: itemTitle.trim(),
-            sku: itemSku.trim() || null,
-            quantity: Number(itemQuantity),
-            unitPrice: Number(itemUnitPrice),
+          items: enteredItems.map(item => ({
+            title: item.title.trim(),
+            sku: item.sku.trim() || null,
+            quantity: Number(item.quantity),
+            unitPrice: Number(item.unitPrice),
             currency,
-          }] : [],
+          })),
         }),
       });
       const data = await response.json();
@@ -179,10 +184,7 @@ export default function TradePage() {
       setTitle("");
       setDescription("");
       setAmount("");
-      setItemTitle("");
-      setItemSku("");
-      setItemQuantity("1");
-      setItemUnitPrice("");
+      setLineItems([{ title: "", sku: "", quantity: "1", unitPrice: "" }]);
       setSelectedCounterparty(null);
       setBusinessQuery("");
       setBusinessResults([]);
@@ -267,22 +269,33 @@ export default function TradePage() {
             <input inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" style={inputStyle} />
           </label>
         </div>
-        <div style={{ marginTop: 14, padding: 14, borderRadius: 12, background: "#f7f4ed", display: "grid", gap: 10 }}>
-          <strong>{ar ? "بند أول (اختياري)" : "First line item (optional)"}</strong>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))", gap: 10 }}>
-            <label style={{ display: "grid", gap: 5 }}>{ar ? "اسم المنتج أو الخدمة" : "Product or service"}
-              <input value={itemTitle} onChange={e => setItemTitle(e.target.value)} maxLength={180} style={inputStyle} />
-            </label>
-            <label style={{ display: "grid", gap: 5 }}>{ar ? "رمز المنتج (اختياري)" : "SKU (optional)"}
-              <input value={itemSku} onChange={e => setItemSku(e.target.value)} maxLength={120} style={inputStyle} />
-            </label>
-            <label style={{ display: "grid", gap: 5 }}>{ar ? "الكمية" : "Quantity"}
-              <input inputMode="decimal" value={itemQuantity} onChange={e => setItemQuantity(e.target.value)} style={inputStyle} />
-            </label>
-            <label style={{ display: "grid", gap: 5 }}>{ar ? "سعر الوحدة" : "Unit price"}
-              <input inputMode="decimal" value={itemUnitPrice} onChange={e => setItemUnitPrice(e.target.value)} placeholder="0.00" style={inputStyle} />
-            </label>
+        <div style={{ marginTop: 14, padding: 14, borderRadius: 12, background: "#f7f4ed", display: "grid", gap: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <strong>{ar ? "بنود الصفقة (اختيارية)" : "Deal line items (optional)"}</strong>
+            <button type="button" disabled={lineItems.length >= 50} onClick={() => setLineItems(current => [...current, { title: "", sku: "", quantity: "1", unitPrice: "" }])} style={{ border: "1px solid #b18d4d", borderRadius: 9, padding: "7px 11px", background: "#fff", color: "#765a2f", cursor: "pointer" }}>
+              {ar ? "+ إضافة بند" : "+ Add item"}
+            </button>
           </div>
+          {lineItems.map((item, index) => <div key={index} style={{ display: "grid", gap: 8, padding: 10, borderRadius: 10, background: "#fff", border: "1px solid rgba(115,128,146,.18)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+              <strong style={{ fontSize: 13 }}>{ar ? `البند ${index + 1}` : `Item ${index + 1}`}</strong>
+              {lineItems.length > 1 && <button type="button" onClick={() => setLineItems(current => current.filter((_, itemIndex) => itemIndex !== index))} style={{ border: "none", background: "transparent", color: "#a33d3d", cursor: "pointer" }}>{ar ? "حذف" : "Remove"}</button>}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 160px), 1fr))", gap: 10 }}>
+              <label style={{ display: "grid", gap: 5 }}>{ar ? "اسم المنتج أو الخدمة" : "Product or service"}
+                <input value={item.title} onChange={e => setLineItems(current => current.map((row, itemIndex) => itemIndex === index ? { ...row, title: e.target.value } : row))} maxLength={180} style={inputStyle} />
+              </label>
+              <label style={{ display: "grid", gap: 5 }}>{ar ? "رمز المنتج (اختياري)" : "SKU (optional)"}
+                <input value={item.sku} onChange={e => setLineItems(current => current.map((row, itemIndex) => itemIndex === index ? { ...row, sku: e.target.value } : row))} maxLength={120} style={inputStyle} />
+              </label>
+              <label style={{ display: "grid", gap: 5 }}>{ar ? "الكمية" : "Quantity"}
+                <input inputMode="decimal" value={item.quantity} onChange={e => setLineItems(current => current.map((row, itemIndex) => itemIndex === index ? { ...row, quantity: e.target.value } : row))} style={inputStyle} />
+              </label>
+              <label style={{ display: "grid", gap: 5 }}>{ar ? "سعر الوحدة" : "Unit price"}
+                <input inputMode="decimal" value={item.unitPrice} onChange={e => setLineItems(current => current.map((row, itemIndex) => itemIndex === index ? { ...row, unitPrice: e.target.value } : row))} placeholder="0.00" style={inputStyle} />
+              </label>
+            </div>
+          </div>)}
         </div>
         <label style={{ display: "grid", gap: 6, marginTop: 12 }}>{ar ? "وصف وشروط مبدئية" : "Description and initial terms"}
           <textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={5000} rows={3} style={inputStyle} />
