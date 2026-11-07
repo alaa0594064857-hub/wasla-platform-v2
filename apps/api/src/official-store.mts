@@ -373,6 +373,18 @@ export async function ensureOfficialStoreTables(): Promise<void> {
     `);
 
     await client.query(`
+      ALTER TABLE official_store_product_source_offers
+        ADD COLUMN IF NOT EXISTS sourcing_candidate_id uuid
+          REFERENCES official_store_sourcing_candidates(id) ON DELETE SET NULL
+    `);
+
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS official_store_source_offer_candidate_unique
+      ON official_store_product_source_offers (sourcing_candidate_id)
+      WHERE sourcing_candidate_id IS NOT NULL
+    `);
+
+    await client.query(`
       CREATE UNIQUE INDEX IF NOT EXISTS official_store_source_offer_url_unique
       ON official_store_product_source_offers (source_product_url)
     `);
