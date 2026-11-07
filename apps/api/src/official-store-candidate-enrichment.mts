@@ -133,10 +133,16 @@ export async function handleOfficialStoreCandidateEnrichment(req: IncomingMessag
           [updated.rows[0].product_id, access.userId, JSON.stringify({ candidateId, decision, reviewStatus: nextStatus })],
         );
         await client.query("COMMIT");
-              reply(res, 200, { success: true, candidate: updated.rows[0], note: decision === "reject"
-        ? "Candidate rejected. No product was published and no supplier order was placed."
-        : "Candidate returned for more evidence. It remains private and unpublished." });
-      return;
+        reply(res, 200, { success: true, candidate: updated.rows[0], note: decision === "reject"
+          ? "Candidate rejected. No product was published and no supplier order was placed."
+          : "Candidate returned for more evidence. It remains private and unpublished." });
+        return;
+      } catch (error) {
+        try { await client.query("ROLLBACK"); } catch { /* transaction may already be closed */ }
+        throw error;
+      } finally {
+        client.release();
+      }
     }
     if (req.method !== "POST") { reply(res, 405, { success: false, error: "Method not allowed" }); return; }
     let body: Record<string, unknown> | null;
