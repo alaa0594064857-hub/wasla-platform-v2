@@ -354,7 +354,19 @@ export default function OfficialStoreSourceOffersPage() {
           {item.source_product_url && <a href={item.source_product_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#9b762c" }}>{ar ? "فتح صفحة المنتج الأصلية" : "Open original product listing"}</a>}
           {item.review_status !== "rejected" && item.review_status !== "converted" && <button type="button" onClick={() => {
             setSourcingCandidateId(item.id);
-            setForm(current => ({ ...current, supplierName: item.supplier_name || "", sourcePlatform: item.source_platform || "", sourceProductUrl: item.source_product_url || "", supplierPrice: item.proposed_price || "", supplierCurrency: item.currency || "USD" }));
+            const sourceEvidence = enrichmentResults[item.id]?.sourceEvidence ?? [];
+            const supplierProof = sourceEvidence.find(entry => entry.type === "supplier_evidence_url" && entry.url)?.url ?? "";
+            const specificationProof = sourceEvidence.find(entry => entry.type === "product_specification" && entry.url)?.url ?? "";
+            setForm(current => ({
+              ...current,
+              supplierName: item.supplier_name || "",
+              sourcePlatform: item.source_platform || "",
+              sourceProductUrl: item.source_product_url || "",
+              supplierPrice: item.proposed_price || "",
+              supplierCurrency: item.currency || "USD",
+              evidenceUrl: supplierProof,
+              specificationEvidenceUrl: specificationProof,
+            }));
             document.getElementById("source-offer-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
           }} style={{ display: "block", marginTop: 8, padding: "8px 11px", border: "1px solid #b18a3c", borderRadius: 8, background: "white", color: "#72551f", fontWeight: 700 }}>{ar ? "ربط بعرض مورد" : "Link to supplier offer"}</button>}
           <button type="button" disabled={enrichmentBusyId === item.id} onClick={() => void enrichCandidate(item.id)} style={{ display: "block", marginTop: 8, padding: "8px 11px", border: 0, borderRadius: 8, background: "#27344d", color: "white", fontWeight: 700 }}>
