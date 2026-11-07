@@ -51,6 +51,7 @@ export async function handleOfficialStoreOrdersRequest(
                 o.shipping_carrier AS "shippingCarrier",
                 o.tracking_reference AS "trackingReference",
                 o.shipping_status AS "shippingStatus",
+                o.shipping_address->>'country' AS "destinationCountry",
                 o.shipping_address AS "shippingAddress",
                 o.customer_note AS "customerNote",
                 o.owner_review_required AS "ownerReviewRequired",
@@ -99,6 +100,7 @@ export async function handleOfficialStoreOrdersRequest(
               o.shipping_carrier AS "shippingCarrier",
               o.tracking_reference AS "trackingReference",
               o.shipping_status AS "shippingStatus",
+              o.shipping_address->>'country' AS "destinationCountry",
               o.owner_review_required AS "ownerReviewRequired",
               o.supplier_purchase_status AS "supplierPurchaseStatus",
               o.created_at AS "createdAt", o.updated_at AS "updatedAt"
