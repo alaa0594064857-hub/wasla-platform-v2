@@ -274,6 +274,7 @@ export default function OfficialStoreSourceOffersPage() {
     <Link href="/owner/official-store" style={{ color: "#9b762c", textDecoration: "none", fontWeight: 700 }}>{t.back}</Link>
     <h1 style={{ fontSize: 28, margin: "18px 0 8px" }}>{t.title}</h1>
     <p style={{ opacity: .78, marginTop: 0 }}>{t.subtitle}</p>
+    <Link href="/owner/official-store/opportunities" style={{ display: "inline-block", marginTop: 10, padding: "10px 14px", border: "1px solid #b89a5a", borderRadius: 10, color: "#9b762c", fontWeight: 700, textDecoration: "none" }}>{ar ? "تقييم فرص المنتجات والربح" : "Assess product opportunities"}</Link>
     <section style={{ padding: 18, border: "1px solid #d8dce5", borderRadius: 16, marginTop: 22 }}>
     <section style={{ padding: 18, border: "1px solid #d8dce5", borderRadius: 16, marginTop: 22 }}>
       <h2 style={{ fontSize: 19, marginTop: 0 }}>{t.importTitle}</h2>
