@@ -22,13 +22,13 @@ type Candidate = {
 };
 
 const initial = {
-  supplierName: "", supplierWebsite: "", sourcePlatform: "Alibaba",
+  supplierName: "", supplierWebsite: "", sourcePlatform: "Direct supplier - Turkey",
   sourceProductUrl: "", supplierProductReference: "", proposedTitle: "",
   proposedDescription: "", proposedPrice: "", currency: "USD",
   availabilityClaim: "", fulfilmentClaim: "", supplierContact: "",
   supplierDropshipConfirmed: false, minimumOrderQuantity: "1",
   shippingCountries: "TR,US,GB,DE", shippingCost: "", shippingCurrency: "USD",
-  shippingMin: "", shippingMax: "", quoteValidUntil: "", evidenceUrl: "",
+  shippingMin: "", shippingMax: "", quoteValidUntil: "", evidenceUrl: "", specificationEvidenceUrl: "",
 };
 
 export default function OwnerSourcingPage() {
@@ -57,7 +57,7 @@ export default function OwnerSourcingPage() {
     moq: "الحد الأدنى للطلب", countries: "الدول المدعوم شحنها (رموز ISO مثل TR,US)",
     shippingCost: "تكلفة الشحن", shippingCurrency: "عملة الشحن",
     shipMin: "أقل مدة شحن بالأيام", shipMax: "أقصى مدة شحن بالأيام",
-    quoteExpiry: "صلاحية عرض السعر (اختياري)", evidence: "رابط دليل التحقق HTTPS",
+    quoteExpiry: "صلاحية عرض السعر (مطلوب للاعتماد)", evidence: "رابط إثبات المورد HTTPS", specEvidence: "رابط إثبات مواصفات المنتج HTTPS",
     save: "حفظ العرض", saving: "جارٍ الحفظ...", loading: "جارٍ التحميل...",
     empty: "لا توجد عروض موردين بعد.", loadError: "تعذر تحميل العروض.",
     saveError: "تعذر حفظ العرض. تحقق من البيانات والروابط.", created: "تم تسجيل عرض المورد.",
@@ -65,7 +65,7 @@ export default function OwnerSourcingPage() {
     verified: "تم التحقق", unverified: "غير متحقق", awaiting: "بانتظار المورد",
     partial: "تحقق جزئي", rejected: "مرفوض", draft: "مسودة", review: "بانتظار المراجعة",
     approved: "معتمد", noEvidence: "أضف دليلاً موثقاً قبل الاعتماد.",
-    note: "الاعتماد هنا لا ينشر المنتج ولا يشتريه. يتطلب تحقق المورد، قبول قطعة واحدة، ورابط المصدر وسعراً سارياً. النشر والشراء الآلي غير مفعّلين.",
+    note: "يمكن التوريد من مصنع أو تاجر محلي في تركيا أو من أي دولة أو منصة؛ لا نعتمد على Alibaba وحده. لا يعتمد المنتج إلا بعد إثبات المورد ومطابقة المواصفات وتأكيد الشحن المباشر لقطعة واحدة وسعر ساري. الاعتماد لا ينشر المنتج ولا يشتريه.",
     sourceLabel: "المصدر", priceLabel: "السعر", moqLabel: "الحد الأدنى", shipLabel: "الشحن",
     dropshipYes: "شحن مباشر مؤكد", dropshipNo: "الشحن المباشر غير مؤكد",
     actionError: "تعذر تنفيذ الإجراء.", saved: "تم تحديث حالة العرض.",
@@ -80,7 +80,7 @@ export default function OwnerSourcingPage() {
     moq: "Minimum order quantity", countries: "Shipping countries (ISO codes e.g. TR,US)",
     shippingCost: "Shipping cost", shippingCurrency: "Shipping currency",
     shipMin: "Minimum shipping days", shipMax: "Maximum shipping days",
-    quoteExpiry: "Quote expiry (optional)", evidence: "Verification evidence URL HTTPS",
+    quoteExpiry: "Quote expiry (required for approval)", evidence: "Supplier proof URL HTTPS", specEvidence: "Product specification proof URL HTTPS",
     save: "Save offer", saving: "Saving...", loading: "Loading...",
     empty: "No supplier offers yet.", loadError: "Could not load offers.",
     saveError: "Could not save offer. Check the fields and URLs.", created: "Supplier offer recorded.",
@@ -88,7 +88,7 @@ export default function OwnerSourcingPage() {
     verified: "Verified", unverified: "Unverified", awaiting: "Awaiting supplier",
     partial: "Partially verified", rejected: "Rejected", draft: "Draft", review: "Needs owner review",
     approved: "Approved", noEvidence: "Add verifiable evidence before approval.",
-    note: "Approval does not publish or purchase a product. It requires supplier verification, single-unit acceptance, source URL and a current quote. Publishing and automated purchasing are not enabled.",
+    note: "Source from a local Turkish manufacturer or seller, or any trusted supplier worldwide; Alibaba is not required. Approval requires supplier proof, matching product specifications, confirmed single-unit direct shipping and a current quote. Approval does not publish or purchase the product.",
     sourceLabel: "Source", priceLabel: "Price", moqLabel: "MOQ", shipLabel: "Shipping",
     dropshipYes: "Direct shipping confirmed", dropshipNo: "Direct shipping not confirmed",
     actionError: "Could not complete this action.", saved: "Offer status updated.",
@@ -133,7 +133,10 @@ export default function OwnerSourcingPage() {
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setSaving(true); setError(""); setNotice("");
     try {
-      const evidence = form.evidenceUrl.trim() ? [{ type: "supplier_evidence_url", url: form.evidenceUrl.trim(), recordedAt: new Date().toISOString() }] : [];
+      const evidence = [
+        ...(form.evidenceUrl.trim() ? [{ type: "supplier_evidence_url", url: form.evidenceUrl.trim(), recordedAt: new Date().toISOString() }] : []),
+        ...(form.specificationEvidenceUrl.trim() ? [{ type: "product_specification", url: form.specificationEvidenceUrl.trim(), recordedAt: new Date().toISOString() }] : []),
+      ];
       const countries = form.shippingCountries.split(",").map(value => value.trim().toUpperCase()).filter(Boolean);
       const body = {
         supplierName: form.supplierName.trim(),
@@ -214,6 +217,7 @@ export default function OwnerSourcingPage() {
         <label>{t.shipMax}<input type="number" min="0" step="1" style={styles.input} value={form.shippingMax} onChange={e => update("shippingMax", e.target.value)} /></label>
         <label>{t.quoteExpiry}<input type="date" style={styles.input} value={form.quoteValidUntil} onChange={e => update("quoteValidUntil", e.target.value ? new Date(e.target.value + "T23:59:59Z").toISOString() : "")} /></label>
         <label style={styles.full}>{t.evidence}<input type="url" placeholder="https://" style={styles.input} value={form.evidenceUrl} onChange={e => update("evidenceUrl", e.target.value)} /></label>
+        <label style={styles.full}>{t.specEvidence}<input type="url" placeholder="https://" style={styles.input} value={form.specificationEvidenceUrl} onChange={e => update("specificationEvidenceUrl", e.target.value)} /></label>
         <label style={styles.full}>{t.countries}<input style={styles.input} value={form.shippingCountries} onChange={e => update("shippingCountries", e.target.value)} /></label>
         <label style={styles.full}>{t.description}<textarea rows={3} maxLength={10000} style={styles.input} value={form.proposedDescription} onChange={e => update("proposedDescription", e.target.value)} /></label>
         <label style={styles.full}>{t.availability}<textarea rows={2} maxLength={500} style={styles.input} value={form.availabilityClaim} onChange={e => update("availabilityClaim", e.target.value)} /></label>
