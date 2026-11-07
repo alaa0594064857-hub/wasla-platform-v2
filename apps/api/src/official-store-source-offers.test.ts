@@ -22,8 +22,18 @@ describe("supplier source offer review transitions", () => {
     expect(shouldRequireOfferReReview("approved", { availabilityStatus: "limited" })).toBe(true);
   });
 
-  it("detects material changes that require a separate approval action", () => {
-    expect(hasMaterialOfferChanges({ supplierPrice: 9 })).toBe(true);
+  it("detects every supported material field as requiring a separate approval action", () => {
+    for (const field of [
+      "supplierPrice",
+      "quoteValidUntil",
+      "availabilityStatus",
+      "supplierIdentityVerified",
+      "specificationsVerified",
+      "directToCustomerConfirmed",
+    ]) {
+      expect(hasMaterialOfferChanges({ [field]: true }), field).toBe(true);
+      expect(shouldRequireOfferReReview("approved", { [field]: true }), field).toBe(true);
+    }
     expect(hasMaterialOfferChanges({ note: "internal note" })).toBe(false);
   });
 
