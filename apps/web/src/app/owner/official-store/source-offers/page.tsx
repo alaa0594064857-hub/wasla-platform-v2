@@ -46,6 +46,9 @@ export default function OfficialStoreSourceOffersPage() {
   const [identityBusy, setIdentityBusy] = useState("");
   const [importForm, setImportForm] = useState({ provider: "shopify", supplierName: "", productUrl: "", supplierEvidenceUrl: "", specificationEvidenceUrl: "", payload: "" });
   const [importing, setImporting] = useState(false);
+  const [enrichmentBusyId, setEnrichmentBusyId] = useState("");
+  const [enrichmentResults, setEnrichmentResults] = useState<Record<string, { category: string; classificationConfidence: number; facts: Record<string,string>; missingRequiredReviewFields: string[]; warnings: string[] }>>({});
+
   const [importResult, setImportResult] = useState<{ importedCount: number; candidates: Array<{ id: string; proposed_title: string }> } | null>(null);
   const [pricingForm, setPricingForm] = useState({ supplierCost: "", supplierCurrency: "USD", supplierFxRate: "", supplierFxRateAsOf: "", supplierFxSource: "", shippingCost: "", shippingCurrency: "USD", shippingFxRate: "", shippingFxRateAsOf: "", shippingFxSource: "", displayCurrency: "USD", marginPercent: "20", fixedMargin: "0", additionalCost: "", additionalCostCurrency: "USD", additionalCostFxRate: "", additionalCostFxRateAsOf: "", additionalCostFxSource: "", additionalCostType: "other_cost" });
   const [pricingBusy, setPricingBusy] = useState(false);
@@ -177,6 +180,21 @@ export default function OfficialStoreSourceOffersPage() {
     finally { setImporting(false); }
   }
 
+  async function enrichCandidate(candidateId: string) {
+    setEnrichmentBusyId(candidateId); setError(""); setNotice("");
+    try {
+      const response = await fetch("/api/platform/official-store/candidates/enrich", {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ candidateId }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success || !data.enrichment) throw new Error("enrich");
+      setEnrichmentResults(current => ({ ...current, [candidateId]: data.enrichment }));
+      setNotice(ar ? "تم تحليل بيانات المنتج وحفظ النتيجة للمراجعة." : "Product data analyzed and saved for review.");
+    } catch { setError(ar ? "تعذر تحليل المنتج. تأكد من نشر الخدمة وصلاحيات الحساب." : "Could not analyze this product. Check deployment and account permissions."); }
+    finally { setEnrichmentBusyId(""); }
+  }
+
   async function calculatePrice(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setPricingBusy(true); setPricingResult(null); setError("");
     try {
@@ -293,7 +311,18 @@ export default function OfficialStoreSourceOffersPage() {
       <p style={{ fontSize: 12, opacity: .75 }}>{t.importRights}</p>
       {importResult && <div role="status" style={{ marginTop: 12, padding: 12, background: "#f6f4ee", borderRadius: 10 }}>
         <strong>{t.imported}: {importResult.importedCount}</strong>
-        {importResult.candidates.map(item => <p key={item.id} style={{ margin: "6px 0" }}>{item.proposed_title}</p>)}
+        {importResult.candidates.map(item => <div key={item.id} style={{ margin: "10px 0", padding: 10, background: "white", border: "1px solid #e5e7eb", borderRadius: 9 }}>
+          <strong>{item.proposed_title}</strong>
+          <button type="button" disabled={enrichmentBusyId === item.id} onClick={() => void enrichCandidate(item.id)} style={{ display: "block", marginTop: 8, padding: "8px 11px", border: 0, borderRadius: 8, background: "#27344d", color: "white", fontWeight: 700 }}>
+            {enrichmentBusyId === item.id ? (ar ? "جارٍ تحليل المنتج..." : "Analyzing product...") : (ar ? "حلّل وصنّف المنتج" : "Analyze and classify product")}
+          </button>
+          {enrichmentResults[item.id] && <div style={{ marginTop: 10, fontSize: 13 }}>
+            <p><strong>{ar ? "التصنيف:" : "Category:"}</strong> {enrichmentResults[item.id].category} · {Math.round(enrichmentResults[item.id].classificationConfidence * 100)}%</p>
+            <p><strong>{ar ? "المواصفات المستخرجة من المصدر (غير مؤكدة):" : "Extracted source claims (unverified):"}</strong> {Object.keys(enrichmentResults[item.id].facts).length ? Object.entries(enrichmentResults[item.id].facts).map(([k,v]) => `${k}: ${v}`).join(" · ") : (ar ? "لم تُستخرج مواصفات مؤكدة من النص." : "No attributes could be extracted from the text.")}</p>
+            <p><strong>{ar ? "حقول تحتاج مراجعة:" : "Fields needing review:"}</strong> {enrichmentResults[item.id].missingRequiredReviewFields.join(", ") || (ar ? "لا توجد حقول ناقصة في قائمة الفحص الأولية." : "No missing fields in the initial checklist.")}</p>
+            <ul>{enrichmentResults[item.id].warnings.map((warning,i) => <li key={i}>{warning}</li>)}</ul>
+          </div>}
+        </div>)}
       </div>}
     </section>
       <h2 style={{ fontSize: 19, marginTop: 0 }}>{t.matchTitle}</h2>
