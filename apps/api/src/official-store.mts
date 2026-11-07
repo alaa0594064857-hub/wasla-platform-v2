@@ -312,7 +312,7 @@ export async function ensureOfficialStoreTables(): Promise<void> {
       WHERE manufacturer_part_number IS NOT NULL
     `);
 
-    await client.query(`
+    await client.query(\`
       CREATE TABLE IF NOT EXISTS official_store_product_source_offers (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         product_id uuid NOT NULL REFERENCES official_store_products(id) ON DELETE CASCADE,
@@ -323,25 +323,9 @@ export async function ensureOfficialStoreTables(): Promise<void> {
         supplier_reference varchar(180),
         variant_attributes jsonb NOT NULL DEFAULT '{}'::jsonb,
         supplier_price numeric(12,2) NOT NULL CHECK (supplier_price >= 0),
-        supplier_currency varchar(3) NOT NULL CHECK (supplier_currency ~ '^[A-Z]{3}
-  } catch (error) {
-    await client.query("ROLLBACK");
-    throw error;
-  } finally {
-    client.release();
-  }
-}
-),
+        supplier_currency varchar(3) NOT NULL CHECK (length(supplier_currency) = 3 AND supplier_currency = upper(supplier_currency)),
         shipping_cost numeric(12,2) CHECK (shipping_cost IS NULL OR shipping_cost >= 0),
-        shipping_currency varchar(3) CHECK (shipping_currency IS NULL OR shipping_currency ~ '^[A-Z]{3}
-  } catch (error) {
-    await client.query("ROLLBACK");
-    throw error;
-  } finally {
-    client.release();
-  }
-}
-),
+        shipping_currency varchar(3) CHECK (shipping_currency IS NULL OR (length(shipping_currency) = 3 AND shipping_currency = upper(shipping_currency))),
         minimum_order_quantity integer CHECK (minimum_order_quantity IS NULL OR minimum_order_quantity >= 1),
         ships_to_countries jsonb NOT NULL DEFAULT '[]'::jsonb,
         direct_to_customer_confirmed boolean NOT NULL DEFAULT FALSE,
@@ -364,7 +348,7 @@ export async function ensureOfficialStoreTables(): Promise<void> {
           OR estimated_shipping_days_max >= estimated_shipping_days_min
         )
       )
-    `);
+    \`);
 
     await client.query(`
       CREATE UNIQUE INDEX IF NOT EXISTS official_store_source_offer_url_unique
