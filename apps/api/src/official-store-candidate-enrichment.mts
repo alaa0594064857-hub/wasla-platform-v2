@@ -107,12 +107,26 @@ export async function handleOfficialStoreCandidateEnrichment(req: IncomingMessag
     const description = candidate.proposed_description ?? "";
     const detected = classify(title, description);
     const extracted = extractEvidenceFields(detected.category, title + " " + description);
-    const source = candidate.source_product_url ? [{ field: "source_listing", url: candidate.source_product_url, status: "supplier_claim_unverified" }] : [];
-    const evidence = [...source, ...Object.keys(extracted.facts).map(field => ({ field, value: extracted.facts[field], source: candidate.source_product_url, status: "source_claim_unverified" }))];
+    const rawEvidence = Array.isArray(candidate.evidence) ? candidate.evidence.slice(0, 30) : [];
+    const sourceEvidence = rawEvidence.flatMap((item: unknown) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+      const entry = item as Record<string, unknown>;
+      const type = typeof entry.type === "string" ? entry.type.slice(0, 60) : "source_evidence";
+      const url = typeof entry.url === "string" ? entry.url : "";
+      const safeUrl = (() => { try { const parsed = new URL(url); return parsed.protocol === "https:" && !parsed.username && !parsed.password ? parsed.toString() : ""; } catch { return ""; } })();
+      const value = typeof entry.value === "string" ? entry.value.slice(0, 160) : "";
+      return [{ type, ...(safeUrl ? { url: safeUrl } : {}), ...(value ? { value } : {}),
+        rightsStatus: type === "image_reference" ? "unreviewed" : "not_applicable",
+        verificationStatus: "unverified" }];
+    });
+    const claimEvidence = [
+      ...(candidate.source_product_url ? [{ field: "source_listing", url: candidate.source_product_url, status: "supplier_claim_unverified" }] : []),
+      ...Object.keys(extracted.facts).map(field => ({ field, value: extracted.facts[field], source: candidate.source_product_url, status: "source_claim_unverified" })),
+    ];
     const enrichment = {
       category: detected.category, classificationConfidence: detected.confidence,
       facts: extracted.facts, missingRequiredReviewFields: extracted.missing,
-      evidence, sourceDescriptionAvailable: Boolean(description),
+      sourceEvidence, claimEvidence, sourceDescriptionAvailable: Boolean(description),
       mediaRights: "unreviewed", supplierIdentity: "unverified",
       listingDraftStatus: "not_generated_no_llm_provider",
       publicationStatus: "private_owner_review_only",
