@@ -81,7 +81,7 @@ describe("owner supplier confirmation review", () => {
       .mockResolvedValueOnce({ rows: [orderRow()] })
       .mockResolvedValueOnce({ rows: [offerRow()] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{
-        id: orderId, orderStatus: "awaiting_payment",
+        id: orderId, orderStatus: "supplier_confirmed",
         supplierConfirmationStatus: "accepted", paymentStatus: "not_enabled",
         supplierPurchaseStatus: "not_placed", ownerReviewRequired: true,
       }] })
@@ -99,11 +99,11 @@ describe("owner supplier confirmation review", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
       success: true,
-      order: { orderStatus: "awaiting_payment", paymentStatus: "not_enabled", supplierPurchaseStatus: "not_placed" },
+      order: { orderStatus: "supplier_confirmed", paymentStatus: "not_enabled", supplierPurchaseStatus: "not_placed" },
     });
     expect(String(client.query.mock.calls[2][0])).toContain("quote_valid_until > NOW()");
     expect(String(client.query.mock.calls[3][0])).toContain("supplier_confirmation_status = 'pending'");
-    expect(client.query.mock.calls[3][1]).toEqual([orderId, "accepted", "awaiting_payment"]);
+    expect(client.query.mock.calls[3][1]).toEqual([orderId, "accepted", "supplier_confirmed"]);
     expect(client.query.mock.calls[4][1][1]).toBe("owner-1");
     expect(JSON.parse(client.query.mock.calls[4][1][3])).toMatchObject({
       decision: "accepted", paymentEnabled: false, supplierPurchasePlaced: false,
