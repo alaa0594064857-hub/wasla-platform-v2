@@ -124,6 +124,19 @@ async function handleRequest(
     return;
   }
 
+  const officialStoreSupplierReviewMatch = requestUrl.pathname.match(/^\/api\/platform\/official-store\/orders\/([0-9a-f-]{36})\/supplier-confirmation$/i);
+  if (officialStoreSupplierReviewMatch) {
+    try {
+      const { handleOfficialStoreOrderSupplierReview } = await import("./official-store-order-review.mjs");
+      await handleOfficialStoreOrderSupplierReview(request, response, officialStoreSupplierReviewMatch[1]);
+    } catch (error) {
+      console.error("WASLA official store supplier review route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Supplier review service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const officialStoreOrderMatch = requestUrl.pathname.match(/^\/api\/platform\/official-store\/orders(?:\/([0-9a-f-]{36}))?$/i);
   if (officialStoreOrderMatch) {
     try {
