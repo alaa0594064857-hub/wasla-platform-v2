@@ -109,16 +109,23 @@ export async function handleTradeOpportunitiesRequest(
     const db = getDatabasePool();
 
     if (request.method === "GET") {
-      const owner = await authorizePlatformPermission(request, response, "platform.manage");
-      if (owner) {
-        const result = opportunityId
-          ? await db.query(`SELECT o.*, a.display_name AS account_name FROM trade_opportunities o INNER JOIN accounts a ON a.id=o.account_id WHERE o.id=$1 LIMIT 1`, [opportunityId])
-          : await db.query(`SELECT o.*, a.display_name AS account_name FROM trade_opportunities o INNER JOIN accounts a ON a.id=o.account_id WHERE o.review_status='pending_review' ORDER BY o.created_at ASC LIMIT 200`);
-        if (opportunityId && !result.rowCount) { reply(response, 404, { success: false, error: "Opportunity not found" }); return; }
+      if (opportunityId === "review") {
+        const owner = await authorizePlatformPermission(request, response, "platform.manage");
+        if (!owner) return;
+        const result = await db.query(`SELECT o.*, a.display_name AS account_name
+          FROM trade_opportunities o INNER JOIN accounts a ON a.id=o.account_id
+          WHERE o.review_status='pending_review' ORDER BY o.created_at ASC LIMIT 200`);
         reply(response, 200, { success: true, opportunities: result.rows });
         return;
       }
-      if (opportunityId) { reply(response, 403, { success: false, error: "Only the platform owner can review individual opportunities" }); return; }
+      if (opportunityId) {
+        const owner = await authorizePlatformPermission(request, response, "platform.manage");
+        if (!owner) return;
+        const result = await db.query(`SELECT o.*, a.display_name AS account_name FROM trade_opportunities o INNER JOIN accounts a ON a.id=o.account_id WHERE o.id=$1 LIMIT 1`, [opportunityId]);
+        if (!result.rowCount) { reply(response, 404, { success: false, error: "Opportunity not found" }); return; }
+        reply(response, 200, { success: true, opportunity: result.rows[0] });
+        return;
+      }
       const result = await db.query(
         `SELECT o.id, o.opportunity_type, o.title, o.description, o.product_category,
                 o.quantity::text AS quantity, o.quantity_unit, o.target_country, o.destination_country,
