@@ -501,3 +501,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Fixed supplier confirmation review: its locked order query now selects the customer user ID used by the notification insert. Added regression assertions for the selected field and notification recipient.
 - Existing customer order history page is present at `/account/orders`; owner order desk remains read-only except for evidence-backed manual supplier confirmation/rejection. Payment, supplier purchase and shipping remain disabled.
 - API Render deployment for the auth defaults is confirmed live; the subsequent supplier-review/test update was still deploying at checkpoint time. Authenticated customer/owner end-to-end tests and real email delivery remain outstanding.
+
+
+## Account, store and communication hardening — 2026-11-08
+
+- Store creation now authorizes the active account membership through the `account.business.update` permission instead of a hard-coded role-name list. This aligns the endpoint with the shared authorization matrix and includes account administrators who hold the permission. Regression test added.
+- Product-based private messages now resolve recipients across store-specific owner/admin/manager memberships and account owner/admin/manager memberships. Recipient discovery also searches actual store memberships rather than assuming every store manager is an account member. Regression coverage added.
+- Product inquiry recipient routing now includes store administrators and account administrators in addition to store owners/managers and account owners/managers. Regression coverage added.
+- Added direct owner-console navigation to WASLA AI, unified audit, Trade commission ledger and commission invoices.
+- Store-creation permission update and the owner-console navigation change are deploying; message routing code is deployed live, while the inquiry-routing test/code update is in the current deployment queue. No two-account live browser test has yet been performed.
