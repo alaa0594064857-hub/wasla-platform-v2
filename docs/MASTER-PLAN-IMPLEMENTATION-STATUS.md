@@ -322,3 +322,11 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Added tests for the official-store public gate, approved data-source ownership/evidence rules, supplier imports remaining unverified and owner-review-only, and the earlier member-catalog/message/inquiry privacy checks.
 - GitHub Actions run `42406174257` passed API tests, migrations/authorization seed/database constraints, API TypeScript check and API/Web builds. Earlier source import tests passed in run `42405875587`; data-source registry tests passed in run `42405772990`; official-store public-gate tests passed in run `42406066645`.
 - Confirmed both official-store product and source-offer tables exist in the production Render database. No actual products or supplier offers are present yet, so the new publication gate has been verified by automated tests, not by a live customer product listing.
+
+
+## Supplier-offer approval regression checkpoint — 2026-11-07
+
+- Added API regression tests proving an offer cannot be approved without verified supplier identity, exact specifications, supplier/product evidence, direct-to-customer shipping, MOQ, current quote and availability.
+- Added a test proving material changes cannot be combined with approval in the same request; the changed offer must be saved and reviewed in a separate action.
+- Added the new tests to the standard API CI command. CI run `42406409120` is in progress; the API test stage has passed, with TypeScript/build checks still running at this checkpoint.
+- No supplier candidates, source offers or official-store products exist in the production database at this time. No fabricated records were added.
