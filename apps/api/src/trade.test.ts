@@ -79,7 +79,11 @@ describe("WASLA Trade deal creation", () => {
     expect(response.status).toBe(201);
     expect((await response.json()).deal.status).toBe("draft");
     expect(mocks.query).toHaveBeenCalledTimes(7);
-    expect(String(mocks.query.mock.calls[1][0])).toContain("account.trade.create");
+    expect(mocks.query.mock.calls[1][1]).toEqual([
+      "11111111-1111-4111-8111-111111111111",
+      "trade-creator",
+      "account.trade.create",
+    ]);
     expect(String(mocks.query.mock.calls[4][0])).toContain("trade_deal_events");
     expect(String(mocks.query.mock.calls[5][0])).toContain("trade.deal.created");
     expect(mocks.query.mock.calls[6][0]).toBe("COMMIT");
