@@ -65,6 +65,7 @@ export default function MessagesPage() {
       const data = await response.json();
       if (!response.ok || !data.success || !Array.isArray(data.conversations)) throw new Error("load");
       setConversations(data.conversations);
+      window.dispatchEvent(new Event("wasla:messages-updated"));
     } catch {
       setError(t.loadError);
     } finally {
@@ -80,6 +81,7 @@ export default function MessagesPage() {
       const data = await response.json();
       if (!response.ok || !data.success || !Array.isArray(data.messages)) throw new Error("messages");
       setMessages(data.messages);
+      window.dispatchEvent(new Event("wasla:messages-updated"));
     } catch {
       setError(t.loadError);
     } finally {
