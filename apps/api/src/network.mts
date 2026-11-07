@@ -223,6 +223,16 @@ export async function handleNetworkRequest(request: IncomingMessage, response: S
             "UPDATE network_friendships SET status = 'accepted', accepted_at = NOW(), updated_at = NOW() WHERE id = $1",
             [incoming.id],
           );
+          await client.query(
+            `INSERT INTO notifications (
+               user_id, type, title_ar, title_en, body_ar, body_en,
+               action_url, resource_id, metadata
+             )
+             VALUES ($1, 'friend_request', 'تم قبول طلب صداقتك', 'Your friend request was accepted',
+                     'أصبح بإمكانك التواصل مع هذا العضو عبر شبكة وصلة.', 'You can now connect with this member on WASLA Network.',
+                     '/network', $2, $3::jsonb)`,
+            [target, incoming.id, JSON.stringify({ friendshipId: incoming.id, acceptedBy: userId })],
+          );
           await client.query("COMMIT");
           respond(response, 200, { success: true, relationship: "friend", message: "Friend request accepted" });
           return;
@@ -234,17 +244,30 @@ export async function handleNetworkRequest(request: IncomingMessage, response: S
           return;
         }
         const ownPrevious = rows.find(row => row.requester_user_id === userId && row.addressee_user_id === target);
+        let friendshipId: string;
         if (ownPrevious) {
-          await client.query(
-            "UPDATE network_friendships SET status = 'pending', created_at = NOW(), updated_at = NOW(), accepted_at = NULL WHERE id = $1",
+          const restored = await client.query(
+            "UPDATE network_friendships SET status = 'pending', created_at = NOW(), updated_at = NOW(), accepted_at = NULL WHERE id = $1 RETURNING id",
             [ownPrevious.id],
           );
+          friendshipId = restored.rows[0].id;
         } else {
-          await client.query(
-            "INSERT INTO network_friendships (requester_user_id, addressee_user_id) VALUES ($1, $2)",
+          const created = await client.query(
+            "INSERT INTO network_friendships (requester_user_id, addressee_user_id) VALUES ($1, $2) RETURNING id",
             [userId, target],
           );
+          friendshipId = created.rows[0].id;
         }
+        await client.query(
+          `INSERT INTO notifications (
+             user_id, type, title_ar, title_en, body_ar, body_en,
+             action_url, resource_id, metadata
+           )
+           VALUES ($1, 'friend_request', 'طلب صداقة جديد', 'New friend request',
+                   'أرسل لك عضو طلب تواصل على شبكة وصلة.', 'A WASLA member sent you a connection request.',
+                   '/network', $2, $3::jsonb)`,
+          [target, friendshipId, JSON.stringify({ friendshipId, requesterUserId: userId })],
+        );
         await client.query("COMMIT");
         respond(response, 200, { success: true, relationship: "outgoing" });
       } catch (error) {
