@@ -72,7 +72,7 @@ describe("official store customer supplier-confirmation requests", () => {
         sourceOfferId: "22222222-2222-4222-8222-222222222222",
         sourcePlatform: "authorized_feed", supplierName: "Private supplier",
         supplierUnitCost: "12.00", supplierShippingCost: "3.00",
-        supplierCostCurrency: "EUR", shipsToCountries: ["TR", "DE"],
+        supplierCostCurrency: "EUR", supplierShippingCurrency: "EUR", shipsToCountries: ["TR", "DE"],
       }] })
       .mockResolvedValueOnce({ rows: [{
         id: "33333333-3333-4333-8333-333333333333", orderNumber: "WS-1",
