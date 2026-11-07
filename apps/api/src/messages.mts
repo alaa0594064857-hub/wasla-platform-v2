@@ -137,13 +137,16 @@ export async function handleMessagesRequest(
       }
       const result = await db.query(
         `SELECT c.id, c.updated_at,
-          peer.id AS peer_id, peer.name AS peer_name, peer.image AS peer_image,
+          peer.id AS peer_id,
+          COALESCE(peer_profile.display_name, peer.name) AS peer_name,
+          COALESCE(peer_profile.avatar_reference, peer.image) AS peer_image,
           latest.body AS last_message, latest.created_at AS last_message_at,
           (SELECT COUNT(*)::int FROM messages unread
             WHERE unread.conversation_id = c.id AND unread.sender_id <> $1) AS message_count
          FROM message_conversations c
          JOIN users peer ON peer.id = CASE
            WHEN c.participant_low = $1 THEN c.participant_high ELSE c.participant_low END
+         LEFT JOIN profiles peer_profile ON peer_profile.user_id = peer.id
          LEFT JOIN LATERAL (
            SELECT body, created_at FROM messages
            WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1
@@ -268,8 +271,11 @@ export async function handleMessagesRequest(
     if (request.method === "GET") {
       const result = await db.query(
         `SELECT m.id, m.sender_id, m.body, m.created_at,
-                u.name AS sender_name, u.image AS sender_image
-         FROM messages m JOIN users u ON u.id = m.sender_id
+                COALESCE(p.display_name, u.name) AS sender_name,
+                COALESCE(p.avatar_reference, u.image) AS sender_image
+         FROM messages m
+         JOIN users u ON u.id = m.sender_id
+         LEFT JOIN profiles p ON p.user_id = u.id
          WHERE m.conversation_id = $1
          ORDER BY m.created_at ASC LIMIT 500`,
         [conversationId],
