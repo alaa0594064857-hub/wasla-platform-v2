@@ -36,6 +36,12 @@ export async function handlePlatformAuditRequest(request: IncomingMessage, respo
         LEFT JOIN users u ON u.id = al.actor_user_id
         LEFT JOIN accounts a ON a.id = al.account_id
         LEFT JOIN stores s ON s.id = al.store_id
+        WHERE al.action <> 'platform.owner.bootstrap'
+           OR al.id = (
+             SELECT latest.id FROM audit_logs latest
+             WHERE latest.action = 'platform.owner.bootstrap'
+             ORDER BY latest.created_at DESC LIMIT 1
+           )
 
         UNION ALL
         SELECT oe.id::text, oe.created_at, 'trade_opportunity',
