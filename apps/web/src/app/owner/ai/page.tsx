@@ -36,7 +36,7 @@ export default function OwnerAiAssistantPage() {
     } catch (e) { setError(e instanceof Error ? e.message : (ar ? "تعذر الاتصال بالمساعد." : "Could not reach the assistant.")); }
     finally { setBusy(false); }
   }
-  return <main dir={ar ? "rtl" : "ltr"} lang={locale} className="mx-auto min-h-screen w-full max-w-5xl space-y-6 px-4 py-8 text-slate-900">
+  return <main dir={ar ? "rtl" : "ltr"} lang={locale} className="mx-auto min-h-screen w-full max-w-5xl space-y-6 px-6 py-8 text-slate-900">
     <header className="flex flex-wrap items-center justify-between gap-3">
       <div><Link href="/owner" className="text-sm text-slate-500 hover:underline">← {ar ? "مركز المالك" : "Owner center"}</Link><p className="mt-3 text-xs font-semibold tracking-[.2em] text-amber-700">WASLA AI OPERATIONS</p><h1 className="mt-1 text-3xl font-bold">{ar ? "مدير WASLA الذكي" : "WASLA AI Manager"}</h1><p className="mt-2 max-w-2xl text-sm text-slate-600">{ar ? "مساعد تشغيلي للمالك لتحليل فرص المنتجات والموردين والتسعير والمخاطر." : "An owner-facing operations copilot for product opportunities, suppliers, pricing, and risk."}</p></div>
       <span className="rounded-full border border-slate-200 px-3 py-1 text-xs">{status?.configured ? (ar ? "Gemini متصل" : "Gemini connected") : (ar ? "بانتظار مفتاح Gemini المجاني" : "Waiting for Gemini free-tier key")}</span>
@@ -56,12 +56,12 @@ export default function OwnerAiAssistantPage() {
       ].map(([title, description]) => <article key={title} className="rounded-xl border border-slate-200 bg-white p-4"><h2 className="font-semibold">{title}</h2><p className="mt-1 text-xs leading-5 text-slate-500">{description}</p></article>)}
     </section>
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-      <div className="border-b bg-slate-50 p-4"><h2 className="font-semibold">{ar ? "محادثة مدير العمليات" : "Operations conversation"}</h2><p className="text-xs text-slate-500">{status?.model || (ar ? "بانتظار إعداد Gemini" : "Awaiting Gemini free-tier setup")}</p></div>
-      <div aria-live="polite" className="min-h-64 space-y-3 p-4">
-        {!messages.length ? <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">{ar ? "مثال: حلّل فرصة هذا المنتج باستخدام تكلفة المورد والشحن وسعر البيع..." : "Example: Analyze this product opportunity using the supplier cost, shipping, and selling price..."}</p> : messages.map((message, index) => <div key={index} className={message.role === "user" ? "ms-8 rounded-xl bg-slate-900 p-3 text-sm text-white" : "me-8 whitespace-pre-wrap rounded-xl bg-slate-100 p-3 text-sm text-slate-800"}>{message.content}</div>)}
+      <div className="border-b bg-slate-50 px-6 py-4"><h2 className="font-semibold">{ar ? "محادثة مدير العمليات" : "Operations conversation"}</h2><p className="text-xs text-slate-500">{status?.model || (ar ? "بانتظار إعداد Gemini" : "Awaiting Gemini free-tier setup")}</p></div>
+      <div aria-live="polite" className="min-h-64 space-y-3 px-6 py-5">
+        {!messages.length ? <p className="rounded-xl bg-slate-50 p-4 text-sm leading-7 text-slate-600">{ar ? "مثال: حلّل فرصة هذا المنتج باستخدام تكلفة المورد والشحن وسعر البيع..." : "Example: Analyze this product opportunity using the supplier cost, shipping, and selling price..."}</p> : messages.map((message, index) => <div key={index} className={message.role === "user" ? "ms-8 rounded-xl bg-slate-900 px-4 py-4 text-sm leading-7 text-white" : "me-8 whitespace-pre-wrap rounded-xl bg-slate-100 px-4 py-4 text-sm leading-7 text-slate-800"}>{message.content}</div>)}
         {busy ? <p className="text-sm text-slate-500">{ar ? "مدير WASLA يحلل..." : "WASLA Manager is thinking..."}</p> : null}
       </div>
-      <form onSubmit={send} className="flex flex-col gap-2 border-t p-3 sm:flex-row">
+      <form onSubmit={send} className="flex flex-col gap-2 border-t px-5 py-4 sm:flex-row">
         <textarea value={draft} onChange={event => setDraft(event.target.value)} maxLength={3000} rows={2} placeholder={ar ? "اكتب سؤالك لمدير WASLA أو تفاصيل الفرصة..." : "Ask WASLA AI a question or describe an opportunity..."} className="min-h-12 flex-1 resize-y rounded-xl border border-slate-300 p-3 text-sm outline-none focus:border-amber-600" />
         <button type="submit" disabled={!status?.configured || busy || !draft.trim()} className="rounded-xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">{busy ? (ar ? "جارٍ الإرسال..." : "Sending...") : (ar ? "إرسال" : "Send")}</button>
       </form>
