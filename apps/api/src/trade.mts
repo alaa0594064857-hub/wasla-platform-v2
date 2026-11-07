@@ -238,6 +238,7 @@ export async function handleTradeRequest(
            WHERE a.id = $1 AND a.status = 'active'
              AND EXISTS (
                SELECT 1 FROM account_members am
+               INNER JOIN users u ON u.id = am.user_id AND u.status = 'active' AND u.email_verified = TRUE
                INNER JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
                INNER JOIN role_permissions rp ON rp.role_id = r.id AND rp.scope_type = r.scope_type
                INNER JOIN permissions p ON p.id = rp.permission_id AND p.scope_type = rp.scope_type
