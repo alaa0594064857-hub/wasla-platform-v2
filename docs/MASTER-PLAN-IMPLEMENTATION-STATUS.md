@@ -445,3 +445,13 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Customer history now says the supplier confirmed availability but the final quote is pending. Owner review confirmation message and AI guidance reflect the same boundary.
 - API schema initialization safely replaces the order-status check constraint to include the new state. CI validates the API tests and builds.
 - API and Web deployments for commit `91c2aed900c39b0dce51a1813565804d861594b5` are both verified Live. GitHub Actions run `42411813187` passed all tests, database migration/constraint checks, TypeScript checks and both builds.
+
+
+## Expanded live owner dashboard metrics — 2026-11-07
+
+- Extended the owner overview API with actual counts for member products/active products, message conversations, product inquiries, WASLA Trade deals, subscription plans/active plans and subscriptions/active subscriptions.
+- Added bilingual owner dashboard rooms for the member product catalogue, messages, Trade, subscriptions and product inquiries. Trade/messages/subscriptions link to their existing workspaces; metrics expose counts only and do not reveal private message contents.
+- Added explanatory safeguards: a Trade deal record does not mean settlement/payment; subscription counts do not mean billing is enabled; member checkout remains seller-owned.
+- Corrected the subscription-plan active metric to use the real `is_active` schema field.
+- Production database snapshot at this checkpoint: member products 0, conversations 0, product inquiries 0, Trade deals 0, subscription plans 0, subscriptions 0. No fabricated activity was inserted.
+- GitHub Actions run `42412206991` passed API tests, migrations, authorization seeding, DB constraints, TypeScript checks and API/Web builds. Render deployments for the expanded owner dashboard are being verified.
