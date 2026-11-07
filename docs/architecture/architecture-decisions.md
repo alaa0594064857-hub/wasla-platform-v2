@@ -444,3 +444,99 @@ Approved architecture boundary only.
 No subscription plans, subscriptions, invoices, payment
 events, provider integration, or live billing have been
 implemented by this decision.
+
+
+## 20. AI-Operated Official Store and Sales Lifecycle
+
+Decision:
+
+The official WASLA Store is operated day to day by a dedicated
+WASLA AI Store Manager. The AI manager is responsible for the
+operational product lifecycle and customer sales workflow; it is
+not merely a customer-support chatbot.
+
+Product discovery and sourcing:
+- The AI manager may research product opportunities, compare
+  supplier offers, and collect product specifications, images,
+  prices, lead times, and fulfilment terms from suppliers.
+- Supplier claims, product authenticity, availability, pricing,
+  and delivery promises must be treated as unverified until
+  supported by supplier confirmation or trusted evidence.
+- The AI must not fabricate suppliers, products, stock, prices,
+  certifications, reviews, or delivery commitments.
+- A sourcing candidate remains a private draft until required
+  supplier evidence and commercial checks are recorded.
+- The AI may prepare bilingual product content and propose
+  pricing using owner-approved margin, currency, and pricing rules.
+- Automatic publication is permitted only for products and
+  pricing that satisfy an owner-approved policy. New suppliers,
+  uncertain claims, exceptional prices, regulated/high-risk
+  categories, and policy exceptions require human approval.
+
+Product publishing and lifecycle:
+- The AI manager may create, enrich, translate, publish, update,
+  pause, and archive official-store product listings within its
+  granted service permissions and approved policies.
+- Publishing requires confirmed supplier identity/contact,
+  product specifications, current price and currency, availability
+  confirmation, fulfilment terms, image/content rights, and any
+  required compliance checks.
+- The AI must automatically pause or flag a listing when supplier
+  confirmation expires, availability is withdrawn, material data
+  conflicts, or a customer reports a serious issue.
+- The official store does not own or centrally hold inventory.
+  Suppliers remain responsible for confirming availability and
+  fulfilling supplier-agreed obligations.
+
+Sales and order operations:
+- The AI manager owns the official-store operational workflow:
+  customer enquiries, quote/availability confirmation, order
+  preparation, customer updates, supplier coordination, shipment
+  tracking, after-sales questions, and escalation.
+- An order is not accepted as confirmed until the required
+  supplier acceptance and payment confirmation conditions are met.
+- Order states must distinguish draft, awaiting supplier,
+  awaiting payment, paid, confirmed, preparing, shipped,
+  delivered, cancelled, refunded, and exception/review states.
+- The AI must not claim payment succeeded based on a browser
+  redirect, customer statement, or unverified screenshot.
+  Payment status must come from a trusted provider confirmation
+  or an explicitly audited owner action.
+- Official-store payment collection must use a dedicated
+  platform-owned provider configuration and settlement account.
+  It must never share member-merchant checkout credentials or
+  subscription billing events.
+- Until the legal entity, jurisdiction, seller-of-record model,
+  provider eligibility, tax/invoicing, returns, shipping, and
+  settlement arrangements are approved, live checkout and
+  automatic paid-order acceptance remain disabled.
+- The AI may prepare orders and coordinate supplier availability
+  while payment is disabled, but must clearly label them as
+  enquiries or pending orders, not completed sales.
+
+Autonomy, limits, and human oversight:
+- The platform owner defines the AI's supplier, product-category,
+  pricing/margin, publication, refund, discount, and escalation
+  policies. The AI cannot change its own permissions or policies.
+- Routine actions within approved limits may be automated and
+  must be recorded in the official-store activity log.
+- Human approval is required for new supplier onboarding,
+  policy exceptions, unusual discounts/pricing, refunds,
+  disputed payments, suspected fraud, safety/compliance issues,
+  and material customer complaints.
+- The owner can pause the AI manager, unpublish products, suspend
+  sales, and take over any order or customer case.
+- The AI service identity is separate from customers, suppliers,
+  member-store accounts, and the platform owner. It has least-
+  privilege access only to official-store data and approved tools.
+- Every AI research source, supplier confirmation, generated
+  content revision, price change, publication, order transition,
+  customer communication, and human intervention is auditable.
+
+Implementation status:
+
+Approved operating model. Current official-store product schema,
+catalogue and owner console are only foundations. Automated
+supplier discovery, AI product operations, order management,
+payment integration, shipment tracking, customer sales workflow,
+and AI oversight controls remain to be implemented and tested.
