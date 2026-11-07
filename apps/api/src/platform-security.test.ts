@@ -103,8 +103,14 @@ describe("platform authorization", () => {
     });
     expect(mocks.query).toHaveBeenCalledOnce();
     expect(mocks.query.mock.calls[0][1]).toEqual(["session-user"]);
-    expect(mocks.query.mock.calls[0][0]).toContain("u.status = 'active'");
-    expect(mocks.query.mock.calls[0][0]).toContain("u.email_verified = TRUE");
+    const authorizationSql = mocks.query.mock.calls[0][0] as string;
+    expect(authorizationSql).toContain("u.status = 'active'");
+    expect(authorizationSql).toContain("u.email_verified = TRUE");
+    expect(authorizationSql).toContain("pra.status = 'active'");
+    expect(authorizationSql).toContain("pra.role_scope = 'platform'");
+    expect(authorizationSql).toContain("r.scope_type = 'platform'");
+    expect(authorizationSql).toContain("rp.scope_type = 'platform'");
+    expect(authorizationSql).toContain("p.scope_type = 'platform'");
   });
 
   it("grants access only from the permissions returned for the session user", async () => {
