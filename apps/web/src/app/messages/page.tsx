@@ -8,7 +8,7 @@ import WorkspaceHeader from "../../components/workspace-header";
 
 type Conversation = {
   id: string; peer_id: string; peer_name: string | null; peer_image: string | null;
-  last_message: string | null; last_message_at: string | null; message_count: number;
+  last_message: string | null; last_message_at: string | null; unread_count: number;
 };
 type Message = {
   id: string; sender_id: string; body: string; created_at: string;
@@ -205,6 +205,7 @@ export default function MessagesPage() {
                     <span style={{ minWidth: 0, display: "grid", flex: 1, gap: 3 }}>
                       <strong>{item.peer_name || (ar ? "مستخدم وصلة" : "WASLA user")}</strong>
                       <small style={{ opacity: .72, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.last_message || (ar ? "لا توجد رسائل" : "No messages yet")}</small>
+                      {item.unread_count > 0 && <span aria-label={ar ? `${item.unread_count} رسائل غير مقروءة` : `${item.unread_count} unread messages`} style={{ justifySelf: ar ? "start" : "end", minWidth: 20, padding: "2px 7px", borderRadius: 999, background: "#c6a15b", color: "#14243a", fontSize: 11, fontWeight: 700 }}>{item.unread_count}</span>}
                     </span>
                   </button>
                 ))}
