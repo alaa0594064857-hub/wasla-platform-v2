@@ -58,6 +58,7 @@ describe("official store order desk", () => {
     expect(data).toMatchObject({ success: true, readOnly: true, orders: [{ id: "order-1" }] });
     expect(String(mocks.query.mock.calls[0][0])).toContain("LIMIT 100");
     expect(String(mocks.query.mock.calls[0][0])).toContain("supplier_purchase_status");
+    expect(String(mocks.query.mock.calls[0][0])).toContain('shipping_address->>\'country\' AS "destinationCountry"');
   });
 
   it("returns the order event history for a valid order identifier", async () => {
