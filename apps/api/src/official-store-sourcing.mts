@@ -154,20 +154,39 @@ export async function handleOfficialStoreSourcingRequest(
         await client.query("ROLLBACK");
         reply(response, 400, { success: false, error: "New sourcing candidates must be reviewed after creation" }); return;
       }
-      if (request.method === "PATCH" && input.reviewStatus === "approved") {
+      if (request.method === "PATCH" && (input.verificationStatus === "verified" || input.reviewStatus === "approved")) {
         const current = await client.query(
-          `SELECT verification_status, supplier_dropship_confirmed, minimum_order_quantity, source_product_url
+          `SELECT verification_status, supplier_dropship_confirmed, minimum_order_quantity,
+                  source_product_url, supplier_website, evidence, quote_valid_until,
+                  proposed_price, currency
            FROM official_store_sourcing_candidates WHERE id = $1 FOR UPDATE`,
           [candidateId],
         );
-        const row = current.rows[0] as { verification_status: string; supplier_dropship_confirmed: boolean; minimum_order_quantity: number | null; source_product_url: string | null; evidence: unknown[]; quote_valid_until: Date | null; proposed_price: string | null; currency: string | null } | undefined;
-        const verified = input.verificationStatus === undefined ? row?.verification_status : input.verificationStatus;
-        const dropship = input.supplierDropshipConfirmed === undefined ? row?.supplier_dropship_confirmed : input.supplierDropshipConfirmed;
-        const minimum = input.minimumOrderQuantity === undefined ? row?.minimum_order_quantity : input.minimumOrderQuantity;
-        const sourceUrl = input.sourceProductUrl === undefined ? row?.source_product_url : input.sourceProductUrl;
-        if (!row || verified !== "verified" || dropship !== true || (minimum !== null && Number(minimum) > 1) || !sourceUrl) {
+        const row = current.rows[0] as {
+          verification_status: string; supplier_dropship_confirmed: boolean;
+          minimum_order_quantity: number | null; source_product_url: string | null;
+          supplier_website: string | null; evidence: unknown[]; quote_valid_until: Date | null;
+          proposed_price: string | null; currency: string | null;
+        } | undefined;
+        const value = (key: Field, currentValue: unknown) => input[key] === undefined ? currentValue : input[key];
+        const verified = value("verificationStatus", row?.verification_status);
+        const dropship = value("supplierDropshipConfirmed", row?.supplier_dropship_confirmed);
+        const minimum = value("minimumOrderQuantity", row?.minimum_order_quantity);
+        const evidence = value("evidence", row?.evidence);
+        const quote = value("quoteValidUntil", row?.quote_valid_until);
+        const price = value("proposedPrice", row?.proposed_price);
+        const currency = value("currency", row?.currency);
+        const sourceUrl = value("sourceProductUrl", row?.source_product_url) || value("supplierWebsite", row?.supplier_website);
+        const proofItems = Array.isArray(evidence) ? evidence as Array<{ type?: string; url?: string }> : [];
+        const hasSupplierProof = proofItems.some(item => item?.type === "supplier_evidence_url" && typeof item.url === "string");
+        const hasSpecificationProof = proofItems.some(item => item?.type === "product_specification" && typeof item.url === "string");
+        const quoteTime = quote instanceof Date ? quote.getTime() : typeof quote === "string" ? Date.parse(quote) : NaN;
+        if (!row || verified !== "verified" || dropship !== true ||
+            (minimum !== null && Number(minimum) > 1) || !sourceUrl ||
+            !hasSupplierProof || !hasSpecificationProof || !Number.isFinite(quoteTime) || quoteTime <= Date.now() ||
+            price === null || price === undefined || currency === null || currency === undefined) {
           await client.query("ROLLBACK");
-          reply(response, 409, { success: false, error: "Approval requires evidence, verified supplier status, confirmed single-unit direct shipping, MOQ of one or less, a current quote, price, currency, and source product URL" }); return;
+          reply(response, 409, { success: false, error: "Verification and approval require supplier and specification evidence, verified supplier status, confirmed single-unit direct shipping, MOQ of one or less, a future-valid quote, price, currency, and a supplier or product URL" }); return;
         }
       }
       if (request.method === "POST") {
