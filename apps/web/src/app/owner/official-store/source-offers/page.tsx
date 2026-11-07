@@ -99,14 +99,18 @@ export default function OfficialStoreSourceOffersPage() {
   };
 
   async function load() {
-    const [p, o] = await Promise.all([
+    const [p, o, c] = await Promise.all([
       fetch("/api/platform/official-store/products", { credentials: "include", cache: "no-store" }),
       fetch("/api/platform/official-store/source-offers", { credentials: "include", cache: "no-store" }),
+      fetch("/api/platform/official-store/candidates/enrich", { credentials: "include", cache: "no-store" }),
     ]);
-    const pd = await p.json(); const od = await o.json();
-    if (!p.ok || !pd.success || !o.ok || !od.success) throw new Error("load");
+    const pd = await p.json(); const od = await o.json(); const cd = await c.json();
+    if (!p.ok || !pd.success || !o.ok || !od.success || !c.ok || !cd.success) throw new Error("load");
     setProducts(Array.isArray(pd.products) ? pd.products : []);
     setOffers(Array.isArray(od.offers) ? od.offers : []);
+    const candidates = Array.isArray(cd.candidates) ? cd.candidates : [];
+    setImportResult(candidates.length ? { importedCount: candidates.length, candidates: candidates.map((item: any) => ({ id: item.id, proposed_title: item.proposed_title || "" })) } : null);
+    setEnrichmentResults(Object.fromEntries(candidates.filter((item: any) => item.enrichment).map((item: any) => [item.id, item.enrichment])));
   }
 
   useEffect(() => {
