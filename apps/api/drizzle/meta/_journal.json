@@ -57,6 +57,13 @@
       "when": 1794078003000,
       "tag": "0007_trade_deals",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794078004000,
+      "tag": "0008_trade_notifications",
+      "breakpoints": true
     }
   ]
 }
