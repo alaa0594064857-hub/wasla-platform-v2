@@ -50,6 +50,7 @@ export default function TradeMatchesPage() {
       "Origin country needs confirmation": "بلد المنشأ يحتاج إلى تأكيد",
       "Delivery destination needs confirmation": "بلد التسليم يحتاج إلى تأكيد",
       "Quantity or supplier minimum needs confirmation": "الكمية أو الحد الأدنى للطلب يحتاج إلى تأكيد",
+      "Supplier capacity needs confirmation": "قدرة المورد على توفير الكمية تحتاج إلى تأكيد",
       "Comparable currency quote is missing": "لا توجد عملة عرض قابلة للمقارنة",
       "Comparable price evidence is missing": "لا يوجد إثبات سعر قابل للمقارنة",
     };
