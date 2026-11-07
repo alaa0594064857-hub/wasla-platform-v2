@@ -7,6 +7,7 @@ import { authClient } from "@/lib/auth-client";
 import { useLocale } from "../../../../components/locale-provider";
 
 type Product = { id: string; title_ar: string; title_en: string };
+type RegisteredDataSource = { id: string; name: string; provider: string; permission_status: string };
 type MatchResult = { productId: string; titleAr: string; titleEn: string; score: number; reasons: string[] };
 type Offer = {
   id: string; product_id: string; title_ar: string; title_en: string;
@@ -44,7 +45,8 @@ export default function OfficialStoreSourceOffersPage() {
   const [matching, setMatching] = useState(false);
   const [matchDecision, setMatchDecision] = useState("");
   const [identityBusy, setIdentityBusy] = useState("");
-  const [importForm, setImportForm] = useState({ provider: "shopify", supplierName: "", productUrl: "", supplierEvidenceUrl: "", specificationEvidenceUrl: "", payload: "" });
+  const [importForm, setImportForm] = useState({ provider: "shopify", dataSourceId: "", supplierName: "", productUrl: "", supplierEvidenceUrl: "", specificationEvidenceUrl: "", payload: "" });
+  const [registeredSources, setRegisteredSources] = useState<RegisteredDataSource[]>([]);
   const [importing, setImporting] = useState(false);
   const [enrichmentBusyId, setEnrichmentBusyId] = useState("");
   const [enrichmentResults, setEnrichmentResults] = useState<Record<string, { category: string; classificationConfidence: number; facts: Record<string,string>; missingRequiredReviewFields: string[]; warnings: string[]; sourceEvidence?: Array<{ type: string; url?: string; value?: string; rightsStatus: string; verificationStatus: string }> }>>({});
@@ -101,13 +103,15 @@ export default function OfficialStoreSourceOffersPage() {
   };
 
   async function load() {
-    const [p, o, c] = await Promise.all([
+    const [p, o, c, s] = await Promise.all([
       fetch("/api/platform/official-store/products", { credentials: "include", cache: "no-store" }),
       fetch("/api/platform/official-store/source-offers", { credentials: "include", cache: "no-store" }),
       fetch("/api/platform/official-store/candidates/enrich", { credentials: "include", cache: "no-store" }),
+      fetch("/api/platform/official-store/data-sources", { credentials: "include", cache: "no-store" }),
     ]);
-    const pd = await p.json(); const od = await o.json(); const cd = await c.json();
-    if (!p.ok || !pd.success || !o.ok || !od.success || !c.ok || !cd.success) throw new Error("load");
+    const pd = await p.json(); const od = await o.json(); const cd = await c.json(); const sd = await s.json();
+    if (!p.ok || !pd.success || !o.ok || !od.success || !c.ok || !cd.success || !s.ok || !sd.success) throw new Error("load");
+    setRegisteredSources(Array.isArray(sd.sources) ? sd.sources : []);
     setProducts(Array.isArray(pd.products) ? pd.products : []);
     setOffers(Array.isArray(od.offers) ? od.offers : []);
     const candidates = Array.isArray(cd.candidates) ? cd.candidates : [];
@@ -176,7 +180,7 @@ export default function OfficialStoreSourceOffersPage() {
       if (!payload || typeof payload !== "object" || Array.isArray(payload)) throw new Error("json");
       const response = await fetch("/api/platform/official-store/import-candidates", {
         method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: importForm.provider, supplierName: importForm.supplierName.trim(), productUrl: importForm.productUrl.trim(), supplierEvidenceUrl: importForm.supplierEvidenceUrl.trim() || null, specificationEvidenceUrl: importForm.specificationEvidenceUrl.trim() || null, payload }),
+        body: JSON.stringify({ provider: importForm.provider, dataSourceId: importForm.dataSourceId || null, supplierName: importForm.supplierName.trim(), productUrl: importForm.productUrl.trim(), supplierEvidenceUrl: importForm.supplierEvidenceUrl.trim() || null, specificationEvidenceUrl: importForm.specificationEvidenceUrl.trim() || null, payload }),
       });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error("import");
@@ -336,6 +340,7 @@ export default function OfficialStoreSourceOffersPage() {
       <form onSubmit={importCandidates} style={{ display: "grid", gap: 12 }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 12 }}>
           <label style={labelStyle}>{t.provider}<select value={importForm.provider} onChange={e => setImportForm(s => ({ ...s, provider: e.target.value }))} style={inputStyle}><option value="shopify">{t.shopify}</option><option value="merchant_feed">{t.feed}</option></select></label>
+          <label style={labelStyle}>{ar ? "مصدر البيانات المعتمد (اختياري)" : "Approved registered data source (optional)"}<select value={importForm.dataSourceId} onChange={e => setImportForm(s => ({ ...s, dataSourceId: e.target.value }))} style={inputStyle}><option value="">{ar ? "استيراد يدوي بدون ربط بسجل مصدر" : "Manual import without registry link"}</option>{registeredSources.filter(source => source.permission_status === "approved" && source.provider.toLowerCase() === importForm.provider.toLowerCase()).map(source => <option key={source.id} value={source.id}>{source.name} · {source.provider}</option>)}</select></label>
           <label style={labelStyle}>{t.importSupplier}<input required value={importForm.supplierName} onChange={e => setImportForm(s => ({ ...s, supplierName: e.target.value }))} style={inputStyle}/></label>
           <label style={labelStyle}>{t.importUrl}<input required type="url" placeholder="https://..." value={importForm.productUrl} onChange={e => setImportForm(s => ({ ...s, productUrl: e.target.value }))} style={inputStyle}/></label>
           <label style={labelStyle}>{t.supplierProof}<input type="url" placeholder="https://..." value={importForm.supplierEvidenceUrl} onChange={e => setImportForm(s => ({ ...s, supplierEvidenceUrl: e.target.value }))} style={inputStyle}/></label>
