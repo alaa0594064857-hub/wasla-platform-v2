@@ -79,12 +79,12 @@ Production requirements:
 Current implementation status:
 
 - Email/password authentication is configured.
-- Email verification is currently disabled.
-- A production email delivery provider is not
-  yet configured.
+- Email verification is enabled in Better Auth and required before normal sign-in.
+- Verification and password-reset email delivery both depend on Resend configuration.
+- Without a verified custom sender/domain, delivery remains restricted to the configured Resend test recipient.
+- The API now has production-safe defaults for its Better Auth base URL and the current Render web origin; the purchased custom domain must be added to BETTER_AUTH_TRUSTED_ORIGINS and BETTER_AUTH_URL when it is connected.
 
-Email verification must be enabled and tested
-before production registration is opened.
+Email delivery must be configured with a verified sender and the full registration, verification, login and password-reset flows must be tested before public production registration is opened.
 
 ## 6. Login Security
 
@@ -235,11 +235,10 @@ Implemented foundations:
 
 Not yet production-ready:
 
-- Email verification delivery.
-- Password recovery delivery.
-- Production secret configuration.
-- Complete authentication security tests.
-- Production deployment configuration.
+- Verified production sender/domain and successful external delivery of verification and password-reset emails.
+- Confirmation of BETTER_AUTH_URL and BETTER_AUTH_TRUSTED_ORIGINS for the final purchased domain.
+- Complete authentication security tests, including rate limiting, session revocation and suspended-account denial.
+- Final production deployment and custom-domain checks.
 
 No production authentication service
 or production credentials are configured
