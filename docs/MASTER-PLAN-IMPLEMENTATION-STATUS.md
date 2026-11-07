@@ -428,3 +428,11 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Updated AI system guidance and capability metadata: it may analyze included order requests but cannot create orders, contact suppliers, collect payments or claim purchasing/fulfilment.
 - Added tests for owner authorization, bounded order reads, no customer PII in the query/context, and explicit read-only capability/limitations.
 - API deployment for commit `b652a3ed1d2cd9c99c3e68c4da634f00c3cc707d` is Live. GitHub Actions run `42411367873` passed all API tests, DB migration/constraints, TypeScript checks and API/Web builds.
+
+
+## Member-store checkout transparency and URL hardening — 2026-11-07
+
+- Public member-product details now disclose that checkout is completed with the member seller and that the seller is responsible for collecting payment, fulfilment, delivery, returns and after-sales service. This preserves the approved no-platform-custody/no-commission model.
+- Member product image, video and external checkout URLs now require HTTPS, reject embedded URL credentials, and reject localhost/.local destinations.
+- Added API regression tests for insecure HTTP, credential-bearing HTTPS, localhost and local-domain checkout URLs.
+- GitHub Actions run `42411603607` passed API tests, DB migrations/constraints, API TypeScript/build and Web build. Render deployment verification is in progress.
