@@ -14,8 +14,8 @@ const words = {
  ar: {
   brand:"وصلة", eyebrow:"مساحة حسابك", title:"مرحباً بعودتك", subtitle:"هذه هي نقطة انطلاقك لإدارة هويتك وعوالمك على وصلة.",
   profile:"ملفك الشخصي", edit:"تعديل الملف الشخصي", email:"البريد الإلكتروني", member:"عضو وصلة",
-  messages:"الرسائل", notifications:"الإشعارات", messagesInfo:"ستظهر هنا محادثاتك مع المتاجر والشركات عند إطلاق نظام الرسائل.",
-  notificationsInfo:"ستظهر هنا تنبيهات الحساب والطلبات والأنشطة عند تفعيل الإشعارات.",
+  messages:"الرسائل", notifications:"الإشعارات", messagesInfo:"تابع محادثاتك مع المتاجر والشركات والأعضاء من مكان واحد.",
+  notificationsInfo:"تابع تنبيهات الدعوات والرسائل واستفسارات المنتجات وطلبات المتجر الرسمي.",
   worlds:"مساحات نشاطك", shops:"متاجري", business:"حسابات الأعمال", network:"شبكتي", open:"فتح", storesCount:"متجر", accountsCount:"حساب أعمال",
   loading:"جارٍ تحميل بيانات الحساب...", error:"تعذر تحميل بعض بيانات الحساب. يمكنك المحاولة مجدداً.",
   retry:"إعادة المحاولة", publicHome:"بوابة وصلة", signOut:"تسجيل الخروج", signingOut:"جارٍ تسجيل الخروج...",
@@ -28,8 +28,8 @@ const words = {
  en: {
   brand:"WASLA", eyebrow:"YOUR ACCOUNT SPACE", title:"Welcome back", subtitle:"Your starting point to manage your identity and worlds across WASLA.",
   profile:"Your profile", edit:"Edit profile", email:"Email address", member:"WASLA member",
-  messages:"Messages", notifications:"Notifications", messagesInfo:"Your conversations with shops and businesses will appear here when messaging launches.",
-  notificationsInfo:"Account, order and activity alerts will appear here when notifications are enabled.",
+  messages:"Messages", notifications:"Notifications", messagesInfo:"Manage your conversations with shops, businesses and WASLA members in one place.",
+  notificationsInfo:"Track account invitations, messages, product inquiries and official-store order alerts.",
   worlds:"Your activity spaces", shops:"My shops", business:"Business accounts", network:"My network", open:"Open", storesCount:"shops", accountsCount:"business accounts",
   loading:"Loading your account...", error:"Some account information could not be loaded. You can try again.",
   retry:"Try again", publicHome:"WASLA gateway", signOut:"Sign out", signingOut:"Signing out...",
