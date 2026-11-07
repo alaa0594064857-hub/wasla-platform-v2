@@ -250,6 +250,11 @@ export default function OwnerSourcingPage() {
             <span>{status(candidate.verification_status)}</span>
           </div>
           <p>{candidate.supplier_dropship_confirmed ? t.dropshipYes : t.dropshipNo}</p>
+          <div style={styles.meta}>
+            <span>{candidate.supplier_identity_verified ? t.identityVerified : (ar ? "هوية المورد غير مؤكدة" : "Supplier identity not verified")}</span>
+            <span>{candidate.specifications_verified ? t.specsVerified : (ar ? "المواصفات غير مؤكدة" : "Specifications not verified")}</span>
+            {candidate.sample_inspected && <span>{t.sampleInspected}</span>}
+          </div>
           {candidate.source_product_url && <a href={candidate.source_product_url} target="_blank" rel="noreferrer" style={styles.sourceLink}>{t.sourceLabel} ↗</a>}
           <div style={styles.actions}>
             {candidate.verification_status !== "verified" && <button type="button" style={styles.secondary} disabled={busyId === candidate.id} onClick={() => patch(candidate, { verificationStatus: "verified" })}>{t.verify}</button>}
