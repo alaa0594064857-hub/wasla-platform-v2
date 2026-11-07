@@ -281,6 +281,13 @@ export async function ensureOfficialStoreTables(): Promise<void> {
         ADD COLUMN IF NOT EXISTS supplier_tracking_url text
     `);
 
+    await client.query(`
+      ALTER TABLE official_store_sourcing_candidates
+        ADD COLUMN IF NOT EXISTS supplier_identity_verified boolean NOT NULL DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS specifications_verified boolean NOT NULL DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS sample_inspected boolean NOT NULL DEFAULT FALSE
+    `);
+
     await client.query("COMMIT");
   } catch (error) {
     await client.query("ROLLBACK");
