@@ -21,6 +21,10 @@ type Deal = {
   createdAt: string;
 };
 type BusinessResult = { id: string; display_name: string; account_type: string; country_code: string | null };
+type DealDetail = {
+  items: { id: string; title: string; description: string | null; quantity: string; unitPrice: string; currency: string }[];
+  events: { id: string; eventType: string; fromStatus: string | null; toStatus: string; body: string | null; createdAt: string }[];
+};
 
 const statusLabels: Record<string, [string, string]> = {
   draft: ["مسودة", "Draft"],
@@ -38,6 +42,8 @@ export default function TradePage() {
   const ar = locale === "ar";
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
+  const [dealDetails, setDealDetails] = useState<Record<string, DealDetail>>({});
+  const [expandedDealId, setExpandedDealId] = useState<string | null>(null);
   const [businessQuery, setBusinessQuery] = useState("");
   const [businessResults, setBusinessResults] = useState<BusinessResult[]>([]);
   const [selectedCounterparty, setSelectedCounterparty] = useState<BusinessResult | null>(null);
@@ -95,6 +101,23 @@ export default function TradePage() {
       setSelectedCounterparty(null);
     } catch {
       setError(ar ? "تعذر البحث عن الشركات حالياً." : "Business search is temporarily unavailable.");
+    }
+  };
+
+  const toggleDealDetails = async (dealId: string) => {
+    if (expandedDealId === dealId) {
+      setExpandedDealId(null);
+      return;
+    }
+    setExpandedDealId(dealId);
+    if (dealDetails[dealId]) return;
+    try {
+      const response = await fetch(`/api/trade/deals/${dealId}`, { credentials: "include", cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error("details");
+      setDealDetails(current => ({ ...current, [dealId]: { items: data.items ?? [], events: data.events ?? [] } }));
+    } catch {
+      setError(ar ? "تعذر تحميل سجل الصفقة." : "Could not load deal history.");
     }
   };
 
@@ -279,6 +302,26 @@ export default function TradePage() {
                     <button type="button" disabled={saving} onClick={() => void actOnDeal(deal, ownPending.id, "accept")} style={buttonStyle}>{ar ? "قبول" : "Accept"}</button>
                     <button type="button" disabled={saving} onClick={() => void actOnDeal(deal, ownPending.id, "decline")} style={{ ...buttonStyle, background: "#fff", color: "#a33d3d", borderColor: "#a33d3d" }}>{ar ? "رفض" : "Decline"}</button>
                     <button type="button" disabled={saving || !counter.message.trim() && !counter.amount.trim()} onClick={() => void actOnDeal(deal, ownPending.id, "counter")} style={{ ...buttonStyle, background: "#b18d4d" }}>{ar ? "إرسال تعديل" : "Send counter"}</button>
+                  </div>
+                </div>}
+                <button type="button" onClick={() => void toggleDealDetails(deal.id)} style={{ justifySelf: "start", border: "none", background: "transparent", color: "#765a2f", textDecoration: "underline", cursor: "pointer", padding: 0 }}>
+                  {expandedDealId === deal.id ? (ar ? "إخفاء سجل الصفقة" : "Hide deal history") : (ar ? "عرض سجل الصفقة" : "View deal history")}
+                </button>
+                {expandedDealId === deal.id && dealDetails[deal.id] && <div style={{ display: "grid", gap: 12, padding: 12, borderRadius: 10, background: "#f7f4ed" }}>
+                  {dealDetails[deal.id].items.length > 0 && <div>
+                    <strong>{ar ? "بنود الصفقة" : "Deal items"}</strong>
+                    {dealDetails[deal.id].items.map(item => <p key={item.id} style={{ margin: "6px 0" }}>{item.title} · {item.quantity} × {item.unitPrice} {item.currency}</p>)}
+                  </div>}
+                  <div>
+                    <strong>{ar ? "سجل التغييرات والقرارات" : "Activity and decisions"}</strong>
+                    {dealDetails[deal.id].events.map(event => <div key={event.id} style={{ padding: "8px 0", borderBottom: "1px solid rgba(115,128,146,.2)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                        <strong>{event.eventType}</strong>
+                        <small style={{ opacity: .65 }}>{new Date(event.createdAt).toLocaleString(ar ? "ar" : "en")}</small>
+                      </div>
+                      <small>{event.fromStatus ? `${event.fromStatus} → ${event.toStatus}` : event.toStatus}</small>
+                      {event.body && <p style={{ margin: "5px 0" }}>{event.body}</p>}
+                    </div>)}
                   </div>
                 </div>}
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
