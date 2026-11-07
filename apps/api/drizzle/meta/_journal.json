@@ -29,6 +29,27 @@
       "when": 1793895000000,
       "tag": "0003_add_registration_type",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794078000000,
+      "tag": "0004_extend_profiles",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794078001000,
+      "tag": "0005_message_read_receipts",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794078002000,
+      "tag": "0006_notifications",
+      "breakpoints": true
     }
   ]
 }
