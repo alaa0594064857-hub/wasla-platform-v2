@@ -293,15 +293,22 @@ export default function OfficialStoreSourceOffersPage() {
   async function review(offer: Offer) {
     setBusyId(offer.id); setError(""); setNotice("");
     try {
-      const response = await fetch(`/api/platform/official-store/source-offers/${offer.id}`, {
-        method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" },
+      const headers = { "Content-Type": "application/json" };
+      const verificationResponse = await fetch(`/api/platform/official-store/source-offers/${offer.id}`, {
+        method: "PATCH", credentials: "include", headers,
         body: JSON.stringify({
           supplierIdentityVerified: true, specificationsVerified: true,
-          directToCustomerConfirmed: true, offerStatus: "approved",
+          directToCustomerConfirmed: true,
         }),
       });
-      const data = await response.json();
-      if (!response.ok || !data.success) throw new Error("review");
+      const verificationData = await verificationResponse.json();
+      if (!verificationResponse.ok || !verificationData.success) throw new Error("verification");
+      const approvalResponse = await fetch(`/api/platform/official-store/source-offers/${offer.id}`, {
+        method: "PATCH", credentials: "include", headers,
+        body: JSON.stringify({ offerStatus: "approved" }),
+      });
+      const approvalData = await approvalResponse.json();
+      if (!approvalResponse.ok || !approvalData.success) throw new Error("approval");
       setNotice(t.saved); await load();
     } catch { setError(t.error); }
     finally { setBusyId(""); }
