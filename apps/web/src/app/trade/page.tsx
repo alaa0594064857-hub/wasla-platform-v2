@@ -89,7 +89,9 @@ export default function TradePage() {
       const response = await fetch(`/api/search?q=${encodeURIComponent(businessQuery.trim())}`, { cache: "no-store" });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error("search");
-      setBusinessResults(data.results?.businesses ?? []);
+      setBusinessResults((data.results?.businesses ?? []).filter((business: BusinessResult) =>
+        !accounts.some(account => account.id === business.id)
+      ));
       setSelectedCounterparty(null);
     } catch {
       setError(ar ? "تعذر البحث عن الشركات حالياً." : "Business search is temporarily unavailable.");
@@ -99,6 +101,10 @@ export default function TradePage() {
   const createDraft = async () => {
     if (!initiatorAccountId || !selectedCounterparty || title.trim().length < 3) {
       setError(ar ? "اختر حسابك والشركة المقابلة وأدخل عنوان الصفقة." : "Choose your account, the counterparty and a deal title.");
+      return;
+    }
+    if (amount.trim() && (!Number.isFinite(Number(amount)) || Number(amount) < 0)) {
+      setError(ar ? "أدخل قيمة صحيحة غير سالبة." : "Enter a valid non-negative amount.");
       return;
     }
     setSaving(true);
