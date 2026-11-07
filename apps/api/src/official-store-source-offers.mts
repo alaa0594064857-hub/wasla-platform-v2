@@ -21,6 +21,48 @@ export function shouldRequireOfferReReview(
     hasMaterialOfferChanges(body);
 }
 
+export function isSourcingCandidateReadyForOfferLink(candidate: {
+  review_status?: unknown;
+  verification_status?: unknown;
+  supplier_dropship_confirmed?: unknown;
+  supplier_identity_verified?: unknown;
+  specifications_verified?: unknown;
+  minimum_order_quantity?: unknown;
+  source_product_url?: unknown;
+  evidence?: unknown;
+  quote_valid_until?: unknown;
+  proposed_price?: unknown;
+  currency?: unknown;
+}, offer: {
+  supplierName: unknown;
+  sourcePlatform: unknown;
+  sourceProductUrl: unknown;
+  supplierPrice: unknown;
+  supplierCurrency: unknown;
+}): boolean {
+  const evidence = Array.isArray(candidate.evidence) ? candidate.evidence as Array<Record<string, unknown>> : [];
+  const hasSupplierProof = evidence.some(item => item?.type === "supplier_evidence_url" && httpsUrl(item.url));
+  const hasSpecificationProof = evidence.some(item => item?.type === "product_specification" && httpsUrl(item.url));
+  const expiry = candidate.quote_valid_until instanceof Date
+    ? candidate.quote_valid_until.getTime()
+    : typeof candidate.quote_valid_until === "string" ? Date.parse(candidate.quote_valid_until) : NaN;
+  return candidate.review_status === "approved" &&
+    candidate.verification_status === "verified" &&
+    candidate.supplier_dropship_confirmed === true &&
+    candidate.supplier_identity_verified === true &&
+    candidate.specifications_verified === true &&
+    Number(candidate.minimum_order_quantity) === 1 &&
+    typeof candidate.source_product_url === "string" &&
+    candidate.source_product_url === offer.sourceProductUrl &&
+    candidate.supplier_name === offer.supplierName &&
+    candidate.source_platform === offer.sourcePlatform &&
+    candidate.currency === offer.supplierCurrency &&
+    candidate.proposed_price !== null && candidate.proposed_price !== undefined &&
+    Number(candidate.proposed_price) === Number(offer.supplierPrice) &&
+    Number.isFinite(expiry) && expiry > Date.now() &&
+    hasSupplierProof && hasSpecificationProof;
+}
+
 function reply(response: ServerResponse, status: number, data: Record<string, unknown>): void {
   response.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
@@ -145,7 +187,7 @@ export async function handleOfficialStoreSourceOffersRequest(
         await client.query("BEGIN");
         if (candidateId) {
           const candidate = await client.query(
-            "SELECT supplier_name, source_platform, source_product_url, proposed_price::text AS proposed_price, currency, review_status FROM official_store_sourcing_candidates WHERE id = $1 FOR UPDATE",
+            "SELECT supplier_name, source_platform, source_product_url, proposed_price::text AS proposed_price, currency, review_status, verification_status, supplier_dropship_confirmed, supplier_identity_verified, specifications_verified, minimum_order_quantity, evidence, quote_valid_until FROM official_store_sourcing_candidates WHERE id = $1 FOR UPDATE",
             [candidateId],
           );
           if (!candidate.rows.length) {
@@ -154,10 +196,10 @@ export async function handleOfficialStoreSourceOffersRequest(
             return;
           }
           const c = candidate.rows[0];
-          if (["rejected", "converted"].includes(c.review_status) || c.supplier_name !== supplierName ||
-              c.source_platform !== platform || c.source_product_url !== body.sourceProductUrl ||
-              (c.currency && c.currency !== currency) ||
-              (c.proposed_price !== null && Number(c.proposed_price) !== Number(body.supplierPrice))) {
+          if (!isSourcingCandidateReadyForOfferLink(c, {
+            supplierName, sourcePlatform: platform, sourceProductUrl: body.sourceProductUrl,
+            supplierPrice: body.supplierPrice, supplierCurrency: currency,
+          })) {
             await client.query("ROLLBACK");
             reply(response, 409, { success: false, error: "Offer details do not match the selected sourcing candidate" });
             return;
