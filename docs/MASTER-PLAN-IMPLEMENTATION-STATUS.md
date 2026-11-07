@@ -65,8 +65,9 @@ This is an evidence-based implementation tracker, not a claim that the platform 
 - Added owner-permission-gated API `POST /api/platform/official-store/opportunities/assess`.
 - Transparent preliminary score: demand evidence strength/freshness (40 points), gross margin before unentered costs (25 points), and supplier readiness checks (10 points).
 - Requires an HTTPS demand evidence URL and date, target market, explicit currency, selling price and cost inputs. Missing supplier/specification evidence and unconfirmed direct shipping/returns are surfaced as blockers.
-- This is a manual assessment preview only. It does not fetch Amazon/marketplace data, persist an opportunity record, verify suppliers independently, publish products, contact suppliers, create orders or make payments. Costs must be entered in one currency; use the pricing preview with documented FX inputs before comparing currencies.
-- Latest code commits: API assessment `f4655f0`, API route `913aac9`, bilingual page `8b7cf5e`, sourcing-console link `7c2e284`. Production build/deployment and authenticated end-to-end behavior must be verified before marking deployed.
+- Assessments are persisted in owner-scoped history and can be retrieved for later review. The score is preliminary and transparent; it is not independently verified market intelligence or net profit.
+- It does not fetch Amazon/marketplace data, verify suppliers independently, publish products, contact suppliers, create orders or make payments. Costs must be entered in one currency; use the pricing preview with documented FX inputs before comparing currencies.
+- The bilingual owner page, assessment API and persistence foundation are deployed. Authenticated production CRUD and authorization-boundary end-to-end tests remain.
 
 ## Immediate build order
 
@@ -213,3 +214,14 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Review scope included platform authorization, source offers, candidate enrichment/review, authorized import candidates, data-source registry, opportunity assessments, and relevant route wiring.
 - Verification limitation: this is a source-code review plus successful production builds/deployments, not a live authenticated penetration test. Negative tests for unauthenticated requests, insufficient roles, cross-owner data access, mismatched candidate details, duplicate conversion, and terminal-state mutation still need to be run with controlled test accounts. Do not describe the workflow as fully security-tested.
 - Commercial readiness remains unchanged: payment/webhooks, order fulfilment orchestration, returns/refunds/disputes, legal/tax/consumer disclosures, live authorized demand connectors, and the autonomous AI manager are not complete or production-verified.
+
+
+## Deployment checkpoint — 2026-11-07 (supplier evidence prefill)
+
+- Commit: `e6c79a98baf2dbcad016e94f800e464d7e73e3fb` (`feat: prefill supplier proof when linking reviewed candidates`).
+- GitHub Actions run `42376645700` completed successfully. The quality job passed shared/API tests, database migrations and constraints, TypeScript checks, API build and web build.
+- Render API deployment `dep-dbnic0vb9u1s73cmv44g` is confirmed `live`; Render Web deployment `dep-dbnic0vb9u1s73cmv420` is confirmed `live`. Both deploys reference the same commit.
+- When linking a reviewed candidate to a supplier offer, the owner form now pre-fills supplier-evidence and product-specification evidence URLs from the candidate enrichment result when those evidence items exist.
+- Evidence remains explicitly unverified. The owner must open and review the evidence and make the required identity/specification/direct-shipping confirmations. Prefill does not verify a supplier, approve an offer, publish a product or place an order.
+- Verification boundary: CI and production deployment are confirmed. Authenticated owner-session browser/database end-to-end testing remains outstanding.
+
