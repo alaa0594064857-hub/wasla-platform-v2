@@ -50,6 +50,13 @@
       "when": 1794078002000,
       "tag": "0006_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794078003000,
+      "tag": "0007_trade_deals",
+      "breakpoints": true
     }
   ]
 }
