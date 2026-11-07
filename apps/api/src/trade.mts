@@ -436,6 +436,12 @@ export async function handleTradeRequest(
       }
 
       const fromStatus = deal.status as DealStatus;
+      if (deal.expires_at && new Date(deal.expires_at).getTime() <= Date.now() &&
+          ["propose", "counter", "accept", "decline"].includes(action)) {
+        await client.query("ROLLBACK");
+        respond(response, 409, { success: false, error: "Trade proposal has expired" });
+        return;
+      }
       let toStatus: DealStatus = fromStatus;
       let pendingResponse: string | null = deal.pending_response_account_id;
       const eventTypeMap: Record<TradeAction, string> = {
