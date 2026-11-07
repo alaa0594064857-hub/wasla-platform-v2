@@ -16,6 +16,9 @@ type OfficialProduct = {
   availability_status: "available" | "limited" | "unavailable" | "needs_confirmation";
   image_url: string | null;
   created_at: string;
+  deliveryCountries: string[];
+  estimatedDeliveryDaysMin: number;
+  estimatedDeliveryDaysMax: number;
 };
 
 export default function OfficialStorePage() {
@@ -40,6 +43,9 @@ export default function OfficialStorePage() {
     close: "إغلاق",
     price: "السعر المعروض",
     availability: "التوفر",
+    delivery: "الدول التي يشملها التوصيل",
+    deliveryTime: "المدة التقديرية للتوصيل",
+    days: "يوم",
     available: "متوفر",
     limited: "توفر محدود",
     unavailableStatus: "غير متوفر حالياً",
@@ -61,6 +67,9 @@ export default function OfficialStorePage() {
     price: "Listed price",
     supplier: "Supplier",
     availability: "Availability",
+    delivery: "Delivery destinations",
+    deliveryTime: "Estimated delivery",
+    days: "days",
     available: "Available",
     limited: "Limited availability",
     unavailableStatus: "Currently unavailable",
@@ -137,6 +146,10 @@ export default function OfficialStorePage() {
         <p className="mt-4 whitespace-pre-wrap leading-8 text-slate-700">{(ar ? selected.description_ar : selected.description_en) || ""}</p>
         <p className="mt-5 text-xl font-bold text-[#8b6828]">{selected.price} {selected.currency}</p>
         <p className="mt-3 text-sm">{copy.availability}: {availabilityLabel(selected.availability_status)}</p>
+        <div className="mt-4 rounded-xl bg-[#f5f1e8] p-4 text-sm leading-7">
+          <p><strong>{copy.delivery}:</strong> {selected.deliveryCountries.join(", ")}</p>
+          <p><strong>{copy.deliveryTime}:</strong> {selected.estimatedDeliveryDaysMin}–{selected.estimatedDeliveryDaysMax} {copy.days}</p>
+        </div>
       </section>
     </div>}
   </main>;
