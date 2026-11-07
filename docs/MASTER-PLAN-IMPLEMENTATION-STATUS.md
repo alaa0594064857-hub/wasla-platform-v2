@@ -14,6 +14,7 @@ This is an evidence-based implementation tracker, not a claim that the platform 
 - WASLA does not take member sales commissions, hold merchant funds, split payments, or pay out merchants.
 - WASLA revenue is separate: membership subscriptions and sales from the official WASLA Store.
 - Official WASLA Store is separate from member-owned stores and is intended to be managed by an AI operations manager under the human platform owner's authority.
+- The official-store catalogue may unify verified equivalent products from multiple external sources into one WASLA listing, while preserving separate supplier offers, variants, source provenance, image rights, costs and fulfilment records.
 - Private member messages are not automatically visible to platform administrators or the official-store AI.
 
 ## Official-store customer experience and sourcing — approved principles
@@ -45,7 +46,7 @@ This is an evidence-based implementation tracker, not a claim that the platform 
 | Subscription plan administration | Partial — deployed | Owner-only plan API and bilingual `/owner/subscriptions` console are deployed; Render API and web deploys for commit `ce6e2025e13270ab849afde03c5f9cedcc12771f` are both confirmed `live` (2026-11-07 review). Plans remain empty until the owner creates them. Public catalogue is read-only and only exposes active/public plans. End-to-end authorization/CRUD tests remain; customer self-service and subscription lifecycle are not implemented. |
 | Subscription payment provider | Not implemented | Deferred until legal entity, operating jurisdiction, provider eligibility, pricing, tax and settlement requirements are confirmed. No live billing. |
 | Official WASLA Store | Partial — public catalogue and owner sourcing console deployed; sourcing schema verified in production | Public catalogue and owner sourcing console `/owner/official-store/sourcing` are deployed. Latest web and API deploys for commit `6d5e7d92a18af1701dde89496721a05cd4f7d8b9` are confirmed `live` (2026-11-07). Render Postgres confirms source platform/URL, MOQ, direct-shipping, shipping countries/cost/estimates, quote expiry, supplier identity/specification/sample verification columns. Public catalogue SELECT excludes supplier identity, contact, source URLs, sourcing notes and supplier costs; exposes only published, active, available/limited products with confirmed direct shipping. No live supplier discovery integration, AI runtime, checkout, supplier purchasing, or end-to-end sales workflow tested. |
-| Official-store AI operations manager | Not implemented — sourcing policy and manual owner review foundation deployed | Source-agnostic policy supports Turkish local suppliers and global suppliers; the owner console captures supplier evidence, exact-specification evidence, supplier identity/specification verification flags, MOQ, direct shipping, shipping terms and quote expiry. This is a manual review queue, not AI research or verification. No AI runtime, supplier search/contact automation, negotiation, pricing engine, order API, payment, or autonomous purchasing exists yet. |
+| Official-store AI operations manager | Not implemented — sourcing policy and manual owner review foundation deployed | Source-agnostic policy supports Turkish local suppliers and global suppliers; the owner console captures supplier evidence, exact-specification evidence, supplier identity/specification verification flags, MOQ, direct shipping, shipping terms and quote expiry. This is a manual review queue, not AI research or verification. Planned next: external-source discovery, canonical product matching and variant separation, multi-supplier offer aggregation, bilingual content enrichment, authorized image provenance, owner-controlled sale pricing and offer refresh. No AI runtime, supplier search/contact automation, negotiation, pricing engine, order API, payment, or autonomous purchasing exists yet. |
 | Official-store orders, checkout and fulfilment | Schema foundation added; APIs/workflow not implemented | Added order/event tables and fields for source marketplace, supplier purchase reference/status, direct-ship tracking, supplier cost and shipping. Need order APIs, supplier acceptance, dedicated official-store payment provider, seller-of-record, tax/import duties, returns and shipping integrations. Live checkout stays disabled until legal/provider arrangements are approved. |
 | Orders and order management | Not implemented | Member sales remain outside WASLA payment custody; platform can optionally coordinate order information without becoming payment intermediary. |
 | Trade/deal management | Not implemented | Requires deal records, participants, negotiation stages, documents, permissions and audit trail. |
@@ -63,13 +64,14 @@ This is an evidence-based implementation tracker, not a claim that the platform 
 2. Subscription plan management and the safe public plan catalogue are deployed; next verify owner authorization, create/update behavior and public-catalogue filtering in production. Keep payment collection disabled.
 3. Build subscription lifecycle and entitlements with audited manual state changes; never mark a paid subscription active from a browser redirect.
 4. Recheck public official-store catalogue/homepage deployments and test owner product CRUD/permissions; then implement AI sourcing/product lifecycle, supplier confirmation and owner policy controls.
-5. Implement official-store order/event foundations and the AI Store Manager workflow: scoped product research, supplier evidence, bilingual listings, publication policy, customer enquiries, order coordination and owner escalation. Keep live payment disabled until legal/provider prerequisites are approved.
-6. Complete the owner command center for subscriptions, official store, security and audit.
-7. Test messaging and inquiries with two distinct accounts and verify that each party can access only their own records.
-8. Test member product publishing and seller-owned checkout link end to end.
-9. Add order/Trade modules, notifications, ratings and complaints according to the approved roadmap.
-10. Run full security, privacy, performance, accessibility, bilingual and deployment checks.
-11. Only then prepare legal/provider onboarding, public launch, domain purchase and investor/accelerator presentation.
+5. Implement external catalogue aggregation: canonical WASLA product records linked to multiple independently verified source offers; robust duplicate/variant matching; bilingual fact-grounded content; image-rights provenance; landed-cost and owner-margin pricing; price/stock/shipping refresh; and exact-source order linkage.
+6. Implement official-store order/event foundations and the AI Store Manager workflow: scoped product research, supplier evidence, bilingual listings, publication policy, customer enquiries, order coordination and owner escalation. Keep live payment disabled until legal/provider prerequisites are approved.
+7. Complete the owner command center for subscriptions, official store, security and audit.
+8. Test messaging and inquiries with two distinct accounts and verify that each party can access only their own records.
+9. Test member product publishing and seller-owned checkout link end to end.
+10. Add order/Trade modules, notifications, ratings and complaints according to the approved roadmap.
+11. Run full security, privacy, performance, accessibility, bilingual and deployment checks.
+12. Only then prepare legal/provider onboarding, public launch, domain purchase and investor/accelerator presentation.
 
 ## Release gates
 
