@@ -162,3 +162,32 @@ WASLA's official store may source an eligible item from an external supplier (il
 Supplier photos/descriptions are not automatically reusable: store rights evidence and use them only with permission/license or another valid legal basis; otherwise create original or properly licensed WASLA media. Compute contribution margin after shipping, FX/payment costs, taxes/duties, returns and other known costs; do not describe the supplier/customer price difference as net profit. Never silently substitute a variant or supplier after customer consent. Supplier purchasing, payment and tracking integrations remain gated by verified payment, approved spending policy, idempotency and owner approval for new suppliers/exceptions.
 
 Detailed operating controls are in section 10 of `docs/architecture/ai-store-manager-operating-spec.md`. **Status: requirement documented; end-to-end supplier-direct fulfilment is not yet implemented.** Existing supplier offers/import candidates/pricing preview are foundations only.
+
+
+## Latest operational checkpoint — 2026-11-07
+
+Both Render services are confirmed live on the latest commit `168b29f63a1bd308a633f8cb4e22597fdf27590e`: API `dep-dbnh6prm5ojs73fe6np0` and web `dep-dbnh6ptfi0pc73aitbsg`. The API build completed successfully and its runtime log reports `WASLA API listening on port 10000`; the web build completed and Next.js reports `Ready`. This confirms deployment and process startup, not a complete authenticated business journey.
+
+### Supplier candidate-to-offer workflow — deployed foundation
+
+- Imported candidates can be reviewed, returned for more evidence or rejected in the owner console.
+- An eligible candidate can prefill the supplier-offer form. The owner still selects the canonical WASLA product and reviews the offer details/evidence before submitting.
+- The API validates that supplier name, source platform, HTTPS product URL, currency and supplier price match the candidate record before linking it to a private supplier offer.
+- A successful link marks the candidate `converted`; the new offer remains `needs_review`. Linking does not publish a product, charge a customer, place a supplier order or expose supplier data publicly.
+- API and web builds/deployments are confirmed live. Authenticated production CRUD, candidate-to-offer database linkage, rollback/duplicate behavior and public-data leakage tests are still required.
+
+### Current launch classification
+
+- **Ready for:** continued owner testing, internal demonstration and carefully controlled inquiry-based pilot after access/security checks.
+- **Not ready for paid commercial launch:** live checkout/payment provider and webhook handling, official-store order lifecycle, supplier purchase and acceptance, shipping/tracking, returns/refunds/disputes and legal/tax/consumer disclosures are not implemented or verified end to end.
+- **Not ready to claim autonomous AI operations:** AI runtime/provider, live authorized trend/source connectors, automated supplier discovery/verification, AI product enrichment/publication and autonomous order orchestration are not implemented.
+- **Domain/brand:** continue using Render URLs while validating the product. The WASLA name remains subject to final brand/domain/trademark checks; do not spend the limited domain budget until the chosen name is confirmed.
+
+### Immediate one-hour work priority
+
+1. Verify API health and key owner routes against the deployed services; confirm authenticated access and role boundaries.
+2. Exercise supplier candidate review and candidate-to-offer linkage with a real owner session and safe test records; inspect resulting statuses and confirm public catalogue isolation.
+3. Test registration/login/profile, public catalogue and member inquiry/message flows with separate test accounts where test credentials are available.
+4. Record any blockers clearly. Keep payment collection, supplier purchases and public product publication disabled unless their required controls are independently verified.
+
+Do not describe the platform as commercially launch-ready based only on successful builds or live service status.
