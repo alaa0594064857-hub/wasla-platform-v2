@@ -436,3 +436,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Member product image, video and external checkout URLs now require HTTPS, reject embedded URL credentials, and reject localhost/.local destinations.
 - Added API regression tests for insecure HTTP, credential-bearing HTTPS, localhost and local-domain checkout URLs.
 - GitHub Actions run `42411603607` passed API tests, DB migrations/constraints, API TypeScript/build and Web build. Render deployment verification is in progress.
+
+
+## Supplier-confirmed pre-quote state — 2026-11-07
+
+- Added explicit `supplier_confirmed` official-store request state. A supplier acceptance no longer moves the request to `awaiting_payment`.
+- The owner must still prepare a final customer quote and obtain customer approval; payment remains disabled, no purchase is placed, and owner review remains required.
+- Customer history now says the supplier confirmed availability but the final quote is pending. Owner review confirmation message and AI guidance reflect the same boundary.
+- API schema initialization safely replaces the order-status check constraint to include the new state. CI validates the API tests and builds.
+- API deployment for commit `91c2aed900c39b0dce51a1813565804d861594b5` is verified Live; Web deployment is building/starting.
