@@ -19,6 +19,7 @@ WASLA Trade manages commercial deal proposals and negotiation between two active
 
 - Every deal belongs to exactly two distinct active business accounts: an initiator account and a counterparty account.
 - The creator must be an active member of the initiator account with `account.trade.create`.
+- Before a deal can be created, the counterparty account must have at least one active, verified member with `account.trade.negotiate`, so the proposal has an authorized recipient.
 - Reading a deal requires an active membership in either party account with `account.trade.read`.
 - Proposing requires the initiator account's trade-create permission.
 - Countering, accepting or declining requires `account.trade.negotiate` on the account currently expected to respond.
