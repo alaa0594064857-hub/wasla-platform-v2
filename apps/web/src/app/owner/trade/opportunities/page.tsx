@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useLocale } from "../../../components/locale-provider";
-import WorkspaceHeader from "../../../components/workspace-header";
+import { useLocale } from "../../../../components/locale-provider";
+import WorkspaceHeader from "../../../../components/workspace-header";
 
 type Opportunity = {
   id: string;
