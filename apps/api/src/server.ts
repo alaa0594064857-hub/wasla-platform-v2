@@ -99,6 +99,19 @@ async function handleRequest(
     return;
   }
 
+  const officialStoreSourcingMatch = requestUrl.pathname.match(/^\\/api\\/platform\\/official-store\\/sourcing-candidates(?:\\/([0-9a-f-]{36}))?$/i);
+  if (officialStoreSourcingMatch) {
+    try {
+      const { handleOfficialStoreSourcingRequest } = await import("./official-store-sourcing.mjs");
+      await handleOfficialStoreSourcingRequest(request, response, officialStoreSourcingMatch[1]);
+    } catch (error) {
+      console.error("WASLA official store sourcing route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Official store sourcing service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const officialStoreProductMatch = requestUrl.pathname.match(/^\/api\/platform\/official-store\/products(?:\/([0-9a-f-]{36}))?$/i);
   const publicOfficialStoreProducts = requestUrl.pathname === "/api/official-store/products";
   if (officialStoreProductMatch || publicOfficialStoreProducts) {
