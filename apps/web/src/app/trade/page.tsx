@@ -242,7 +242,6 @@ export default function TradePage() {
               const hasTradePermission = (accountId: string, permission: "create" | "negotiate" | "update") =>
                 ["account_owner", "account_admin", "account_manager"].includes(accountRole(accountId));
               const ownInitiator = accounts.some(account => account.id === deal.initiatorAccountId);
-              const ownCounterparty = accounts.some(account => account.id === deal.counterpartyAccountId);
               const ownPending = accounts.find(account => account.id === deal.pendingResponseAccountId && hasTradePermission(account.id, "negotiate"));
               const ownParty = accounts.find(account =>
                 (account.id === deal.initiatorAccountId || account.id === deal.counterpartyAccountId) &&
