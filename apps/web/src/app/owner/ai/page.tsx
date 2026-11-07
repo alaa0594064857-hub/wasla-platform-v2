@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useLocale } from "../../../components/locale-provider";
 
 type Message = { role: "user" | "assistant"; content: string };
-type Status = { configured: boolean; model: string | null; provider?: string; engine?: string; capabilities: string[]; limitations: string[] };
+type Status = { configured: boolean; model: string | null; provider?: string; engine?: string; readOnlyDataAccess?: boolean; capabilities: string[]; limitations: string[] };
 export default function OwnerAiAssistantPage() {
   const { locale } = useLocale();
   const ar = locale === "ar";
@@ -66,6 +66,6 @@ export default function OwnerAiAssistantPage() {
         <button type="submit" disabled={!status?.configured || busy || !draft.trim()} className="rounded-xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">{busy ? (ar ? "جارٍ الإرسال..." : "Sending...") : (ar ? "إرسال" : "Send")}</button>
       </form>
     </section>
-    <p className="text-xs leading-5 text-slate-500">{ar ? "المساعد استشاري حالياً: لا يقرأ بعد بيانات المنصة الحية ولا يتصل بالموردين ولا ينشر منتجات ولا ينشئ طلبات أو مدفوعات. تطبق حدود الاستخدام المجاني. لا ترسل كلمات مرور أو مفاتيح API أو بيانات عملاء حساسة. راجع الأدلة قبل التنفيذ. تُسجل رسائل المالك والردود لأغراض التدقيق." : "Advisory only: it cannot yet read live platform records, contact suppliers, publish products, or create orders/payments. Free-tier limits apply. Do not send passwords, API keys, or sensitive customer data. Verify evidence before acting. Owner prompts and replies are stored for audit."}</p>
+    <p className="text-xs leading-5 text-slate-500">{ar ? "يقرأ المساعد حالياً لقطة محدودة للقراءة فقط من أحدث 30 منتجاً و50 عرض مورد في متجر WASLA الرسمي، بما فيها بيانات المورد والتكلفة المخصصة للمالك. لا يتصل بالموردين ولا ينشر منتجات ولا ينشئ طلبات أو مدفوعات ولا يغيّر البيانات. قد لا تشمل اللقطة كل السجلات، ويجب التحقق من الأدلة قبل القرار. تطبق حدود الاستخدام المجاني. لا ترسل كلمات مرور أو مفاتيح API أو بيانات عملاء حساسة. تُسجل رسائل المالك والردود لأغراض التدقيق." : "Read-only access: the assistant receives a limited snapshot of up to the 30 latest official-store products and 50 latest supplier offers, including owner-private supplier and cost details. It cannot contact suppliers, publish products, create orders/payments, or change data. The snapshot may not include every record; verify evidence before acting. Free-tier limits apply. Do not send passwords, API keys, or sensitive customer data. Owner prompts and replies are stored for audit."}</p>
   </main>;
 }
