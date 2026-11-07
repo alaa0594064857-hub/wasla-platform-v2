@@ -36,20 +36,24 @@ function validOptionalUrl(value: unknown): value is string | null | undefined {
     return false;
   }
 }
-function canManageSql() {
+function hasStoreProductPermissionSql(permissionKeys: readonly string[]) {
+  const allowed = permissionKeys.map((key) => `'${key}'`).join(", ");
   return `(
     EXISTS (
       SELECT 1 FROM account_members am
       INNER JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
+      INNER JOIN role_permissions rp ON rp.role_id = r.id AND rp.scope_type = r.scope_type
+      INNER JOIN permissions p ON p.id = rp.permission_id AND p.scope_type = rp.scope_type
       WHERE am.account_id = s.account_id AND am.user_id = $2
-        AND am.status = 'active'
-        AND r.name IN ('account_owner', 'account_manager')
+        AND am.status = 'active' AND p.permission_key IN (${allowed})
     )
     OR EXISTS (
       SELECT 1 FROM store_members sm
       INNER JOIN roles sr ON sr.id = sm.role_id AND sr.scope_type = sm.role_scope
+      INNER JOIN role_permissions rp ON rp.role_id = sr.id AND rp.scope_type = sr.scope_type
+      INNER JOIN permissions p ON p.id = rp.permission_id AND p.scope_type = rp.scope_type
       WHERE sm.store_id = s.id AND sm.user_id = $2
-        AND sm.status = 'active' AND sr.name IN ('store_owner', 'store_manager')
+        AND sm.status = 'active' AND p.permission_key IN (${allowed})
     )
   )`;
 }
@@ -70,10 +74,13 @@ export async function handleStoreProductsRequest(
       return;
     }
     const pool = getDatabasePool();
+    const requiredPermissions = request.method === "GET"
+      ? ["account.product.read", "store.product.read"]
+      : ["account.product.create", "store.product.create"];
     const permission = await pool.query(
       `SELECT s.id, s.account_id FROM stores s
        WHERE s.slug = $1 AND s.status = 'active'
-         AND ${canManageSql()}
+         AND ${hasStoreProductPermissionSql(requiredPermissions)}
        LIMIT 1`,
       [slug, session.user.id],
     );
@@ -245,7 +252,7 @@ export async function handleStoreProductDetailRequest(
         `UPDATE store_products p SET ${fields.join(", ")}, updated_at = NOW()
          FROM stores s
          WHERE p.id = $3 AND p.store_id = s.id AND s.slug = $1
-           AND s.status = 'active' AND ${canManageSql()}
+           AND s.status = 'active' AND ${hasStoreProductPermissionSql(["account.product.update", "store.product.update"])}
          RETURNING p.id, p.store_id AS "storeId", p.title, p.description, p.sku,
            p.price::text AS price, p.currency, p.stock_quantity AS "stockQuantity",
            p.image_url AS "imageUrl", p.video_url AS "videoUrl", p.seller_checkout_url AS "sellerCheckoutUrl", p.status,
