@@ -158,6 +158,10 @@ export async function handleStoreProductsRequest(
       client.release();
     }
   } catch (error) {
+    if ((error as { code?: string })?.code === "23505") {
+      respond(response, 409, { success: false, error: "A product with this SKU already exists in this store" });
+      return;
+    }
     console.error("WASLA store products API error:", error);
     respond(response, 500, { success: false, error: "Could not process product request" });
   }
