@@ -291,6 +291,10 @@ export default function OfficialStoreSourceOffersPage() {
   }
 
   async function review(offer: Offer) {
+    const confirmed = window.confirm(ar
+      ? "قبل الاعتماد: هل فتحت أدلة المورد والمواصفات وتحققت بنفسك من أنها تخص المنتج والنسخة المحددة؟ وهل تأكدت من هوية المورد، والسعر الساري، والتوفر، والحد الأدنى للطلب (قطعة واحدة أو أقل)، والشحن المباشر للعميل؟ بالضغط على موافق ستسجل WASLA هذه التأكيدات باسم حسابك."
+      : "Before approval: have you opened and checked the supplier and specification evidence and confirmed they match the exact product and variant? Have you verified supplier identity, current price, availability, MOQ (one unit or less), and direct-to-customer shipping? Confirming records these attestations under your account.");
+    if (!confirmed) return;
     setBusyId(offer.id); setError(""); setNotice("");
     try {
       const headers = { "Content-Type": "application/json" };
