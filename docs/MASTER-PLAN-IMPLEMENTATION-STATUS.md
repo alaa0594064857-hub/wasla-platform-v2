@@ -418,3 +418,13 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Added separate supplier item-cost currency and supplier-shipping currency fields; both are persisted and compared independently to avoid mixing currencies.
 - Added API tests for owner permission, required evidence, exact-offer revalidation, price-change rejection, payment/purchase remaining disabled, and customer notifications.
 - Functional API and Web code is deployed Live on Render; final CI run `42411107317` has passed API tests, DB migration/constraints and API TypeScript/build; Web build is still completing at the time of this update.
+
+
+## Owner AI order-desk context — 2026-11-07
+
+- Extended the owner-only Gemini assistant's read-only snapshot to include up to 50 recent official-store order requests alongside up to 30 products and 50 supplier offers.
+- The order snapshot includes order number, product title, quantity, listed price/currency, destination country, supplier-confirmation status, payment status, shipping status, owner-review flag and supplier-purchase status.
+- It deliberately excludes customer user IDs, email, name, phone, full address and customer notes. Supplier/cost context remains owner-only.
+- Updated AI system guidance and capability metadata: it may analyze included order requests but cannot create orders, contact suppliers, collect payments or claim purchasing/fulfilment.
+- Added tests for owner authorization, bounded order reads, no customer PII in the query/context, and explicit read-only capability/limitations.
+- API deployment for commit `b652a3ed1d2cd9c99c3e68c4da634f00c3cc707d` is Live. GitHub Actions run `42411367873` passed all API tests, DB migration/constraints, TypeScript checks and API/Web builds.
