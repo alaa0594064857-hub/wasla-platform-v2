@@ -243,15 +243,18 @@ export async function handleStoreDetailRequest(
              EXISTS (
                SELECT 1 FROM account_members am
                INNER JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
+               INNER JOIN role_permissions rp ON rp.role_id = r.id AND rp.scope_type = r.scope_type
+               INNER JOIN permissions p ON p.id = rp.permission_id AND p.scope_type = rp.scope_type
                WHERE am.account_id = s.account_id AND am.user_id = $3
-                 AND am.status = 'active'
-                 AND r.name IN ('account_owner', 'account_manager')
+                 AND am.status = 'active' AND p.permission_key = 'account.business.update'
              )
              OR EXISTS (
                SELECT 1 FROM store_members sm
                INNER JOIN roles sr ON sr.id = sm.role_id AND sr.scope_type = sm.role_scope
+               INNER JOIN role_permissions rp ON rp.role_id = sr.id AND rp.scope_type = sr.scope_type
+               INNER JOIN permissions p ON p.id = rp.permission_id AND p.scope_type = rp.scope_type
                WHERE sm.store_id = s.id AND sm.user_id = $3
-                 AND sm.status = 'active' AND sr.name = 'store_owner'
+                 AND sm.status = 'active' AND p.permission_key = 'store.update'
              )
            )
          RETURNING id, account_id, name, slug, status, created_at, updated_at`,
