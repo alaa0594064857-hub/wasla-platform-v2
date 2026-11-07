@@ -28,14 +28,14 @@ function orderRow() {
     supplierConfirmationStatus: "pending", orderStatus: "awaiting_supplier",
     sourcePlatform: "authorized_feed", supplierName: "Supplier A",
     supplierUnitCost: "12.00", supplierShippingCost: "3.00",
-    supplierCostCurrency: "EUR", destinationCountry: "TR", sourceOfferId: offerId,
+    supplierCostCurrency: "EUR", supplierShippingCurrency: "EUR", destinationCountry: "TR", sourceOfferId: offerId,
   };
 }
 function offerRow() {
   return {
     sourcePlatform: "authorized_feed", supplierName: "Supplier A",
     supplierUnitCost: "12.00", supplierShippingCost: "3.00",
-    supplierCostCurrency: "EUR", shipsToCountries: ["TR", "DE"],
+    supplierCostCurrency: "EUR", supplierShippingCurrency: "EUR", shipsToCountries: ["TR", "DE"],
   };
 }
 
