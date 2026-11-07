@@ -23,7 +23,7 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
   const ar = locale === "ar";
   const inAccountSpace = pathname === "/account" || pathname === "/profile";
   // Signed-in users stay inside their WASLA workspace; the public gateway is for visitors.
-  const accountHref = session?.user ? "/account" : "/";
+  const accountHref = session?.user ? (isPlatformOwner ? "/owner" : "/account") : "/";
   const messagesHref = pathname === "/messages" ? "/" : "/messages";
 
   useEffect(() => {
