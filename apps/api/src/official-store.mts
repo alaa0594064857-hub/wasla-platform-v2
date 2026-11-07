@@ -2,8 +2,9 @@ import { getDatabasePool } from "./database.js";
 
 /**
  * Platform-owned WASLA Store foundation.
- * Deliberately separate from member stores/products and does not create
- * inventory quantities, payment flows, orders, or an AI user account.
+ * Deliberately separate from member stores/products. It creates order/event
+ * schema for future operations but does not enable checkout, payment capture,
+ * supplier purchasing, fulfillment or an AI user account.
  */
 export async function ensureOfficialStoreTables(): Promise<void> {
   const client = await getDatabasePool().connect();
