@@ -21,27 +21,10 @@ export function shouldRequireOfferReReview(
     hasMaterialOfferChanges(body);
 }
 
-export function isSourcingCandidateReadyForOfferLink(candidate: {
-  supplier_name?: unknown;
-  source_platform?: unknown;
-  review_status?: unknown;
-  verification_status?: unknown;
-  supplier_dropship_confirmed?: unknown;
-  supplier_identity_verified?: unknown;
-  specifications_verified?: unknown;
-  minimum_order_quantity?: unknown;
-  source_product_url?: unknown;
-  evidence?: unknown;
-  quote_valid_until?: unknown;
-  proposed_price?: unknown;
-  currency?: unknown;
-}, offer: {
-  supplierName: unknown;
-  sourcePlatform: unknown;
-  sourceProductUrl: unknown;
-  supplierPrice: unknown;
-  supplierCurrency: unknown;
-}): boolean {
+export function isSourcingCandidateReadyForOfferLink(
+  candidate: Record<string, unknown>,
+  offer: Record<string, unknown>,
+): boolean {
   const evidence = Array.isArray(candidate.evidence) ? candidate.evidence as Array<Record<string, unknown>> : [];
   const hasSupplierProof = evidence.some(item => item?.type === "supplier_evidence_url" && httpsUrl(item.url));
   const hasSpecificationProof = evidence.some(item => item?.type === "product_specification" && httpsUrl(item.url));
