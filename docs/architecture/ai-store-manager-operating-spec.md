@@ -274,3 +274,8 @@ Required controls:
 Example used for financial illustration only: supplier item $5 and WASLA customer price $15 gives $10 gross spread before shipping, payment fees, duties/taxes, returns, FX and operating costs. The system must show estimated contribution margin, not call the $10 spread net profit.
 
 This model is an intended capability. Existing supplier offers, import candidates and pricing preview are groundwork; automated supplier purchase, payment, carrier tracking and end-to-end direct fulfilment are not yet live.
+
+
+### Category-specific guardrails for cosmetics and skincare in supplier-direct listings
+
+For creams, moisturizers, perfumes and other cosmetics/personal-care products, the AI must additionally verify and retain, where applicable and legally required: manufacturer/responsible person, full ingredient list (INCI), product identity and intended use, batch/lot traceability, manufacturing/expiry or period-after-opening information, country of origin, packaging/seal condition, warnings, allergens, storage instructions, required local notification/registration and import eligibility for the destination market. Claims such as treating eczema, acne or other diseases must not be invented or presented as medical claims without the applicable authorization and evidence. Do not list counterfeit, decanted, unsealed, expired, recalled, untraceable or inadequately documented products. Supplier-direct fulfilment must preserve batch traceability and ensure the item shipped is the exact approved product and variant.
