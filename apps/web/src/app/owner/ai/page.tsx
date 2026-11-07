@@ -32,7 +32,7 @@ export default function OwnerAiAssistantPage() {
       const response = await fetch("/api/platform/ai/assistant", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: next }) });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.error || "AI request failed");
-      setMessages(current => [...current, { role: "assistant", content: data.answer }].slice(-12));
+      setMessages(current => [...current, { role: "assistant" as const, content: String(data.answer) }].slice(-12));
     } catch (e) { setError(e instanceof Error ? e.message : (ar ? "تعذر الاتصال بالمساعد." : "Could not reach the assistant.")); }
     finally { setBusy(false); }
   }
