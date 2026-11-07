@@ -74,6 +74,19 @@ async function handleRequest(
     return;
   }
 
+  if (/^\/api\/trade\/opportunities(?:\/(?:review|[0-9a-f-]{36}))?$/i.test(requestUrl.pathname)) {
+    const opportunityId = requestUrl.pathname.match(/^\/api\/trade\/opportunities\/(review|[0-9a-f-]{36})$/i)?.[1];
+    try {
+      const { handleTradeOpportunitiesRequest } = await import("./trade-opportunities.mjs");
+      await handleTradeOpportunitiesRequest(request, response, opportunityId);
+    } catch (error) {
+      console.error("WASLA trade opportunity route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Trade opportunity service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (/^\/api\/trade\/deals(?:\/[0-9a-f-]{36})?$/i.test(requestUrl.pathname)) {
     const dealId = requestUrl.pathname.match(/^\/api\/trade\/deals\/([0-9a-f-]{36})$/i)?.[1];
     try {
@@ -731,6 +744,8 @@ if (process.env.NODE_ENV !== "test") {
       await ensureNotificationsTable();
       const { ensureTradeTables } = await import("./trade.mjs");
       await ensureTradeTables();
+      const { ensureTradeOpportunityTables } = await import("./trade-opportunities.mjs");
+      await ensureTradeOpportunityTables();
       const { ensureOfficialStoreTables } = await import("./official-store.mjs");
       await ensureOfficialStoreTables();
       const { ensureOfficialStoreOpportunityTables } = await import("./official-store-opportunities.mjs");
