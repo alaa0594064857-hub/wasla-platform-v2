@@ -10,6 +10,7 @@ const fields = [
   "reviewStatus", "sourcePlatform", "sourceProductUrl", "supplierDropshipConfirmed",
   "minimumOrderQuantity", "shippingCountries", "shippingCost", "shippingCurrency",
   "estimatedShippingDaysMin", "estimatedShippingDaysMax", "quoteValidUntil",
+  "supplierIdentityVerified", "specificationsVerified", "sampleInspected",
 ] as const;
 type Field = typeof fields[number];
 const columns: Record<Field, string> = {
@@ -78,6 +79,9 @@ function validate(input: Record<string, unknown>, partial: boolean): string | nu
     if (has(key) && input[key] !== null && (!Number.isInteger(input[key]) || Number(input[key]) < (key === "minimumOrderQuantity" ? 1 : 0) || Number(input[key]) > 100000)) return "Invalid quantity or shipping estimate";
   }
   if (has("supplierDropshipConfirmed") && typeof input.supplierDropshipConfirmed !== "boolean") return "Invalid dropshipping confirmation";
+  for (const key of ["supplierIdentityVerified", "specificationsVerified", "sampleInspected"]) {
+    if (has(key) && typeof input[key] !== "boolean") return "Invalid verification flag";
+  }
   if (has("shippingCountries") && (!Array.isArray(input.shippingCountries) || input.shippingCountries.length > 100 ||
       input.shippingCountries.some(value => typeof value !== "string" || !/^[A-Z]{2}$/.test(value)))) return "Shipping countries must be ISO 2-letter country codes";
   if (has("evidence") && (!Array.isArray(input.evidence) || input.evidence.length > 20 || JSON.stringify(input.evidence).length > 12000)) return "Evidence must be an array of up to 20 compact items";
@@ -158,7 +162,7 @@ export async function handleOfficialStoreSourcingRequest(
         const current = await client.query(
           `SELECT verification_status, supplier_dropship_confirmed, minimum_order_quantity,
                   source_product_url, supplier_website, evidence, quote_valid_until,
-                  proposed_price, currency
+                  proposed_price, currency, supplier_identity_verified, specifications_verified
            FROM official_store_sourcing_candidates WHERE id = $1 FOR UPDATE`,
           [candidateId],
         );
@@ -167,6 +171,7 @@ export async function handleOfficialStoreSourcingRequest(
           minimum_order_quantity: number | null; source_product_url: string | null;
           supplier_website: string | null; evidence: unknown[]; quote_valid_until: Date | null;
           proposed_price: string | null; currency: string | null;
+          supplier_identity_verified: boolean; specifications_verified: boolean;
         } | undefined;
         const value = (key: Field, currentValue: unknown) => input[key] === undefined ? currentValue : input[key];
         const verified = value("verificationStatus", row?.verification_status);
@@ -174,6 +179,8 @@ export async function handleOfficialStoreSourcingRequest(
         const minimum = value("minimumOrderQuantity", row?.minimum_order_quantity);
         const evidence = value("evidence", row?.evidence);
         const quote = value("quoteValidUntil", row?.quote_valid_until);
+        const supplierIdentity = value("supplierIdentityVerified", row?.supplier_identity_verified);
+        const specifications = value("specificationsVerified", row?.specifications_verified);
         const price = value("proposedPrice", row?.proposed_price);
         const currency = value("currency", row?.currency);
         const sourceUrl = value("sourceProductUrl", row?.source_product_url) || value("supplierWebsite", row?.supplier_website);
@@ -181,7 +188,7 @@ export async function handleOfficialStoreSourcingRequest(
         const hasSupplierProof = proofItems.some(item => item?.type === "supplier_evidence_url" && typeof item.url === "string");
         const hasSpecificationProof = proofItems.some(item => item?.type === "product_specification" && typeof item.url === "string");
         const quoteTime = quote instanceof Date ? quote.getTime() : typeof quote === "string" ? Date.parse(quote) : NaN;
-        if (!row || verified !== "verified" || dropship !== true ||
+        if (!row || verified !== "verified" || supplierIdentity !== true || specifications !== true || dropship !== true ||
             (minimum !== null && Number(minimum) > 1) || !sourceUrl ||
             !hasSupplierProof || !hasSpecificationProof || !Number.isFinite(quoteTime) || quoteTime <= Date.now() ||
             price === null || price === undefined || currency === null || currency === undefined) {
