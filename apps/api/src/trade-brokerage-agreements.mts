@@ -159,25 +159,36 @@ export async function handleBrokerageAgreements(request: IncomingMessage, respon
       const agreement=locked.rows[0];
       const buyerParty=await hasTradePermission(agreement.buyer_account_id,userId);
       const supplierParty=await hasTradePermission(agreement.supplier_account_id,userId);
-      if (!buyerParty&&!supplierParty) { await client.query("ROLLBACK"); send(response,403,{success:false,error:"You are not authorized to act for either agreement party."}); return; }
-      if (agreement.status!=="pending_acceptance" || new Date(agreement.expires_at).getTime()<=Date.now()) {
+      const requestedAccount = uuid(data.accountId) ? data.accountId : null;
+      const actingAccount = requestedAccount ?? (buyerParty && !supplierParty ? agreement.buyer_account_id : supplierParty && !buyerParty ? agreement.supplier_account_id : null);
+      if (!actingAccount || (actingAccount!==agreement.buyer_account_id && actingAccount!==agreement.supplier_account_id) ||
+          !(actingAccount===agreement.buyer_account_id ? buyerParty : supplierParty)) {
+        await client.query("ROLLBACK"); send(response,403,{success:false,error:"Select a business account you are authorized to represent in this agreement."}); return;
+      }
+      if (agreement.status!=="pending_acceptance") {
         await client.query("ROLLBACK"); send(response,409,{success:false,error:"This agreement is no longer open for acceptance."}); return;
+      }
+      if (new Date(agreement.expires_at).getTime()<=Date.now()) {
+        await client.query(`UPDATE trade_brokerage_agreements SET status='expired',updated_at=NOW() WHERE id=$1`,[agreementId]);
+        await client.query(`INSERT INTO trade_brokerage_agreement_events (agreement_id,event_type,note) VALUES ($1,'expired','Agreement expired before acceptance')`,[agreementId]);
+        await client.query("COMMIT"); send(response,409,{success:false,error:"This agreement has expired."}); return;
       }
       if (action==="reject") {
         await client.query(`UPDATE trade_brokerage_agreements SET status='rejected',updated_at=NOW() WHERE id=$1`,[agreementId]);
         await client.query(`INSERT INTO trade_brokerage_agreement_events (agreement_id,actor_user_id,actor_account_id,event_type,note)
-          VALUES ($1,$2,$3,'rejected',$4)`,[agreementId,userId,buyerParty?agreement.buyer_account_id:agreement.supplier_account_id,str(data.note,1000)||null]);
+          VALUES ($1,$2,$3,'rejected',$4)`,[agreementId,userId,actingAccount,str(data.note,1000)||null]);
         await client.query("COMMIT"); send(response,200,{success:true,status:"rejected"}); return;
       }
-      const column=buyerParty?"buyer_accepted_at":"supplier_accepted_at";
-      const actorColumn=buyerParty?"buyer_accepted_by":"supplier_accepted_by";
+      const buyerPartyActing=actingAccount===agreement.buyer_account_id;
+      const column=buyerPartyActing?"buyer_accepted_at":"supplier_accepted_at";
+      const actorColumn=buyerPartyActing?"buyer_accepted_by":"supplier_accepted_by";
       if (agreement[column]) { await client.query("ROLLBACK"); send(response,409,{success:false,error:"Your party has already accepted these terms."}); return; }
       const updated=await client.query(`UPDATE trade_brokerage_agreements
         SET ${column}=NOW(),${actorColumn}=$2,
             status=CASE WHEN ${buyerParty?"supplier_accepted_at":"buyer_accepted_at"} IS NOT NULL THEN 'active' ELSE 'pending_acceptance' END,
             updated_at=NOW() WHERE id=$1 RETURNING *`,[agreementId,userId]);
       await client.query(`INSERT INTO trade_brokerage_agreement_events (agreement_id,actor_user_id,actor_account_id,event_type)
-        VALUES ($1,$2,$3,$4)`,[agreementId,userId,buyerParty?agreement.buyer_account_id:agreement.supplier_account_id,buyerParty?"buyer_accepted":"supplier_accepted"]);
+        VALUES ($1,$2,$3,$4)`,[agreementId,userId,actingAccount,buyerPartyActing?"buyer_accepted":"supplier_accepted"]);
       await client.query("COMMIT");
       send(response,200,{success:true,agreement:updated.rows[0],message:updated.rows[0].status==="active"?"Both parties accepted. The brokerage engagement is recorded as active; no payment has been collected.":"Acceptance recorded for your party. The other party must still accept."}); return;
     } catch(error) { await client.query("ROLLBACK"); throw error; }
