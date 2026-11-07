@@ -22,6 +22,8 @@ export function shouldRequireOfferReReview(
 }
 
 export function isSourcingCandidateReadyForOfferLink(candidate: {
+  supplier_name?: unknown;
+  source_platform?: unknown;
   review_status?: unknown;
   verification_status?: unknown;
   supplier_dropship_confirmed?: unknown;
