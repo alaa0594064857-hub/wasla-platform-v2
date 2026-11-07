@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
@@ -11,12 +11,23 @@ type Result = {
   economics: { landedCost: number; grossProfitBeforeUnenteredCosts: number; grossMarginPercent: number; note: string };
   recommendation: string; missingChecks: string[]; disclaimer: string;
 };
+type SavedOpportunity = { id: string; title: string; market: string; currency: string; score: number; recommendation: string; created_at: string };
 const initial = { title: "", market: "US", demandEvidenceUrl: "", demandEvidenceDate: new Date().toISOString().slice(0,10), demandSignalStrength: "3", demandSourceType: "owner_supplied", currency: "USD", sellingPrice: "", supplierCost: "", shippingCost: "", extraCosts: "0", supplierEvidenceUrl: "", specificationEvidenceUrl: "", supplierIdentityVerified: false, specificationsVerified: false, directShippingConfirmed: false, returnsConfirmed: false };
 export default function ProductOpportunitiesPage() {
   const { locale } = useLocale(); const ar = locale === "ar"; const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
   const [form, setForm] = useState(initial); const [busy, setBusy] = useState(false);
   const [error, setError] = useState(""); const [result, setResult] = useState<Result | null>(null);
+  const [history, setHistory] = useState<SavedOpportunity[]>([]);
+  useEffect(() => {
+    if (!session?.user) return;
+    let active = true;
+    fetch("/api/platform/official-store/opportunities/assess", { credentials: "include", cache: "no-store" })
+      .then(async response => { const data = await response.json(); if (!response.ok || !data.success) throw new Error("history"); return data.opportunities as SavedOpportunity[]; })
+      .then(items => { if (active) setHistory(items); })
+      .catch(() => { if (active) setHistory([]); });
+    return () => { active = false; };
+  }, [session?.user?.id]);
   const t = ar ? {
     title: "تقييم فرص المنتجات", subtitle: "قيّم فرصة منتج بناءً على دليل طلب موثق وتكلفة ومخاطر المورد. هذه نسخة تقييم يدوي أولية وليست بحثاً مباشراً في أمازون.",
     product: "اسم المنتج", market: "السوق المستهدف", demandUrl: "رابط دليل الطلب HTTPS", demandDate: "تاريخ الدليل", signal: "قوة إشارة الطلب (1 ضعيفة – 5 قوية)", source: "نوع مصدر الدليل", owner: "بحث/دليل أدخله المالك", api: "واجهة سوق أو مصدر مرخص", currency: "العملة", sell: "سعر البيع المتوقع", supplierCost: "تكلفة المورد", shipping: "الشحن", extra: "تكاليف إضافية معروفة", supplierUrl: "رابط إثبات المورد HTTPS", specUrl: "رابط إثبات المواصفات HTTPS", identity: "تم التحقق من هوية المورد", specs: "تم التحقق من تطابق المواصفات", direct: "تم تأكيد الشحن المباشر", returns: "تم تأكيد سياسة الإرجاع وخدمة ما بعد البيع", run: "قيّم الفرصة", running: "جارٍ التقييم...", back: "العودة لعروض الموردين", score: "النتيجة", demandScore: "الطلب", marginScore: "هامش الربح الإجمالي", readiness: "جاهزية المورد", landed: "التكلفة المدخلة", gross: "الربح الإجمالي التقديري قبل التكاليف غير المدخلة", margin: "هامش الربح الإجمالي", missing: "النواقص", recommendation: "التوصية", errorText: "تعذر التقييم. تحقق من الروابط HTTPS والأسعار والعملة.", disclaimer: "التقييم لا يجلب بيانات أمازون تلقائياً ولا يثبت المبيعات أو المورد. لا ينشر منتجاً ولا ينشئ طلب شراء."
@@ -32,7 +43,7 @@ export default function ProductOpportunitiesPage() {
     try {
       const response = await fetch("/api/platform/official-store/opportunities/assess", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, demandSignalStrength: Number(form.demandSignalStrength), sellingPrice: Number(form.sellingPrice), supplierCost: Number(form.supplierCost), shippingCost: Number(form.shippingCost), extraCosts: Number(form.extraCosts) }) });
       const data = await response.json(); if (!response.ok || !data.success || !data.assessmentOnly) throw new Error("assessment");
-      setResult(data);
+      setResult(data);\n      if (data.opportunityId) setHistory(items => [{ id: data.opportunityId, title: data.title, market: data.market, currency: data.currency, score: data.score.total, recommendation: data.recommendation, created_at: data.createdAt }, ...items].slice(0,100));
     } catch { setError(t.errorText); } finally { setBusy(false); }
   }
   const field = (key: keyof typeof initial, label: string, type = "text") => <label className="grid gap-1 text-sm font-medium">{label}<input className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900" type={type} value={String(form[key])} onChange={e => update(key, e.target.value)} required /></label>;
@@ -60,6 +71,10 @@ export default function ProductOpportunitiesPage() {
       <div><h3 className="font-semibold">{t.missing}</h3>{result.missingChecks.length ? <ul className="list-disc ps-6 text-sm">{result.missingChecks.map(item=><li key={item}>{missingLabels[item] ?? item}</li>)}</ul> : <p className="text-sm">{ar ? "لا توجد نواقص ضمن الفحوص المحددة." : "No missing checks in the defined review set."}</p>}</div>
       <p className="text-xs text-slate-500">{result.economics.note} {result.disclaimer}</p>
     </section>}
+    <section className="space-y-3 rounded-2xl border p-4 md:p-6">
+      <h2 className="text-lg font-bold">{ar ? "سجل الفرص المحفوظة" : "Saved opportunity history"}</h2>
+      {history.length ? <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-start"><th className="p-2 text-start">{ar ? "المنتج" : "Product"}</th><th className="p-2 text-start">{ar ? "السوق" : "Market"}</th><th className="p-2 text-start">{ar ? "النتيجة" : "Score"}</th><th className="p-2 text-start">{ar ? "التوصية" : "Recommendation"}</th><th className="p-2 text-start">{ar ? "التاريخ" : "Date"}</th></tr></thead><tbody>{history.map(item => <tr key={item.id} className="border-b last:border-0"><td className="p-2">{item.title}</td><td className="p-2">{item.market}</td><td className="p-2 font-semibold">{item.score}/75</td><td className="p-2">{item.recommendation}</td><td className="p-2 whitespace-nowrap">{new Date(item.created_at).toLocaleDateString(ar ? "ar" : "en")}</td></tr>)}</tbody></table></div> : <p className="text-sm text-slate-500">{ar ? "لا توجد تقييمات محفوظة بعد. سيظهر كل تقييم جديد هنا." : "No saved assessments yet. New assessments will appear here."}</p>}
+    </section>
     <p className="text-xs text-slate-500">{t.disclaimer}</p>
   </main>;
 }
