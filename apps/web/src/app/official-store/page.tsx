@@ -51,6 +51,7 @@ export default function OfficialStorePage() {
     customerNote: "ملاحظة (اختياري)",
     requestPending: "جارٍ إرسال الطلب...",
     requestSuccess: "تم تسجيل طلبك للمراجعة والتحقق من المورد. لم يتم خصم أي مبلغ ولم يتم شراء المنتج بعد.",
+    myRequests: "متابعة طلباتي",
     requestLogin: "سجّل الدخول أولاً حتى نتمكن من حفظ طلبك.",
     requestFailure: "تعذر تسجيل الطلب. تحقق من الدولة أو حاول لاحقاً.",
     requestDisclaimer: "هذا طلب للتحقق من المورد والتوفر فقط، وليس عملية شراء أو دفع.",
@@ -82,6 +83,7 @@ export default function OfficialStorePage() {
     customerNote: "Note (optional)",
     requestPending: "Sending request...",
     requestSuccess: "Your request was recorded for review and supplier confirmation. No payment was taken and the product has not been purchased.",
+    myRequests: "Track my requests",
     requestLogin: "Please sign in first so we can save your request.",
     requestFailure: "The request could not be recorded. Check the destination or try again later.",
     requestDisclaimer: "This only requests supplier and availability confirmation. It is not a purchase or payment.",
@@ -218,6 +220,7 @@ export default function OfficialStorePage() {
           </label>
           <p className="text-xs leading-6 text-slate-500">{copy.requestDisclaimer}</p>
           {requestMessage && <p role={requestError ? "alert" : "status"} className={`rounded-xl p-3 text-sm leading-7 ${requestError ? "bg-red-50 text-red-800" : "bg-emerald-50 text-emerald-800"}`}>{requestMessage}</p>}
+          {requestMessage && !requestError && <Link href="/account/orders" className="inline-flex font-semibold text-[#8b6828] underline">{copy.myRequests}</Link>}
           <button type="button" disabled={requesting || !destinationCountry} onClick={submitSupplierConfirmationRequest} className="w-full rounded-xl bg-[#17253a] px-5 py-3 font-semibold text-white disabled:opacity-50">{requesting ? copy.requestPending : copy.requestConfirmation}</button>
         </div>
       </section>
