@@ -114,6 +114,7 @@ describe("product-based private messaging", () => {
     expect(await response.json()).toEqual({
       success: true,
       conversations: [{ id: "conversation-id", peer_name: "Profile Name", peer_image: "https://example.com/avatar.png" }],
+      unreadCount: 0,
     });
     const sql = String(mocks.query.mock.calls[0][0]);
     expect(sql).toContain("COALESCE(peer_profile.display_name, peer.name)");
