@@ -132,7 +132,11 @@ export default function PlatformOwnerPage() {
     { id: "settings", label: copy.settings, icon: "⚙", href: "#settings" },
     { id: "subscriptions", label: ar ? "خطط الاشتراك" : "Subscription plans", icon: "＄", href: "/owner/subscriptions" },
     { id: "official-store", label: ar ? "متجر WASLA الرسمي" : "Official WASLA Store", icon: "▣", href: "/owner/official-store" },
-    { id: "trade-opportunities", label: ar ? "مراجعة فرص Trade" : "Trade opportunity review", icon: "⇄", href: "/owner/trade/opportunities" }
+    { id: "trade-opportunities", label: ar ? "مراجعة فرص Trade" : "Trade opportunity review", icon: "⇄", href: "/owner/trade/opportunities" },
+    { id: "ai", label: ar ? "مدير WASLA AI" : "WASLA AI Manager", icon: "✳", href: "/owner/ai" },
+    { id: "audit", label: ar ? "سجل التدقيق الموحد" : "Unified audit log", icon: "◈", href: "/owner/audit" },
+    { id: "trade-commissions", label: ar ? "سجل العمولات" : "Trade commissions", icon: "＄", href: "/owner/trade/commission-ledger" },
+    { id: "trade-invoices", label: ar ? "فواتير العمولات" : "Commission invoices", icon: "▤", href: "/owner/trade/commission-invoices" }
   ];
 
   const roomDefs = [
