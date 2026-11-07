@@ -1,0 +1,74 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+
+const mocks = vi.hoisted(() => ({ query: vi.fn(), authorize: vi.fn() }));
+vi.mock("./database.js", () => ({ getDatabasePool: () => ({ query: mocks.query }) }));
+vi.mock("./platform-security.mjs", () => ({ authorizePlatformPermission: mocks.authorize }));
+
+let handleOfficialStoreProductsRequest: (
+  request: IncomingMessage, response: ServerResponse, productId?: string, publicCatalogue?: boolean
+) => Promise<void>;
+let server: Server | undefined;
+
+async function startServer(publicCatalogue = true): Promise<string> {
+  server = createServer((request, response) => {
+    void handleOfficialStoreProductsRequest(request, response, undefined, publicCatalogue);
+  });
+  await new Promise<void>((resolve, reject) => {
+    server!.once("error", reject);
+    server!.listen(0, "127.0.0.1", resolve);
+  });
+  const address = server.address();
+  if (!address || typeof address === "string") throw new Error("Test server address unavailable");
+  return `http://127.0.0.1:${address.port}`;
+}
+
+beforeEach(async () => {
+  ({ handleOfficialStoreProductsRequest } = await import("./official-store-products.mjs"));
+});
+
+afterEach(async () => {
+  if (server?.listening) {
+    await new Promise<void>((resolve, reject) => server!.close(error => error ? reject(error) : resolve()));
+  }
+  server = undefined;
+  vi.resetAllMocks();
+});
+
+describe("official WASLA Store public catalogue", () => {
+  it("returns only public product fields and requires a currently approved verified direct-shipping offer", async () => {
+    mocks.query.mockResolvedValueOnce({
+      rows: [{
+        id: "product-1",
+        title_ar: "منتج",
+        title_en: "Product",
+        price: "20.00",
+        currency: "EUR",
+        availability_status: "available",
+      }],
+    });
+    const baseUrl = await startServer(true);
+    const response = await fetch(baseUrl);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data).toMatchObject({ success: true, products: [{ id: "product-1", title_en: "Product" }] });
+    expect(JSON.stringify(data)).not.toMatch(/supplier_name|supplier_price|supplier_reference|source_product_url|shipping_cost/i);
+    const sql = String(mocks.query.mock.calls[0][0]);
+    expect(sql).toContain("o.offer_status = 'approved'");
+    expect(sql).toContain("o.direct_to_customer_confirmed = TRUE");
+    expect(sql).toContain("o.supplier_identity_verified = TRUE");
+    expect(sql).toContain("o.specifications_verified = TRUE");
+    expect(sql).toContain("o.minimum_order_quantity = 1");
+    expect(sql).toContain("o.quote_valid_until > NOW()");
+    expect(sql).toContain("o.last_verified_at IS NOT NULL");
+    expect(sql).not.toContain("p.supplier_dropship_confirmed = TRUE");
+  });
+
+  it("keeps the public catalogue read-only", async () => {
+    const baseUrl = await startServer(true);
+    const response = await fetch(baseUrl, { method: "POST" });
+    expect(response.status).toBe(405);
+    expect(mocks.query).not.toHaveBeenCalled();
+  });
+});
