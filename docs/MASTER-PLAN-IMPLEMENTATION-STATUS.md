@@ -368,3 +368,14 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Added tests for the new metrics and permission gate. GitHub Actions run `42409112994` passed API tests, migrations, authorization seed, database constraints, API TypeScript and API/Web builds.
 - Production database check at this checkpoint: 0 official-store orders, 0 official products, 0 source offers, 0 orders needing review, 0 offers needing review. The dashboard therefore reports real zeros, not fabricated activity.
 - GitHub Actions run `42409112994` passed all tests, migrations, authorization seed, database constraints, TypeScript and API/Web builds. The API deployment containing the new metrics was verified live; the Web deployment containing the dashboard room was verified live.
+
+
+## Public official-store delivery disclosure checkpoint — 2026-11-07
+
+- Public official-store catalogue now selects the most recently verified currently-approved supplier offer that meets the existing strict publication gates, and exposes only customer-safe delivery countries and estimated delivery-day range.
+- Supplier identity, supplier price, source URL, source reference, internal shipping cost and other sourcing details remain excluded from the public response.
+- The bilingual product-details dialog displays delivery destinations and estimated delivery time before any future order confirmation.
+- Regression tests assert the public response includes delivery information while excluding supplier/source/private cost fields.
+- GitHub Actions run `42409560966` passed API tests, migrations, authorization seeding, DB constraints, API TypeScript/build and Web build.
+- Render deployments for the latest API and Web commit are in progress; do not call this checkpoint live until both deployments report Live.
+- This remains catalogue disclosure only; it does not create orders, collect payment, place supplier purchases or enable shipping.
