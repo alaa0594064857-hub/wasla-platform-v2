@@ -339,3 +339,13 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Updated the trade operating specification to describe the V2 workflow (not V1) and the multiple-item limit.
 - GitHub Actions run `42406523238` passed all API tests, database migration/authorization/constraint checks, TypeScript checks and both API and Web builds.
 - The trade UI change is committed and awaiting its Render Web deployment verification.
+
+
+## Navigation and membership catalogue checkpoint — 2026-11-07
+
+- Corrected the public homepage so WASLA Trade and Messages link to their implemented workspaces instead of displaying "Coming soon".
+- The WASLA AI card now links to the owner-only AI room and is clearly labelled "Owner only" / "خاص بالمالك"; this does not grant public users owner access.
+- Added a bilingual `/plans` page backed by the existing public subscription-plan catalogue endpoint. It displays only active public plans and clearly states that enrollment/payment are not enabled. When no approved plans exist, it shows an honest empty state rather than invented prices or trial terms.
+- Added a homepage link to the plans catalogue.
+- GitHub Actions run `42406790981` passed API tests, migration/authorization/constraint checks, TypeScript checks and API/Web builds.
+- Render Web deployment for these latest homepage and plans changes is still pending verification. Do not treat the code commit or successful build as proof that the live site has updated.
