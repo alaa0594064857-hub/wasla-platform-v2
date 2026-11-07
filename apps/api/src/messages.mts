@@ -36,6 +36,8 @@ export async function ensureMessagesTables(): Promise<void> {
       participant_high uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       created_at timestamptz NOT NULL DEFAULT NOW(),
       updated_at timestamptz NOT NULL DEFAULT NOW(),
+      participant_low_last_read_at timestamptz,
+      participant_high_last_read_at timestamptz,
       CONSTRAINT message_conversations_distinct CHECK (participant_low < participant_high),
       CONSTRAINT message_conversations_pair_unique UNIQUE (participant_low, participant_high)
     )
@@ -49,6 +51,8 @@ export async function ensureMessagesTables(): Promise<void> {
       created_at timestamptz NOT NULL DEFAULT NOW()
     )
   `);
+  await db.query(`ALTER TABLE message_conversations ADD COLUMN IF NOT EXISTS participant_low_last_read_at timestamptz`);
+  await db.query(`ALTER TABLE message_conversations ADD COLUMN IF NOT EXISTS participant_high_last_read_at timestamptz`);
   await db.query(`CREATE INDEX IF NOT EXISTS messages_conversation_created_idx ON messages (conversation_id, created_at DESC)`);
   await db.query(`CREATE INDEX IF NOT EXISTS message_conversations_low_updated_idx ON message_conversations (participant_low, updated_at DESC)`);
   await db.query(`CREATE INDEX IF NOT EXISTS message_conversations_high_updated_idx ON message_conversations (participant_high, updated_at DESC)`);
@@ -142,7 +146,15 @@ export async function handleMessagesRequest(
           COALESCE(peer_profile.avatar_reference, peer.image) AS peer_image,
           latest.body AS last_message, latest.created_at AS last_message_at,
           (SELECT COUNT(*)::int FROM messages unread
-            WHERE unread.conversation_id = c.id AND unread.sender_id <> $1) AS message_count
+            WHERE unread.conversation_id = c.id
+              AND unread.sender_id <> $1
+              AND unread.created_at > COALESCE(
+                CASE WHEN c.participant_low = $1
+                  THEN c.participant_low_last_read_at
+                  ELSE c.participant_high_last_read_at
+                END,
+                'epoch'::timestamptz
+              )) AS unread_count
          FROM message_conversations c
          JOIN users peer ON peer.id = CASE
            WHEN c.participant_low = $1 THEN c.participant_high ELSE c.participant_low END
@@ -269,6 +281,13 @@ export async function handleMessagesRequest(
     }
 
     if (request.method === "GET") {
+      await db.query(
+        `UPDATE message_conversations
+         SET participant_low_last_read_at = CASE WHEN participant_low = $2 THEN NOW() ELSE participant_low_last_read_at END,
+             participant_high_last_read_at = CASE WHEN participant_high = $2 THEN NOW() ELSE participant_high_last_read_at END
+         WHERE id = $1 AND (participant_low = $2 OR participant_high = $2)`,
+        [conversationId, userId],
+      );
       const result = await db.query(
         `SELECT m.id, m.sender_id, m.body, m.created_at,
                 COALESCE(p.display_name, u.name) AS sender_name,
