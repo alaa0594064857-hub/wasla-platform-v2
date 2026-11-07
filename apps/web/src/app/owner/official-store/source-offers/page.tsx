@@ -43,10 +43,11 @@ export default function OfficialStoreSourceOffersPage() {
   const [matchResults, setMatchResults] = useState<MatchResult[]>([]);
   const [matching, setMatching] = useState(false);
   const [matchDecision, setMatchDecision] = useState("");
+  const [identityBusy, setIdentityBusy] = useState("");
 
   const t = ar ? {
     title: "عروض الموردين للمنتجات الموحدة",
-    matchTitle: "مطابقة منتج من موقع خارجي", matchHelp: "أدخل بيانات المنتج من الموقع الآخر لمعرفة هل هو موجود لدينا باسم أو سجل مختلف.", match: "مطابقة المنتجات", matchRun: "ابحث عن منتج مطابق", matchBusy: "جارٍ فحص المنتجات...", brand: "العلامة التجارية", model: "الموديل", gtin: "GTIN / الباركود", mpn: "رقم القطعة", matches: "المنتجات المحتملة", noMatch: "لم نجد تطابقاً موثوقاً. يلزم مراجعة أو إنشاء منتج جديد.",
+    saveIdentity: "اعتماد بيانات المنتج الموحد", identitySaved: "تم حفظ هوية المنتج.", matchTitle: "مطابقة منتج من موقع خارجي", matchHelp: "أدخل بيانات المنتج من الموقع الآخر لمعرفة هل هو موجود لدينا باسم أو سجل مختلف.", match: "مطابقة المنتجات", matchRun: "ابحث عن منتج مطابق", matchBusy: "جارٍ فحص المنتجات...", brand: "العلامة التجارية", model: "الموديل", gtin: "GTIN / الباركود", mpn: "رقم القطعة", matches: "المنتجات المحتملة", noMatch: "لم نجد تطابقاً موثوقاً. يلزم مراجعة أو إنشاء منتج جديد.",
     subtitle: "اربط عدة عروض توريد بالمنتج نفسه، مع الاحتفاظ بسعر وشحن ومصدر كل مورد بشكل مستقل.",
     back: "العودة إلى متجر WASLA", add: "إضافة عرض توريد", product: "منتج WASLA",
     supplier: "اسم المورد", platform: "الموقع أو المنصة", url: "رابط المنتج الأصلي HTTPS",
@@ -66,7 +67,7 @@ export default function OfficialStoreSourceOffersPage() {
     note: "لا يؤدي تسجيل العرض إلى نشر المنتج أو شراءه. لا يُعتمد العرض إلا بعد توثيق الهوية والمواصفات والسعر والشحن وتأكيد التوفر.",
   } : {
     title: "Supplier offers for unified products",
-    matchTitle: "Match a product from another website", matchHelp: "Enter product details from an external listing to check whether it already exists under another title or record.", match: "Product matching", matchRun: "Find matching products", matchBusy: "Comparing products...", brand: "Brand", model: "Model", gtin: "GTIN / barcode", mpn: "Part number", matches: "Possible matches", noMatch: "No confident match found. Review manually or create a new product.",
+    saveIdentity: "Save canonical product identity", identitySaved: "Canonical product identity saved.", matchTitle: "Match a product from another website", matchHelp: "Enter product details from an external listing to check whether it already exists under another title or record.", match: "Product matching", matchRun: "Find matching products", matchBusy: "Comparing products...", brand: "Brand", model: "Model", gtin: "GTIN / barcode", mpn: "Part number", matches: "Possible matches", noMatch: "No confident match found. Review manually or create a new product.",
     subtitle: "Link multiple supplier offers to one WASLA product while keeping each source, price and shipping terms separate.",
     back: "Back to official WASLA Store", add: "Add supplier offer", product: "WASLA product",
     supplier: "Supplier name", platform: "Source site or marketplace", url: "Original product URL HTTPS",
@@ -135,6 +136,20 @@ export default function OfficialStoreSourceOffersPage() {
       setMatchDecision(String(data.decision || ""));
     } catch { setError(t.error); }
     finally { setMatching(false); }
+  }
+
+  async function saveIdentity(productId: string) {
+    setIdentityBusy(productId); setError(""); setNotice("");
+    try {
+      const response = await fetch("/api/platform/official-store/product-matches", {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...matchInput, productId, saveIdentity: true }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error("identity");
+      setNotice(t.identitySaved);
+    } catch { setError(t.error); }
+    finally { setIdentityBusy(""); }
   }
 
   async function save(event: FormEvent<HTMLFormElement>) {
@@ -209,6 +224,7 @@ export default function OfficialStoreSourceOffersPage() {
       {matchDecision && <div style={{ marginTop: 14 }}><strong>{t.matches}</strong>
         {matchResults.length === 0 ? <p>{t.noMatch}</p> : matchResults.map(item => <p key={item.productId} style={{ borderBottom: "1px solid #e5e7eb", paddingBottom: 8 }}>
           <strong>{ar ? item.titleAr : item.titleEn}</strong> · {item.score}% · {item.reasons.join(", ")}
+          <button type="button" disabled={identityBusy === item.productId} onClick={() => void saveIdentity(item.productId)} style={{ display: "block", marginTop: 7, padding: "7px 10px", border: "1px solid #b18a3c", borderRadius: 8, background: "white", color: "#8a682a" }}>{identityBusy === item.productId ? "..." : t.saveIdentity}</button>
         </p>)}
         <p style={{ fontSize: 12, opacity: .7 }}>{ar ? "هذه اقتراحات للمراجعة فقط؛ لا يتم دمج السجلات تلقائياً." : "Suggestions only; records are never merged automatically."}</p>
       </div>}
