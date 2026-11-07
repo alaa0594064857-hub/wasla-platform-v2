@@ -25,6 +25,11 @@ export default function OfficialStoreOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [detailLoading, setDetailLoading] = useState(false);
+  const [reviewEvidenceUrl, setReviewEvidenceUrl] = useState("");
+  const [reviewNote, setReviewNote] = useState("");
+  const [reviewSaving, setReviewSaving] = useState(false);
+  const [reviewMessage, setReviewMessage] = useState("");
+  const [reviewError, setReviewError] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
@@ -48,6 +53,29 @@ export default function OfficialStoreOrdersPage() {
       setSelected({ order: data.order, events: Array.isArray(data.events) ? data.events : [] });
     } catch { setError(ar ? "تعذر تحميل تفاصيل الطلب." : "Could not load order details."); }
     finally { setDetailLoading(false); }
+  }
+
+  async function reviewSupplier(orderId: string, decision: "accepted" | "rejected") {
+    if (reviewSaving) return;
+    setReviewSaving(true); setReviewMessage(""); setReviewError(false);
+    try {
+      const response = await fetch(`/api/platform/official-store/orders/${orderId}/supplier-confirmation`, {
+        method: "PATCH", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ decision, evidenceUrl: reviewEvidenceUrl.trim() || null, note: reviewNote.trim() }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(typeof data.error === "string" ? data.error : "review");
+      setReviewMessage(ar
+        ? (decision === "accepted" ? "تم تسجيل تأكيد المورد. الدفع والشراء ما زالا غير مفعّلين." : "تم إغلاق الطلب لعدم تأكيد المورد.")
+        : (decision === "accepted" ? "Supplier confirmation recorded. Payment and purchasing remain disabled." : "Request closed because the supplier could not confirm availability."));
+      setReviewNote(""); setReviewEvidenceUrl("");
+      await load();
+      await openOrder(orderId);
+    } catch (error) {
+      setReviewError(true);
+      setReviewMessage(error instanceof Error ? error.message : (ar ? "تعذر حفظ المراجعة." : "Could not save supplier review."));
+    } finally { setReviewSaving(false); }
   }
 
   const label = (value: unknown) => typeof value === "string" && value ? value.replaceAll("_", " ") : "—";
@@ -98,7 +126,23 @@ export default function OfficialStoreOrdersPage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,220px),1fr))", gap: 12 }}>
           {Object.entries(selected.order).filter(([key]) => !["shippingAddress","customerNote","supplierOrderUrl","supplierTrackingUrl"].includes(key)).map(([key,value]) => <div key={key} style={{ padding: 10, borderRadius: 9, background: cream, overflowWrap: "anywhere" }}><small style={{ color: muted }}>{label(key)}</small><div style={{ fontWeight: 650, marginTop: 4 }}>{value === null || value === "" ? "—" : typeof value === "boolean" ? (value ? (ar ? "نعم" : "Yes") : (ar ? "لا" : "No")) : String(value)}</div></div>)}
         </div>
-        <h3 style={{ color: navy, marginTop: 22 }}>{ar ? "سجل الأحداث" : "Event history"}</h3>
+        {selected.order.supplierConfirmationStatus === "pending" && selected.order.orderStatus === "awaiting_supplier" && <section style={{ marginTop: 22, padding: 16, borderRadius: 12, background: "#fff8e8", border: "1px solid rgba(177,141,77,.4)" }}>
+          <h3 style={{ color: navy, marginTop: 0 }}>{ar ? "مراجعة تأكيد المورد" : "Supplier confirmation review"}</h3>
+          <p style={{ color: muted, lineHeight: 1.8 }}>{ar ? "استخدم هذا الإجراء فقط بعد التواصل الفعلي مع المورد والتحقق من نفس المنتج والسعر والتوصيل. قبول المورد لا يعني تحصيل الدفع أو شراء المنتج." : "Use this only after contacting the supplier and verifying the exact product, price and delivery. Supplier acceptance does not collect payment or place a purchase."}</p>
+          <label style={{ display: "block", fontWeight: 700, marginTop: 10 }}>{ar ? "رابط دليل التأكيد (HTTPS مطلوب عند القبول)" : "Confirmation evidence URL (HTTPS required for acceptance)"}
+            <input value={reviewEvidenceUrl} onChange={event => setReviewEvidenceUrl(event.target.value)} placeholder="https://" style={{ display: "block", width: "100%", marginTop: 6, padding: 11, border: "1px solid #d9cfbb", borderRadius: 9 }} />
+          </label>
+          <label style={{ display: "block", fontWeight: 700, marginTop: 10 }}>{ar ? "ملاحظات التحقق (10 أحرف على الأقل)" : "Verification note (at least 10 characters)"}
+            <textarea value={reviewNote} onChange={event => setReviewNote(event.target.value)} rows={3} maxLength={1000} style={{ display: "block", width: "100%", marginTop: 6, padding: 11, border: "1px solid #d9cfbb", borderRadius: 9 }} />
+          </label>
+          {reviewMessage && <p role={reviewError ? "alert" : "status"} style={{ color: reviewError ? "#a33d3d" : "#26734a", lineHeight: 1.7 }}>{reviewMessage}</p>}
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
+            <button disabled={reviewSaving || !reviewEvidenceUrl.trim() || reviewNote.trim().length < 10} onClick={() => void reviewSupplier(String(selected.order.id), "accepted")} style={{ background: navy, color: "#fff", border: 0, borderRadius: 9, padding: "10px 14px", fontWeight: 700, opacity: reviewSaving ? .6 : 1 }}>{ar ? "تأكيد توفر المورد" : "Confirm supplier availability"}</button>
+            <button disabled={reviewSaving || reviewNote.trim().length < 10} onClick={() => void reviewSupplier(String(selected.order.id), "rejected")} style={{ background: "#fff", color: "#a33d3d", border: "1px solid #a33d3d", borderRadius: 9, padding: "10px 14px", fontWeight: 700 }}>{ar ? "رفض / إغلاق الطلب" : "Reject / close request"}</button>
+          </div>
+        </section>}
+        {reviewMessage && !reviewError && <p role="status" style={{ color: "#26734a" }}>{reviewMessage}</p>}
+                <h3 style={{ color: navy, marginTop: 22 }}>{ar ? "سجل الأحداث" : "Event history"}</h3>
         {selected.events.length ? selected.events.map(event => <div key={event.id} style={{ padding: "10px 0", borderBottom: "1px solid #e7e9ec" }}><strong>{label(event.eventType)}</strong><div style={{ color: muted, fontSize: 13 }}>{label(event.actorType)} · {date(event.createdAt)}</div><pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", fontSize: 12 }}>{JSON.stringify(event.details, null, 2)}</pre></div>) : <p style={{ color: muted }}>{ar ? "لا توجد أحداث مسجلة." : "No recorded events."}</p>}
       </section>}
     </div>
