@@ -86,6 +86,7 @@ describe("owner supplier confirmation review", () => {
         supplierPurchaseStatus: "not_placed", ownerReviewRequired: true,
       }] })
       .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] });
     const base = await startServer();
     const response = await fetch(base, {
@@ -107,6 +108,8 @@ describe("owner supplier confirmation review", () => {
     expect(JSON.parse(client.query.mock.calls[4][1][3])).toMatchObject({
       decision: "accepted", paymentEnabled: false, supplierPurchasePlaced: false,
     });
+    expect(String(client.query.mock.calls[5][0])).toContain("official_store_order");
+    expect(client.query.mock.calls[5][1][5]).toBe("/account/orders");
     expect(client.query.mock.calls.at(-1)?.[0]).toBe("COMMIT");
     expect(client.release).toHaveBeenCalledOnce();
   });
@@ -153,6 +156,7 @@ describe("owner supplier confirmation review", () => {
     expect(await response.json()).toMatchObject({
       success: true, order: { orderStatus: "cancelled", paymentStatus: "not_enabled" },
     });
+    expect(String(client.query.mock.calls[3][0])).toContain("official_store_order");
     expect(client.query.mock.calls.at(-1)?.[0]).toBe("COMMIT");
     expect(client.release).toHaveBeenCalledOnce();
   });
