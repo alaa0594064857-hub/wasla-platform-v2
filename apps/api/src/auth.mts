@@ -18,7 +18,7 @@ if (process.env.NODE_ENV === "production" && !secret) {
 
 const trustedOrigins = (
   process.env.BETTER_AUTH_TRUSTED_ORIGINS ??
-  "http://localhost:3000"
+  "https://wasla-web-4a64.onrender.com,http://localhost:3000"
 )
   .split(",")
   .map((origin) => origin.trim())
@@ -77,7 +77,7 @@ export const auth = betterAuth({
 
   baseURL:
     process.env.BETTER_AUTH_URL ??
-    "http://localhost:4000",
+    "https://wasla-apiwasla-api-v2.onrender.com",
 
   ...(secret ? { secret } : {}),
 
