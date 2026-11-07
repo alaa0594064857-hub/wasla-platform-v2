@@ -21,9 +21,9 @@ vi.mock("./database.js", async (importOriginal) => {
 let handleMessagesRequest: (request: IncomingMessage, response: ServerResponse, conversationId?: string) => Promise<void>;
 let server: Server | undefined;
 
-async function startServer(): Promise<string> {
+async function startServer(conversationId?: string): Promise<string> {
   server = createServer((request, response) => {
-    void handleMessagesRequest(request, response);
+    void handleMessagesRequest(request, response, conversationId);
   });
   await new Promise<void>((resolve, reject) => {
     server!.once("error", reject);
@@ -118,5 +118,25 @@ describe("product-based private messaging", () => {
     const sql = String(mocks.query.mock.calls[0][0]);
     expect(sql).toContain("COALESCE(peer_profile.display_name, peer.name)");
     expect(sql).toContain("LEFT JOIN profiles peer_profile");
+    expect(sql).toContain("AS unread_count");
+    expect(sql).toContain("participant_low_last_read_at");
+  });
+
+  it("marks a conversation read when its messages are opened", async () => {
+    mocks.query
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "conversation-id" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "message-id", sender_id: "seller-user", body: "Hello" }] });
+
+    const baseUrl = await startServer("11111111-1111-4111-8111-111111111111");
+    const response = await fetch(`${baseUrl}/api/messages/11111111-1111-4111-8111-111111111111`);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      success: true,
+      messages: [{ id: "message-id", sender_id: "seller-user", body: "Hello" }],
+    });
+    expect(mocks.query).toHaveBeenCalledTimes(3);
+    expect(String(mocks.query.mock.calls[1][0])).toContain("participant_high_last_read_at");
   });
 });
