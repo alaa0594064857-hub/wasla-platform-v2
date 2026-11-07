@@ -481,3 +481,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - One open invoice per commission entry is enforced. The invoice recipient party must match the agreement's payer setting. When payer is both, the invoice remains the full total commission and is not split automatically.
 - Added bilingual owner workspace at `/owner/trade/commission-invoices`, linked from the commission ledger. These are internal invoice records, not certified tax invoices, and no email delivery, payment collection, transfer, tax calculation or legal compliance is provided.
 - Production deployment and authenticated end-to-end verification remain pending.
+
+
+## Unified Trade audit feed — implementation checkpoint (2026-11-08)
+
+- Extended the existing owner-only `GET /api/platform/audit` feed to combine platform audit logs with buyer/supplier opportunity events, brokerage agreement events, commission ledger events and commission invoice events.
+- The unified feed preserves event time, event source, event/resource identifier, actor email, account context and relevant status/note details. It remains read-only, permission-gated by `platform.audit.read`, bounded to at most 100 events, and does not expose private message bodies or supplier contact/source details.
+- Updated the bilingual `/owner/audit` page to show the unified Trade lifecycle event stream.
+- Added regression assertions that all four Trade event families are included and the query remains bounded.
+- GitHub/Render deployment and production query verification are pending; no authenticated owner-session test has yet been completed.
