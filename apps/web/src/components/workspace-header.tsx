@@ -94,6 +94,7 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
     { href: "/profile", label: ar ? "ملفي الشخصي" : "My profile", icon: "◎" },
     { href: "/shops", label: ar ? "متاجري" : "My shops", icon: "✳" },
     { href: "/business", label: ar ? "شركتي وحسابات الأعمال" : "My company & business", icon: "▦" },
+    { href: "/trade", label: ar ? "التجارة والصفقات" : "Trade deals", icon: "⇄" },
     { href: "/network", label: ar ? "شبكتي وأصدقائي" : "My network & friends", icon: "♧" },
     { href: "/messages", label: ar ? "الرسائل" : "Messages", icon: "✉" },
     { href: "/inquiries", label: ar ? "استفسارات المنتجات" : "Product inquiries", icon: "▤" },
@@ -124,6 +125,7 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
         <Link href={accountHref} aria-current={inAccountSpace ? "page" : undefined}>{isPending ? "..." : session?.user ? (ar ? "مساحة عملي" : "My workspace") : (ar ? "الرئيسية" : "Home")}</Link>
         <Link href="/shops">{ar ? "المتاجر" : "Shops"}</Link>
         <Link href="/business">{ar ? "الأعمال" : "Business"}</Link>
+        <Link href="/trade" aria-current={pathname === "/trade" ? "page" : undefined}>{ar ? "الصفقات" : "Trade"}</Link>
         <Link href="/network" aria-current={pathname === "/network" ? "page" : undefined}>{ar ? "شبكتي" : "My network"}</Link>
         <Link href={messagesHref} style={{ position: "relative" }}>
           {pathname === "/messages" ? (ar ? "الرئيسية" : "Home") : (ar ? "الرسائل" : "Messages")}
