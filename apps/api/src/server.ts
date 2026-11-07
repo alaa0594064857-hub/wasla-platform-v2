@@ -627,7 +627,9 @@ if (process.env.NODE_ENV !== "test") {
 
   void import("./database.js")
     .then(async ({ ensureRegistrationTypeColumn, ensureAccountOwnerRole, ensureStoreOwnerRole, ensurePlatformOwnerRole, ensurePersonalThemesTable, ensureStoreProductsTable, ensureNetworkTables, ensureProductInquiryTables, ensureSubscriptionBillingTables }) => {
+      const { ensureAuthorizationRoles } = await import("./authorization-bootstrap.mjs");
       await ensureRegistrationTypeColumn();
+      await ensureAuthorizationRoles();
       await ensureAccountOwnerRole();
       await ensureStoreOwnerRole();
       await ensurePlatformOwnerRole();
