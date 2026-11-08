@@ -75,7 +75,10 @@ export default function NotificationsPage() {
   };
 
   const openNotification = async (item: Notification) => {
-    if (!item.readAt) await markRead(item.id);
+    if (!item.readAt) {
+      const markedRead = await markRead(item.id);
+      if (!markedRead) return;
+    }
     router.push(item.actionUrl);
   };
 
