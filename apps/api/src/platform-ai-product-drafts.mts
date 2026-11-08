@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { authorizePlatformPermission } from "./platform-security.mjs";
 import { getDatabasePool } from "./database.js";
+import { getPlatformAiManagerControl } from "./platform-ai-controls.mjs";
 
 function reply(response: ServerResponse, status: number, data: Record<string, unknown>): void {
   response.writeHead(status, {
@@ -56,6 +57,11 @@ export async function handleAiProductDraftRequest(request: IncomingMessage, resp
     return;
   }
 
+  const control = await getPlatformAiManagerControl();
+  if (!control.enabled) {
+    reply(response, 423, { success: false, code: "AI_MANAGER_PAUSED", error: "The WASLA AI Manager is paused by the owner." });
+    return;
+  }
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) {
     reply(response, 503, { success: false, code: "AI_PROVIDER_NOT_CONFIGURED", error: "Gemini is not configured." });
