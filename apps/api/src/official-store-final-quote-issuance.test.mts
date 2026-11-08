@@ -3,7 +3,7 @@ import { createServer, type Server } from "node:http";
 
 const mocks = vi.hoisted(() => ({ authorize: vi.fn(), connect: vi.fn() }));
 vi.mock("./platform-security.mjs", () => ({ authorizePlatformPermission: mocks.authorize }));
-vi.mock("./database.js", () => ({ getDatabasePool: () => ({ connect: mocks.connect }) }));
+vi.mock("./database.js", async (importOriginal) => ({ ...(await importOriginal<typeof import("./database.js")>()), getDatabasePool: () => ({ connect: mocks.connect }) }));
 
 let handler: (request: import("node:http").IncomingMessage, response: import("node:http").ServerResponse, id?: string) => Promise<void>;
 let server: Server | undefined;
