@@ -104,6 +104,22 @@ describe("product-based private messaging", () => {
     expect(mocks.query).toHaveBeenCalledOnce();
   });
 
+  it("returns a client error for malformed JSON instead of an internal server error", async () => {
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{invalid-json",
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      success: false,
+      error: "Invalid JSON request body",
+    });
+    expect(mocks.query).not.toHaveBeenCalled();
+  });
+
   it("requires exactly one recipientId or productId", async () => {
     const baseUrl = await startServer();
     const response = await fetch(`${baseUrl}/api/messages`, {
