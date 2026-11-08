@@ -50,6 +50,19 @@ afterEach(async () => {
 });
 
 describe("product-based private messaging", () => {
+  it("rejects unauthenticated requests before querying messages", async () => {
+    mocks.getSession.mockResolvedValueOnce(null);
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/messages`);
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({
+      success: false,
+      error: "Authentication required",
+    });
+    expect(mocks.query).not.toHaveBeenCalled();
+  });
+
   it("resolves the seller from an active product without exposing a seller user id", async () => {
     mocks.query
       .mockResolvedValueOnce({ rows: [{ recipient_id: "seller-user" }] })
