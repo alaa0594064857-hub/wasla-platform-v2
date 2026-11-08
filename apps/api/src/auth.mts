@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { APIError } from "better-auth/api";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
+import { expo } from "@better-auth/expo";
 
 import { getDrizzleDatabase, getDatabasePool } from "./database.js";
 import * as schema from "./db/schema.js";
@@ -19,6 +20,7 @@ if (process.env.NODE_ENV === "production" && !secret) {
 const trustedOrigins = [...new Set([
   "https://wasla-web-4a64.onrender.com",
   "http://localhost:3000",
+  "wasla://",
   ...(process.env.BETTER_AUTH_TRUSTED_ORIGINS ?? "").split(","),
 ].map((origin) => origin.trim()).filter(Boolean))];
 
@@ -132,6 +134,8 @@ export const auth = betterAuth({
       },
     },
   },
+
+  plugins: [expo()],
 
   emailAndPassword: {
     enabled: true,
