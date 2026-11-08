@@ -146,3 +146,98 @@ export async function handleVerifiedProductReviewsRequest(
     client.release();
   }
 }
+
+
+/** Buyers may edit their own review; every prior version is retained and edits return to moderation. */
+export async function handleVerifiedProductReviewEditRequest(
+  request: IncomingMessage,
+  response: ServerResponse,
+  productId: string,
+  reviewId: string,
+): Promise<void> {
+  if (request.method !== "PATCH") {
+    respond(response, 405, { success: false, error: "Method not allowed" });
+    return;
+  }
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reviewId)) {
+    respond(response, 400, { success: false, error: "A valid review id is required" });
+    return;
+  }
+  const session = await auth.api.getSession({ headers: fromNodeHeaders(request.headers) });
+  if (!session) {
+    respond(response, 401, { success: false, error: "Authentication required" });
+    return;
+  }
+  let body: unknown;
+  try {
+    body = await readBody(request);
+  } catch (error) {
+    const tooLarge = error instanceof Error && error.message === "Request body too large";
+    respond(response, tooLarge ? 413 : 400, {
+      success: false, error: tooLarge ? "Request body too large" : "Invalid request body",
+    });
+    return;
+  }
+  if (!isObject(body) || !Number.isInteger(body.rating) ||
+      (body.rating as number) < 1 || (body.rating as number) > 5 ||
+      typeof body.body !== "string" || body.body.trim().length < 10 ||
+      body.body.trim().length > 2000 ||
+      (body.title !== undefined &&
+        (typeof body.title !== "string" || body.title.trim().length > 120))) {
+    respond(response, 400, { success: false, error: "Provide a rating from 1 to 5 and a review between 10 and 2000 characters" });
+    return;
+  }
+
+  const client = await getDatabasePool().connect();
+  try {
+    await client.query("BEGIN");
+    const existing = await client.query(
+      `SELECT id, buyer_user_id AS "buyerUserId", rating, title, body, status
+       FROM verified_product_reviews
+       WHERE id = $1 AND product_id = $2
+       FOR UPDATE`,
+      [reviewId, productId],
+    );
+    if (!existing.rowCount || existing.rows[0].buyerUserId !== session.user.id) {
+      await client.query("ROLLBACK");
+      respond(response, 404, { success: false, error: "Review not found" });
+      return;
+    }
+    if (!["pending_moderation", "published"].includes(existing.rows[0].status)) {
+      await client.query("ROLLBACK");
+      respond(response, 409, { success: false, error: "This review can no longer be edited" });
+      return;
+    }
+    await client.query(
+      `INSERT INTO verified_product_review_edits
+         (review_id, editor_user_id, previous_rating, previous_title, previous_body, previous_status)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [reviewId, session.user.id, existing.rows[0].rating, existing.rows[0].title,
+        existing.rows[0].body, existing.rows[0].status],
+    );
+    const updated = await client.query(
+      `UPDATE verified_product_reviews
+       SET rating = $3, title = $4, body = $5, status = 'pending_moderation',
+           moderated_by = NULL, moderation_note = NULL, moderated_at = NULL, updated_at = NOW()
+       WHERE id = $1 AND product_id = $2
+       RETURNING id, rating, title, body, status, updated_at AS "updatedAt"`,
+      [reviewId, productId, body.rating,
+        typeof body.title === "string" ? body.title.trim() || null : null, body.body.trim()],
+    );
+    await client.query(
+      `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, metadata)
+       VALUES ($1, 'review.edited', 'verified_product_review', $2, $3::jsonb)`,
+      [session.user.id, reviewId, JSON.stringify({ previousStatus: existing.rows[0].status, newStatus: "pending_moderation" })],
+    );
+    await client.query("COMMIT");
+    respond(response, 200, {
+      success: true, review: updated.rows[0],
+      message: "Your changes were saved and returned to moderation",
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
