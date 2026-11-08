@@ -90,7 +90,7 @@ export async function handleOfficialStoreProductsRequest(
       }
       const result = await db.query(
         `SELECT p.id, p.title_ar, p.title_en, p.description_ar, p.description_en,
-                approval.customer_price::text AS price, approval.currency, p.availability_status,
+                trim_scale(approval.customer_price)::text AS price, approval.currency, p.availability_status,
                 p.image_url, p.created_at,
                 ARRAY[approval.destination_country] AS "deliveryCountries",
                 offer.estimated_shipping_days_min AS "estimatedDeliveryDaysMin",
@@ -133,7 +133,7 @@ export async function handleOfficialStoreProductsRequest(
                 COALESCE((
                   SELECT jsonb_agg(jsonb_build_object(
                     'destinationCountry', approval.destination_country,
-                    'price', approval.customer_price::text,
+                    'price', trim_scale(approval.customer_price)::text,
                     'currency', approval.currency,
                     'approvedAt', approval.approved_at
                   ) ORDER BY approval.destination_country)
