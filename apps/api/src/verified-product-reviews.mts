@@ -55,8 +55,9 @@ export async function handleVerifiedProductReviewsRequest(
     const [reviews, summary] = await Promise.all([
       db.query(
         `SELECT r.id, r.rating, r.title, r.body, r.created_at AS "createdAt",
-                'Verified buyer' AS "buyerLabel"
+                'Verified buyer' AS "buyerLabel", x.body AS "storeResponse", x.created_at AS "storeResponseCreatedAt"
          FROM verified_product_reviews r
+         LEFT JOIN verified_product_review_responses x ON x.review_id = r.id AND x.status = 'published'
          WHERE r.product_id = $1 AND r.status = 'published'
          ORDER BY r.created_at DESC
          LIMIT 50`,
