@@ -260,6 +260,8 @@ describe("member store order requests", () => {
     expect(await response.json()).toMatchObject({ success: true, order: { status: "completed" } });
     const sql = String(clientQuery.mock.calls[1][0]);
     expect(sql).toContain("o.buyer_user_id = $5 AND o.status = 'shipped'");
+    expect(sql).toContain("NOT EXISTS");
+    expect(sql).toContain("d.status IN ('open', 'merchant_responded')");
     expect(sql).toContain("delivery_confirmed_at");
     expect(String(clientQuery.mock.calls[3][0])).toContain("Buyer confirmed delivery");
   });
