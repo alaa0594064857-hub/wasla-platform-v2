@@ -640,7 +640,7 @@ async function handleRequest(
 
 
 
-  const memberStoreOrderMatch = requestUrl.pathname.match(/^\\/api\\/stores\\/([^/]+)\\/orders(?:\\/([0-9a-f-]{36}))?$/i);
+  const memberStoreOrderMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/orders(?:\/([0-9a-f-]{36}))?$/i);
   if (memberStoreOrderMatch) {
     try {
       const { handleMemberStoreOrdersRequest } = await import("./member-store-orders.mjs");
