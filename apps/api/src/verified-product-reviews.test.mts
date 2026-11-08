@@ -116,6 +116,24 @@ describe("verified product reviews", () => {
     expect(clientQuery).not.toHaveBeenCalledWith(expect.stringContaining("INSERT INTO verified_product_reviews"), expect.anything());
   });
 
+  it("blocks review submission when the completed order has an unresolved delivery or item dispute", async () => {
+    clientQuery
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+      .mockResolvedValueOnce({ rowCount: null, rows: [] });
+    const base = await startServer();
+    const response = await fetch(endpoint(base), {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rating: 5, body: "The review is valid length but dispute is open." }),
+    });
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ success: false });
+    const eligibilitySql = String(clientQuery.mock.calls[1][0]);
+    expect(eligibilitySql).toContain("d.status IN ('open', 'merchant_responded')");
+    expect(clientQuery).toHaveBeenCalledWith("ROLLBACK");
+    expect(clientQuery).not.toHaveBeenCalledWith(expect.stringContaining("INSERT INTO verified_product_reviews"), expect.anything());
+  });
+
   it("does not allow duplicate reviews for the same order line", async () => {
     clientQuery
       .mockResolvedValueOnce({ rowCount: null, rows: [] })
