@@ -2,8 +2,9 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 let isFreshFxRateTimestamp: (value: unknown, now?: number) => value is string;
 let isValidDestinationCountry: (value: unknown) => value is string;
+let isOfferEligibleForDestination: (offer: Record<string, unknown> | null | undefined, productId: string, destinationCountry: string) => boolean;
 beforeEach(async () => {
-  ({ isFreshFxRateTimestamp, isValidDestinationCountry } = await import("./official-store-pricing.mjs"));
+  ({ isFreshFxRateTimestamp, isValidDestinationCountry, isOfferEligibleForDestination } = await import("./official-store-pricing.mjs"));
 });
 
 describe("official store FX freshness", () => {
@@ -37,5 +38,30 @@ describe("official store destination scoping", () => {
     expect(isValidDestinationCountry("TUR")).toBe(false);
     expect(isValidDestinationCountry("")).toBe(false);
     expect(isValidDestinationCountry(null)).toBe(false);
+  });
+});
+
+
+describe("verified supplier offer pricing eligibility", () => {
+  const validOffer = {
+    product_id: "product-1", offer_status: "approved", availability_status: "available",
+    direct_to_customer_confirmed: true, supplier_identity_verified: true,
+    specifications_verified: true, minimum_order_quantity: 1,
+    shipping_cost: "4.50", shipping_currency: "USD",
+    ships_to_countries: ["TR", "DE"],
+    quote_valid_until: "2099-01-01T00:00:00.000Z",
+    last_verified_at: "2026-11-08T10:00:00.000Z",
+  };
+
+  it("accepts an approved, verified single-unit offer shipping to the destination", () => {
+    expect(isOfferEligibleForDestination(validOffer, "product-1", "TR")).toBe(true);
+  });
+
+  it("rejects a different product, unsupported destination, expired quote or unverified offer", () => {
+    expect(isOfferEligibleForDestination(validOffer, "product-2", "TR")).toBe(false);
+    expect(isOfferEligibleForDestination(validOffer, "product-1", "US")).toBe(false);
+    expect(isOfferEligibleForDestination({ ...validOffer, quote_valid_until: "2000-01-01T00:00:00.000Z" }, "product-1", "TR")).toBe(false);
+    expect(isOfferEligibleForDestination({ ...validOffer, specifications_verified: false }, "product-1", "TR")).toBe(false);
+    expect(isOfferEligibleForDestination({ ...validOffer, minimum_order_quantity: 2 }, "product-1", "TR")).toBe(false);
   });
 });
