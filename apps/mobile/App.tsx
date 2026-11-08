@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { getOfficialStoreProducts, OfficialStoreProduct, WaslaApiError } from "./src/api";
 import {
   Pressable,
   SafeAreaView,
@@ -6,6 +7,8 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
+  ActivityIndicator,
   View,
 } from "react-native";
 
@@ -25,7 +28,15 @@ const copy = {
     messages: "الرسائل",
     account: "حساب موحد",
     footer: "وصلة تجمع عالم التجارة والأعمال.",
-    setup: "نسخة تأسيسية — سيتم ربط الخدمات تدريجياً بواجهة WASLA API."
+    setup: "كتالوج المتجر الرسمي مرتبط بواجهة WASLA API.",
+    country: "رمز دولة التوصيل (مثلاً TR أو US)",
+    load: "عرض المنتجات",
+    loading: "جارٍ تحميل المنتجات...",
+    empty: "لا توجد منتجات معتمدة لهذه الدولة حالياً.",
+    error: "تعذر الاتصال بالكتالوج. حاول مرة أخرى لاحقاً.",
+    price: "السعر",
+    available: "متوفر",
+    limited: "توفر محدود"
   },
   en: {
     direction: "ltr" as const,
@@ -40,7 +51,15 @@ const copy = {
     messages: "Messages",
     account: "One unified account",
     footer: "WASLA connects commerce and business.",
-    setup: "Foundation build — services will be connected to the WASLA API in stages."
+    setup: "The official store catalogue is connected to the WASLA API.",
+    country: "Delivery country code (e.g. TR or US)",
+    load: "Load products",
+    loading: "Loading products...",
+    empty: "No approved products are currently available for this country.",
+    error: "Could not connect to the catalogue. Please try again.",
+    price: "Price",
+    available: "Available",
+    limited: "Limited availability"
   }
 };
 
@@ -55,6 +74,24 @@ export default function App() {
   const [language, setLanguage] = useState<Language>("ar");
   const t = useMemo(() => copy[language], [language]);
   const rtl = t.direction === "rtl";
+  const [country, setCountry] = useState("TR");
+  const [products, setProducts] = useState<OfficialStoreProduct[]>([]);
+  const [catalogueLoading, setCatalogueLoading] = useState(false);
+  const [catalogueError, setCatalogueError] = useState("");
+
+  async function loadCatalogue() {
+    setCatalogueLoading(true);
+    setCatalogueError("");
+    try {
+      const result = await getOfficialStoreProducts(country);
+      setProducts(result);
+    } catch (error) {
+      setCatalogueError(error instanceof WaslaApiError && error.message === "INVALID_COUNTRY" ? t.country : t.error);
+      setProducts([]);
+    } finally {
+      setCatalogueLoading(false);
+    }
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -133,7 +170,7 @@ const styles = StyleSheet.create({
   moduleCard: { width: "48%", minHeight: 118, flexGrow: 1, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#ECE6D9", borderRadius: 16, padding: 16, justifyContent: "space-between" },
   moduleIcon: { color: "#B18A4A", fontSize: 25, fontWeight: "700" },
   moduleTitle: { color: "#14283F", fontSize: 15, fontWeight: "800" },
-  note: { marginTop: 24, borderRadius: 14, backgroundColor: "#EEE9DD", padding: 15 },
+  catalogue: { marginTop: 28, borderRadius: 16, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#ECE6D9", padding: 16, gap: 12 },\n  catalogueTitle: { color: "#14283F", fontSize: 19, fontWeight: "900" },\n  countryInput: { borderWidth: 1, borderColor: "#D8D1C2", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 12, color: "#14283F" },\n  catalogueButton: { backgroundColor: "#14283F", padding: 14, borderRadius: 11, alignItems: "center" },\n  productCard: { borderTopWidth: 1, borderTopColor: "#ECE6D9", paddingTop: 12, gap: 5 },\n  productTitle: { color: "#14283F", fontSize: 15, fontWeight: "800" },\n  productPrice: { color: "#5E6873", fontSize: 13 },\n  productStatus: { color: "#A17B3D", fontSize: 12, fontWeight: "700" },\n  errorText: { color: "#B42318", fontSize: 13 },\n  note: { marginTop: 24, borderRadius: 14, backgroundColor: "#EEE9DD", padding: 15 },
   noteText: { color: "#626A72", fontSize: 12, lineHeight: 19 },
   footer: { marginTop: 28, textAlign: "center", color: "#899099", fontSize: 12 }
 });
