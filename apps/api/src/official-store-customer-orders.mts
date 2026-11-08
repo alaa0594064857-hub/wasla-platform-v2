@@ -3,7 +3,6 @@ import { randomBytes } from "node:crypto";
 import { fromNodeHeaders } from "better-auth/node";
 import { auth } from "./auth.mjs";
 import { getDatabasePool } from "./database.js";
-import { ensurePriceApprovalTables } from "./official-store-pricing.mjs";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -92,7 +91,6 @@ export async function handleOfficialStoreCustomerOrdersRequest(
     if (!/^[A-Z]{2}$/.test(destinationCountry)) {
       reply(response, 400, { success: false, error: "Use a two-letter destination country code" }); return;
     }
-    await ensurePriceApprovalTables();
     const client = await db.connect();
     try {
       await client.query("BEGIN");
