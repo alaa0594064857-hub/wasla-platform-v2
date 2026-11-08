@@ -97,7 +97,7 @@ export async function ensurePriceApprovalTables(): Promise<void> {
       offer_id UUID NOT NULL REFERENCES official_store_product_source_offers(id) ON DELETE RESTRICT,
       destination_country CHAR(2) NOT NULL,
       currency CHAR(3) NOT NULL,
-      customer_price NUMERIC(14,2) NOT NULL CHECK (customer_price >= 0),
+      customer_price NUMERIC(18,6) NOT NULL CHECK (customer_price >= 0),
       breakdown JSONB NOT NULL,
       created_by UUID NOT NULL,
       expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '30 minutes'),
@@ -111,7 +111,7 @@ export async function ensurePriceApprovalTables(): Promise<void> {
       offer_id UUID NOT NULL REFERENCES official_store_product_source_offers(id) ON DELETE RESTRICT,
       destination_country CHAR(2) NOT NULL,
       currency CHAR(3) NOT NULL,
-      customer_price NUMERIC(14,2) NOT NULL CHECK (customer_price >= 0),
+      customer_price NUMERIC(18,6) NOT NULL CHECK (customer_price >= 0),
       breakdown JSONB NOT NULL,
       approved_by UUID NOT NULL,
       approved_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -135,7 +135,7 @@ async function handleApprovePrice(request: IncomingMessage, response: ServerResp
   try {
     await client.query("BEGIN");
     const previewResult = await client.query(
-      `SELECT id, product_id, offer_id, destination_country, currency, customer_price::text AS customer_price, breakdown
+      `SELECT id, product_id, offer_id, destination_country, currency, trim_scale(customer_price)::text AS customer_price, breakdown
        FROM official_store_price_previews WHERE id = $1 AND created_by = $2 AND expires_at > NOW() FOR UPDATE`,
       [body.previewId, userId],
     );
@@ -169,7 +169,7 @@ async function handleApprovePrice(request: IncomingMessage, response: ServerResp
       `INSERT INTO official_store_price_approvals
         (product_id, offer_id, destination_country, currency, customer_price, breakdown, approved_by)
        VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7)
-       RETURNING id, product_id, offer_id, destination_country, currency, customer_price::text AS customer_price, approved_at, status`,
+       RETURNING id, product_id, offer_id, destination_country, currency, trim_scale(customer_price)::text AS customer_price, approved_at, status`,
       [preview.product_id, preview.offer_id, preview.destination_country, preview.currency, preview.customer_price, JSON.stringify(preview.breakdown), userId],
     );
     await client.query(
