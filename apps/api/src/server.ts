@@ -276,10 +276,11 @@ async function handleRequest(
     return;
   }
 
-  if (requestUrl.pathname === "/api/platform/official-store/pricing/preview") {
+  const officialStorePricingAction = requestUrl.pathname.match(/^\/api\/platform\/official-store\/pricing\/(preview|approve)$/);
+  if (officialStorePricingAction) {
     try {
       const { handleOfficialStorePricingRequest } = await import("./official-store-pricing.mjs");
-      await handleOfficialStorePricingRequest(request, response);
+      await handleOfficialStorePricingRequest(request, response, officialStorePricingAction[1] as "preview" | "approve");
     } catch (error) {
       console.error("WASLA official store pricing route error:", error);
       if (!response.headersSent) sendJson(response, 500, { success: false, error: "Pricing preview service error" });
