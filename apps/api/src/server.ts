@@ -414,6 +414,19 @@ async function handleRequest(
     }
     return;
   }
+  const reviewDisputeDecisionMatch = requestUrl.pathname.match(/^\/api\/platform\/review-disputes\/(report|appeal)\/([0-9a-f-]{36})$/i);
+  if (reviewDisputeDecisionMatch) {
+    try {
+      const { handlePlatformReviewDisputeDecision } = await import("./review-disputes.mjs");
+      await handlePlatformReviewDisputeDecision(request, response, reviewDisputeDecisionMatch[1] as "report" | "appeal", reviewDisputeDecisionMatch[2]);
+    } catch (error) {
+      console.error("WASLA review dispute decision error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Review dispute decision service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/platform/review-disputes") {
     try {
       const { handlePlatformReviewDisputes } = await import("./review-disputes.mjs");
