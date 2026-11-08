@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Server } from "node:http";
-import { createWaslaServer } from "./server";
+import { createWaslaServer } from "./server.js";
 import { auth } from "./auth.mjs";
 import { getDatabasePool } from "./database.js";
 
@@ -18,12 +18,13 @@ const release = vi.fn();
 const connect = vi.fn();
 
 async function startServer() {
-  server = createWaslaServer();
+  const currentServer = createWaslaServer();
+  server = currentServer;
   await new Promise<void>((resolve, reject) => {
-    server!.once("error", reject);
-    server!.listen(0, "127.0.0.1", resolve);
+    currentServer.once("error", reject);
+    currentServer.listen(0, "127.0.0.1", resolve);
   });
-  const address = server.address();
+  const address = currentServer.address();
   if (!address || typeof address === "string") throw new Error("No test server address");
   return `http://127.0.0.1:${address.port}`;
 }
