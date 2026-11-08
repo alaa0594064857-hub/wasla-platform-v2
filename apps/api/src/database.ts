@@ -372,6 +372,36 @@ export async function ensureVerifiedReviewTables(): Promise<void> {
     )
   `);
   await db.query(`CREATE INDEX IF NOT EXISTS verified_product_review_edits_review_idx ON verified_product_review_edits (review_id, changed_at DESC)`);
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS verified_product_review_reports (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      review_id uuid NOT NULL REFERENCES verified_product_reviews(id) ON DELETE RESTRICT,
+      reporter_user_id uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+      reason varchar(32) NOT NULL CHECK (reason IN ('spam','abuse','harassment','conflict_of_interest','personal_information','other')),
+      details varchar(1000),
+      status varchar(20) NOT NULL DEFAULT 'open' CHECK (status IN ('open','reviewed','dismissed','actioned')),
+      reviewed_by uuid REFERENCES users(id) ON DELETE SET NULL,
+      reviewed_at timestamptz,
+      created_at timestamptz NOT NULL DEFAULT NOW(),
+      UNIQUE (review_id, reporter_user_id)
+    )
+  `);
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS verified_product_review_appeals (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      review_id uuid NOT NULL REFERENCES verified_product_reviews(id) ON DELETE RESTRICT,
+      appellant_user_id uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+      reason varchar(1000) NOT NULL CHECK (length(trim(reason)) BETWEEN 10 AND 1000),
+      status varchar(20) NOT NULL DEFAULT 'open' CHECK (status IN ('open','upheld','overturned')),
+      reviewed_by uuid REFERENCES users(id) ON DELETE SET NULL,
+      reviewed_at timestamptz,
+      resolution_note varchar(1000),
+      created_at timestamptz NOT NULL DEFAULT NOW()
+    )
+  `);
+  await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS verified_product_review_one_open_appeal_idx ON verified_product_review_appeals (review_id) WHERE status = 'open'`);
+  await db.query(`CREATE INDEX IF NOT EXISTS verified_product_review_reports_queue_idx ON verified_product_review_reports (status, created_at)`);
+  await db.query(`CREATE INDEX IF NOT EXISTS verified_product_review_appeals_queue_idx ON verified_product_review_appeals (status, created_at)`);
   await db.query(`CREATE INDEX IF NOT EXISTS verified_product_reviews_public_idx ON verified_product_reviews (product_id, created_at DESC) WHERE status = 'published'`);
   await db.query(`CREATE INDEX IF NOT EXISTS verified_product_reviews_buyer_idx ON verified_product_reviews (buyer_user_id, created_at DESC)`);
 }
