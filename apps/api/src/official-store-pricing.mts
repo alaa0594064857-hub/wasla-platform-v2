@@ -79,11 +79,12 @@ export async function handleOfficialStorePricingRequest(request: IncomingMessage
     if (!body || !validAmount(body.supplierCost) || !validCurrency(body.supplierCurrency) ||
         !validAmount(body.shippingCost) || !validCurrency(body.shippingCurrency) ||
         !validCurrency(body.displayCurrency) ||
+        typeof body.destinationCountry !== "string" || !/^[A-Z]{2}$/.test(body.destinationCountry) ||
         typeof body.marginPercent !== "number" || !Number.isFinite(body.marginPercent) ||
         body.marginPercent < 0 || body.marginPercent > 500 ||
         !validAmount(body.fixedMargin ?? 0) ||
         (body.costs !== undefined && (!Array.isArray(body.costs) || body.costs.length > 20))) {
-      reply(response, 400, { success: false, error: "Provide valid supplier/shipping costs, ISO currencies, margin percentage, fixed margin and up to 20 additional cost lines" }); return;
+      reply(response, 400, { success: false, error: "Provide a 2-letter destination country, valid supplier/shipping costs, ISO currencies, margin percentage, fixed margin and up to 20 additional cost lines" }); return;
     }
     const target = body.displayCurrency;
     let supplierFxRate = 1;
@@ -123,7 +124,7 @@ export async function handleOfficialStorePricingRequest(request: IncomingMessage
       ? Number(((finalPrice - roundedCost) / finalPrice * 100).toFixed(2))
       : 0;
     reply(response, 200, {
-      success: true, previewOnly: true, published: false, currency: target,
+      success: true, previewOnly: true, published: false, currency: target, destinationCountry: body.destinationCountry,
       breakdown: {
         supplierCost: { amount: body.supplierCost, currency: body.supplierCurrency, convertedAmount: supplier, fxRate: supplierFxRate,
           ...(body.supplierCurrency !== target ? { fxRateAsOf: body.supplierFxRateAsOf, fxSource: body.supplierFxSource } : {}) },
