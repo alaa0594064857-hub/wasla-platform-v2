@@ -750,3 +750,13 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Added regression coverage for inactive-account authorization and unauthenticated access without querying private opportunity data.
 - Final-head API-quality run `42493941527` and CI run `42493941511` both completed successfully. CI covered shared-package tests/type checks, API tests, migrations, authorization seeding, database constraints, TypeScript checks, API build and Web production build.
 - No payment, supplier outreach, or order behavior changed. The commit is merged to GitHub but is not live on Render because pipeline build minutes remain exhausted. Hosted two-account verification remains outstanding.
+
+
+## Trade opportunity review notifications — implementation in PR validation
+
+- Platform-owner review decisions for buyer requests and supplier offers now persist the existing decision event and create an in-app notification for the original submitter in the same database transaction.
+- Arabic and English notification titles and decision text cover approval, rejection and closure; the optional review note is included in the notification.
+- Review updates now apply only while the opportunity is `pending_review`, preventing a second decision, duplicate event and duplicate notification after the first decision.
+- Added API regression tests for all three outcomes and for rejecting a repeated decision without creating another event or notification.
+- The notification uses the existing in-app `trade_deal` notification category and links to the Trade workspace. This does not add email or push delivery.
+- Changes are on branch `feat/trade-opportunity-review-notifications`; CI/API quality checks and review are pending. Nothing has been merged or deployed.
