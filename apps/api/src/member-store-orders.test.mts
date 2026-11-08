@@ -97,7 +97,7 @@ describe("member store order requests", () => {
     expect(clientQuery.mock.calls[1][1]).toEqual([
       "cancelled", "", "22222222-2222-4222-8222-222222222222", "demo",
       "11111111-1111-4111-8111-111111111111", ["store.order.manage", "account.order.manage"],
-      null, null, null,
+      null, null, null, "11111111-1111-4111-8111-111111111111",
     ]);
   });
 
@@ -214,6 +214,7 @@ describe("member store order requests", () => {
       "shipped", "", "22222222-2222-4222-8222-222222222222", "demo",
       "11111111-1111-4111-8111-111111111111", ["store.order.manage", "account.order.manage"],
       "DHL", "TRACK-123", "https://tracking.example.test/TRACK-123",
+      "11111111-1111-4111-8111-111111111111",
     ]);
     expect(String(clientQuery.mock.calls[3][0])).toContain("Your order has shipped");
   });
