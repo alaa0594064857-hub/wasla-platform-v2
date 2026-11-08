@@ -189,7 +189,7 @@ describe("owner supplier confirmation review", () => {
       decision: "expired", paymentEnabled: false, supplierPurchasePlaced: false,
     });
     expect(String(client.query.mock.calls[4][0])).toContain("INSERT INTO notifications");
-    expect(client.query.mock.calls[4][1][2]).toBe("تعذر تأكيد توفر المنتج");
+    expect(client.query.mock.calls[4][1][1]).toBe("تعذر تأكيد توفر المنتج");
     expect(client.query.mock.calls.at(-1)?.[0]).toBe("COMMIT");
     expect(client.release).toHaveBeenCalledOnce();
   });
