@@ -665,7 +665,7 @@ export async function ensureMemberStoreOrderTables(): Promise<void> {
     await client.query(`DROP TRIGGER IF EXISTS member_store_orders_capture_events ON member_store_orders`);
     await client.query(`
       CREATE TRIGGER member_store_orders_capture_events
-      AFTER INSERT OR UPDATE OF status, carrier_name, tracking_number, tracking_url ON member_store_orders
+      AFTER INSERT OR UPDATE ON member_store_orders
       FOR EACH ROW EXECUTE FUNCTION wasla_capture_member_store_order_event()
     `);
     await client.query(`
