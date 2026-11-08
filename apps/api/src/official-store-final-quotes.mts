@@ -92,6 +92,9 @@ export async function handleOfficialStoreFinalQuoteIssue(
     if (order.quoteStatus === "accepted") {
       await client.query("ROLLBACK"); reply(response, 409, { success: false, error: "Customer already accepted this quote; create a new request for changes" }); return;
     }
+    if (order.quoteStatus === "pending_customer" && order.quoteExpiresAt && new Date(order.quoteExpiresAt).getTime() > Date.now()) {
+      await client.query("ROLLBACK"); reply(response, 409, { success: false, error: "An unexpired quote is already awaiting the customer response" }); return;
+    }
     if (!order.sourceOfferId || !order.productId || !order.destinationCountry) {
       await client.query("ROLLBACK"); reply(response, 409, { success: false, error: "The verified supplier offer for this request is unavailable" }); return;
     }
