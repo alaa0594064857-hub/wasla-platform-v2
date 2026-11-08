@@ -58,6 +58,7 @@ export default function MemberStoreOrdersPage() {
     cancelled: "ملغي",
     accept: "قبول الطلب",
     reject: "رفض الطلب",
+    cancel: "إلغاء الطلب",
     buyer: "العميل",
     submitted: "تاريخ الإرسال",
     noPayment: "هذا طلب وليس عملية شراء مدفوعة. قبول البائع لا يخصم المخزون ولا يحصّل الأموال ولا ينشئ شحنة.",
@@ -80,6 +81,7 @@ export default function MemberStoreOrdersPage() {
     cancelled: "Cancelled",
     accept: "Accept request",
     reject: "Reject request",
+    cancel: "Cancel request",
     buyer: "Buyer",
     submitted: "Submitted",
     noPayment: "This is an order request, not a paid purchase. Merchant acceptance does not decrement stock, collect funds or create a shipment.",
@@ -103,7 +105,7 @@ export default function MemberStoreOrdersPage() {
 
   useEffect(() => { void load(); }, [load]);
 
-  async function updateOrder(orderId: string, status: "accepted" | "rejected") {
+  async function updateOrder(orderId: string, status: "accepted" | "rejected" | "cancelled") {
     if (busy) return;
     setBusy(orderId); setMessage(""); setError("");
     try {
@@ -157,6 +159,9 @@ export default function MemberStoreOrdersPage() {
             <p className="mt-3 font-bold">{copy.subtotal}: {order.subtotal} {order.currency}</p>
             {order.buyerNote && <p className="mt-3 text-sm text-slate-600"><strong>{copy.note}:</strong> {order.buyerNote}</p>}
             {order.merchantNote && <p className="mt-2 text-sm text-slate-600"><strong>{copy.merchantNote}:</strong> {order.merchantNote}</p>}
+            {!isMerchantView && order.status === "pending_merchant_review" && <div className="mt-4">
+              <button disabled={busy === order.id} onClick={() => void updateOrder(order.id, "cancelled")} className="rounded-lg border border-red-700 px-4 py-2 text-sm font-semibold text-red-700 disabled:opacity-50">{copy.cancel}</button>
+            </div>}
             {isMerchantView && order.status === "pending_merchant_review" && <div className="mt-4 flex flex-wrap gap-3">
               <button disabled={busy === order.id} onClick={() => void updateOrder(order.id, "accepted")} className="rounded-lg bg-[#14233b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{copy.accept}</button>
               <button disabled={busy === order.id} onClick={() => void updateOrder(order.id, "rejected")} className="rounded-lg border border-red-700 px-4 py-2 text-sm font-semibold text-red-700 disabled:opacity-50">{copy.reject}</button>
