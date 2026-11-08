@@ -193,7 +193,7 @@ export async function handleSubscriptionLifecycleRequest(
         return;
       }
       if (customerUserId && customerUserId !== billingContactUserId) {
-        const customer = await client.query("SELECT id FROM users WHERE id = $1 AND status = 'active'", [customerUserId]);
+        const customer = await client.query("SELECT id FROM users WHERE id = $1 AND status = 'active' AND email_verified = TRUE", [customerUserId]);
         if (!customer.rows[0]) {
           await client.query("ROLLBACK");
           send(response, 400, { success: false, error: "Customer user not found or inactive" });
@@ -202,8 +202,10 @@ export async function handleSubscriptionLifecycleRequest(
       }
       if (customerAccountId) {
         const membership = await client.query(
-          `SELECT 1 FROM account_members
-           WHERE account_id = $1 AND user_id = $2 AND status = 'active'
+          `SELECT 1 FROM account_members am
+           JOIN accounts a ON a.id = am.account_id
+           WHERE am.account_id = $1 AND am.user_id = $2
+             AND am.status = 'active' AND a.status = 'active'
            LIMIT 1`,
           [customerAccountId, billingContactUserId],
         );
