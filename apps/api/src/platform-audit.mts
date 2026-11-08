@@ -44,6 +44,15 @@ export async function handlePlatformAuditRequest(request: IncomingMessage, respo
            )
 
         UNION ALL
+        SELECT osl.id::text, osl.created_at, 'official_store',
+               osl.action, 'official_store_product', osl.product_id::text,
+               u.email, COALESCE(p.title_en, p.title_ar),
+               osl.details
+        FROM official_store_activity_log osl
+        LEFT JOIN official_store_products p ON p.id = osl.product_id
+        LEFT JOIN users u ON u.id = osl.actor_user_id
+
+        UNION ALL
         SELECT oe.id::text, oe.created_at, 'trade_opportunity',
                oe.event_type, 'trade_opportunity', oe.opportunity_id::text,
                u.email, a.display_name,
