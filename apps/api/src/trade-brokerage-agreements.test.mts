@@ -225,4 +225,27 @@ describe("WASLA Trade brokerage agreement access and acceptance", () => {
     expect(mocks.query.mock.calls.at(-1)?.[0]).toBe("ROLLBACK");
   });
 
+
+  it("denies an active account member who lacks the trade-create permission", async () => {
+    mocks.query
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ rowCount: 1, rows: [agreement] })
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+      .mockResolvedValueOnce({});
+
+    const baseUrl = await startServer(agreement.id);
+    const response = await fetch(`${baseUrl}/api/trade/brokerage-agreements/${agreement.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "accept", accountId: agreement.buyer_account_id }),
+    });
+
+    expect(response.status).toBe(403);
+    expect(String(mocks.query.mock.calls[2][0])).toContain("p.permission_key='account.trade.create'");
+    expect(String(mocks.query.mock.calls[2][0])).toContain("am.status='active'");
+    expect(mocks.query.mock.calls.at(-1)?.[0]).toBe("ROLLBACK");
+    expect(mocks.release).toHaveBeenCalledOnce();
+  });
+
 });
