@@ -954,3 +954,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - API quality workflow run 42528463643 passed on commit 9431cc90b1b115a2ac508ab8e11cd2a9d0b71ec8: API tests and API build succeeded.
 - After that passing run, two additional safeguards were committed: return requests validate buyer input before opening a DB connection, and an approved replacement cannot be incorrectly marked as a returned item. The buyer-facing order UI now clearly marks replacement fulfillment as not yet enabled.
 - These two latest safeguards are on the current PR head and still require a fresh CI run; do not treat the latest head as fully verified yet.
+
+## Member-store return and exchange verification — 2026-11-09
+
+- Draft PR #49 remains stacked on PR #48 and is not merged or deployed.
+- The latest PR #49 head is `af25d068b36ee1bedd617a8b193186ef6b73de21`.
+- GitHub Actions API quality run `42528600356` completed successfully on that head: API tests and API build passed.
+- This API-only workflow does not replace the full repository CI. The full CI workflow also runs shared-package tests/typecheck, database migrations, authorization seeding, database integration tests, API typecheck, and the web production build. Those checks still need to run against the final PR head.
+- Remaining product work: merchant-configurable return policies with buyer-visible disclosure (no universal statutory deadline hardcoded), replacement shipment fulfillment, payment-provider refund/reversal integration, and end-to-end/database verification.
+- No merge, Render deployment, paid build-minute purchase, domain purchase, or production database mutation was performed.
