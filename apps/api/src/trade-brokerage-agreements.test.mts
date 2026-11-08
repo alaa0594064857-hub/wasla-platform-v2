@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   connect: vi.fn(),
   release: vi.fn(),
   authorizePlatformPermission: vi.fn(),
+  createNotification: vi.fn(),
 }));
 
 vi.mock("./auth.mjs", () => ({
@@ -19,6 +20,10 @@ vi.mock("./database.js", () => ({
 
 vi.mock("./platform-security.mjs", () => ({
   authorizePlatformPermission: mocks.authorizePlatformPermission,
+}));
+
+vi.mock("./notifications.mjs", () => ({
+  createNotification: mocks.createNotification,
 }));
 
 let handleBrokerageAgreements: (
@@ -45,6 +50,8 @@ const agreement = {
   id: "33333333-3333-4333-8333-333333333333",
   buyer_account_id: "11111111-1111-4111-8111-111111111111",
   supplier_account_id: "22222222-2222-4222-8222-222222222222",
+  buyer_submitter_user_id: "buyer-submit-user",
+  supplier_submitter_user_id: "supplier-submit-user",
   status: "pending_acceptance",
   expires_at: new Date(Date.now() + 60_000).toISOString(),
   buyer_accepted_at: null,
@@ -149,6 +156,8 @@ describe("WASLA Trade brokerage agreement access and acceptance", () => {
     expect(await response.json()).toMatchObject({ success: true, agreement: { status: "pending_acceptance" } });
     expect(String(mocks.query.mock.calls[4][0])).toContain("buyer_accepted_at");
     expect(String(mocks.query.mock.calls[5][0])).toContain("trade_brokerage_agreement_events");
+    expect(mocks.createNotification).toHaveBeenCalledOnce();
+    expect(mocks.createNotification.mock.calls[0][1]).toMatchObject({ userId: "supplier-submit-user", type: "trade_deal", actionUrl: "/trade/agreements", metadata: { status: "pending_acceptance" } });
     expect(mocks.query.mock.calls.some(([sql]) => String(sql).toLowerCase().includes("payment"))).toBe(false);
     expect(mocks.query.mock.calls.at(-1)?.[0]).toBe("COMMIT");
     expect(mocks.release).toHaveBeenCalledOnce();
@@ -176,6 +185,8 @@ describe("WASLA Trade brokerage agreement access and acceptance", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ success: true, agreement: { status: "active" } });
     expect(String(mocks.query.mock.calls[4][0])).toContain("supplier_accepted_at");
+    expect(mocks.createNotification).toHaveBeenCalledTimes(2);
+    expect(mocks.createNotification.mock.calls.map((call) => call[1].userId).sort()).toEqual(["buyer-submit-user", "supplier-submit-user"]);
     expect(mocks.query.mock.calls.at(-1)?.[0]).toBe("COMMIT");
     expect(mocks.query.mock.calls.some(([sql]) => /payment|charge|transfer/i.test(String(sql)))).toBe(false);
   });
@@ -200,6 +211,8 @@ describe("WASLA Trade brokerage agreement access and acceptance", () => {
     expect(await response.json()).toMatchObject({ success: true, status: "rejected" });
     expect(String(mocks.query.mock.calls[4][0])).toContain("status='rejected'");
     expect(String(mocks.query.mock.calls[5][0])).toContain("event_type");
+    expect(mocks.createNotification).toHaveBeenCalledOnce();
+    expect(mocks.createNotification.mock.calls[0][1]).toMatchObject({ userId: "supplier-submit-user", metadata: { status: "rejected" } });
     expect(mocks.query.mock.calls.at(-1)?.[0]).toBe("COMMIT");
     expect(mocks.query.mock.calls.some(([sql]) => String(sql).includes("buyer_accepted_at"))).toBe(false);
   });
