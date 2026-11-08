@@ -30,7 +30,11 @@ async function readBody(request: IncomingMessage): Promise<Record<string, unknow
 }
 
 function validCurrency(value: unknown): value is string {
-  return typeof value === "string" && /^[A-Z]{3}$/.test(value);
+  if (typeof value !== "string" || !/^[A-Z]{3}$/.test(value)) return false;
+  try {
+    new Intl.NumberFormat("en", { style: "currency", currency: value }).format(1);
+    return true;
+  } catch { return false; }
 }
 
 export function isValidDestinationCountry(value: unknown): value is string {
@@ -255,7 +259,7 @@ export async function handleOfficialStorePricingRequest(request: IncomingMessage
     const supplierFxSource = body.supplierFxSource;
     const shippingFxSource = body.shippingFxSource;
     if (supplierCurrency !== target) {
-      if (typeof body.supplierFxRate !== "number" || !Number.isFinite(body.supplierFxRate) || body.supplierFxRate <= 0 ||
+      if (typeof body.supplierFxRate !== "number" || !Number.isFinite(body.supplierFxRate) || body.supplierFxRate <= 0 || body.supplierFxRate > 1_000_000 ||
           !isFreshFxRateTimestamp(body.supplierFxRateAsOf) ||
           typeof supplierFxSource !== "string" || !supplierFxSource.trim() || supplierFxSource.length > 180) {
         reply(response, 400, { success: false, error: "Supplier currency conversion requires a positive FX rate with a source timestamp no older than 24 hours and a source reference" }); return;
@@ -263,7 +267,7 @@ export async function handleOfficialStorePricingRequest(request: IncomingMessage
       supplierFxRate = body.supplierFxRate;
     }
     if (shippingCurrency !== target) {
-      if (typeof body.shippingFxRate !== "number" || !Number.isFinite(body.shippingFxRate) || body.shippingFxRate <= 0 ||
+      if (typeof body.shippingFxRate !== "number" || !Number.isFinite(body.shippingFxRate) || body.shippingFxRate <= 0 || body.shippingFxRate > 1_000_000 ||
           !isFreshFxRateTimestamp(body.shippingFxRateAsOf) ||
           typeof shippingFxSource !== "string" || !shippingFxSource.trim() || shippingFxSource.length > 180) {
         reply(response, 400, { success: false, error: "Shipping currency conversion requires a positive FX rate with a source timestamp no older than 24 hours and a source reference" }); return;
@@ -272,6 +276,9 @@ export async function handleOfficialStorePricingRequest(request: IncomingMessage
     }
     const supplier = supplierCost * supplierFxRate;
     const shipping = shippingCost * shippingFxRate;
+    if (!validAmount(supplier) || !validAmount(shipping)) {
+      reply(response, 400, { success: false, error: "Converted supplier or shipping cost is outside the supported range" }); return;
+    }
     const rawCosts = (body.costs ?? []) as CostLine[];
     const costs = rawCosts.map(line => normalizeLine(line, target));
     if (costs.some(line => line === null)) {
@@ -279,15 +286,19 @@ export async function handleOfficialStorePricingRequest(request: IncomingMessage
     }
     const additional = (costs as NonNullable<typeof costs[number]>[]).reduce((sum, line) => sum + line.targetAmount, 0);
     const costSubtotal = supplier + shipping + additional;
+    if (!validAmount(costSubtotal)) {
+      reply(response, 400, { success: false, error: "Total landed cost is outside the supported range" }); return;
+    }
     const margin = costSubtotal * (marginPercent / 100) + Number(body.fixedMargin ?? 0);
     const digits = currencyDigits(target);
     const factor = 10 ** digits;
     const finalPrice = Math.ceil((costSubtotal + margin) * factor - 1e-10) / factor;
     const roundedCost = Math.round(costSubtotal * factor) / factor;
     const roundedMargin = Math.round(margin * factor) / factor;
-    const grossMarginPercent = finalPrice > 0
-      ? Number(((finalPrice - roundedCost) / finalPrice * 100).toFixed(2))
-      : 0;
+    if (!validAmount(finalPrice) || finalPrice <= 0) {
+      reply(response, 400, { success: false, error: "The calculated customer price must be positive and within the supported range" }); return;
+    }
+    const grossMarginPercent = Number(((finalPrice - roundedCost) / finalPrice * 100).toFixed(2));
     const previewId = randomUUID();
     const breakdown = {
          supplierCost: { amount: supplierCost, currency: supplierCurrency, convertedAmount: supplier, fxRate: supplierFxRate,
