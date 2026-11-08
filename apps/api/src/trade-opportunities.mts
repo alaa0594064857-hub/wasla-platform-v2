@@ -209,6 +209,7 @@ export async function handleTradeOpportunitiesRequest(
                 o.minimum_order_quantity::text AS minimum_order_quantity, o.delivery_terms,
                 o.review_status, o.expires_at, o.created_at, o.updated_at
          FROM trade_opportunities o
+         INNER JOIN accounts a ON a.id=o.account_id AND a.status='active'
          WHERE EXISTS (
            SELECT 1 FROM account_members am
            INNER JOIN roles r ON r.id=am.role_id AND r.scope_type=am.role_scope
