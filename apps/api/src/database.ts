@@ -466,3 +466,40 @@ export async function ensureSubscriptionBillingTables(): Promise<void> {
     client.release();
   }
 }
+
+
+/** Member-owned store order requests; no payment capture or stock reservation occurs here. */
+export async function ensureMemberStoreOrderTables(): Promise<void> {
+  const client = await getDatabasePool().connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS member_store_orders (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        order_number varchar(32) NOT NULL UNIQUE,
+        store_id uuid NOT NULL REFERENCES stores(id) ON DELETE RESTRICT,
+        buyer_user_id uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+        status varchar(32) NOT NULL DEFAULT 'pending_merchant_review'
+          CHECK (status IN ('pending_merchant_review', 'accepted', 'rejected', 'cancelled', 'fulfilled')),
+        currency varchar(3) NOT NULL,
+        items jsonb NOT NULL,
+        subtotal numeric(14,2) NOT NULL CHECK (subtotal >= 0),
+        buyer_note varchar(2000),
+        merchant_note varchar(2000),
+        idempotency_key varchar(100),
+        created_at timestamptz NOT NULL DEFAULT NOW(),
+        updated_at timestamptz NOT NULL DEFAULT NOW(),
+        UNIQUE (store_id, buyer_user_id, idempotency_key)
+      )
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS member_store_orders_store_created_idx
+      ON member_store_orders (store_id, created_at DESC)
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS member_store_orders_buyer_created_idx
+      ON member_store_orders (buyer_user_id, created_at DESC)
+    `);
+  } finally {
+    client.release();
+  }
+}
