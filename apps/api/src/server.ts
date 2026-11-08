@@ -718,6 +718,18 @@ async function handleRequest(
     return;
   }
 
+  const sellerReviewResponseMatch = requestUrl.pathname.match(/^\/api\/reviews\/([0-9a-f-]{36})\/response$/i);
+  if (sellerReviewResponseMatch) {
+    try { const { handleSellerReviewResponse } = await import('./review-responses.mjs'); await handleSellerReviewResponse(request, response, sellerReviewResponseMatch[1]); }
+    catch (error) { console.error('WASLA seller review response error:', error); if (!response.headersSent) sendJson(response, 500, { success: false, error: 'Seller review response service error' }); else response.destroy(error instanceof Error ? error : undefined); }
+    return;
+  }
+  const platformReviewResponsesMatch = requestUrl.pathname.match(/^\/api\/platform\/review-responses(?:\/([0-9a-f-]{36}))?$/i);
+  if (platformReviewResponsesMatch) {
+    try { const { handlePlatformReviewResponses } = await import('./review-responses.mjs'); await handlePlatformReviewResponses(request, response, platformReviewResponsesMatch[1]); }
+    catch (error) { console.error('WASLA platform review responses error:', error); if (!response.headersSent) sendJson(response, 500, { success: false, error: 'Platform review responses service error' }); else response.destroy(error instanceof Error ? error : undefined); }
+    return;
+  }
   const productReviewsMatch = requestUrl.pathname.match(/^\/api\/products\/([0-9a-f-]{36})\/reviews$/i);
   if (productReviewsMatch) {
     try {
