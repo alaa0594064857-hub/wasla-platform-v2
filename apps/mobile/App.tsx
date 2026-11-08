@@ -169,6 +169,44 @@ export default function App() {
           ))}
         </View>
 
+        <View style={styles.authCard}>
+          {session?.user ? (
+            <>
+              <Text style={[styles.catalogueTitle, rtl && styles.textRight]}>{t.signedIn}: {session.user.name}</Text>
+              <Pressable accessibilityRole="button" onPress={() => void authClient.signOut()} style={styles.catalogueButton}>
+                <Text style={styles.primaryButtonText}>{t.signOut}</Text>
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <Text style={[styles.catalogueTitle, rtl && styles.textRight]}>{t.signIn}</Text>
+              <TextInput value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" placeholder={t.email} style={[styles.countryInput, rtl && styles.textRight]} />
+              <TextInput value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" placeholder={t.password} style={[styles.countryInput, rtl && styles.textRight]} />
+              <Pressable accessibilityRole="button" onPress={() => void handleSignIn()} disabled={authBusy || sessionLoading} style={styles.catalogueButton}>
+                {authBusy || sessionLoading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>{t.signIn}</Text>}
+              </Pressable>
+              {!!authError && <Text style={styles.errorText}>{authError}</Text>}
+            </>
+          )}
+        </View>
+
+        <View style={styles.catalogue}>
+          <Text style={[styles.catalogueTitle, rtl && styles.textRight]}>{t.shops}</Text>
+          <TextInput value={country} onChangeText={setCountry} autoCapitalize="characters" maxLength={2} placeholder={t.country} style={[styles.countryInput, rtl && styles.textRight]} />
+          <Pressable accessibilityRole="button" onPress={() => void loadCatalogue()} disabled={catalogueLoading} style={styles.catalogueButton}>
+            {catalogueLoading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>{t.load}</Text>}
+          </Pressable>
+          {!!catalogueError && <Text style={styles.errorText}>{catalogueError}</Text>}
+          {products.map(product => (
+            <View key={product.id} style={styles.productCard}>
+              <Text style={[styles.productTitle, rtl && styles.textRight]}>{rtl ? product.title_ar : product.title_en}</Text>
+              <Text style={[styles.productPrice, rtl && styles.textRight]}>{t.price}: {product.price} {product.currency}</Text>
+              <Text style={[styles.productStatus, rtl && styles.textRight]}>{product.availability_status === "available" ? t.available : t.limited}</Text>
+            </View>
+          ))}
+          {!catalogueLoading && !catalogueError && products.length === 0 && <Text style={[styles.noteText, rtl && styles.textRight]}>{t.empty}</Text>}
+        </View>
+
         <View style={styles.note}>
           <Text style={[styles.noteText, rtl && styles.textRight]}>{t.setup}</Text>
         </View>
@@ -204,7 +242,17 @@ const styles = StyleSheet.create({
   moduleCard: { width: "48%", minHeight: 118, flexGrow: 1, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#ECE6D9", borderRadius: 16, padding: 16, justifyContent: "space-between" },
   moduleIcon: { color: "#B18A4A", fontSize: 25, fontWeight: "700" },
   moduleTitle: { color: "#14283F", fontSize: 15, fontWeight: "800" },
-  authCard: { marginTop: 28, borderRadius: 16, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#ECE6D9", padding: 16, gap: 12 },\n  catalogue: { marginTop: 20, borderRadius: 16, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#ECE6D9", padding: 16, gap: 12 },\n  catalogueTitle: { color: "#14283F", fontSize: 19, fontWeight: "900" },\n  countryInput: { borderWidth: 1, borderColor: "#D8D1C2", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 12, color: "#14283F" },\n  catalogueButton: { backgroundColor: "#14283F", padding: 14, borderRadius: 11, alignItems: "center" },\n  productCard: { borderTopWidth: 1, borderTopColor: "#ECE6D9", paddingTop: 12, gap: 5 },\n  productTitle: { color: "#14283F", fontSize: 15, fontWeight: "800" },\n  productPrice: { color: "#5E6873", fontSize: 13 },\n  productStatus: { color: "#A17B3D", fontSize: 12, fontWeight: "700" },\n  errorText: { color: "#B42318", fontSize: 13 },\n  note: { marginTop: 24, borderRadius: 14, backgroundColor: "#EEE9DD", padding: 15 },
+  authCard: { marginTop: 28, borderRadius: 16, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#ECE6D9", padding: 16, gap: 12 },
+  catalogue: { marginTop: 20, borderRadius: 16, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#ECE6D9", padding: 16, gap: 12 },
+  catalogueTitle: { color: "#14283F", fontSize: 19, fontWeight: "900" },
+  countryInput: { borderWidth: 1, borderColor: "#D8D1C2", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 12, color: "#14283F" },
+  catalogueButton: { backgroundColor: "#14283F", padding: 14, borderRadius: 11, alignItems: "center" },
+  productCard: { borderTopWidth: 1, borderTopColor: "#ECE6D9", paddingTop: 12, gap: 5 },
+  productTitle: { color: "#14283F", fontSize: 15, fontWeight: "800" },
+  productPrice: { color: "#5E6873", fontSize: 13 },
+  productStatus: { color: "#A17B3D", fontSize: 12, fontWeight: "700" },
+  errorText: { color: "#B42318", fontSize: 13 },
+  note: { marginTop: 24, borderRadius: 14, backgroundColor: "#EEE9DD", padding: 15 },
   noteText: { color: "#626A72", fontSize: 12, lineHeight: 19 },
   footer: { marginTop: 28, textAlign: "center", color: "#899099", fontSize: 12 }
 });
