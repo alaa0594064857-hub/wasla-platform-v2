@@ -98,7 +98,7 @@ export async function handleOfficialStoreCustomerOrdersRequest(
       await client.query("BEGIN");
       const offerResult = await client.query(
         `SELECT p.id AS "productId", p.title_ar AS "titleAr", p.title_en AS "titleEn",
-                approval.customer_price::text AS "unitPrice", approval.currency,
+                trim_scale(approval.customer_price)::text AS "unitPrice", approval.currency,
                 o.id AS "sourceOfferId", o.source_platform AS "sourcePlatform",
                 o.supplier_name AS "supplierName",
                 o.supplier_price::text AS "supplierUnitCost",
