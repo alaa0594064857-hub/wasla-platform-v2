@@ -706,3 +706,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Already-read notifications continue to open directly.
 - Final-head CI run `42491533006` and API-quality run `42491532984` both completed successfully. CI covered shared-package tests/type checks, API tests, migrations, authorization seeding, database constraints, TypeScript checks, API build and Web production build.
 - UI-only change; no API, database, permissions, or order/payment behavior changed. The change is merged to GitHub but is not live on Render because pipeline build minutes remain exhausted.
+
+## Brokerage agreement authorization regression coverage — 2026-11-08
+
+- PR #28 merged to `main` as `9dd342f7a2b366e9db38820af2a657b2024f9a0c`.
+- Added API regression coverage proving unauthenticated requests cannot access brokerage agreements and users outside the buyer/supplier business accounts cannot accept terms.
+- Added coverage that the first party's acceptance leaves the agreement pending until the other party accepts; the test also guards against payment execution in this acceptance path.
+- Final-head API-quality run `42492171109` and CI run `42492171125` both completed successfully. CI included shared-package tests/type checks, API tests, migrations, authorization seeding, database constraints, TypeScript checks, API build and Web production build.
+- Tests only; no runtime behavior, schema, payment, or permission rules changed. This is merged to GitHub `main` but is not live on Render because pipeline build minutes remain exhausted.
+- Remaining trade verification: add explicit regression cases for the second party's acceptance and activation, rejection, expiry, inactive account membership, and account members lacking trade permission; then perform hosted two-account verification after deployment is possible.
