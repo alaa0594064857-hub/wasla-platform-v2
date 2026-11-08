@@ -236,7 +236,7 @@ export async function handleMemberStoreOrdersRequest(
     respond(response, 400, { success: false, error: "Invalid request body" });
     return;
   }
-  if (!isObject(body) || !["accepted", "rejected", "fulfilled"].includes(String(body.status))) {
+  if (!isObject(body) || !["accepted", "rejected", "cancelled"].includes(String(body.status))) {
     respond(response, 400, { success: false, error: "Invalid order status" });
     return;
   }
@@ -245,7 +245,10 @@ export async function handleMemberStoreOrdersRequest(
     respond(response, 400, { success: false, error: "Order note is too long" });
     return;
   }
-  const result = await pool.query(
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const result = await client.query(
     `UPDATE member_store_orders o
      SET status = $1, merchant_note = COALESCE(NULLIF($2, ''), merchant_note), updated_at = NOW()
      FROM stores s
@@ -254,19 +257,27 @@ export async function handleMemberStoreOrdersRequest(
        AND (
          ($1 = 'accepted' AND o.status = 'pending_merchant_review') OR
          ($1 = 'rejected' AND o.status = 'pending_merchant_review') OR
-         ($1 = 'fulfilled' AND o.status = 'accepted')
+
        )
      RETURNING o.id, o.order_number AS "orderNumber", o.status, o.updated_at AS "updatedAt"`,
     [body.status, note, orderId, slug, session.user.id, ["store.order.manage", "account.order.manage"]],
-  );
+    );
   if (result.rowCount !== 1) {
+    await client.query("ROLLBACK");
     respond(response, 404, { success: false, error: "Order not found, access denied, or transition not allowed" });
     return;
   }
-  await pool.query(
+  await client.query(
     `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, metadata)
      VALUES ($1, 'member_store.order_status_changed', 'member_store_order', $2, $3::jsonb)`,
     [session.user.id, orderId, JSON.stringify({ status: body.status, note: note || null })],
   );
+  await client.query("COMMIT");
   respond(response, 200, { success: true, order: result.rows[0] });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }
