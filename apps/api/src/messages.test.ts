@@ -50,6 +50,19 @@ afterEach(async () => {
 });
 
 describe("product-based private messaging", () => {
+  it("rejects unauthenticated requests before querying messages", async () => {
+    mocks.getSession.mockResolvedValueOnce(null);
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/messages`);
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({
+      success: false,
+      error: "Authentication required",
+    });
+    expect(mocks.query).not.toHaveBeenCalled();
+  });
+
   it("resolves the seller from an active product without exposing a seller user id", async () => {
     mocks.query
       .mockResolvedValueOnce({ rows: [{ recipient_id: "seller-user" }] })
@@ -102,6 +115,38 @@ describe("product-based private messaging", () => {
       error: "You cannot start a conversation with yourself",
     });
     expect(mocks.query).toHaveBeenCalledOnce();
+  });
+
+  it("returns a client error for malformed JSON instead of an internal server error", async () => {
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{invalid-json",
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      success: false,
+      error: "Invalid JSON request body",
+    });
+    expect(mocks.query).not.toHaveBeenCalled();
+  });
+
+  it("rejects oversized request bodies before querying messages", async () => {
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "x".repeat(12_001),
+    });
+
+    expect(response.status).toBe(413);
+    expect(await response.json()).toEqual({
+      success: false,
+      error: "Request body too large",
+    });
+    expect(mocks.query).not.toHaveBeenCalled();
   });
 
   it("requires exactly one recipientId or productId", async () => {
