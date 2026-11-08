@@ -40,7 +40,8 @@ export default function MemberStoreOrdersPage() {
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [merchantNotes, setMerchantNotes] = useState<Record<string, string>>({});\n  const [shippingDetails, setShippingDetails] = useState<Record<string, { carrierName: string; trackingNumber: string; trackingUrl: string }>>({});
+  const [merchantNotes, setMerchantNotes] = useState<Record<string, string>>({});
+  const [shippingDetails, setShippingDetails] = useState<Record<string, { carrierName: string; trackingNumber: string; trackingUrl: string }>>({});
 
   const copy = ar ? {
     title: "طلبات المتجر",
@@ -130,7 +131,9 @@ export default function MemberStoreOrdersPage() {
 
   function statusText(status: string) {
     if (status === "accepted") return copy.accepted;
-    if (status === "shipped") return copy.shipped;\n    if (status === "completed") return copy.completed;\n    if (status === "rejected") return copy.rejected;
+    if (status === "shipped") return copy.shipped;
+    if (status === "completed") return copy.completed;
+    if (status === "rejected") return copy.rejected;
     if (status === "cancelled") return copy.cancelled;
     return copy.pending;
   }
