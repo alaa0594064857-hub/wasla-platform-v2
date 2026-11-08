@@ -715,3 +715,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Final-head API-quality run `42492171109` and CI run `42492171125` both completed successfully. CI included shared-package tests/type checks, API tests, migrations, authorization seeding, database constraints, TypeScript checks, API build and Web production build.
 - Tests only; no runtime behavior, schema, payment, or permission rules changed. This is merged to GitHub `main` but is not live on Render because pipeline build minutes remain exhausted.
 - Remaining trade verification: add explicit regression cases for the second party's acceptance and activation, rejection, expiry, inactive account membership, and account members lacking trade permission; then perform hosted two-account verification after deployment is possible.
+
+## Brokerage agreement lifecycle regression follow-up — 2026-11-08
+
+- Follow-up tests were added for second-party acceptance and activation, rejection, expiry handling, and inactive account/member authorization.
+- The initial test run exposed an assertion-order issue in the rejection test; this was a test expectation issue, not a production behavior change.
+- PR #29 corrected the test to assert the agreement status update before the audit-event insert. It merged to `main` as `8b7b5f65f4697b8d71d3e46ef0b41636c1f518ca`.
+- Final-head WASLA CI run `42492922203` and API-quality run `42492922186` both completed successfully. CI covered shared-package tests/type checks, API tests, migrations, authorization seeding, database constraints, TypeScript checks, API build and Web production build.
+- Test-only change; no runtime behavior, schema, authorization, payment, or order behavior changed.
+- Remaining: add explicit coverage for an active account member who lacks the required trade permission, then complete hosted two-account verification after Render deployment is possible. Render pipeline build minutes remain exhausted; this commit is not live on hosted services.
