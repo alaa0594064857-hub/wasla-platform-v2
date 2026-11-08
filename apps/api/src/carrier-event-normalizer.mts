@@ -25,9 +25,9 @@ export function normalizeCarrierEvent(input: {
   const carrierCode = input.carrierCode.trim().toLowerCase();
   if (!/^[a-z0-9][a-z0-9_-]{1,39}$/.test(carrierCode)) return { accepted: false, reason: "invalid_carrier" };
   const providerEventId = input.providerEventId.trim();
-  if (!providerEventId || providerEventId.length > 255 || /[\\r\\n]/.test(providerEventId)) return { accepted: false, reason: "invalid_event_id" };
+  if (!providerEventId || providerEventId.length > 255 || /[\r\n]/.test(providerEventId)) return { accepted: false, reason: "invalid_event_id" };
   const trackingReference = input.trackingReference.trim();
-  if (trackingReference.length < 3 || trackingReference.length > 120 || /[\\r\\n]/.test(trackingReference)) return { accepted: false, reason: "invalid_tracking_reference" };
+  if (trackingReference.length < 3 || trackingReference.length > 120 || /[\r\n]/.test(trackingReference)) return { accepted: false, reason: "invalid_tracking_reference" };
   const status = eventMap[input.eventCode.trim().toLowerCase()];
   if (!status) return { accepted: false, reason: "unknown_event" };
   const time = new Date(input.occurredAt);
