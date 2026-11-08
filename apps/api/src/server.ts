@@ -794,6 +794,8 @@ if (process.env.NODE_ENV !== "test") {
       await ensureBrokerageInvoiceTables();
       const { ensureOfficialStoreTables } = await import("./official-store.mjs");
       await ensureOfficialStoreTables();
+      const { ensurePriceApprovalTables } = await import("./official-store-pricing.mjs");
+      await ensurePriceApprovalTables();
       const { ensureOfficialStoreOpportunityTables } = await import("./official-store-opportunities.mjs");
       await ensureOfficialStoreOpportunityTables();
       const { ensureOfficialStoreDataSourceTables } = await import("./official-store-data-sources.mjs");
