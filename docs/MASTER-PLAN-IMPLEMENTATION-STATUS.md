@@ -778,3 +778,11 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Notifications are created in the same database transaction as the agreement/event updates and link to the internal Trade agreements workspace.
 - API regression tests cover first acceptance, second acceptance/activation and rejection notifications. Final-head API Quality run `42499043998` and WASLA CI run `42499044079` both completed successfully, including API tests, TypeScript checks, API build and Web production build.
 - This is in GitHub `main`; it is not deployed or hosted-verified on Render because pipeline build minutes remain exhausted. No trade funds, escrow or payments are collected by this workflow.
+
+
+## Brokerage commission invoice lifecycle regression coverage — 2026-11-08
+
+- PR #36 merged to `main` as `cb1c92a8c5c5e140688ffc8607f01381f438ca82`.
+- Added seven API regression tests for invoice authentication, numbered draft creation and commission amount snapshots, payer-party validation, invoice-to-ledger synchronization on issue, HTTPS payment evidence, blocking payment of drafts, and restoring a commission entry to recorded when an issued invoice is cancelled.
+- Added the new test file to the API test script. Final-head API Quality run `42499320588` and WASLA CI run `42499320600` both completed successfully. CI covered API tests, migrations, authorization seeding, database constraints, TypeScript checks, API build and Web production build.
+- Test coverage only; no runtime or database behavior changed. Still pending: dedicated commission-ledger API tests, authenticated owner end-to-end testing and hosted verification after Render deployment is available.
