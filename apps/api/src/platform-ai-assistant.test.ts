@@ -27,6 +27,7 @@ beforeEach(async () => {
   previousApiKey = process.env.GEMINI_API_KEY;
   process.env.GEMINI_API_KEY = "test-key-not-real";
   mocks.authorize.mockResolvedValue({ userId: "owner-1" });
+  mocks.query.mockResolvedValue({ rows: [] });
 });
 
 afterEach(async () => {
@@ -47,11 +48,15 @@ describe("WASLA owner AI order context", () => {
     expect(data.capabilities).toContain("read_recent_official_store_orders");
     expect(data.limitations).toContain("no_order_creation_or_payments");
     expect(data.readOnlyDataAccess).toBe(true);
-    expect(mocks.query).not.toHaveBeenCalled();
+    expect(mocks.query).toHaveBeenCalled();
+    expect(String(mocks.query.mock.calls[0][0])).toContain("CREATE TABLE IF NOT EXISTS platform_ai_manager_control");
   });
 
   it("includes a bounded order snapshot without customer personal data", async () => {
     mocks.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ enabled: true, pausedReason: null, updatedAt: new Date().toISOString() }] })
       .mockResolvedValueOnce({ rows: [{ title_en: "Sample catalogue item" }] })
       .mockResolvedValueOnce({ rows: [{ supplier_name: "Private supplier" }] })
       .mockResolvedValueOnce({ rows: [{
@@ -81,7 +86,7 @@ describe("WASLA owner AI order context", () => {
       success: true, advisoryOnly: true,
       dataContext: { mode: "read_only", officialStoreOrdersIncluded: 1 },
     });
-    const sql = String(mocks.query.mock.calls[2][0]);
+    const sql = String(mocks.query.mock.calls[5][0]);
     expect(sql).toContain("FROM official_store_orders");
     expect(sql).toContain("LIMIT 50");
     expect(sql).not.toContain("customer_user_id");
