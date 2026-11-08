@@ -479,7 +479,7 @@ export async function ensureMemberStoreOrderTables(): Promise<void> {
         store_id uuid NOT NULL REFERENCES stores(id) ON DELETE RESTRICT,
         buyer_user_id uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
         status varchar(32) NOT NULL DEFAULT 'pending_merchant_review'
-          CHECK (status IN ('pending_merchant_review', 'accepted', 'rejected', 'cancelled', 'fulfilled')),
+          CHECK (status IN ('pending_merchant_review', 'accepted', 'rejected', 'cancelled')),
         currency varchar(3) NOT NULL,
         items jsonb NOT NULL,
         subtotal numeric(14,2) NOT NULL CHECK (subtotal >= 0),
