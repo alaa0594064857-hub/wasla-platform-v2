@@ -144,4 +144,46 @@ describe("verified product reviews", () => {
     expect(String(query.mock.calls[1][0])).toContain("r.status = 'published'");
     expect(String(query.mock.calls[1][0])).not.toContain("buyer_user_id");
   });
+  it("lets only the review owner edit and sends the revised version back to moderation", async () => {
+    clientQuery
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{
+        id: "66666666-6666-4666-8666-666666666666",
+        buyerUserId: "11111111-1111-4111-8111-111111111111",
+        rating: 4, title: "Original", body: "The original review text is long enough.", status: "published",
+      }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "66666666-6666-4666-8666-666666666666", status: "pending_moderation" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: null, rows: [] });
+    const base = await startServer();
+    const response = await fetch(`${base}/api/products/${productId}/reviews/66666666-6666-4666-8666-666666666666`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rating: 5, title: "Updated", body: "The updated review text is long enough." }),
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ success: true, review: { status: "pending_moderation" } });
+    expect(String(clientQuery.mock.calls[2][0])).toContain("INSERT INTO verified_product_review_edits");
+    expect(String(clientQuery.mock.calls[3][0])).toContain("status = 'pending_moderation'");
+    expect(String(clientQuery.mock.calls[4][0])).toContain("review.edited");
+    expect(clientQuery).toHaveBeenCalledWith("COMMIT");
+  });
+
+  it("does not reveal or edit another buyer's review", async () => {
+    clientQuery
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{
+        buyerUserId: "99999999-9999-4999-8999-999999999999",
+        rating: 4, title: null, body: "A different buyer review.", status: "published",
+      }] })
+      .mockResolvedValueOnce({ rowCount: null, rows: [] });
+    const base = await startServer();
+    const response = await fetch(`${base}/api/products/${productId}/reviews/66666666-6666-4666-8666-666666666666`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rating: 5, body: "Attempted unauthorized review edit." }),
+    });
+    expect(response.status).toBe(404);
+    expect(clientQuery).toHaveBeenCalledWith("ROLLBACK");
+  });
+
 });
