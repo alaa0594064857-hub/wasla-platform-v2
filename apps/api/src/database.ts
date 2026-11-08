@@ -359,6 +359,19 @@ export async function ensureVerifiedReviewTables(): Promise<void> {
       ADD COLUMN IF NOT EXISTS moderation_note varchar(1000),
       ADD COLUMN IF NOT EXISTS moderated_at timestamptz
   `);
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS verified_product_review_edits (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      review_id uuid NOT NULL REFERENCES verified_product_reviews(id) ON DELETE RESTRICT,
+      editor_user_id uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+      previous_rating smallint NOT NULL CHECK (previous_rating BETWEEN 1 AND 5),
+      previous_title varchar(120),
+      previous_body varchar(2000) NOT NULL,
+      previous_status varchar(24) NOT NULL,
+      changed_at timestamptz NOT NULL DEFAULT NOW()
+    )
+  `);
+  await db.query(`CREATE INDEX IF NOT EXISTS verified_product_review_edits_review_idx ON verified_product_review_edits (review_id, changed_at DESC)`);
   await db.query(`CREATE INDEX IF NOT EXISTS verified_product_reviews_public_idx ON verified_product_reviews (product_id, created_at DESC) WHERE status = 'published'`);
   await db.query(`CREATE INDEX IF NOT EXISTS verified_product_reviews_buyer_idx ON verified_product_reviews (buyer_user_id, created_at DESC)`);
 }
