@@ -655,7 +655,7 @@ async function handleRequest(
     return;
   }
 
-  const productReviewsMatch = requestUrl.pathname.match(/^\\/api\\/products\\/([0-9a-f-]{36})\\/reviews$/i);
+  const productReviewsMatch = requestUrl.pathname.match(/^\/api\/products\/([0-9a-f-]{36})\/reviews$/i);
   if (productReviewsMatch) {
     try {
       const { handleVerifiedProductReviewsRequest } = await import("./verified-product-reviews.mjs");
