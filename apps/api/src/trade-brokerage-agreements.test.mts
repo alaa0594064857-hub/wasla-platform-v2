@@ -128,4 +128,100 @@ describe("WASLA Trade brokerage agreement access and acceptance", () => {
     expect(mocks.query.mock.calls.at(-1)?.[0]).toBe("COMMIT");
     expect(mocks.release).toHaveBeenCalledOnce();
   });
+
+  it("activates the agreement only after the second distinct party accepts", async () => {
+    const alreadyAccepted = { ...agreement, buyer_accepted_at: new Date().toISOString() };
+    const active = { ...alreadyAccepted, supplier_accepted_at: new Date().toISOString(), status: "active" };
+    mocks.query
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ rowCount: 1, rows: [alreadyAccepted] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{}] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{}] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [active] })
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({});
+
+    const baseUrl = await startServer(agreement.id);
+    const response = await fetch(`${baseUrl}/api/trade/brokerage-agreements/${agreement.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "accept", accountId: agreement.supplier_account_id }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ success: true, agreement: { status: "active" } });
+    expect(String(mocks.query.mock.calls[4][0])).toContain("supplier_accepted_at");
+    expect(mocks.query.mock.calls.at(-1)?.[0]).toBe("COMMIT");
+    expect(mocks.query.mock.calls.some(([sql]) => /payment|charge|transfer/i.test(String(sql)))).toBe(false);
+  });
+
+  it("records rejection and prevents any acceptance update", async () => {
+    mocks.query
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ rowCount: 1, rows: [agreement] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{}] })
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({});
+
+    const baseUrl = await startServer(agreement.id);
+    const response = await fetch(`${baseUrl}/api/trade/brokerage-agreements/${agreement.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "reject", accountId: agreement.buyer_account_id, note: "Terms not accepted" }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ success: true, status: "rejected" });
+    expect(String(mocks.query.mock.calls[4][0])).toContain("event_type");
+    expect(mocks.query.mock.calls.at(-1)?.[0]).toBe("COMMIT");
+    expect(mocks.query.mock.calls.some(([sql]) => String(sql).includes("buyer_accepted_at"))).toBe(false);
+  });
+
+  it("expires an overdue agreement and records the expiry event instead of accepting it", async () => {
+    const overdue = { ...agreement, expires_at: new Date(Date.now() - 60_000).toISOString() };
+    mocks.query
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ rowCount: 1, rows: [overdue] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{}] })
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({});
+
+    const baseUrl = await startServer(agreement.id);
+    const response = await fetch(`${baseUrl}/api/trade/brokerage-agreements/${agreement.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "accept", accountId: agreement.buyer_account_id }),
+    });
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ success: false, error: "This agreement has expired." });
+    expect(String(mocks.query.mock.calls[4][0])).toContain("status='expired'");
+    expect(String(mocks.query.mock.calls[5][0])).toContain("'expired'");
+    expect(mocks.query.mock.calls.at(-1)?.[0]).toBe("COMMIT");
+  });
+
+  it("denies an inactive account member because the authorization query requires active membership and account status", async () => {
+    mocks.query
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ rowCount: 1, rows: [agreement] })
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+      .mockResolvedValueOnce({});
+
+    const baseUrl = await startServer(agreement.id);
+    const response = await fetch(`${baseUrl}/api/trade/brokerage-agreements/${agreement.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "accept", accountId: agreement.buyer_account_id }),
+    });
+
+    expect(response.status).toBe(403);
+    expect(String(mocks.query.mock.calls[2][0])).toContain("a.status='active'");
+    expect(String(mocks.query.mock.calls[2][0])).toContain("am.status='active'");
+    expect(mocks.query.mock.calls.at(-1)?.[0]).toBe("ROLLBACK");
+  });
+
 });
