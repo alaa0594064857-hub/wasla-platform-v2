@@ -162,8 +162,20 @@ export async function handleOfficialStoreProductsRequest(
         reply(response, 409, { success: false, error: "Create the product as a draft, approve a destination-specific price, then publish it." }); return;
       }
       const approval = await db.query(
-        `SELECT 1 FROM official_store_price_approvals
-         WHERE product_id = $1 AND status = 'active' LIMIT 1`,
+        `SELECT 1
+         FROM official_store_price_approvals approval
+         INNER JOIN official_store_product_source_offers offer
+           ON offer.id = approval.offer_id AND offer.product_id = approval.product_id
+          AND offer.offer_status = 'approved'
+          AND offer.availability_status IN ('available','limited')
+          AND offer.direct_to_customer_confirmed = TRUE
+          AND offer.supplier_identity_verified = TRUE
+          AND offer.specifications_verified = TRUE
+          AND offer.minimum_order_quantity = 1
+          AND offer.shipping_cost IS NOT NULL AND offer.shipping_currency IS NOT NULL
+          AND offer.quote_valid_until > NOW() AND offer.last_verified_at IS NOT NULL
+          AND offer.ships_to_countries @> to_jsonb(ARRAY[approval.destination_country::text]::text[])
+         WHERE approval.product_id = $1 AND approval.status = 'active' LIMIT 1`,
         [productId],
       );
       if (!approval.rows.length) {
