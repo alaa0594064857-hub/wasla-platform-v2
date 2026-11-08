@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { fromNodeHeaders } from "better-auth/node";
 import { auth } from "./auth.mjs";
 import { getDatabasePool } from "./database.js";
+import { ensurePriceApprovalTables } from "./official-store-pricing.mjs";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -87,12 +88,17 @@ export async function handleOfficialStoreCustomerOrdersRequest(
       return;
     }
 
+    const destinationCountry = body.destinationCountry.trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(destinationCountry)) {
+      reply(response, 400, { success: false, error: "Use a two-letter destination country code" }); return;
+    }
+    await ensurePriceApprovalTables();
     const client = await db.connect();
     try {
       await client.query("BEGIN");
       const offerResult = await client.query(
         `SELECT p.id AS "productId", p.title_ar AS "titleAr", p.title_en AS "titleEn",
-                p.price::text AS "unitPrice", p.currency,
+                approval.customer_price::text AS "unitPrice", approval.currency,
                 o.id AS "sourceOfferId", o.source_platform AS "sourcePlatform",
                 o.supplier_name AS "supplierName",
                 o.supplier_price::text AS "supplierUnitCost",
@@ -102,10 +108,14 @@ export async function handleOfficialStoreCustomerOrdersRequest(
                 o.ships_to_countries AS "shipsToCountries"
          FROM official_store_products p
          INNER JOIN official_store_settings s ON s.singleton_id = TRUE AND s.status = 'active'
+         INNER JOIN official_store_price_approvals approval
+           ON approval.product_id = p.id
+          AND approval.destination_country = $2
+          AND approval.status = 'active'
          INNER JOIN LATERAL (
            SELECT o.*
            FROM official_store_product_source_offers o
-           WHERE o.product_id = p.id
+           WHERE o.id = approval.offer_id AND o.product_id = p.id
              AND o.offer_status = 'approved'
              AND o.availability_status IN ('available', 'limited')
              AND o.direct_to_customer_confirmed = TRUE
@@ -126,7 +136,7 @@ export async function handleOfficialStoreCustomerOrdersRequest(
          WHERE p.id = $1 AND p.status = 'published'
            AND p.availability_status IN ('available', 'limited')
          FOR SHARE OF p`,
-        [body.productId],
+        [body.productId, destinationCountry],
       );
       const offer = offerResult.rows[0];
       if (!offer) {
@@ -135,7 +145,6 @@ export async function handleOfficialStoreCustomerOrdersRequest(
         return;
       }
       const destinations = Array.isArray(offer.shipsToCountries) ? offer.shipsToCountries : [];
-      const destinationCountry = body.destinationCountry.trim();
       if (!destinations.some((item: unknown) => typeof item === "string" && item.toLowerCase() === destinationCountry.toLowerCase())) {
         await client.query("ROLLBACK");
         reply(response, 400, { success: false, error: "The selected destination is not covered by the current supplier offer" });
