@@ -16,15 +16,15 @@ async function body(req: IncomingMessage): Promise<Record<string, unknown> | nul
   return typeof value === "object" && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : null;
 }
 const merchantSql = `EXISTS (
- SELECT 1 FROM stores s WHERE s.id=$2 AND (
+ SELECT 1 FROM stores s WHERE s.id=$1 AND (
   EXISTS (SELECT 1 FROM account_members am JOIN roles r ON r.id=am.role_id AND r.scope_type=am.role_scope
    JOIN role_permissions rp ON rp.role_id=r.id AND rp.scope_type=r.scope_type
    JOIN permissions p ON p.id=rp.permission_id AND p.scope_type=rp.scope_type
-   WHERE am.account_id=s.account_id AND am.user_id=$3 AND am.status='active' AND p.permission_key=ANY($4::text[]))
+   WHERE am.account_id=s.account_id AND am.user_id=$2 AND am.status='active' AND p.permission_key=ANY($3::text[]))
   OR EXISTS (SELECT 1 FROM store_members sm JOIN roles r ON r.id=sm.role_id AND r.scope_type=sm.role_scope
    JOIN role_permissions rp ON rp.role_id=r.id AND rp.scope_type=r.scope_type
    JOIN permissions p ON p.id=rp.permission_id AND p.scope_type=rp.scope_type
-   WHERE sm.store_id=s.id AND sm.user_id=$3 AND sm.status='active' AND p.permission_key=ANY($4::text[]))
+   WHERE sm.store_id=s.id AND sm.user_id=$2 AND sm.status='active' AND p.permission_key=ANY($3::text[]))
  )`;
 /** Return/exchange requests are operational records only: no refund, payment or carrier action is performed. */
 export async function handleMemberStoreReturn(req: IncomingMessage, res: ServerResponse, slug: string, orderId: string, action: "submit" | "respond" | "received" | "close") {
@@ -57,12 +57,12 @@ export async function handleMemberStoreReturn(req: IncomingMessage, res: ServerR
    const request=selected.rows[0];
    if(action==="respond"){
     const decision=input.decision, note=typeof input.note==="string"?input.note.trim():"";
-    const member=await client.query("SELECT 1 WHERE "+merchantSql,[request.id,request.storeId,session.user.id,["store.order.manage","account.order.manage"]]);
+    const member=await client.query("SELECT 1 WHERE "+merchantSql,[request.storeId,session.user.id,["store.order.manage","account.order.manage"]]);
     if(!member.rowCount){await client.query("ROLLBACK");send(res,403,{success:false,error:"Store order management permission required"});return;}
     if(request.status!=="submitted"||!["approved","rejected"].includes(String(decision))||note.length<5||note.length>2000){await client.query("ROLLBACK");send(res,409,{success:false,error:"A valid decision and 5–2000 character response are required"});return;}
     result=await client.query("UPDATE member_store_return_requests SET status=$2,merchant_response=$3,merchant_user_id=$4,merchant_responded_at=NOW(),updated_at=NOW() WHERE id=$1 RETURNING id,status,merchant_response AS \"merchantResponse\",updated_at AS \"updatedAt\"",[request.id,decision,note,session.user.id]);
    }else if(action==="received"){
-    const member=await client.query("SELECT 1 WHERE "+merchantSql,[request.id,request.storeId,session.user.id,["store.order.manage","account.order.manage"]]);
+    const member=await client.query("SELECT 1 WHERE "+merchantSql,[request.storeId,session.user.id,["store.order.manage","account.order.manage"]]);
     if(!member.rowCount){await client.query("ROLLBACK");send(res,403,{success:false,error:"Store order management permission required"});return;}
     if(request.status!=="approved"){await client.query("ROLLBACK");send(res,409,{success:false,error:"Only an approved return can be marked received"});return;}
     result=await client.query("UPDATE member_store_return_requests SET status='item_received',item_received_at=NOW(),updated_at=NOW() WHERE id=$1 RETURNING id,status,item_received_at AS \"itemReceivedAt\"",[request.id]);
