@@ -36,6 +36,13 @@ export async function handleMemberStoreReturn(req: IncomingMessage, res: ServerR
  let input:Record<string,unknown>|null;
  try{input=await body(req);}catch(e){send(res,e instanceof Error&&e.message==="too_large"?413:400,{success:false,error:"Invalid request body"});return;}
  if(!input){send(res,400,{success:false,error:"Invalid request body"});return;}
+ if(action==="submit"){
+  const reason=typeof input.reason==="string"?input.reason.trim():"";
+  const details=typeof input.details==="string"?input.details.trim():"";
+  if(!["return","replacement"].includes(String(input.resolution))||!["damaged_or_defective","not_as_described","wrong_item","missing_items","other"].includes(reason)||details.length<10||details.length>3000){
+   send(res,400,{success:false,error:"Choose a valid resolution and reason, and provide 10–3000 characters"});return;
+  }
+ }
  const db=getDatabasePool(), client=await db.connect();
  try{
   await client.query("BEGIN");
