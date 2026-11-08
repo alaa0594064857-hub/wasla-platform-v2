@@ -900,3 +900,15 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Added bilingual seller response submission/display and an owner-only moderation queue at `/admin/review-responses`, linked from `/admin/reviews`.
 - Added regression coverage for authentication, store membership authorization, duplicate response protection and transactional moderator approval. Full API quality and WASLA CI passed on `f98d36320220955c925cd10769fcceeae42be9e4`; expanded regression tests are now running on the newer head.
 - No payment, inventory, supplier purchasing or deployment settings changed. PR #46 remains a draft and is not merged or deployed.
+
+
+## Member-store order complaints and dispute resolution — 2026-11-08
+
+- Draft PR #47 (feat/member-store-order-disputes) adds a separate complaint workflow for member-store orders; it is stacked on PR #46 and does not change main.
+- Buyers can open one active complaint per accepted, shipped or completed order. The buyer's original reason/details remain separate from the merchant response.
+- Only an active store/account member with existing store.order.manage or account.order.manage permission can respond. The buyer can close a case only after a moderator resolves or dismisses it.
+- Platform moderators with platform.reports.manage receive an open-case queue and can resolve/dismiss with a required note. Decisions, buyer submissions, merchant responses and buyer closure are audit logged transactionally.
+- Added bilingual buyer/merchant complaint controls to the member-store orders page and a bilingual platform desk at /admin/order-disputes, linked from review dispute administration.
+- Database bootstrap creates the dispute table and indexes idempotently. No funds are held, no chargebacks or settlement are performed, and no payment/purchase is triggered.
+- API regression tests and API TypeScript build passed on the initial API implementation head 3947fc127cf1062dbe7c388d4af5f1cd5e914de2. The subsequent customer-facing UI and order-query integration commits require a fresh final-head full CI run before this item is considered verified.
+- No PR merge, Render deployment, build-minute purchase, or production migration was performed.
