@@ -752,11 +752,13 @@ Do not describe the platform as commercially launch-ready based only on successf
 - No payment, supplier outreach, or order behavior changed. The commit is merged to GitHub but is not live on Render because pipeline build minutes remain exhausted. Hosted two-account verification remains outstanding.
 
 
-## Trade opportunity review notifications — implementation in PR validation
+## Trade opportunity review notifications — 2026-11-08
 
-- Platform-owner review decisions for buyer requests and supplier offers now persist the existing decision event and create an in-app notification for the original submitter in the same database transaction.
+- PR #33 merged to `main` as `bfc2f0b42c0c66f474390e2c3c4a7cc99f21f94d`.
+- Platform-owner review decisions for buyer requests and supplier offers persist the existing decision event and create an in-app notification for the original submitter in the same database transaction.
 - Arabic and English notification titles and decision text cover approval, rejection and closure; the optional review note is included in the notification.
 - Review updates now apply only while the opportunity is `pending_review`, preventing a second decision, duplicate event and duplicate notification after the first decision.
 - Added API regression tests for all three outcomes and for rejecting a repeated decision without creating another event or notification.
+- Final-head WASLA CI run `42497649973` and API-quality run `42497649966` both completed successfully.
 - The notification uses the existing in-app `trade_deal` notification category and links to the Trade workspace. This does not add email or push delivery.
-- Changes are on branch `feat/trade-opportunity-review-notifications`; CI/API quality checks and review are pending. Nothing has been merged or deployed.
+- Merged to GitHub `main`; not deployed to Render because pipeline build minutes remain exhausted. Hosted two-account verification remains outstanding.
