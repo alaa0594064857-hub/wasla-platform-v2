@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from "react";
 import {
-  I18nManager,
   Pressable,
   SafeAreaView,
   ScrollView,
