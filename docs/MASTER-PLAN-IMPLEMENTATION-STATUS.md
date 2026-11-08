@@ -796,3 +796,13 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Added API regression coverage for unauthenticated access, blocking direct invoice/payment state changes, required waiver reasons, open/paid invoice protection and waiver event history.
 - Final-head API Quality run `42499573576` and WASLA CI run `42499573311` both completed successfully, including API tests, TypeScript checks, API build and Web production build.
 - Merged to GitHub `main`; not deployed or verified on Render because pipeline build minutes remain exhausted. No payment collection or funds movement was added.
+
+
+## External supplier import provenance hardening — 2026-11-08
+
+- PR #38 merged to `main` as `1cb7258fa60b18d135160f8e2680f2a2a05fcb59`.
+- The normalized ingestion adapter (`merchant_feed` or `shopify`) is now stored separately from the actual source platform (for example, Alibaba.com), so sourcing candidates retain correct provenance.
+- Naming an external source platform requires an approved owner-scoped data-source registry entry matching that platform. Unregistered external platforms are rejected before import.
+- Added API regression coverage for missing approval and an approved Alibaba-labelled merchant-feed import. All API tests and builds passed in API Quality run `42499828765` and WASLA CI run `42499828796`; CI also passed migrations, database constraints, TypeScript checks and Web production build.
+- This does not implement a live Alibaba API connector or marketplace crawler. No scraping, publication or purchasing was added; imported candidates remain unverified and owner-review-only.
+- Merged to GitHub `main`; hosted deployment verification remains pending because Render build minutes are exhausted.
