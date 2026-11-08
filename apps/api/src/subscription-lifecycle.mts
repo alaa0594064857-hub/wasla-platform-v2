@@ -106,13 +106,49 @@ export async function handleSubscriptionLifecycleRequest(
     return;
   }
 
-  if (request.method !== "POST" && !(request.method === "PATCH" && subscriptionId)) {
-    send(response, 405, { success: false, error: "Method not allowed" });
+  if (subscriptionId && !isUuid(subscriptionId)) {
+    send(response, 400, { success: false, error: "Invalid subscription ID" });
     return;
   }
 
-  if (subscriptionId && !isUuid(subscriptionId)) {
-    send(response, 400, { success: false, error: "Invalid subscription ID" });
+  if (request.method === "GET" && subscriptionId) {
+    const [subscription, events] = await Promise.all([
+      db.query(
+        `SELECT s.id, s.plan_id, p.code AS plan_code, p.name_ar, p.name_en,
+                p.amount::text AS plan_amount, p.currency, p.billing_interval, p.interval_count,
+                s.customer_user_id, cu.email AS customer_email,
+                s.customer_account_id, a.display_name AS customer_account_name,
+                s.billing_contact_user_id, bu.email AS billing_contact_email,
+                s.status, s.current_period_start, s.current_period_end,
+                s.trial_start, s.trial_end, s.cancel_at_period_end, s.canceled_at,
+                s.started_at, s.created_at, s.updated_at
+         FROM subscriptions s
+         JOIN subscription_plans p ON p.id = s.plan_id
+         LEFT JOIN users cu ON cu.id = s.customer_user_id
+         LEFT JOIN accounts a ON a.id = s.customer_account_id
+         JOIN users bu ON bu.id = s.billing_contact_user_id
+         WHERE s.id = $1`,
+        [subscriptionId],
+      ),
+      db.query(
+        `SELECT id, event_type, from_status, to_status, reason, evidence_url, created_at
+         FROM subscription_admin_events
+         WHERE subscription_id = $1
+         ORDER BY created_at DESC
+         LIMIT 100`,
+        [subscriptionId],
+      ),
+    ]);
+    if (!subscription.rows[0]) {
+      send(response, 404, { success: false, error: "Subscription not found" });
+      return;
+    }
+    send(response, 200, { success: true, subscription: subscription.rows[0], events: events.rows, billingEnabled: false });
+    return;
+  }
+
+  if (request.method !== "POST" && !(request.method === "PATCH" && subscriptionId)) {
+    send(response, 405, { success: false, error: "Method not allowed" });
     return;
   }
 
