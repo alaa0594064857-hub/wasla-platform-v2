@@ -278,10 +278,16 @@ export async function handleMemberStoreOrdersRequest(
   const carrierName = typeof body.carrierName === "string" ? body.carrierName.trim() : "";
   const trackingNumber = typeof body.trackingNumber === "string" ? body.trackingNumber.trim() : "";
   const trackingUrl = typeof body.trackingUrl === "string" ? body.trackingUrl.trim() : "";
+  let parsedTrackingUrl: URL | undefined;
+  if (body.status === "shipped") {
+    try { parsedTrackingUrl = new URL(trackingUrl); } catch { /* validated below */ }
+  }
   if (body.status === "shipped" &&
       (carrierName.length < 2 || carrierName.length > 100 ||
        trackingNumber.length < 3 || trackingNumber.length > 120 ||
-       !/^https:\/\//i.test(trackingUrl) || trackingUrl.length > 1000)) {
+       !parsedTrackingUrl || parsedTrackingUrl.protocol !== "https:" ||
+       !parsedTrackingUrl.hostname || parsedTrackingUrl.username || parsedTrackingUrl.password ||
+       trackingUrl.length > 1000)) {
     respond(response, 400, { success: false, error: "Shipping requires a carrier, tracking number, and secure tracking URL" });
     return;
   }
