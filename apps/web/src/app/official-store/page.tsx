@@ -193,8 +193,8 @@ export default function OfficialStorePage() {
         : failed ? <p role="alert" className="rounded-2xl bg-white p-8 text-center text-[#963f35]">{copy.unavailable}</p>
         : products.length === 0 ? <div className="rounded-3xl border border-[#e0d7c6] bg-white px-6 py-16 text-center shadow-sm">
             <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[#17253a] text-3xl font-black text-[#d8bd7c]">W</div>
-            <h3 className="mt-6 text-2xl font-bold">{copy.emptyTitle}</h3>
-            <p className="mx-auto mt-3 max-w-xl leading-8 text-slate-600">{copy.empty}</p>
+            <h3 className="mt-6 text-2xl font-bold">{catalogueCountry ? copy.emptyTitle : copy.catalogueCountry}</h3>
+            <p className="mx-auto mt-3 max-w-xl leading-8 text-slate-600">{catalogueCountry ? copy.empty : copy.countryRequired}</p>
           </div>
         : <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {products.map(product => <article key={product.id} className="overflow-hidden rounded-2xl border border-[#e4ddcf] bg-white shadow-sm">
