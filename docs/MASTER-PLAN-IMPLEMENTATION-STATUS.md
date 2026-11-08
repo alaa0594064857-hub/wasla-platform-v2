@@ -890,4 +890,4 @@ Do not describe the platform as commercially launch-ready based only on successf
 - An edited published review is immediately returned to pending moderation; it is not publicly visible again until a platform moderator republishes it.
 - Edit and history writes, plus the audit event, are committed in one transaction.
 - Regression tests cover a valid owner edit, moderation reset and rejection of another buyer's edit.
-- **Verification status:** code and tests are committed to draft PR #46; a fresh CI run for the latest PR head is still pending. No production migration or deployment has occurred.
+- **Verification status:** code and regression tests are committed to draft PR #46. GitHub Actions passed on head `1e65293c23a200eac7c9c30fc95f0c7d6de15a18`: API tests/build and full WASLA CI (shared tests, API tests, database migrations/constraints, TypeScript checks, API build and Web build). No production migration or deployment has occurred.
