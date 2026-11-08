@@ -62,11 +62,9 @@ export default function NotificationsPage() {
         setError(ar ? "تعذر تحديث حالة الإشعار." : "Could not update notification status.");
         return false;
       }
-      setItems(current => {
-        const wasUnread = current.some(item => item.id === id && !item.readAt);
-        if (wasUnread) setUnreadCount(count => Math.max(0, count - 1));
-        return current.map(item => item.id === id ? { ...item, readAt: item.readAt ?? new Date().toISOString() } : item);
-      });
+      const wasUnread = items.some(item => item.id === id && !item.readAt);
+      setItems(current => current.map(item => item.id === id ? { ...item, readAt: item.readAt ?? new Date().toISOString() } : item));
+      if (wasUnread) setUnreadCount(count => Math.max(0, count - 1));
       window.dispatchEvent(new Event("wasla:notifications-updated"));
       return true;
     } catch {
