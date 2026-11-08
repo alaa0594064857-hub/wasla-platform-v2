@@ -54,7 +54,7 @@ This is an evidence-based implementation tracker, not a claim that the platform 
 | Notifications | Partial foundation; member-store request events added | Authenticated inbox/read-state workflow exists. PR #20 adds transactional in-app notifications for authorized active store/account order managers when a buyer submits a member-store request, and for the buyer when the merchant accepts or rejects it. External push/email delivery, additional event coverage and hosted unread/read verification remain. |
 | Ratings and reviews | Not implemented | No production module verified. |
 | Complaints and disputes | Not implemented | No production module verified. |
-| Mobile applications | Not implemented | Web-first foundation; Android/iOS apps remain future work. |
+| Mobile applications | Partial foundation — Expo Android/iOS workspace and public official-store catalogue API client committed; not usable/launch-ready | `apps/mobile` now contains Expo SDK 58 / React Native 0.88 app identity for Android/iOS, bilingual Arabic/English starter UI, configurable API base URL and typed destination-specific public official-store catalogue client. The starter screen can request the public catalogue by two-letter country code. Still outstanding: dependency installation and typecheck, secure Better Auth React Native/Expo session integration, authenticated API methods, navigation and full screens for shops/business/trade/orders/messages/profile/notifications, push notifications, EAS build profiles, icons/splash/privacy/store metadata, physical-device testing and store review. No hosted mobile build or device verification has occurred. |
 | Internationalization completeness | Partial | Arabic/English and RTL/LTR exist in several areas; every route, email, validation and workflow needs a localization audit. |
 | Automated tests and release quality gates | Core CI passing; hosted acceptance incomplete | Main CI and API quality checks passed for the subscription lifecycle PR before merge. Continue current-main CI verification and complete authenticated browser journeys, cross-account authorization, accessibility, localization, and deployment checks. |
 | Domain and brand finalization | Deferred | No domain purchase yet; continue using current Render URLs while development proceeds. |
@@ -870,3 +870,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Successful issuance test verifies customer notification and that payment and supplier purchasing remain disabled.
 - Final-head API Quality run `42506482225` and WASLA CI run `42506482264` both passed.
 - Test-only change; no runtime behavior or schema changed. Merged to GitHub `main`; Render deployment and hosted owner/customer verification remain pending while build minutes are exhausted.
+
+
+## Mobile foundation checkpoint — 2026-11-09
+
+- Added the initial Expo SDK 58 / React Native 0.88 workspace at `apps/mobile`, with Android package and iOS bundle identifier `com.wasla.app`.
+- Added bilingual Arabic/English starter UI and a typed API client for the public official-store catalogue. The app requests destination-specific catalogue data from `/api/official-store/products?country=XX` using the configured WASLA API base URL.
+- The mobile workspace is source-code foundation only. No dependency installation, TypeScript check, Android/iOS build, device test, authenticated session flow or store submission has been completed.
+- Next mobile sequence: validate dependency graph and typecheck; implement supported secure Better Auth Expo session storage; add authenticated endpoint clients and navigation; then implement screens and push notifications before EAS builds and physical-device QA.
+- Current Render deployment remains blocked by workspace build-pipeline minutes. Do not repeatedly trigger hosted builds or enable paid minute purchases without the owner's approval.
