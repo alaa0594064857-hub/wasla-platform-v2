@@ -861,3 +861,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Acceptance is explicitly verified to keep `paymentEnabled: false` and `supplierPurchasePlaced: false`; the event type is checked through its parameterized SQL value.
 - Final-head WASLA CI run `42506039900` and API Quality run `42506039977` both passed.
 - Test-only change; no runtime behavior or schema changed. Merged to GitHub `main`; Render deployment and hosted customer/owner verification remain pending while build minutes are exhausted.
+
+
+## Official-store final quote issuance safety regression coverage — 2026-11-08
+
+- PR #45 merged to `main` as `14e1b058fe7fe5fd260f14f7d888322514ad03c7`.
+- Added handler-level tests verifying platform management authorization before database access, supplier reconfirmation before quote issuance, exact currently approved/verified supplier offer validation including direct-to-customer destination-country shipping, and protection against replacing an unexpired customer-pending quote.
+- Successful issuance test verifies customer notification and that payment and supplier purchasing remain disabled.
+- Final-head API Quality run `42506482225` and WASLA CI run `42506482264` both passed.
+- Test-only change; no runtime behavior or schema changed. Merged to GitHub `main`; Render deployment and hosted owner/customer verification remain pending while build minutes are exhausted.
