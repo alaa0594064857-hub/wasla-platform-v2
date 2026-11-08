@@ -611,3 +611,10 @@ Do not describe the platform as commercially launch-ready based only on successf
 - The UI updates the displayed quantity after a successful response. No automatic stock reservation or decrement occurs when a buyer submits an order request; merchant inventory remains merchant-controlled.
 - GitHub Actions CI run `42485664972` and API-quality run `42485664976` both passed on the final PR head. This included API tests, database migrations/constraints, authorization seeding, TypeScript checks, API build and Web production build.
 - Render deployment remains blocked by exhausted pipeline minutes. The merged inventory controls are not yet live on the hosted site. Merchant/buyer end-to-end browser testing remains outstanding.
+
+
+## Member-store inventory controls merge verification — 2026-11-08
+
+- PR #17 is merged to `main` as `bd7b9a09f00cb5056a5adf28dd91afb70be7aee6`.
+- Final-head GitHub CI run `42485664972` and API-quality run `42485664976` both completed successfully. CI included API tests, database migrations/constraints, authorization seeding, TypeScript checks, API build and Web production build.
+- Inventory quantity controls are committed and validated in GitHub, but are not deployed to Render because the workspace has exhausted pipeline build minutes. Do not describe them as live until deployment and hosted verification succeed.
