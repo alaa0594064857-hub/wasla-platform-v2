@@ -71,6 +71,32 @@ export async function handleMemberStoreOrdersRequest(
   const pool = getDatabasePool();
 
   if (request.method === "GET") {
+    if (orderId) {
+      const owned = await pool.query(
+        `SELECT o.id
+         FROM member_store_orders o
+         INNER JOIN stores s ON s.id = o.store_id
+         WHERE o.id = $1 AND s.slug = $2 AND s.status = 'active'
+           AND (o.buyer_user_id = $3 OR ${merchantPermission(3, 4)})
+         LIMIT 1`,
+        [orderId, slug, session.user.id, ["store.order.read", "account.order.read"]],
+      );
+      if (!owned.rowCount) {
+        respond(response, 404, { success: false, error: "Order not found" });
+        return;
+      }
+      const events = await pool.query(
+        `SELECT id, event_type AS "eventType", from_status AS "fromStatus",
+                to_status AS "toStatus", source, reason_code AS "reasonCode",
+                metadata, created_at AS "createdAt"
+         FROM member_store_order_events
+         WHERE order_id = $1
+         ORDER BY created_at ASC, id ASC`,
+        [orderId],
+      );
+      respond(response, 200, { success: true, events: events.rows });
+      return;
+    }
     const result = await pool.query(
       `SELECT o.id, o.order_number AS "orderNumber", o.store_id AS "storeId",
               o.buyer_user_id AS "buyerUserId", o.status, o.currency, o.items,
