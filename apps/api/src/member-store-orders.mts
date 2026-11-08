@@ -88,13 +88,22 @@ export async function handleMemberStoreOrdersRequest(
       const events = await pool.query(
         `SELECT id, event_type AS "eventType", from_status AS "fromStatus",
                 to_status AS "toStatus", source, reason_code AS "reasonCode",
-                metadata, created_at AS "createdAt"
+                created_at AS "createdAt"
          FROM member_store_order_events
          WHERE order_id = $1
          ORDER BY created_at ASC, id ASC`,
         [orderId],
       );
-      respond(response, 200, { success: true, events: events.rows });
+      const safeEvents = events.rows.map((event) => ({
+        id: event.id,
+        eventType: event.eventType,
+        fromStatus: event.fromStatus,
+        toStatus: event.toStatus,
+        source: event.source,
+        reasonCode: event.reasonCode,
+        createdAt: event.createdAt,
+      }));
+      respond(response, 200, { success: true, events: safeEvents });
       return;
     }
     const result = await pool.query(
