@@ -5,6 +5,16 @@ import { useRouter } from "next/navigation";
 import { useLocale } from "../../../../components/locale-provider";
 import WorkspaceHeader from "../../../../components/workspace-header";
 
+type DecisionHistory = {
+  id: string;
+  title: string;
+  opportunity_type: "buyer_request" | "supplier_offer";
+  review_status: "approved" | "rejected" | "closed";
+  account_name: string;
+  note: string | null;
+  event_created_at: string;
+};
+
 type Opportunity = {
   id: string;
   account_id: string;
@@ -31,6 +41,7 @@ export default function TradeOpportunityReviewPage() {
   const router = useRouter();
   const ar = locale === "ar";
   const [items, setItems] = useState<Opportunity[]>([]);
+  const [decisions, setDecisions] = useState<DecisionHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState("");
   const [note, setNote] = useState<Record<string, string>>({});
@@ -41,12 +52,17 @@ export default function TradeOpportunityReviewPage() {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch("/api/trade/opportunities/review", { credentials: "include", cache: "no-store" });
-      if (response.status === 401) { router.replace("/login"); return; }
-      if (response.status === 403) throw new Error(ar ? "هذه الصفحة مخصصة لإدارة WASLA." : "This page is restricted to WASLA platform administrators.");
-      const data = await response.json();
+      const [response, historyResponse] = await Promise.all([
+        fetch("/api/trade/opportunities/review", { credentials: "include", cache: "no-store" }),
+        fetch("/api/trade/opportunities/review-history", { credentials: "include", cache: "no-store" }),
+      ]);
+      if (response.status === 401 || historyResponse.status === 401) { router.replace("/login"); return; }
+      if (response.status === 403 || historyResponse.status === 403) throw new Error(ar ? "هذه الصفحة مخصصة لإدارة WASLA." : "This page is restricted to WASLA platform administrators.");
+      const [data, historyData] = await Promise.all([response.json(), historyResponse.json()]);
       if (!response.ok || !data.success) throw new Error(data.error || "load");
+      if (!historyResponse.ok || !historyData.success) throw new Error(historyData.error || "history");
       setItems(data.opportunities ?? []);
+      setDecisions(historyData.decisions ?? []);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : (ar ? "تعذر تحميل الطلبات." : "Could not load opportunities."));
     } finally { setLoading(false); }
@@ -121,6 +137,32 @@ export default function TradeOpportunityReviewPage() {
             </div>
           </article>)}
         </div>}
+      <section style={{ marginTop: 30 }}>
+        <h2 style={{ color: "#14243a", fontSize: 21 }}>{ar ? "سجل القرارات الأخيرة" : "Recent decision history"}</h2>
+        <p style={{ lineHeight: 1.7, opacity: .75 }}>{ar ? "سجل للقرارات النهائية التي اتخذتها إدارة WASLA، مع الملاحظات وتاريخ القرار." : "A record of final WASLA review decisions, including notes and decision timestamps."}</p>
+        {decisions.length === 0 ? (
+          <div style={{ padding: 18, background: "#fff", borderRadius: 12 }}>{ar ? "لا توجد قرارات مسجلة بعد." : "No review decisions recorded yet."}</div>
+        ) : (
+          <div style={{ display: "grid", gap: 10 }}>
+            {decisions.map(decision => {
+              const label = decision.review_status === "approved"
+                ? (ar ? "معتمد" : "Approved")
+                : decision.review_status === "rejected"
+                  ? (ar ? "مرفوض" : "Rejected")
+                  : (ar ? "مغلق" : "Closed");
+              return <article key={decision.id} style={{ padding: 15, background: "#fff", border: "1px solid rgba(115,128,146,.2)", borderRadius: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                  <strong style={{ color: "#14243a" }}>{decision.title}</strong>
+                  <strong>{label}</strong>
+                </div>
+                <p style={{ margin: "6px 0", opacity: .72 }}>{decision.account_name} · {decision.opportunity_type === "buyer_request" ? (ar ? "طلب شراء" : "Buyer request") : (ar ? "عرض مورد" : "Supplier offer")}</p>
+                {decision.note && <p style={{ whiteSpace: "pre-wrap", margin: "8px 0" }}>{ar ? "ملاحظة القرار: " : "Decision note: "}{decision.note}</p>}
+                <small style={{ opacity: .65 }}>{new Date(decision.event_created_at).toLocaleString(ar ? "ar" : "en")}</small>
+              </article>;
+            })}
+          </div>
+        )}
+      </section>
     </div>
   </main>;
 }
