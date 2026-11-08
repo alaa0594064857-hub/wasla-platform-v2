@@ -333,6 +333,19 @@ async function handleRequest(
     return;
   }
 
+  const subscriptionLifecycleMatch = requestUrl.pathname.match(/^\/api\/platform\/subscriptions(?:\/([0-9a-f-]{36}))?$/i);
+  if (subscriptionLifecycleMatch) {
+    try {
+      const { handleSubscriptionLifecycleRequest } = await import("./subscription-lifecycle.mjs");
+      await handleSubscriptionLifecycleRequest(request, response, subscriptionLifecycleMatch[1]);
+    } catch (error) {
+      console.error("WASLA subscription lifecycle route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Subscription lifecycle service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const subscriptionPlanMatch = requestUrl.pathname.match(new RegExp("^/api/platform/subscription-plans(?:/([0-9a-f-]{36}))?$", "i"));
   if (subscriptionPlanMatch || requestUrl.pathname === "/api/subscription-plans") {
     try {
