@@ -101,7 +101,7 @@ describe("official store customer final quote decisions", () => {
     expect(await response.json()).toMatchObject({ success: true, decision: "accepted", paymentEnabled: false });
     expect(String(client.query.mock.calls[2][0])).toContain("SET final_quote_status = $2");
     expect(client.query.mock.calls[2][1]).toEqual([orderId, "accepted"]);
-    expect(String(client.query.mock.calls[3][0])).toContain("'final_quote_accepted'");
+    expect(client.query.mock.calls[3][1][2]).toBe("final_quote_accepted");
     expect(JSON.parse(client.query.mock.calls[3][1][3])).toMatchObject({
       decision: "accepted", paymentEnabled: false, supplierPurchasePlaced: false,
     });
