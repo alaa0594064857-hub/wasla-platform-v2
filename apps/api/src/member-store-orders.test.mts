@@ -242,12 +242,64 @@ describe("member store order requests", () => {
     expect(String(clientQuery.mock.calls[3][0])).toContain("Buyer confirmed delivery");
   });
 
+  it("does not allow a buyer to mark an order as shipped", async () => {
+    clientQuery
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+      .mockResolvedValueOnce({ rowCount: null, rows: [] });
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/stores/demo/orders/22222222-2222-4222-8222-222222222222`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        status: "shipped", carrierName: "DHL", trackingNumber: "TRACK-123",
+        trackingUrl: "https://tracking.example.test/TRACK-123",
+      }),
+    });
+    expect(response.status).toBe(404);
+    const sql = String(clientQuery.mock.calls[1][0]);
+    expect(sql).toContain("o.status = 'accepted'");
+    expect(sql).toContain("store.order.manage");
+    expect(sql).toContain("account.order.manage");
+    expect(clientQuery).toHaveBeenCalledWith("ROLLBACK");
+    expect(clientQuery).not.toHaveBeenCalledWith(expect.stringContaining("INSERT INTO notifications"), expect.anything());
+  });
+
+  it("does not allow a merchant to confirm delivery on behalf of the buyer", async () => {
+    clientQuery
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+      .mockResolvedValueOnce({ rowCount: null, rows: [] });
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/stores/demo/orders/22222222-2222-4222-8222-222222222222`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "completed" }),
+    });
+    expect(response.status).toBe(404);
+    const sql = String(clientQuery.mock.calls[1][0]);
+    expect(sql).toContain("o.buyer_user_id = $5 AND o.status = 'shipped'");
+    expect(clientQuery).toHaveBeenCalledWith("ROLLBACK");
+    expect(clientQuery).not.toHaveBeenCalledWith(expect.stringContaining("INSERT INTO notifications"), expect.anything());
+  });
+
   it("rejects insecure or incomplete shipment tracking before opening a transaction", async () => {
     const baseUrl = await startServer();
     const response = await fetch(`${baseUrl}/api/stores/demo/orders/22222222-2222-4222-8222-222222222222`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "shipped", carrierName: "DHL", trackingNumber: "TRACK-123", trackingUrl: "http://tracking.example.test" }),
+    });
+    expect(response.status).toBe(400);
+    expect(connect).not.toHaveBeenCalled();
+  });
+
+  it("rejects malformed HTTPS tracking URLs before opening a transaction", async () => {
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/stores/demo/orders/22222222-2222-4222-8222-222222222222`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "shipped", carrierName: "DHL", trackingNumber: "TRACK-123", trackingUrl: "https://" }),
     });
     expect(response.status).toBe(400);
     expect(connect).not.toHaveBeenCalled();
