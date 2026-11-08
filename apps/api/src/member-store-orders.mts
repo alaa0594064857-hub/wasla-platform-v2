@@ -288,7 +288,7 @@ export async function handleMemberStoreOrdersRequest(
          ($1 = 'cancelled' AND o.buyer_user_id = $5 AND o.status = 'pending_merchant_review') OR
          ($1 IN ('accepted', 'rejected') AND o.status = 'pending_merchant_review' AND ${merchantPermission(5, 6)} )
        )
-     RETURNING o.id, o.order_number AS "orderNumber", o.status, o.updated_at AS "updatedAt"`,
+     RETURNING o.id, o.order_number AS "orderNumber", o.buyer_user_id AS "buyerUserId", o.status, o.updated_at AS "updatedAt"`,
     [body.status, note, orderId, slug, session.user.id, ["store.order.manage", "account.order.manage"]],
     );
   if (result.rowCount !== 1) {
@@ -301,6 +301,19 @@ export async function handleMemberStoreOrdersRequest(
      VALUES ($1, 'member_store.order_status_changed', 'member_store_order', $2, $3::jsonb)`,
     [session.user.id, orderId, JSON.stringify({ status: body.status, note: note || null })],
   );
+  if (body.status !== "cancelled") {
+    await client.query(
+      `INSERT INTO notifications
+         (user_id, type, title_ar, title_en, body_ar, body_en, action_url, resource_id, metadata)
+       VALUES ($1, 'member_store_order',
+         CASE WHEN $2 = 'accepted' THEN 'تم قبول طلبك' ELSE 'تم رفض طلبك' END,
+         CASE WHEN $2 = 'accepted' THEN 'Your order request was accepted' ELSE 'Your order request was declined' END,
+         CASE WHEN $2 = 'accepted' THEN 'وافق التاجر على طلبك.' ELSE 'لم يتمكن التاجر من قبول طلبك.' END,
+         CASE WHEN $2 = 'accepted' THEN 'The merchant accepted your request.' ELSE 'The merchant could not accept your request.' END,
+         '/store/' || $3 || '/orders', $4, jsonb_build_object('orderNumber', $5, 'status', $2))`,
+      [result.rows[0].buyerUserId, body.status, slug, orderId, result.rows[0].orderNumber],
+    );
+  }
   await client.query("COMMIT");
   respond(response, 200, { success: true, order: result.rows[0] });
   } catch (error) {
