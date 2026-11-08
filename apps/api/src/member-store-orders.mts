@@ -202,13 +202,14 @@ export async function handleMemberStoreOrdersRequest(
       }
       const orderNumber = `WS-${Date.now().toString(36).toUpperCase()}-${randomUUID().slice(0, 6).toUpperCase()}`;
       const created = await client.query(
-        `INSERT INTO member_store_orders
+        `WITH actor_context AS MATERIALIZED (SELECT set_config('wasla.actor_user_id', $9, true))
+         INSERT INTO member_store_orders
           (order_number, store_id, buyer_user_id, currency, items, subtotal, buyer_note, idempotency_key)
-         VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7,$8)
+         SELECT $1,$2,$3,$4,$5::jsonb,$6,$7,$8 FROM actor_context
          RETURNING id, order_number AS "orderNumber", status, currency,
                    items, subtotal::text AS subtotal, created_at AS "createdAt"`,
         [orderNumber, store.rows[0].id, session.user.id, snapshots[0].currency,
-          JSON.stringify(snapshots), subtotal.toFixed(2), note || null, idempotencyKey ?? null],
+          JSON.stringify(snapshots), subtotal.toFixed(2), note || null, idempotencyKey ?? null, session.user.id],
       );
       await client.query(
         `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, store_id, metadata)
@@ -313,7 +314,8 @@ export async function handleMemberStoreOrdersRequest(
   try {
     await client.query("BEGIN");
     const result = await client.query(
-    `UPDATE member_store_orders o
+    `WITH actor_context AS MATERIALIZED (SELECT set_config('wasla.actor_user_id', $10, true))
+     UPDATE member_store_orders o
      SET status = $1,
          merchant_note = CASE WHEN $1 IN ('cancelled', 'completed') THEN merchant_note ELSE COALESCE(NULLIF($2, ''), merchant_note) END,
          carrier_name = CASE WHEN $1 = 'shipped' THEN $7 ELSE carrier_name END,
@@ -322,7 +324,7 @@ export async function handleMemberStoreOrdersRequest(
          shipped_at = CASE WHEN $1 = 'shipped' THEN COALESCE(shipped_at, NOW()) ELSE shipped_at END,
          delivery_confirmed_at = CASE WHEN $1 = 'completed' THEN COALESCE(delivery_confirmed_at, NOW()) ELSE delivery_confirmed_at END,
          updated_at = NOW()
-     FROM stores s
+     FROM stores s, actor_context
      WHERE o.id = $3 AND o.store_id = s.id AND s.slug = $4 AND s.status = 'active'
        AND (
          ($1 = 'cancelled' AND o.buyer_user_id = $5 AND o.status = 'pending_merchant_review') OR
@@ -335,7 +337,7 @@ export async function handleMemberStoreOrdersRequest(
                o.tracking_url AS "trackingUrl", o.shipped_at AS "shippedAt",
                o.delivery_confirmed_at AS "deliveryConfirmedAt", o.updated_at AS "updatedAt"`,
     [body.status, note, orderId, slug, session.user.id, ["store.order.manage", "account.order.manage"],
-      carrierName || null, trackingNumber || null, trackingUrl || null],
+      carrierName || null, trackingNumber || null, trackingUrl || null, session.user.id],
     );
   if (result.rowCount !== 1) {
     await client.query("ROLLBACK");
