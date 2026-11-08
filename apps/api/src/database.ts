@@ -330,6 +330,30 @@ export async function ensureStoreOwnerRole(): Promise<void> {
 }
 
 
+/** Verified-purchase product reviews; creation is tied to a completed member-store order line. */
+export async function ensureVerifiedReviewTables(): Promise<void> {
+  const db = getDatabasePool();
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS verified_product_reviews (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      order_id uuid NOT NULL REFERENCES member_store_orders(id) ON DELETE RESTRICT,
+      product_id uuid NOT NULL REFERENCES store_products(id) ON DELETE RESTRICT,
+      store_id uuid NOT NULL REFERENCES stores(id) ON DELETE RESTRICT,
+      buyer_user_id uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+      rating smallint NOT NULL CHECK (rating BETWEEN 1 AND 5),
+      title varchar(120),
+      body varchar(2000) NOT NULL CHECK (length(trim(body)) BETWEEN 10 AND 2000),
+      status varchar(24) NOT NULL DEFAULT 'pending_moderation'
+        CHECK (status IN ('pending_moderation', 'published', 'rejected', 'hidden')),
+      created_at timestamptz NOT NULL DEFAULT NOW(),
+      updated_at timestamptz NOT NULL DEFAULT NOW(),
+      UNIQUE (order_id, product_id)
+    )
+  `);
+  await db.query(`CREATE INDEX IF NOT EXISTS verified_product_reviews_public_idx ON verified_product_reviews (product_id, created_at DESC) WHERE status = 'published'`);
+  await db.query(`CREATE INDEX IF NOT EXISTS verified_product_reviews_buyer_idx ON verified_product_reviews (buyer_user_id, created_at DESC)`);
+}
+
 /** Separate inquiry records from private direct-message conversations. */
 export async function ensureProductInquiryTables(): Promise<void> {
   const { ensureProductInquiryTables: createTables } = await import("./product-inquiries.mjs");
