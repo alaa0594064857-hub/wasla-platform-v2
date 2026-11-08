@@ -171,6 +171,8 @@ describe("member store order requests", () => {
     expect(body.events[0]).not.toHaveProperty("trackingUrl");
     expect(String(query.mock.calls[0][0])).toContain("o.buyer_user_id = $3");
     expect(String(query.mock.calls[1][0])).toContain("FROM member_store_order_events");
+    expect(String(query.mock.calls[1][0])).toContain("LIMIT 200");
+    expect(String(query.mock.calls[1][0])).toContain("ORDER BY created_at ASC, id ASC");
     expect(String(query.mock.calls[1][0])).not.toContain("tracking_number");
     expect(String(query.mock.calls[1][0])).not.toContain("tracking_url");
   });
