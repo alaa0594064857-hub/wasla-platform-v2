@@ -100,6 +100,41 @@ describe("member store order requests", () => {
     ]);
   });
 
+
+  it("notifies only active store/account order managers when a buyer submits a request", async () => {
+    clientQuery
+      .mockResolvedValueOnce({ rowCount: null, rows: [] }) // begin
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "33333333-3333-4333-8333-333333333333", accountId: "44444444-4444-4444-8444-444444444444" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "55555555-5555-4555-8555-555555555555", title: "Test item", sku: "SKU-1", price: "12.50", currency: "USD", stockQuantity: 4 }] })
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "66666666-6666-4666-8666-666666666666", orderNumber: "WS-TEST-1", status: "pending_merchant_review" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] }) // audit
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] }) // notifications
+      .mockResolvedValueOnce({ rowCount: null, rows: [] }); // commit
+
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/stores/demo/orders`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Idempotency-Key": "buyer-order-001" },
+      body: JSON.stringify({ items: [{ productId: "55555555-5555-4555-8555-555555555555", quantity: 2 }] }),
+    });
+
+    expect(response.status).toBe(201);
+    expect(await response.json()).toMatchObject({ success: true, order: { orderNumber: "WS-TEST-1" } });
+    const notificationCall = clientQuery.mock.calls[6];
+    expect(String(notificationCall[0])).toContain("INSERT INTO notifications");
+    expect(String(notificationCall[0])).toContain("store_members");
+    expect(String(notificationCall[0])).toContain("account_members");
+    expect(String(notificationCall[0])).toContain("p.permission_key = ANY($4::text[])");
+    expect(String(notificationCall[0])).toContain("recipients.user_id <> $7");
+    expect(notificationCall[1]).toEqual([
+      "demo", "66666666-6666-4666-8666-666666666666", "44444444-4444-4444-8444-444444444444",
+      ["store.order.read", "store.order.manage", "account.order.read", "account.order.manage"],
+      "33333333-3333-4333-8333-333333333333", "WS-TEST-1",
+      "11111111-1111-4111-8111-111111111111",
+    ]);
+  });
+
   it("lists only buyer-owned orders or orders the merchant may read", async () => {
     query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
     const baseUrl = await startServer();
