@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
@@ -114,7 +114,7 @@ export default function OwnerSubscriptionLifecyclePage() {
     return () => { active = false; };
   }, [isPending, session?.user?.id]);
 
-  async function createSubscription(event: React.FormEvent<HTMLFormElement>) {
+  async function createSubscription(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy("create"); setError(""); setMessage("");
     try {
@@ -196,7 +196,7 @@ export default function OwnerSubscriptionLifecyclePage() {
   </main>;
 }
 
-const styles: Record<string, React.CSSProperties> = {
+const styles: Record<string, CSSProperties> = {
   shell: { minHeight: "100vh", padding: "28px clamp(16px, 4vw, 56px)", background: "#f5f1e8", color: "#17253a", fontFamily: "Arial, sans-serif" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 18, marginBottom: 20, flexWrap: "wrap" },
   back: { color: "#9a742d", textDecoration: "none", fontWeight: 700 },
