@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
-import { getOfficialStoreProducts, OfficialStoreProduct, WaslaApiError } from "./src/api";
+import { getOfficialStoreProducts, WaslaApiError } from "./src/api";
+import type { OfficialStoreProduct } from "./src/api";
 import { authClient } from "./src/auth-client";
 import {
   Pressable,
