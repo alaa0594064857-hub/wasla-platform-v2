@@ -402,7 +402,7 @@ async function handleRequest(
     return;
   }
 
-  const platformReviewMatch = requestUrl.pathname.match(/^\\/api\\/platform\\/reviews(?:\\/([0-9a-f-]{36}))?$/i);
+  const platformReviewMatch = requestUrl.pathname.match(/^\/api\/platform\/reviews(?:\/([0-9a-f-]{36}))?$/i);
   if (platformReviewMatch) {
     try {
       const { handlePlatformReviewModerationRequest } = await import("./platform-review-moderation.mjs");
