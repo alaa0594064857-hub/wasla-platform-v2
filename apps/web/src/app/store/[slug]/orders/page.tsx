@@ -25,6 +25,11 @@ type StoreOrder = {
   subtotal: string;
   buyerNote: string | null;
   merchantNote: string | null;
+  carrierName: string | null;
+  trackingNumber: string | null;
+  trackingUrl: string | null;
+  shippedAt: string | null;
+  deliveryConfirmedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -57,12 +62,15 @@ export default function MemberStoreOrdersPage() {
     stockAtRequest: "المخزون المسجل وقت الطلب (للاسترشاد)",
     pending: "بانتظار مراجعة البائع",
     accepted: "قبله البائع",
+    shipped: "تم الشحن - بانتظار تأكيد الاستلام",
+    completed: "اكتمل بعد تأكيد الاستلام",
     rejected: "رفضه البائع",
     cancelled: "ملغي",
     accept: "قبول الطلب",
     reject: "رفض الطلب",
     notePlaceholder: "أضف ملاحظة للعميل (اختياري)",
     cancel: "إلغاء الطلب",
+    carrier: "شركة الشحن", trackingNumber: "رقم التتبع", trackingUrl: "رابط التتبع الآمن", markShipped: "تأكيد الشحن", confirmDelivery: "تأكيد استلام الطلب", tracking: "معلومات الشحن",
     buyer: "العميل",
     submitted: "تاريخ الإرسال",
     noPayment: "هذا طلب وليس عملية شراء مدفوعة. قبول البائع لا يخصم المخزون ولا يحصّل الأموال ولا ينشئ شحنة.",
@@ -82,12 +90,15 @@ export default function MemberStoreOrdersPage() {
     stockAtRequest: "Stock recorded when the request was placed (reference only)",
     pending: "Awaiting merchant review",
     accepted: "Accepted by merchant",
+    shipped: "Shipped — awaiting buyer confirmation",
+    completed: "Completed — receipt confirmed",
     rejected: "Rejected by merchant",
     cancelled: "Cancelled",
     accept: "Accept request",
     reject: "Reject request",
     notePlaceholder: "Add a note for the customer (optional)",
     cancel: "Cancel request",
+    carrier: "Carrier", trackingNumber: "Tracking number", trackingUrl: "Secure tracking URL", markShipped: "Mark as shipped", confirmDelivery: "Confirm delivery received", tracking: "Shipment details",
     buyer: "Buyer",
     submitted: "Submitted",
     noPayment: "This is an order request, not a paid purchase. Merchant acceptance does not decrement stock, collect funds or create a shipment.",
