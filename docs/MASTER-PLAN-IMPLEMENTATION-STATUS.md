@@ -948,3 +948,9 @@ Do not describe the platform as commercially launch-ready based only on successf
 - No arbitrary statutory return window is hardcoded; eligibility is limited to shipped/completed orders pending approved store policy and applicable-law review.
 - PR #49 is stacked on PR #48 and remains a draft. Final-head CI and database execution tests are pending; do not treat this workflow as production-verified until checks pass.
 - No PR was merged, no Render deployment was triggered, and no paid service or payment setting was changed.
+
+
+### Verification update — 2026-11-09
+- API quality workflow run 42528463643 passed on commit 9431cc90b1b115a2ac508ab8e11cd2a9d0b71ec8: API tests and API build succeeded.
+- After that passing run, two additional safeguards were committed: return requests validate buyer input before opening a DB connection, and an approved replacement cannot be incorrectly marked as a returned item. The buyer-facing order UI now clearly marks replacement fulfillment as not yet enabled.
+- These two latest safeguards are on the current PR head and still require a fresh CI run; do not treat the latest head as fully verified yet.
