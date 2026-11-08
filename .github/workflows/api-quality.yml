@@ -12,6 +12,22 @@ concurrency:
 jobs:
   api:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: wasla
+          POSTGRES_PASSWORD: wasla_test_password
+          POSTGRES_DB: wasla_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U wasla -d wasla_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://wasla:wasla_test_password@localhost:5432/wasla_test
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,7 +39,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
       - name: Run API tests
