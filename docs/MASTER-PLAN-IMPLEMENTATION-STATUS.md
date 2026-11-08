@@ -881,3 +881,13 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Payment capture, member-sale fund handling, supplier purchasing and refunds remain disabled pending their separate provider/legal approvals.
 - This is a design/implementation contract only. No runtime code, database schema, API route, UI or automated test has been changed by this PR. The next engineering step is to implement the contract in small tested increments after inspecting the exact route registration and migration conventions.
 - No changes were made to `main`; no Render settings, deployments, purchases or domain settings were changed.
+
+
+## Verified member-store review editing — 2026-11-08
+
+- Buyer-owned review edits are accepted only from the authenticated original reviewer and only while the review is pending moderation or published.
+- Every edit stores the prior rating, title, body, status, editor and timestamp in an append-only history table.
+- An edited published review is immediately returned to pending moderation; it is not publicly visible again until a platform moderator republishes it.
+- Edit and history writes, plus the audit event, are committed in one transaction.
+- Regression tests cover a valid owner edit, moderation reset and rejection of another buyer's edit.
+- **Verification status:** code and tests are committed to draft PR #46; a fresh CI run for the latest PR head is still pending. No production migration or deployment has occurred.
