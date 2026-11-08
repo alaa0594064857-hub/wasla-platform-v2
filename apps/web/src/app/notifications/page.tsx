@@ -51,16 +51,31 @@ export default function NotificationsPage() {
     void loadNotifications();
   }, [loadNotifications]);
 
-  const markRead = async (id: string) => {
-    const response = await fetch(`/api/notifications/${id}/read`, {
-      method: "PATCH",
-      credentials: "include",
-      cache: "no-store",
-    });
-    if (!response.ok) return;
-    setItems(current => current.map(item => item.id === id ? { ...item, readAt: item.readAt ?? new Date().toISOString() } : item));
-    setUnreadCount(current => Math.max(0, current - (items.find(item => item.id === id && !item.readAt) ? 1 : 0)));
-    window.dispatchEvent(new Event("wasla:notifications-updated"));
+  const markRead = async (id: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`/api/notifications/${id}/read`, {
+        method: "PATCH",
+        credentials: "include",
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        setError(ar ? "تعذر تحديث حالة الإشعار." : "Could not update notification status.");
+        return false;
+      }
+      const wasUnread = items.some(item => item.id === id && !item.readAt);
+      setItems(current => current.map(item => item.id === id ? { ...item, readAt: item.readAt ?? new Date().toISOString() } : item));
+      if (wasUnread) setUnreadCount(count => Math.max(0, count - 1));
+      window.dispatchEvent(new Event("wasla:notifications-updated"));
+      return true;
+    } catch {
+      setError(ar ? "تعذر الاتصال لتحديث الإشعار." : "Could not reach the service to update this notification.");
+      return false;
+    }
+  };
+
+  const openNotification = async (item: Notification) => {
+    if (!item.readAt) await markRead(item.id);
+    router.push(item.actionUrl);
   };
 
   const markAllRead = async () => {
@@ -131,7 +146,7 @@ export default function NotificationsPage() {
                 {!item.readAt && <button type="button" onClick={() => void markRead(item.id)}>
                   {ar ? "تعليم كمقروء" : "Mark as read"}
                 </button>}
-                <Link href={item.actionUrl} onClick={() => { if (!item.readAt) void markRead(item.id); }}>
+                <Link href={item.actionUrl} onClick={event => { event.preventDefault(); void openNotification(item); }}>
                   {ar ? "فتح" : "Open"} ↗
                 </Link>
               </div>
