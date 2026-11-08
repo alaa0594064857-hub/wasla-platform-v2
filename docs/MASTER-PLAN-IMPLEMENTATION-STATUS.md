@@ -593,3 +593,11 @@ Do not describe the platform as commercially launch-ready based only on successf
 - The UI explains that this is a request workflow, not paid checkout: no payment is collected, no stock is reserved/decremented, and no shipment or supplier purchase is triggered.
 - GitHub Actions CI run `42484679521` and API quality run `42484679484` both passed before merge, including API tests, database checks, TypeScript/API build and Web production build.
 - Render deployment remains blocked by exhausted pipeline minutes. These merged UI/API changes are not live until deployed and verified on the hosted services. Two-account browser testing and merchant acceptance testing remain outstanding.
+
+## Member-store order request journey — 2026-11-08
+
+- PR #14: authenticated member-store order request API, buyer/merchant scoped reads, merchant accept/reject actions, idempotency support, and transactional audit events.
+- PR #15: bilingual product-page order request flow and buyer/merchant order list at `/store/:slug/orders`.
+- PR #16: bilingual navigation link from the public member-store page to its order list.
+- PR #16 CI and API quality workflows both passed before merge. All three PRs are merged to `main`.
+- These are order requests, not paid purchases. They do not collect payment, reserve/decrement stock, contact suppliers, purchase goods, or perform shipping/fulfilment.
