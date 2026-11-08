@@ -81,7 +81,7 @@ export default function NotificationsPage() {
   const title = ar ? "مركز الإشعارات" : "Notification center";
   const intro = ar
     ? "تنبيهات دعوات الحسابات والرسائل واستفسارات المنتجات وطلبات المتجر الرسمي في مكان واحد."
-    : "Account invitations, messages, product inquiries and official-store order updates in one place.";
+    : "Account invitations, messages, product inquiries and store order updates in one place.";
 
   return <main className="wasla-notifications-page" dir={ar ? "rtl" : "ltr"} lang={locale}>
     <WorkspaceHeader section="account" />
@@ -109,7 +109,7 @@ export default function NotificationsPage() {
         items.length === 0 ? <section className="wasla-notifications-empty">
           <div className="wasla-notifications-symbol">♢</div>
           <h2>{ar ? "لا توجد إشعارات حتى الآن" : "You’re all caught up"}</h2>
-          <p>{ar ? "ستظهر هنا التنبيهات الجديدة عندما تصلك دعوة أو رسالة أو استفسار." : "New alerts will appear here when you receive an invitation, message or inquiry."}</p>
+          <p>{ar ? "ستظهر هنا التنبيهات الجديدة عندما تصلك دعوة أو رسالة أو استفسار أو طلب متجر." : "New alerts will appear here when you receive an invitation, message, inquiry or store order."}</p>
           <Link href="/account">{ar ? "العودة إلى حسابي" : "Back to my account"} ↗</Link>
         </section> :
         <section aria-label={title} style={{ display: "grid", gap: 10 }}>
