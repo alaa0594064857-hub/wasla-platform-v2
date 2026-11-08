@@ -195,6 +195,22 @@ export async function handleTradeOpportunitiesRequest(
         reply(response, 200, { success: true, opportunities: result.rows });
         return;
       }
+      if (opportunityId === "review-history") {
+        const owner = await authorizePlatformPermission(request, response, "platform.manage");
+        if (!owner) return;
+        const result = await db.query(
+          `SELECT o.id, o.title, o.opportunity_type, o.review_status, o.reviewed_at,
+                  a.display_name AS account_name, e.event_type, e.note,
+                  e.actor_user_id, e.created_at AS event_created_at
+           FROM trade_opportunity_events e
+           INNER JOIN trade_opportunities o ON o.id=e.opportunity_id
+           INNER JOIN accounts a ON a.id=o.account_id
+           WHERE e.event_type IN ('approved','rejected','closed')
+           ORDER BY e.created_at DESC LIMIT 100`
+        );
+        reply(response, 200, { success: true, decisions: result.rows });
+        return;
+      }
       if (opportunityId) {
         const owner = await authorizePlatformPermission(request, response, "platform.manage");
         if (!owner) return;
