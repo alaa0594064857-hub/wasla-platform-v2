@@ -769,3 +769,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - PR #33 (`bfc2f0b42c0c66f474390e2c3c4a7cc99f21f94`) merged: opportunity submitters receive an in-app notification after an owner records an approval, rejection or closure. Decision/event/notification writes share the review transaction.
 - PR #34 (`994fcca26fb8c91ab6ff040d60d7b505a5958c2f`) merged: owner-only API and bilingual console history show the latest 100 final opportunity review decisions. Unauthorized and unauthenticated access are covered by API tests.
 - Both PRs passed WASLA CI and API Quality checks before merge. These code changes are in `main`, not yet verified on the hosted Render deployment because build minutes are exhausted. Do not describe them as live.
+
+
+## Brokerage agreement party notifications — 2026-11-08
+
+- PR #35 merged to `main` as `df86ffe58fe71f5849461200933c4e9e8ea8f0f2`.
+- Buyer and supplier opportunity submitters are notified when a brokerage agreement is prepared for acceptance; the other party is notified when one party accepts or rejects; both parties are notified when the agreement becomes active.
+- Notifications are created in the same database transaction as the agreement/event updates and link to the internal Trade agreements workspace.
+- API regression tests cover first acceptance, second acceptance/activation and rejection notifications. Final-head API Quality run `42499043998` and WASLA CI run `42499044079` both completed successfully, including API tests, TypeScript checks, API build and Web production build.
+- This is in GitHub `main`; it is not deployed or hosted-verified on Render because pipeline build minutes remain exhausted. No trade funds, escrow or payments are collected by this workflow.
