@@ -536,3 +536,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Pricing preview now requires an explicit uppercase two-letter destination code (for example, `TR` or `US`) and returns that country with the preview result.
 - The owner interface collects the destination country before calculation; the owner must enter verified country-specific taxes, customs, payment fees and other costs as separate lines. The system does not infer tax or customs liabilities.
 - API commit `aff1297dcb0265dbb3c848649ffe7602479c5b03` and web build for the same branch head completed successfully; Render app logs confirm both services Live at 00:07 UTC on 2026-11-08.
+
+
+## Supplier-bound official-store pricing preview — 2026-11-08
+
+- Pricing preview now requires a product ID and an approved source-offer ID. The API loads supplier price, supplier currency, shipping cost and shipping currency from the database offer; client-supplied supplier/shipping cost values are ignored.
+- Before calculating, the API rechecks offer/product linkage, approved status, available/limited state, direct-to-customer confirmation, supplier identity and specification verification, MOQ=1, shipping cost/currency, unexpired quote, last verification timestamp, and destination-country coverage.
+- The owner UI offers only verified, current, single-unit offers that cover the selected destination; supplier/shipping amount and currency fields are read-only and populated from the selected offer.
+- API and web deployment for commit `12d9a625bc941044f278b016034ab46a8a56740c` were both confirmed Live by Render (2026-11-08).
+- The calculation remains a preview only. Explicit owner price approval and destination-specific public price enforcement are still pending; this feature does not publish or change the catalogue price.
