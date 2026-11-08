@@ -601,6 +601,79 @@ export async function ensureMemberStoreOrderTables(): Promise<void> {
       ON member_store_orders (buyer_user_id, created_at DESC)
     `);
     await client.query(`
+      CREATE TABLE IF NOT EXISTS member_store_order_events (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        order_id uuid NOT NULL REFERENCES member_store_orders(id) ON DELETE RESTRICT,
+        store_id uuid NOT NULL REFERENCES stores(id) ON DELETE RESTRICT,
+        actor_type varchar(20) NOT NULL CHECK (actor_type IN ('buyer','merchant','owner','support','carrier','system')),
+        actor_user_id uuid REFERENCES users(id) ON DELETE RESTRICT,
+        event_type varchar(48) NOT NULL,
+        from_status varchar(32),
+        to_status varchar(32),
+        source varchar(32) NOT NULL CHECK (source IN ('application','merchant_manual','owner_manual','carrier_api','carrier_webhook','legacy_migration')),
+        reason_code varchar(64),
+        idempotency_key varchar(160) NOT NULL,
+        metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+        created_at timestamptz NOT NULL DEFAULT NOW(),
+        CONSTRAINT member_store_order_events_idempotency_unique UNIQUE (order_id, idempotency_key)
+      )
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS member_store_order_events_order_created_idx
+      ON member_store_order_events (order_id, created_at ASC, id ASC)
+    `);
+    await client.query(`
+      CREATE OR REPLACE FUNCTION wasla_reject_order_event_mutation()
+      RETURNS trigger LANGUAGE plpgsql AS $
+      BEGIN
+        RAISE EXCEPTION 'member_store_order_events is append-only';
+      END;
+      $
+    `);
+    await client.query(`DROP TRIGGER IF EXISTS member_store_order_events_immutable ON member_store_order_events`);
+    await client.query(`
+      CREATE TRIGGER member_store_order_events_immutable
+      BEFORE UPDATE OR DELETE ON member_store_order_events
+      FOR EACH ROW EXECUTE FUNCTION wasla_reject_order_event_mutation()
+    `);
+    await client.query(`
+      CREATE OR REPLACE FUNCTION wasla_capture_member_store_order_event()
+      RETURNS trigger LANGUAGE plpgsql AS $
+      DECLARE actor_id uuid; actor_kind varchar(20); event_key varchar(160);
+      BEGIN
+        actor_id := NULLIF(current_setting('wasla.actor_user_id', true), '')::uuid;
+        actor_kind := CASE WHEN actor_id IS NULL THEN 'system' WHEN actor_id = NEW.buyer_user_id THEN 'buyer' ELSE 'merchant' END;
+        IF TG_OP = 'INSERT' THEN
+          INSERT INTO member_store_order_events (order_id,store_id,actor_type,actor_user_id,event_type,from_status,to_status,source,idempotency_key,metadata)
+          VALUES (NEW.id,NEW.store_id,actor_kind,actor_id,'order.created',NULL,NEW.status,'application','db:created',jsonb_build_object('orderNumber',NEW.order_number));
+          RETURN NEW;
+        END IF;
+        IF OLD.status IS DISTINCT FROM NEW.status THEN
+          event_key := 'db:status:' || txid_current()::text;
+          INSERT INTO member_store_order_events (order_id,store_id,actor_type,actor_user_id,event_type,from_status,to_status,source,idempotency_key,metadata)
+          VALUES (NEW.id,NEW.store_id,actor_kind,actor_id,'order.status_changed',OLD.status,NEW.status,'application',event_key,'{}'::jsonb);
+        END IF;
+        IF OLD.tracking_number IS DISTINCT FROM NEW.tracking_number OR OLD.tracking_url IS DISTINCT FROM NEW.tracking_url OR OLD.carrier_name IS DISTINCT FROM NEW.carrier_name THEN
+          event_key := 'db:shipment:' || txid_current()::text;
+          INSERT INTO member_store_order_events (order_id,store_id,actor_type,actor_user_id,event_type,from_status,to_status,source,reason_code,idempotency_key,metadata)
+          VALUES (NEW.id,NEW.store_id,actor_kind,actor_id,'shipment.manual_recorded',OLD.status,NEW.status,CASE WHEN actor_kind='buyer' THEN 'application' ELSE 'merchant_manual' END,'merchant_shipment_entry',event_key,jsonb_build_object('carrierName',NEW.carrier_name));
+        END IF;
+        RETURN NEW;
+      END;
+      $
+    `);
+    await client.query(`DROP TRIGGER IF EXISTS member_store_orders_capture_events ON member_store_orders`);
+    await client.query(`
+      CREATE TRIGGER member_store_orders_capture_events
+      AFTER INSERT OR UPDATE OF status, carrier_name, tracking_number, tracking_url ON member_store_orders
+      FOR EACH ROW EXECUTE FUNCTION wasla_capture_member_store_order_event()
+    `);
+    await client.query(`
+      INSERT INTO member_store_order_events (order_id,store_id,actor_type,event_type,from_status,to_status,source,reason_code,idempotency_key,metadata,created_at)
+      SELECT o.id,o.store_id,'system','order.legacy_snapshot',NULL,o.status,'legacy_migration','pre_event_ledger','legacy:snapshot','{}'::jsonb,o.created_at
+      FROM member_store_orders o ON CONFLICT (order_id,idempotency_key) DO NOTHING
+    `);
+    await client.query(`
       CREATE TABLE IF NOT EXISTS member_store_order_disputes (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         order_id uuid NOT NULL REFERENCES member_store_orders(id) ON DELETE RESTRICT,
