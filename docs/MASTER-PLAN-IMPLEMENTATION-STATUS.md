@@ -870,3 +870,13 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Successful issuance test verifies customer notification and that payment and supplier purchasing remain disabled.
 - Final-head API Quality run `42506482225` and WASLA CI run `42506482264` both passed.
 - Test-only change; no runtime behavior or schema changed. Merged to GitHub `main`; Render deployment and hosted owner/customer verification remain pending while build minutes are exhausted.
+
+
+## Order delivery and verified reviews — implementation contract prepared (2026-11-08)
+
+- Added `docs/architecture/order-delivery-reviews-implementation-contract.md` on branch `feat/order-delivery-reviews-readiness`.
+- The contract covers separate member-store and official-store responsibilities; server-enforced lifecycle transitions; shipment/tracking; evidence confidence; buyer confirmation; delivery cases, returns and disputes; verified-purchase eligibility; review edits, reports, moderation and appeals; role authorization; privacy boundaries; idempotency; and acceptance tests.
+- It explicitly prevents merchant self-reported delivery from independently unlocking reviews, and keeps official-store supplier-private information out of customer-facing order views.
+- Payment capture, member-sale fund handling, supplier purchasing and refunds remain disabled pending their separate provider/legal approvals.
+- This is a design/implementation contract only. No runtime code, database schema, API route, UI or automated test has been changed by this PR. The next engineering step is to implement the contract in small tested increments after inspecting the exact route registration and migration conventions.
+- No changes were made to `main`; no Render settings, deployments, purchases or domain settings were changed.
