@@ -98,7 +98,7 @@ describe("official store customer supplier-confirmation requests", () => {
     const orderSql = String(client.query.mock.calls[1][0]);
     expect(orderSql).toContain("official_store_price_approvals");
     expect(orderSql).toContain("approval.destination_country = $2");
-    expect(orderSql).toContain("approval.customer_price::text");
+    expect(orderSql).toContain("trim_scale(approval.customer_price)::text");
     expect(orderSql).toContain("o.id = approval.offer_id");
     expect(client.query.mock.calls[1][1]).toEqual(["11111111-1111-4111-8111-111111111111", "TR"]);
     expect(String(client.query.mock.calls[2][0])).toContain("owner_review_required");
