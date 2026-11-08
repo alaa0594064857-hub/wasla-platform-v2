@@ -19,6 +19,12 @@ type CustomerRequest = {
   destinationCountry: string | null;
   createdAt: string;
   updatedAt: string;
+  finalQuoteAmount: string | null;
+  finalQuoteCurrency: string | null;
+  finalQuoteShippingDaysMin: number | null;
+  finalQuoteShippingDaysMax: number | null;
+  finalQuoteExpiresAt: string | null;
+  finalQuoteStatus: string;
 };
 
 export default function OfficialStoreRequestsPage() {
@@ -28,6 +34,8 @@ export default function OfficialStoreRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [signedOut, setSignedOut] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [busyQuote, setBusyQuote] = useState("");
+  const [quoteMessage, setQuoteMessage] = useState("");
 
   const copy = ar ? {
     title: "طلباتي من متجر WASLA الرسمي",
@@ -90,6 +98,27 @@ export default function OfficialStoreRequestsPage() {
     return () => { active = false; };
   }, []);
 
+  async function decideQuote(orderId: string, decision: "accepted" | "rejected") {
+    if (busyQuote) return;
+    setBusyQuote(orderId); setQuoteMessage("");
+    try {
+      const response = await fetch("/api/official-store/orders/" + orderId + "/quote-decision", {
+        method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ decision })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(typeof data.error === "string" ? data.error : "quote");
+      setQuoteMessage(ar
+        ? (decision === "accepted" ? "وافقت على عرض السعر. لم يتم تحصيل أي مبلغ ولم يتم شراء المنتج." : "رفضت عرض السعر. لم يتم تحصيل أي مبلغ.")
+        : (decision === "accepted" ? "You accepted the quote. No payment was taken and no purchase was placed." : "You declined the quote. No payment was taken."));
+      const refreshed = await fetch("/api/official-store/orders", { credentials: "include", cache: "no-store" });
+      const next = await refreshed.json();
+      if (refreshed.ok && next.success && Array.isArray(next.requests)) setRequests(next.requests);
+    } catch (error) {
+      setQuoteMessage(error instanceof Error ? error.message : (ar ? "تعذر حفظ ردك." : "Could not save your response."));
+    } finally { setBusyQuote(""); }
+  }
+
   function supplierStatus(status: string) {
     if (status === "accepted") return copy.accepted;
     if (status === "rejected") return copy.rejected;
@@ -107,6 +136,7 @@ export default function OfficialStoreRequestsPage() {
       </div>
     </section>
     <section className="mx-auto max-w-5xl space-y-5 px-5 py-10 md:px-8">
+      {quoteMessage && <p role="status" className="rounded-xl bg-white p-4 text-sm">{quoteMessage}</p>}
       {loading ? <p className="rounded-2xl bg-white p-8 text-center">{copy.loading}</p>
         : signedOut ? <p className="rounded-2xl bg-white p-8 text-center">{copy.signIn} <Link className="font-bold underline" href="/login">Login</Link></p>
         : failed ? <p role="alert" className="rounded-2xl bg-white p-8 text-center text-red-800">{copy.error}</p>
@@ -116,6 +146,19 @@ export default function OfficialStoreRequestsPage() {
             <div><p className="text-xs font-semibold text-[#96732e]">{copy.request}: {item.orderNumber}</p><h2 className="mt-2 text-xl font-bold">{item.productTitle}</h2></div>
             <span className="rounded-full bg-[#f5f1e8] px-3 py-2 text-xs font-semibold">{supplierStatus(item.supplierConfirmationStatus)}</span>
           </div>
+          {item.finalQuoteStatus === "pending_customer" && item.finalQuoteExpiresAt && new Date(item.finalQuoteExpiresAt).getTime() > Date.now() && <div className="mt-5 rounded-xl border border-[#d6c08c] bg-[#fff9eb] p-4">
+            <h3 className="font-bold">{ar ? "عرض السعر النهائي من WASLA" : "WASLA final quote"}</h3>
+            <p className="mt-2">{ar ? "السعر النهائي" : "Final price"}: <strong>{item.finalQuoteAmount} {item.finalQuoteCurrency}</strong></p>
+            <p>{ar ? "مدة التوصيل المتوقعة" : "Estimated delivery"}: {item.finalQuoteShippingDaysMin}–{item.finalQuoteShippingDaysMax} {ar ? "يوماً" : "days"}</p>
+            <p className="text-sm">{ar ? "ينتهي العرض" : "Expires"}: {new Date(item.finalQuoteExpiresAt).toLocaleString(locale)}</p>
+            <div className="mt-3 flex flex-wrap gap-3">
+              <button disabled={busyQuote === item.id} onClick={() => void decideQuote(item.id, "accepted")} className="rounded-lg bg-[#17253a] px-4 py-2 font-semibold text-white disabled:opacity-50">{ar ? "أوافق على السعر" : "Accept quote"}</button>
+              <button disabled={busyQuote === item.id} onClick={() => void decideQuote(item.id, "rejected")} className="rounded-lg border border-[#a33d3d] px-4 py-2 font-semibold text-[#a33d3d] disabled:opacity-50">{ar ? "أرفض العرض" : "Decline quote"}</button>
+            </div>
+          </div>}
+          {item.finalQuoteStatus === "accepted" && <p className="mt-4 rounded-xl bg-[#e8f2e9] p-4 text-sm">{ar ? "وافقت على عرض السعر. الدفع والشراء غير مفعّلين بعد." : "You accepted the quote. Payment and purchasing are not enabled yet."}</p>}
+          {(item.finalQuoteStatus === "expired" || (item.finalQuoteStatus === "pending_customer" && item.finalQuoteExpiresAt && new Date(item.finalQuoteExpiresAt).getTime() <= Date.now())) && <p className="mt-4 rounded-xl bg-[#f5f1e8] p-4 text-sm">{ar ? "انتهت صلاحية عرض السعر. تواصل مع WASLA لطلب تحديثه." : "This quote expired. Contact WASLA for an updated quote."}</p>}
+
           <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
             <p><strong>{copy.destination}:</strong> {item.destinationCountry || "—"}</p>
             <p><strong>{copy.price}:</strong> {item.unitPrice} {item.currency}</p>

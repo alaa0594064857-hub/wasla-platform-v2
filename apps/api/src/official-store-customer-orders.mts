@@ -59,6 +59,12 @@ export async function handleOfficialStoreCustomerOrdersRequest(
                 payment_status AS "paymentStatus",
                 shipping_status AS "shippingStatus",
                 shipping_address->>'country' AS "destinationCountry",
+                final_quote_amount::text AS "finalQuoteAmount",
+                final_quote_currency AS "finalQuoteCurrency",
+                final_quote_shipping_days_min AS "finalQuoteShippingDaysMin",
+                final_quote_shipping_days_max AS "finalQuoteShippingDaysMax",
+                final_quote_expires_at AS "finalQuoteExpiresAt",
+                final_quote_status AS "finalQuoteStatus",
                 created_at AS "createdAt", updated_at AS "updatedAt"
          FROM official_store_orders
          WHERE customer_user_id = $1

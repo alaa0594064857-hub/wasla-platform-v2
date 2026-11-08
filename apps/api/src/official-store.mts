@@ -438,6 +438,22 @@ export async function ensureOfficialStoreTables(): Promise<void> {
       ON official_store_product_media (product_id, is_primary DESC, created_at ASC)
     `);
 
+    await client.query(`
+      ALTER TABLE official_store_orders
+        ADD COLUMN IF NOT EXISTS final_quote_amount numeric(12,2),
+        ADD COLUMN IF NOT EXISTS final_quote_currency varchar(3),
+        ADD COLUMN IF NOT EXISTS final_quote_shipping_days_min integer,
+        ADD COLUMN IF NOT EXISTS final_quote_shipping_days_max integer,
+        ADD COLUMN IF NOT EXISTS final_quote_expires_at timestamptz,
+        ADD COLUMN IF NOT EXISTS final_quote_status varchar(20) NOT NULL DEFAULT 'not_issued'
+          CHECK (final_quote_status IN ('not_issued', 'pending_customer', 'accepted', 'rejected', 'expired'))
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS official_store_orders_quote_expiry_idx
+      ON official_store_orders (final_quote_expires_at)
+      WHERE final_quote_status = 'pending_customer'
+    `);
+
     await client.query("COMMIT");
   } catch (error) {
     await client.query("ROLLBACK");
