@@ -131,7 +131,7 @@ export async function handleMemberStoreOrdersRequest(
     try {
       await client.query("BEGIN");
       const store = await client.query(
-        "SELECT id FROM stores WHERE slug = $1 AND status = 'active' FOR SHARE",
+        "SELECT id, account_id AS \"accountId\" FROM stores WHERE slug = $1 AND status = 'active' FOR SHARE",
         [slug],
       );
       if (store.rowCount !== 1) {
@@ -203,6 +203,37 @@ export async function handleMemberStoreOrdersRequest(
          VALUES ($1, 'member_store.order_requested', 'member_store_order', $2, $3, $4::jsonb)`,
         [session.user.id, created.rows[0].id, store.rows[0].id,
           JSON.stringify({ orderNumber, itemCount: snapshots.length, subtotal: subtotal.toFixed(2) })],
+      );
+      // Notify active account/store members with order permissions; never expose this alert to the buyer.
+      await client.query(
+        `INSERT INTO notifications
+           (user_id, type, title_ar, title_en, body_ar, body_en, action_url, resource_id, metadata)
+         SELECT DISTINCT recipients.user_id, 'member_store_order',
+                'طلب جديد في متجرك', 'New order request for your store',
+                'لديك طلب جديد رقم ' || $6, 'You received a new order request ' || $6,
+                '/store/' || $1 || '/orders', $2,
+                jsonb_build_object('orderNumber', $6, 'storeSlug', $1)
+         FROM (
+           SELECT am.user_id
+           FROM account_members am
+           JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
+           JOIN role_permissions rp ON rp.role_id = r.id AND rp.scope_type = r.scope_type
+           JOIN permissions p ON p.id = rp.permission_id AND p.scope_type = rp.scope_type
+           WHERE am.account_id = $3 AND am.status = 'active'
+             AND p.permission_key = ANY($4::text[])
+           UNION
+           SELECT sm.user_id
+           FROM store_members sm
+           JOIN roles r ON r.id = sm.role_id AND r.scope_type = sm.role_scope
+           JOIN role_permissions rp ON rp.role_id = r.id AND rp.scope_type = r.scope_type
+           JOIN permissions p ON p.id = rp.permission_id AND p.scope_type = rp.scope_type
+           WHERE sm.store_id = $5 AND sm.status = 'active'
+             AND p.permission_key = ANY($4::text[])
+         ) recipients
+         WHERE recipients.user_id <> $7`
+        [slug, created.rows[0].id, store.rows[0].accountId,
+          ["store.order.read", "store.order.manage", "account.order.read", "account.order.manage"],
+          store.rows[0].id, orderNumber, session.user.id],
       );
       await client.query("COMMIT");
       respond(response, 201, { success: true, order: created.rows[0] });
