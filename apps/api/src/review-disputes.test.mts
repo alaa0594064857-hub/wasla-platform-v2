@@ -105,7 +105,7 @@ describe("review reports and appeals", () => {
     });
     expect(response.status).toBe(200);
     expect(String(clientQuery.mock.calls[3][0])).toContain("SET status = 'pending_moderation'");
-    expect(String(clientQuery.mock.calls[4][0])).toContain("review.appeal.overturned");
+    expect(clientQuery.mock.calls[4][1]).toContain("review.appeal.overturned");
   });
 
 });
