@@ -13,7 +13,7 @@ describe("carrier event normalization", () => {
   });
   it("rejects malformed carrier, event, tracking and timestamp fields", () => {
     expect(normalizeCarrierEvent({ ...base, carrierCode: "../carrier" })).toEqual({ accepted: false, reason: "invalid_carrier" });
-    expect(normalizeCarrierEvent({ ...base, providerEventId: "bad\\nevent" })).toEqual({ accepted: false, reason: "invalid_event_id" });
+    expect(normalizeCarrierEvent({ ...base, providerEventId: "bad\nevent" })).toEqual({ accepted: false, reason: "invalid_event_id" });
     expect(normalizeCarrierEvent({ ...base, trackingReference: "x" })).toEqual({ accepted: false, reason: "invalid_tracking_reference" });
     expect(normalizeCarrierEvent({ ...base, occurredAt: "yesterday" })).toEqual({ accepted: false, reason: "invalid_event_time" });
   });
