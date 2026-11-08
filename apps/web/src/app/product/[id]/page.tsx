@@ -6,7 +6,8 @@ import { useEffect, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import { useLocale } from "@/components/locale-provider";
 
-type Product = { id: string; title: string; description?: string; price: string; currency: string; imageUrl?: string; videoUrl?: string; sellerCheckoutUrl?: string | null; storeName: string; storeSlug: string };\ntype ProductReview = { id: string; rating: number; title: string | null; body: string; createdAt: string; buyerLabel: string };
+type Product = { id: string; title: string; description?: string; price: string; currency: string; imageUrl?: string; videoUrl?: string; sellerCheckoutUrl?: string | null; storeName: string; storeSlug: string };
+type ProductReview = { id: string; rating: number; title: string | null; body: string; createdAt: string; buyerLabel: string };
 
 export default function PublicProductPage() {
   const params = useParams<{ id: string }>();
@@ -18,7 +19,14 @@ export default function PublicProductPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const [quantity, setQuantity] = useState("1");\n  const [reviews, setReviews] = useState<ProductReview[]>([]);\n  const [reviewSummary, setReviewSummary] = useState<{ count: number; average: string } | null>(null);\n  const [reviewRating, setReviewRating] = useState("5");\n  const [reviewTitle, setReviewTitle] = useState("");\n  const [reviewBody, setReviewBody] = useState("");\n  const [reviewBusy, setReviewBusy] = useState(false);\n  const [reviewMessage, setReviewMessage] = useState("");
+  const [quantity, setQuantity] = useState("1");
+  const [reviews, setReviews] = useState<ProductReview[]>([]);
+  const [reviewSummary, setReviewSummary] = useState<{ count: number; average: string } | null>(null);
+  const [reviewRating, setReviewRating] = useState("5");
+  const [reviewTitle, setReviewTitle] = useState("");
+  const [reviewBody, setReviewBody] = useState("");
+  const [reviewBusy, setReviewBusy] = useState(false);
+  const [reviewMessage, setReviewMessage] = useState("");
   useEffect(() => {
     let active = true;
     fetch(`/api/public/products/${encodeURIComponent(params.id)}`, { cache: "no-store" })
