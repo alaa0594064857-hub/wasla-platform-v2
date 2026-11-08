@@ -123,7 +123,7 @@ export async function handlePlatformReviewDisputeDecision(
   try {
     await client.query("BEGIN");
     const selected = await client.query(
-      \`SELECT id, review_id AS "reviewId", status FROM \${table} WHERE id = $1 FOR UPDATE\`, [id],
+      `SELECT id, review_id AS "reviewId", status FROM ${table} WHERE id = $1 FOR UPDATE`, [id],
     );
     if (!selected.rowCount || selected.rows[0].status !== "open") {
       await client.query("ROLLBACK");
@@ -132,37 +132,37 @@ export async function handlePlatformReviewDisputeDecision(
     const decision = body.status as string;
     if (kind === "report") {
       await client.query(
-        \`UPDATE verified_product_review_reports SET status = $2, reviewed_by = $3, reviewed_at = NOW() WHERE id = $1\`,
+        `UPDATE verified_product_review_reports SET status = $2, reviewed_by = $3, reviewed_at = NOW() WHERE id = $1`,
         [id, decision, access.userId],
       );
       if (decision === "actioned") {
         await client.query(
-          \`UPDATE verified_product_reviews SET status = 'hidden', moderated_by = $2,
+          `UPDATE verified_product_reviews SET status = 'hidden', moderated_by = $2,
            moderation_note = $3, moderated_at = NOW(), updated_at = NOW()
-           WHERE id = $1 AND status = 'published'\`,
+           WHERE id = $1 AND status = 'published'`,
           [selected.rows[0].reviewId, access.userId,
             typeof body.note === "string" ? body.note.trim() || "Hidden after review report" : "Hidden after review report"],
         );
       }
     } else {
       await client.query(
-        \`UPDATE verified_product_review_appeals SET status = $2, reviewed_by = $3,
-         reviewed_at = NOW(), resolution_note = $4 WHERE id = $1\`,
+        `UPDATE verified_product_review_appeals SET status = $2, reviewed_by = $3,
+         reviewed_at = NOW(), resolution_note = $4 WHERE id = $1`,
         [id, decision, access.userId, typeof body.note === "string" ? body.note.trim() || null : null],
       );
       if (decision === "overturned") {
         await client.query(
-          \`UPDATE verified_product_reviews SET status = 'pending_moderation', moderated_by = $2,
+          `UPDATE verified_product_reviews SET status = 'pending_moderation', moderated_by = $2,
            moderation_note = $3, moderated_at = NOW(), updated_at = NOW()
-           WHERE id = $1 AND status IN ('rejected','hidden')\`,
+           WHERE id = $1 AND status IN ('rejected','hidden')`,
           [selected.rows[0].reviewId, access.userId, "Appeal accepted; returned to moderation"],
         );
       }
     }
     await client.query(
-      \`INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, metadata)
-       VALUES ($1, $2, $3, $4, $5::jsonb)\`,
-      [access.userId, \`review.\${kind}.\${decision}\`, \`verified_product_review_\${kind}\`, id,
+      `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, metadata)
+       VALUES ($1, $2, $3, $4, $5::jsonb)`,
+      [access.userId, `review.${kind}.${decision}`, `verified_product_review_${kind}`, id,
         JSON.stringify({ reviewId: selected.rows[0].reviewId, note: typeof body.note === "string" ? body.note.trim() : null })],
     );
     await client.query("COMMIT");
