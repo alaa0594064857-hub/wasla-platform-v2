@@ -230,7 +230,7 @@ export async function handleMemberStoreOrdersRequest(
            WHERE sm.store_id = $5 AND sm.status = 'active'
              AND p.permission_key = ANY($4::text[])
          ) recipients
-         WHERE recipients.user_id <> $7`
+         WHERE recipients.user_id <> $7`,
         [slug, created.rows[0].id, store.rows[0].accountId,
           ["store.order.read", "store.order.manage", "account.order.read", "account.order.manage"],
           store.rows[0].id, orderNumber, session.user.id],
