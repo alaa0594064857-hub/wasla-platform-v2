@@ -626,3 +626,10 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Final-head API quality run `42486225387` and CI run `42486225384` completed successfully, including API tests, database migrations/constraints, TypeScript checks, API build, and Web production build.
 - Buyers can cancel only their own requests while they remain pending merchant review. Merchant accept/reject remains permission-controlled; the existing audit trail records status changes.
 - This does not trigger payment, stock changes, supplier purchase, or shipment. The change is merged to GitHub but is not live on Render until deployment succeeds; Render build minutes remain exhausted.
+
+
+## Member-store request workflow updates — 2026-11-08
+
+- PR #18 merged as `c0d7acf79c08615c1ac40c096e9b485890a09217`: a buyer may cancel only their own request while it is pending merchant review. CI and API quality checks passed, including the web production build.
+- PR #19 merged as `4541b1ee9a96ee4fba0c70d49fed89438d065121`: merchants may add an optional bilingual note (up to 2,000 characters) when accepting or rejecting a pending member-store request. The note uses the existing validated API field and audit event. Both API quality and CI workflows passed, including the web production build.
+- These remain request-management features only. No payment, stock reservation/decrement, supplier purchasing, shipping, or refunds are triggered. The commits are on GitHub `main`; Render deployment is still pending because pipeline build minutes are exhausted.
