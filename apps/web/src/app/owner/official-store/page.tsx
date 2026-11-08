@@ -39,7 +39,7 @@ export default function OwnerOfficialStorePage() {
     back: "العودة لمركز المالك", denied: "هذه الصفحة مخصصة لمالك المنصة.",
     add: "إضافة منتج رسمي", edit: "تعديل المنتج", save: "حفظ المنتج", saving: "جارٍ الحفظ...",
     titleAr: "اسم المنتج بالعربية", titleEn: "اسم المنتج بالإنجليزية",
-    descAr: "الوصف بالعربية", descEn: "الوصف بالإنجليزية", price: "السعر", currency: "العملة",
+    descAr: "الوصف بالعربية", descEn: "الوصف بالإنجليزية", price: "قيمة مرجعية فقط (ليست سعر العميل)", currency: "العملة",
     supplier: "اسم المورد", availability: "حالة التوفر", fulfillment: "ملاحظات التوريد والتسليم",
     image: "رابط صورة المنتج (HTTPS)", status: "حالة النشر", draft: "مسودة", published: "منشور", archived: "مؤرشف",
     available: "متوفر", limited: "توفر محدود", unavailable: "غير متوفر", needs_confirmation: "يتطلب تأكيد المورد",
@@ -53,7 +53,7 @@ export default function OwnerOfficialStorePage() {
     back: "Back to owner center", denied: "This page is restricted to the platform owner.",
     add: "Add official product", edit: "Edit product", save: "Save product", saving: "Saving...",
     titleAr: "Arabic product title", titleEn: "English product title",
-    descAr: "Arabic description", descEn: "English description", price: "Price", currency: "Currency",
+    descAr: "Arabic description", descEn: "English description", price: "Reference value only (not customer price)", currency: "Currency",
     supplier: "Supplier name", availability: "Availability", fulfillment: "Fulfillment notes",
     image: "Product image URL (HTTPS)", status: "Publication status", draft: "Draft", published: "Published", archived: "Archived",
     available: "Available", limited: "Limited availability", unavailable: "Unavailable", needs_confirmation: "Supplier confirmation required",
@@ -183,7 +183,7 @@ export default function OwnerOfficialStorePage() {
           {product.image_url ? <img src={product.image_url} alt="" style={styles.image} /> : <div style={styles.imagePlaceholder}>W</div>}
           <div style={styles.productBody}>
             <strong>{ar ? product.title_ar : product.title_en}</strong>
-            <small>{product.price} {product.currency} · {t.productStatus}: {statusLabel(product.status)} · {availabilityLabel(product.availability_status)}</small>
+            <small>{ar ? "مرجع:" : "Reference:"} {product.price} {product.currency} · {t.productStatus}: {statusLabel(product.status)} · {availabilityLabel(product.availability_status)}</small>
             {product.supplier_name && <small>{t.supplier}: {product.supplier_name}</small>}
             <small>{ar ? "الأسعار المعتمدة حسب الدولة:" : "Approved destination prices:"} {(product.activePriceApprovals || []).length
               ? product.activePriceApprovals!.map(item => `${item.destinationCountry}: ${item.price} ${item.currency}`).join(" · ")
