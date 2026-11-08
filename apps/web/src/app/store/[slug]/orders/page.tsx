@@ -37,6 +37,14 @@ type StoreOrder = {
   disputeStatus: string | null;
   merchantResponse: string | null;
   moderatorNote: string | null;
+  returnRequestId: string | null;
+  returnResolution: string | null;
+  returnReason: string | null;
+  returnDetails: string | null;
+  returnStatus: string | null;
+  returnMerchantResponse: string | null;
+  returnCreatedAt: string | null;
+  returnItemReceivedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -61,6 +69,11 @@ export default function MemberStoreOrdersPage() {
   const [orderEvents, setOrderEvents] = useState<Record<string, OrderEvent[]>>({});
   const [eventLoading, setEventLoading] = useState("");
   const [eventErrors, setEventErrors] = useState<Record<string, string>>({});
+  const [returnDetails, setReturnDetails] = useState<Record<string, string>>({});
+  const [returnReasons, setReturnReasons] = useState<Record<string, string>>({});
+  const [returnResolutions, setReturnResolutions] = useState<Record<string, string>>({});
+  const [returnResponses, setReturnResponses] = useState<Record<string, string>>({});
+  const [returnBusy, setReturnBusy] = useState("");
 
   const copy = ar ? {
     title: "طلبات المتجر",
@@ -197,6 +210,37 @@ export default function MemberStoreOrdersPage() {
     finally { setDisputeBusy(""); }
   }
 
+  async function returnAction(order: StoreOrder, action: "submit" | "respond" | "received" | "close") {
+    if (returnBusy) return;
+    const details = action === "submit" ? returnDetails[order.id] ?? "" : returnResponses[order.id] ?? "";
+    if (action === "submit" && details.trim().length < 10) {
+      setError(ar ? "اشرح سبب الإرجاع أو الاستبدال بعشرة أحرف على الأقل." : "Explain the return or exchange reason in at least 10 characters.");
+      return;
+    }
+    if (action === "respond" && details.trim().length < 5) {
+      setError(ar ? "أضف ردًا لا يقل عن 5 أحرف." : "Enter a response of at least 5 characters.");
+      return;
+    }
+    setReturnBusy(order.id); setError(""); setMessage("");
+    try {
+      const suffix = action === "respond" ? "/response" : action === "received" ? "/received" : action === "close" ? "/close" : "";
+      const response = await fetch(`/api/stores/${encodeURIComponent(slug)}/orders/${order.id}/return${suffix}`, {
+        method: action === "received" || action === "close" ? "PATCH" : "POST",
+        credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(action === "submit"
+          ? { resolution: returnResolutions[order.id] ?? "return", reason: returnReasons[order.id] ?? "other", details }
+          : action === "respond" ? { decision: "approved", note: details } : {})
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || "return");
+      setMessage(ar ? "تم تحديث طلب الإرجاع أو الاستبدال." : "Return or exchange request updated.");
+      setReturnDetails(v => ({ ...v, [order.id]: "" }));
+      setReturnResponses(v => ({ ...v, [order.id]: "" }));
+      await load();
+    } catch (e) { setError(e instanceof Error ? e.message : (ar ? "تعذر تحديث الطلب." : "Could not update request.")); }
+    finally { setReturnBusy(""); }
+  }
+
   function statusText(status: string) {
     if (status === "accepted") return copy.accepted;
     if (status === "shipped") return copy.shipped;
@@ -280,6 +324,39 @@ export default function MemberStoreOrdersPage() {
             </div>}
             {order.buyerNote && <p className="mt-3 text-sm text-slate-600"><strong>{copy.note}:</strong> {order.buyerNote}</p>}
             {order.merchantNote && <p className="mt-2 text-sm text-slate-600"><strong>{copy.merchantNote}:</strong> {order.merchantNote}</p>}
+            {order.returnRequestId && <section className="mt-4 rounded-xl border border-[#d8bd79] bg-[#fff9eb] p-4 text-sm">
+              <strong>{ar ? "طلب الإرجاع أو الاستبدال" : "Return or exchange request"} · {order.returnStatus}</strong>
+              <p className="mt-2">{ar ? "النوع:" : "Requested resolution:"} {order.returnResolution === "replacement" ? (ar ? "استبدال" : "Replacement") : (ar ? "إرجاع" : "Return")}</p>
+              <p className="mt-1">{order.returnDetails}</p>
+              {order.returnMerchantResponse && <p className="mt-2 border-t border-[#e8d9b6] pt-2">{ar ? "رد المتجر:" : "Store response:"} {order.returnMerchantResponse}</p>}
+              {isMerchantView && order.returnStatus === "submitted" && <div className="mt-3 space-y-2">
+                <textarea rows={2} maxLength={2000} value={returnResponses[order.id] ?? ""} onChange={e => setReturnResponses(v => ({ ...v, [order.id]: e.target.value }))} placeholder={ar ? "اكتب رد المتجر..." : "Write the store response..."} className="w-full rounded-lg border border-[#e5dfd1] bg-white p-3" />
+                <div className="flex flex-wrap gap-2">
+                  <button disabled={returnBusy === order.id || (returnResponses[order.id] ?? "").trim().length < 5} onClick={() => void returnAction(order, "respond")} className="rounded-lg bg-[#14233b] px-4 py-2 font-semibold text-white disabled:opacity-50">{ar ? "الموافقة على الطلب" : "Approve request"}</button>
+                  <button disabled={returnBusy === order.id} onClick={async () => {
+                    if (returnBusy) return;
+                    setReturnBusy(order.id); setError("");
+                    try { const response = await fetch(`/api/stores/${encodeURIComponent(slug)}/orders/${order.id}/return/response`, { method:"POST", credentials:"include", headers:{"Content-Type":"application/json"}, body:JSON.stringify({decision:"rejected",note:(returnResponses[order.id] ?? "").trim() || (ar ? "يرجى التواصل مع المتجر لمزيد من التفاصيل." : "Please contact the store for more details.")}) }); const data=await response.json(); if(!response.ok||!data.success) throw new Error(data.error||"return"); await load(); }
+                    catch(e){setError(e instanceof Error?e.message:(ar?"تعذر تحديث الطلب.":"Could not update request."));} finally{setReturnBusy("");}
+                  }} className="rounded-lg border border-red-700 px-4 py-2 font-semibold text-red-700 disabled:opacity-50">{ar ? "رفض الطلب" : "Reject request"}</button>
+                </div>
+              </div>}
+              {isMerchantView && order.returnStatus === "approved" && order.returnResolution === "return" && <button disabled={returnBusy === order.id} onClick={() => void returnAction(order, "received")} className="mt-3 rounded-lg border border-[#14233b] px-4 py-2 font-semibold">{ar ? "تأكيد استلام المنتج المُعاد" : "Confirm returned item received"}</button>}
+              {isMerchantView && order.returnStatus === "approved" && order.returnResolution === "replacement" && <p className="mt-3 text-xs text-slate-600">{ar ? "تمت الموافقة على الاستبدال. تنفيذ شحن البديل سيُفعّل بعد استكمال تكامل الشحن." : "Replacement approved. Dispatching the replacement will be enabled after shipping integration."}</p>}
+              {!isMerchantView && ["rejected","item_received"].includes(order.returnStatus ?? "") && <button disabled={returnBusy === order.id} onClick={() => void returnAction(order, "close")} className="mt-3 rounded-lg border border-[#14233b] px-4 py-2 font-semibold">{ar ? "إغلاق طلب الإرجاع" : "Close return request"}</button>}
+            </section>}
+            {!isMerchantView && !order.returnRequestId && ["shipped","completed"].includes(order.status) && <section className="mt-4 space-y-2 rounded-xl border border-[#e5dfd1] p-4">
+              <strong>{ar ? "طلب إرجاع أو استبدال" : "Request a return or exchange"}</strong>
+              <select value={returnResolutions[order.id] ?? "return"} onChange={e => setReturnResolutions(v => ({...v,[order.id]:e.target.value}))} className="w-full rounded-lg border border-[#e5dfd1] bg-white p-3">
+                <option value="return">{ar ? "إرجاع المنتج" : "Return item"}</option><option value="replacement">{ar ? "استبدال المنتج" : "Replace item"}</option>
+              </select>
+              <select value={returnReasons[order.id] ?? "other"} onChange={e => setReturnReasons(v => ({...v,[order.id]:e.target.value}))} className="w-full rounded-lg border border-[#e5dfd1] bg-white p-3">
+                <option value="damaged_or_defective">{ar ? "تالف أو معيب" : "Damaged or defective"}</option><option value="not_as_described">{ar ? "لا يطابق الوصف" : "Not as described"}</option><option value="wrong_item">{ar ? "منتج خاطئ" : "Wrong item"}</option><option value="missing_items">{ar ? "نواقص" : "Missing items"}</option><option value="other">{ar ? "سبب آخر" : "Other"}</option>
+              </select>
+              <textarea rows={3} maxLength={3000} value={returnDetails[order.id] ?? ""} onChange={e => setReturnDetails(v => ({...v,[order.id]:e.target.value}))} placeholder={ar ? "اشرح سبب طلبك..." : "Explain your request..."} className="w-full rounded-lg border border-[#e5dfd1] p-3" />
+              <button disabled={returnBusy === order.id || (returnDetails[order.id] ?? "").trim().length < 10} onClick={() => void returnAction(order,"submit")} className="rounded-lg bg-[#14233b] px-4 py-2 font-semibold text-white disabled:opacity-50">{ar ? "إرسال طلب الإرجاع أو الاستبدال" : "Submit return or exchange request"}</button>
+              <p className="text-xs text-slate-500">{ar ? "يخضع الطلب لسياسة المتجر والقوانين المعمول بها. هذا الإجراء لا ينفذ استردادًا ماليًا." : "Subject to the store policy and applicable law. This action does not issue a refund."}</p>
+            </section>}
             {order.disputeId && <section className="mt-4 rounded-xl border border-[#d8bd79] bg-[#fff9eb] p-4 text-sm">
               <strong>{ar ? "شكوى الطلب" : "Order complaint"} · {order.disputeStatus}</strong>
               {order.disputeDetails && <p className="mt-2 whitespace-pre-wrap">{order.disputeDetails}</p>}

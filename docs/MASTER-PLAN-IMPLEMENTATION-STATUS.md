@@ -937,3 +937,40 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Validates carrier identifier, provider event ID, tracking reference and canonical ISO timestamp; derives an idempotency key from carrier + provider event ID.
 - Even a normalized `delivered` event remains `verificationState: pending` and `proofOfDeliveryVerified: false`. Normalization is not authentication, shipment/order matching, delivery evidence or permission to complete an order.
 - The carrier-specific adapter must verify native signatures, match the exact tracking reference to the correct shipment, enforce replay/idempotency, preserve provider raw-event audit evidence safely, and apply a monotonic transition policy before any state change. No carrier is selected or connected.
+
+
+## Member-store returns and exchanges — 2026-11-09
+
+- Draft PR #49 adds an authenticated buyer request for return or replacement on shipped/completed member-store orders, with reason/details validation and one active request per order.
+- Authorized store/account order managers can approve or reject with a recorded response; after approval, the merchant can record receipt of the returned item; the buyer can close a rejected request or a received return.
+- The order page exposes the current request and bilingual buyer/merchant controls. Return requests are audited and stored separately from delivery complaints.
+- This is an operational workflow only. It does not initiate refunds, payment reversals, chargebacks, replacement shipment creation, carrier actions or supplier purchases. A replacement fulfillment step, explicit merchant return policy/window configuration, legal policy review and payment-provider integration remain outstanding.
+- No arbitrary statutory return window is hardcoded; eligibility is limited to shipped/completed orders pending approved store policy and applicable-law review.
+- PR #49 is stacked on PR #48 and remains a draft. Final-head CI and database execution tests are pending; do not treat this workflow as production-verified until checks pass.
+- No PR was merged, no Render deployment was triggered, and no paid service or payment setting was changed.
+
+
+### Verification update — 2026-11-09
+- API quality workflow run 42528463643 passed on commit 9431cc90b1b115a2ac508ab8e11cd2a9d0b71ec8: API tests and API build succeeded.
+- After that passing run, two additional safeguards were committed: return requests validate buyer input before opening a DB connection, and an approved replacement cannot be incorrectly marked as a returned item. The buyer-facing order UI now clearly marks replacement fulfillment as not yet enabled.
+- These two latest safeguards are on the current PR head and still require a fresh CI run; do not treat the latest head as fully verified yet.
+
+## Member-store return and exchange verification — 2026-11-09
+
+- Draft PR #49 remains stacked on PR #48 and is not merged or deployed.
+- The latest PR #49 head is `af25d068b36ee1bedd617a8b193186ef6b73de21`.
+- GitHub Actions API quality run `42528600356` completed successfully on that head: API tests and API build passed.
+- This API-only workflow does not replace the full repository CI. The full CI workflow also runs shared-package tests/typecheck, database migrations, authorization seeding, database integration tests, API typecheck, and the web production build. Those checks still need to run against the final PR head.
+- Remaining product work: merchant-configurable return policies with buyer-visible disclosure (no universal statutory deadline hardcoded), replacement shipment fulfillment, payment-provider refund/reversal integration, and end-to-end/database verification.
+- No merge, Render deployment, paid build-minute purchase, domain purchase, or production database mutation was performed.
+
+## PR chain readiness review — 2026-11-09 (updated)
+
+- PR #46 head `dd0e07d803b5e75c3514d20a15d49570b2657119`: mergeable; API quality workflow run `42531203484` passed, and full WASLA CI run `42531203469` passed. The full run covered shared-package tests/typecheck, API tests/typecheck/build, database migrations and constraints, authorization seeding, and the production web build.
+- PR #47 head `9a2954ce1da934a44067b00ef4b08b3602f76c91`: mergeable; API quality workflow run `42521913421` passed. Full repository CI has not been confirmed on this exact head.
+- PR #48 head `21b7e1fc8b2601f727464d95b9129e04ad348f6a`: mergeable; API quality workflow run `42527326786` passed. Full repository CI has not been confirmed on this exact head.
+- PR #49 head `32bd5b5b1bcdbf58fe2e53b9a2765b0e1e0e8237`: mergeable; API quality workflow run `42529654440` passed. Full repository CI has not been confirmed on this exact head.
+- PR #46's earlier merge conflict was resolved in its branch by restoring the bilingual link from review-dispute administration to order-dispute administration. The corrected head is the one covered by both successful workflows above.
+- All four PRs remain open drafts and unmerged. Their dependency order is #46 → #47 → #48 → #49. Mergeability is not merge authorization; no PR was merged.
+- Remaining verification before release: run full repository CI against the final stacked chain, perform hosted buyer/merchant/admin end-to-end tests, review carrier-specific integration and delivery proof, implement merchant-configurable return policies and replacement fulfillment, and complete payment/refund and legal/provider prerequisites.
+- No Render deployment, paid build-minute purchase, domain purchase, or production database mutation was performed.
