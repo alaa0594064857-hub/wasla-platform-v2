@@ -110,6 +110,10 @@ export async function handleVerifiedProductReviewsRequest(
        INNER JOIN store_products p ON p.id = $1 AND p.store_id = o.store_id
        WHERE o.buyer_user_id = $2 AND o.status = 'completed'
          AND o.items @> jsonb_build_array(jsonb_build_object('productId', p.id::text))
+         AND NOT EXISTS (
+           SELECT 1 FROM member_store_order_disputes d
+           WHERE d.order_id = o.id AND d.status IN ('open', 'merchant_responded')
+         )
        ORDER BY o.delivery_confirmed_at DESC NULLS LAST, o.updated_at DESC
        LIMIT 1
        FOR UPDATE OF o`,

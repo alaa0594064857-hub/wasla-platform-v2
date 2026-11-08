@@ -601,6 +601,145 @@ export async function ensureMemberStoreOrderTables(): Promise<void> {
       ON member_store_orders (buyer_user_id, created_at DESC)
     `);
     await client.query(`
+      CREATE TABLE IF NOT EXISTS member_store_order_events (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        order_id uuid NOT NULL REFERENCES member_store_orders(id) ON DELETE RESTRICT,
+        store_id uuid NOT NULL REFERENCES stores(id) ON DELETE RESTRICT,
+        actor_type varchar(20) NOT NULL CHECK (actor_type IN ('buyer','merchant','owner','support','carrier','system')),
+        actor_user_id uuid REFERENCES users(id) ON DELETE RESTRICT,
+        event_type varchar(48) NOT NULL,
+        from_status varchar(32),
+        to_status varchar(32),
+        source varchar(32) NOT NULL CHECK (source IN ('application','merchant_manual','owner_manual','carrier_api','carrier_webhook','legacy_migration')),
+        reason_code varchar(64),
+        idempotency_key varchar(160) NOT NULL,
+        metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+        created_at timestamptz NOT NULL DEFAULT NOW(),
+        CONSTRAINT member_store_order_events_idempotency_unique UNIQUE (order_id, idempotency_key)
+      )
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS member_store_order_events_order_created_idx
+      ON member_store_order_events (order_id, created_at ASC, id ASC)
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS member_store_shipments (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        order_id uuid NOT NULL REFERENCES member_store_orders(id) ON DELETE RESTRICT,
+        store_id uuid NOT NULL REFERENCES stores(id) ON DELETE RESTRICT,
+        fulfiller_user_id uuid REFERENCES users(id) ON DELETE RESTRICT,
+        carrier_name varchar(100) NOT NULL,
+        tracking_reference varchar(120) NOT NULL,
+        tracking_url text NOT NULL,
+        status varchar(24) NOT NULL DEFAULT 'shipped' CHECK (status IN ('shipped','in_transit','delivery_attempted','delivered','exception','unknown')),
+        source varchar(24) NOT NULL CHECK (source IN ('merchant_manual','owner_manual','carrier_api','carrier_webhook')),
+        shipped_at timestamptz NOT NULL DEFAULT NOW(),
+        last_carrier_event_at timestamptz,
+        idempotency_key varchar(160) NOT NULL,
+        created_at timestamptz NOT NULL DEFAULT NOW(),
+        updated_at timestamptz NOT NULL DEFAULT NOW(),
+        CONSTRAINT member_store_shipments_idempotency_unique UNIQUE (order_id,idempotency_key)
+      )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS member_store_shipments_order_created_idx ON member_store_shipments (order_id,created_at ASC)`);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS member_store_delivery_evidence (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        order_id uuid NOT NULL REFERENCES member_store_orders(id) ON DELETE RESTRICT,
+        shipment_id uuid REFERENCES member_store_shipments(id) ON DELETE RESTRICT,
+        source varchar(32) NOT NULL CHECK (source IN ('customer_confirmation','merchant_self_report','carrier_api','carrier_webhook','staff_review')),
+        source_event_id varchar(255),
+        actor_user_id uuid REFERENCES users(id) ON DELETE RESTRICT,
+        observed_at timestamptz NOT NULL DEFAULT NOW(),
+        received_at timestamptz NOT NULL DEFAULT NOW(),
+        evidence_reference varchar(500),
+        evidence_hash varchar(128),
+        verification_state varchar(20) NOT NULL CHECK (verification_state IN ('informational','pending','verified','rejected')),
+        decision_reason varchar(500),
+        idempotency_key varchar(160) NOT NULL,
+        created_at timestamptz NOT NULL DEFAULT NOW(),
+        CONSTRAINT member_store_delivery_evidence_idempotency_unique UNIQUE (order_id,idempotency_key)
+      )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS member_store_delivery_evidence_order_created_idx ON member_store_delivery_evidence (order_id,created_at ASC)`);
+    await client.query(`
+      CREATE OR REPLACE FUNCTION wasla_reject_order_event_mutation()
+      RETURNS trigger LANGUAGE plpgsql AS $wasla$
+      BEGIN
+        RAISE EXCEPTION 'member_store_order_events is append-only';
+      END;
+      $wasla$
+    `);
+    await client.query(`DROP TRIGGER IF EXISTS member_store_order_events_immutable ON member_store_order_events`);
+    await client.query(`
+      CREATE OR REPLACE FUNCTION wasla_reject_delivery_evidence_mutation()
+      RETURNS trigger LANGUAGE plpgsql AS $wasla$
+      BEGIN
+        RAISE EXCEPTION 'member_store_delivery_evidence is append-only';
+      END;
+      $wasla$
+    `);
+    await client.query(`DROP TRIGGER IF EXISTS member_store_delivery_evidence_immutable ON member_store_delivery_evidence`);
+    await client.query(`
+      CREATE TRIGGER member_store_delivery_evidence_immutable
+      BEFORE UPDATE OR DELETE ON member_store_delivery_evidence
+      FOR EACH ROW EXECUTE FUNCTION wasla_reject_delivery_evidence_mutation()
+    `);
+    await client.query(`
+      CREATE TRIGGER member_store_order_events_immutable
+      BEFORE UPDATE OR DELETE ON member_store_order_events
+      FOR EACH ROW EXECUTE FUNCTION wasla_reject_order_event_mutation()
+    `);
+    await client.query(`
+      CREATE OR REPLACE FUNCTION wasla_capture_member_store_order_event()
+      RETURNS trigger LANGUAGE plpgsql AS $wasla$
+      DECLARE actor_id uuid; actor_kind varchar(20); event_key varchar(160);
+      BEGIN
+        actor_id := NULLIF(current_setting('wasla.actor_user_id', true), '')::uuid;
+        actor_kind := CASE WHEN actor_id IS NULL THEN 'system' WHEN actor_id = NEW.buyer_user_id THEN 'buyer' ELSE 'merchant' END;
+        IF TG_OP = 'INSERT' THEN
+          INSERT INTO member_store_order_events (order_id,store_id,actor_type,actor_user_id,event_type,from_status,to_status,source,idempotency_key,metadata)
+          VALUES (NEW.id,NEW.store_id,actor_kind,actor_id,'order.created',NULL,NEW.status,'application','db:created',jsonb_build_object('orderNumber',NEW.order_number));
+          RETURN NEW;
+        END IF;
+        IF OLD.status IS DISTINCT FROM NEW.status THEN
+          event_key := 'db:status:' || txid_current()::text;
+          INSERT INTO member_store_order_events (order_id,store_id,actor_type,actor_user_id,event_type,from_status,to_status,source,idempotency_key,metadata)
+          VALUES (NEW.id,NEW.store_id,actor_kind,actor_id,'order.status_changed',OLD.status,NEW.status,'application',event_key,'{}'::jsonb);
+        END IF;
+        IF OLD.tracking_number IS DISTINCT FROM NEW.tracking_number OR OLD.tracking_url IS DISTINCT FROM NEW.tracking_url OR OLD.carrier_name IS DISTINCT FROM NEW.carrier_name THEN
+          event_key := 'db:shipment:' || txid_current()::text;
+          INSERT INTO member_store_shipments (order_id,store_id,fulfiller_user_id,carrier_name,tracking_reference,tracking_url,status,source,idempotency_key)
+          VALUES (NEW.id,NEW.store_id,actor_id,NEW.carrier_name,NEW.tracking_number,NEW.tracking_url,'shipped','merchant_manual',event_key)
+          ON CONFLICT (order_id,idempotency_key) DO NOTHING;
+          INSERT INTO member_store_delivery_evidence (order_id,shipment_id,source,actor_user_id,verification_state,decision_reason,idempotency_key)
+          SELECT NEW.id,sh.id,'merchant_self_report',actor_id,'informational','Merchant-entered shipment details are not independent proof of delivery',event_key
+          FROM member_store_shipments sh WHERE sh.order_id=NEW.id AND sh.idempotency_key=event_key
+          ON CONFLICT (order_id,idempotency_key) DO NOTHING;
+          INSERT INTO member_store_order_events (order_id,store_id,actor_type,actor_user_id,event_type,from_status,to_status,source,reason_code,idempotency_key,metadata)
+          VALUES (NEW.id,NEW.store_id,actor_kind,actor_id,'shipment.manual_recorded',OLD.status,NEW.status,'merchant_manual','merchant_shipment_entry',event_key,jsonb_build_object('carrierName',NEW.carrier_name));
+        END IF;
+        IF TG_OP = 'UPDATE' AND OLD.status IS DISTINCT FROM NEW.status AND NEW.status = 'completed' AND actor_kind = 'buyer' THEN
+          INSERT INTO member_store_delivery_evidence (order_id,source,actor_user_id,observed_at,received_at,verification_state,decision_reason,idempotency_key)
+          VALUES (NEW.id,'customer_confirmation',actor_id,NOW(),NOW(),'verified','Authenticated buyer explicitly confirmed receipt','customer-confirmation:' || txid_current()::text)
+          ON CONFLICT (order_id,idempotency_key) DO NOTHING;
+        END IF;
+        RETURN NEW;
+      END;
+      $wasla$
+    `);
+    await client.query(`DROP TRIGGER IF EXISTS member_store_orders_capture_events ON member_store_orders`);
+    await client.query(`
+      CREATE TRIGGER member_store_orders_capture_events
+      AFTER INSERT OR UPDATE ON member_store_orders
+      FOR EACH ROW EXECUTE FUNCTION wasla_capture_member_store_order_event()
+    `);
+    await client.query(`
+      INSERT INTO member_store_order_events (order_id,store_id,actor_type,event_type,from_status,to_status,source,reason_code,idempotency_key,metadata,created_at)
+      SELECT o.id,o.store_id,'system','order.legacy_snapshot',NULL,o.status,'legacy_migration','pre_event_ledger','legacy:snapshot','{}'::jsonb,o.created_at
+      FROM member_store_orders o ON CONFLICT (order_id,idempotency_key) DO NOTHING
+    `);
+    await client.query(`
       CREATE TABLE IF NOT EXISTS member_store_order_disputes (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         order_id uuid NOT NULL REFERENCES member_store_orders(id) ON DELETE RESTRICT,

@@ -15,6 +15,7 @@ type OrderLine = {
   quantity: number;
   availabilityAtRequest: number;
 };
+type OrderEvent = { id: string; eventType: string; fromStatus: string | null; toStatus: string | null; source: string; reasonCode: string | null; createdAt: string };
 type StoreOrder = {
   id: string;
   orderNumber: string;
@@ -57,6 +58,9 @@ export default function MemberStoreOrdersPage() {
   const [complaintReasons, setComplaintReasons] = useState<Record<string, string>>({});
   const [merchantResponses, setMerchantResponses] = useState<Record<string, string>>({});
   const [disputeBusy, setDisputeBusy] = useState("");
+  const [orderEvents, setOrderEvents] = useState<Record<string, OrderEvent[]>>({});
+  const [eventLoading, setEventLoading] = useState("");
+  const [eventErrors, setEventErrors] = useState<Record<string, string>>({});
 
   const copy = ar ? {
     title: "طلبات المتجر",
@@ -85,7 +89,9 @@ export default function MemberStoreOrdersPage() {
     submitted: "تاريخ الإرسال",
     noPayment: "هذا طلب وليس عملية شراء مدفوعة. قبول البائع لا يخصم المخزون ولا يحصّل الأموال ولا ينشئ شحنة.",
     updated: "تم تحديث حالة الطلب.",
-    updateError: "تعذر تحديث الطلب. قد لا تملك صلاحية إدارة هذا المتجر."
+    updateError: "تعذر تحديث الطلب. قد لا تملك صلاحية إدارة هذا المتجر.",
+    history: "سجل حركة الطلب", historyLoading: "جارٍ تحميل السجل...", historyError: "تعذر تحميل سجل الطلب.", historyEmpty: "لا توجد أحداث مسجلة.",
+    createdEvent: "إنشاء الطلب", statusChange: "تغيير الحالة", eventSource: "المصدر", from: "من", to: "إلى"
   } : {
     title: "Store orders",
     intro: "Customer requests and merchant decisions. WASLA does not collect payment or reserve stock.",
@@ -113,7 +119,9 @@ export default function MemberStoreOrdersPage() {
     submitted: "Submitted",
     noPayment: "This is an order request, not a paid purchase. Merchant acceptance does not decrement stock, collect funds or create a shipment.",
     updated: "Order status updated.",
-    updateError: "Could not update the request. You may not have permission to manage this store."
+    updateError: "Could not update the request. You may not have permission to manage this store.",
+    history: "Order activity history", historyLoading: "Loading history...", historyError: "Could not load order history.", historyEmpty: "No events recorded.",
+    createdEvent: "Order created", statusChange: "Status changed", eventSource: "Source", from: "From", to: "To"
   };
 
   const load = useCallback(async () => {
@@ -131,6 +139,20 @@ export default function MemberStoreOrdersPage() {
   }, [slug, copy.loadError]);
 
   useEffect(() => { void load(); }, [load]);
+
+  async function loadOrderEvents(orderId: string) {
+    if (eventLoading === orderId) return;
+    setEventLoading(orderId);
+    setEventErrors(current => ({ ...current, [orderId]: "" }));
+    try {
+      const response = await fetch(`/api/stores/${encodeURIComponent(slug)}/orders/${orderId}`, { credentials: "include", cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok || !data.success || !Array.isArray(data.events)) throw new Error("events");
+      setOrderEvents(current => ({ ...current, [orderId]: data.events }));
+    } catch {
+      setEventErrors(current => ({ ...current, [orderId]: copy.historyError }));
+    } finally { setEventLoading(""); }
+  }
 
   async function updateOrder(orderId: string, status: "accepted" | "rejected" | "cancelled" | "shipped" | "completed", note = "", shipping?: { carrierName: string; trackingNumber: string; trackingUrl: string }) {
     if (busy) return;
@@ -184,6 +206,30 @@ export default function MemberStoreOrdersPage() {
     return copy.pending;
   }
 
+  function eventTypeText(eventType: string) {
+    const labels: Record<string, [string, string]> = {
+      "order.created": ["إنشاء الطلب", "Order created"],
+      "order.legacy_snapshot": ["سجل سابق قبل تفعيل سجل الأحداث", "Legacy snapshot"],
+      "order.status_changed": ["تغيير حالة الطلب", "Order status changed"],
+      "shipment.manual_recorded": ["تسجيل بيانات الشحن يدويًا", "Shipment details recorded manually"],
+    };
+    const label = labels[eventType];
+    return label ? label[ar ? 0 : 1] : eventType;
+  }
+
+  function sourceText(source: string) {
+    const labels: Record<string, [string, string]> = {
+      application: ["النظام", "Application"],
+      merchant_manual: ["إدخال يدوي من المتجر", "Merchant-entered"],
+      owner_manual: ["إدخال يدوي من الإدارة", "Owner-entered"],
+      carrier_api: ["واجهة شركة الشحن", "Carrier API"],
+      carrier_webhook: ["إشعار شركة الشحن", "Carrier webhook"],
+      legacy_migration: ["ترحيل سجل سابق", "Legacy migration"],
+    };
+    const label = labels[source];
+    return label ? label[ar ? 0 : 1] : source;
+  }
+
   return <main className="min-h-screen bg-[#f7f4ec] text-[#14233b]" dir={ar ? "rtl" : "ltr"} lang={locale}>
     <header className="border-b border-[#e5dfd1] bg-white px-5 py-4">
       <Link href="/" className="font-bold tracking-wide">WASLA <span className="text-[#b89545]">وصلة</span></Link>
@@ -204,6 +250,20 @@ export default function MemberStoreOrdersPage() {
               <div><p className="text-xs font-semibold text-[#9b792f]">{copy.request}: {order.orderNumber}</p><p className="mt-2 text-sm text-slate-500">{copy.submitted}: {new Date(order.createdAt).toLocaleString(locale)}</p></div>
               <span className="rounded-full bg-[#f4efe3] px-3 py-2 text-xs font-semibold">{statusText(order.status)}</span>
             </div>
+            <section className="mt-4 rounded-xl border border-[#e5dfd1] p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <strong className="text-sm">{copy.history}</strong>
+                <button type="button" onClick={() => void loadOrderEvents(order.id)} disabled={eventLoading === order.id} className="rounded-lg border border-[#14233b] px-3 py-2 text-xs font-semibold disabled:opacity-50">{eventLoading === order.id ? copy.historyLoading : copy.history}</button>
+              </div>
+              {eventErrors[order.id] && <p role="alert" className="mt-2 text-sm text-red-700">{eventErrors[order.id]}</p>}
+              {orderEvents[order.id] && (orderEvents[order.id].length === 0
+                ? <p className="mt-3 text-sm text-slate-500">{copy.historyEmpty}</p>
+                : <ol className="mt-3 space-y-3 border-s-2 border-[#e5dfd1] ps-4">{orderEvents[order.id].map(event => <li key={event.id} className="text-sm">
+                    <p className="font-semibold">{eventTypeText(event.eventType)}</p>
+                    {(event.fromStatus || event.toStatus) && <p className="mt-1 text-slate-600">{event.fromStatus ? `${copy.from}: ${statusText(event.fromStatus)}` : ""}{event.fromStatus && event.toStatus ? " · " : ""}{event.toStatus ? `${copy.to}: ${statusText(event.toStatus)}` : ""}</p>}
+                    <p className="mt-1 text-xs text-slate-500">{copy.eventSource}: {sourceText(event.source)} · {new Date(event.createdAt).toLocaleString(locale)}</p>
+                  </li>)}</ol>)}
+            </section>
             <div className="mt-4 divide-y divide-[#eee8dc]">
               {order.items.map(line => <div key={line.productId} className="flex flex-wrap justify-between gap-2 py-3">
                 <div><p className="font-semibold">{line.title}</p><p className="text-xs text-slate-500">{line.sku || "—"} · {line.quantity} × {line.unitPrice} {line.currency}</p>{isMerchantView && <p className="mt-1 text-xs text-slate-500">{copy.stockAtRequest}: {line.availabilityAtRequest}</p>}</div>
