@@ -122,6 +122,7 @@ export async function handleOfficialStoreProductsRequest(
 
     const access = await authorizePlatformPermission(request, response, "platform.manage");
     if (!access) return;
+    await ensurePriceApprovalTables();
 
     if (request.method === "GET" && !productId) {
       const result = await db.query(
@@ -156,6 +157,20 @@ export async function handleOfficialStoreProductsRequest(
     if (request.method === "PATCH" && keys.length === 0) {
       reply(response, 400, { success: false, error: "No supported product fields supplied" }); return;
     }
+    if (input.status === "published") {
+      if (request.method === "POST") {
+        reply(response, 409, { success: false, error: "Create the product as a draft, approve a destination-specific price, then publish it." }); return;
+      }
+      const approval = await db.query(
+        `SELECT 1 FROM official_store_price_approvals
+         WHERE product_id = $1 AND status = 'active' LIMIT 1`,
+        [productId],
+      );
+      if (!approval.rows.length) {
+        reply(response, 409, { success: false, error: "A current owner-approved destination price is required before publishing this product." }); return;
+      }
+    }
+
     const client = await db.connect();
     try {
       await client.query("BEGIN");
