@@ -185,6 +185,9 @@ export async function handleOfficialStoreFinalQuoteDecision(
     if (!order.final_quote_expires_at || new Date(order.final_quote_expires_at).getTime() <= Date.now()) {
       await client.query(
         `UPDATE official_store_orders SET final_quote_status = 'expired', updated_at = NOW() WHERE id = $1`, [orderId]);
+      await client.query(
+        `INSERT INTO official_store_order_events (order_id, actor_type, event_type, details)
+         VALUES ($1, 'system', 'final_quote_expired', '{"paymentEnabled":false}'::jsonb)`, [orderId]);
       await client.query("COMMIT");
       reply(response, 409, { success: false, error: "This quote has expired; ask WASLA for a refreshed quote" }); return;
     }
