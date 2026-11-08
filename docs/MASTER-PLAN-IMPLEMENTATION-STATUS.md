@@ -697,3 +697,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Network/server failures now produce a bilingual error message, and the loading state is reliably reset.
 - Final-head CI run `42490860737` and API-quality run `42490860638` both completed successfully. CI covered shared-package tests/type checks, API tests, migrations, authorization seeding, database constraints, TypeScript checks, API build and Web production build.
 - UI-only change; no API, database, permissions, or order/payment behavior changed. The change is merged to GitHub but is not live on Render because pipeline build minutes remain exhausted.
+
+
+## Notification navigation failure handling — 2026-11-08
+
+- PR #27 merged to `main` as `1b9f0db49216d1d64e4ca4801eb2f50030ba5ea3`.
+- Opening an unread notification now navigates only after the mark-as-read request succeeds. If the request fails, the user stays in the notification center and sees the existing bilingual error feedback.
+- Already-read notifications continue to open directly.
+- Final-head CI run `42491533006` and API-quality run `42491532984` both completed successfully. CI covered shared-package tests/type checks, API tests, migrations, authorization seeding, database constraints, TypeScript checks, API build and Web production build.
+- UI-only change; no API, database, permissions, or order/payment behavior changed. The change is merged to GitHub but is not live on Render because pipeline build minutes remain exhausted.
