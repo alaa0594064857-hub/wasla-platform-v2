@@ -806,3 +806,13 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Added API regression coverage for missing approval and an approved Alibaba-labelled merchant-feed import. All API tests and builds passed in API Quality run `42499828765` and WASLA CI run `42499828796`; CI also passed migrations, database constraints, TypeScript checks and Web production build.
 - This does not implement a live Alibaba API connector or marketplace crawler. No scraping, publication or purchasing was added; imported candidates remain unverified and owner-review-only.
 - Merged to GitHub `main`; hosted deployment verification remains pending because Render build minutes are exhausted.
+
+
+## Approved external marketplace import UI — 2026-11-08
+
+- PR #39 merged to `main` as `d3d0047a199292a892832e85da5f14375598aec8`.
+- The bilingual owner source-offers workspace now separates ingestion format (Shopify or normalized merchant feed) from the original marketplace/platform name.
+- Approved data-source registry entries are selectable across providers; choosing one sets the original platform and registry ID together. External marketplaces require an approved registry record, enforced server-side by PR #38.
+- The UI explicitly states that this workflow imports owner-provided authorized data; it does not crawl or connect to Alibaba or any marketplace automatically.
+- WASLA CI run `42500024539` and API Quality run `42500024516` passed, including API tests, TypeScript checks, API build and Web production build.
+- PRs #38 and #39 are merged to GitHub `main`; Render deployment and owner-side live import verification remain pending. No marketplace credentials, scraping, purchases or public product publication were added.
