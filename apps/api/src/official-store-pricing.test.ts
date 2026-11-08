@@ -1,5 +1,9 @@
-import { describe, expect, it } from "vitest";
-import { isFreshFxRateTimestamp } from "./official-store-pricing.mjs";
+import { beforeEach, describe, expect, it } from "vitest";
+
+let isFreshFxRateTimestamp: (value: unknown, now?: number) => value is string;
+beforeEach(async () => {
+  ({ isFreshFxRateTimestamp } = await import("./official-store-pricing.mjs"));
+});
 
 describe("official store FX freshness", () => {
   const now = Date.parse("2026-11-08T12:00:00.000Z");
