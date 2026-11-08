@@ -28,7 +28,7 @@ async function readBody(request: IncomingMessage): Promise<unknown> {
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
-function merchantPermission(permission: "read" | "manage") {
+function merchantPermission(userPlaceholder: number, permissionsPlaceholder: number) {
   const keys = permission === "read"
     ? ["store.order.read", "account.order.read"]
     : ["store.order.manage", "account.order.manage"];
@@ -38,15 +38,15 @@ function merchantPermission(permission: "read" | "manage") {
       INNER JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
       INNER JOIN role_permissions rp ON rp.role_id = r.id AND rp.scope_type = r.scope_type
       INNER JOIN permissions p ON p.id = rp.permission_id AND p.scope_type = rp.scope_type
-      WHERE am.account_id = s.account_id AND am.user_id = $2
-        AND am.status = 'active' AND p.permission_key = ANY($3::text[])
+      WHERE am.account_id = s.account_id AND am.user_id = ${userPlaceholder}
+        AND am.status = 'active' AND p.permission_key = ANY(${permissionsPlaceholder}::text[])
     )
     OR EXISTS (
       SELECT 1 FROM store_members sm
       INNER JOIN roles r ON r.id = sm.role_id AND r.scope_type = sm.role_scope
       INNER JOIN role_permissions rp ON rp.role_id = r.id AND rp.scope_type = r.scope_type
       INNER JOIN permissions p ON p.id = rp.permission_id AND p.scope_type = rp.scope_type
-      WHERE sm.store_id = s.id AND sm.user_id = $2
+      WHERE sm.store_id = s.id AND sm.user_id = ${userPlaceholder}
         AND sm.status = 'active' AND p.permission_key = ANY($3::text[])
     )
   )`;
@@ -118,7 +118,7 @@ export async function handleMemberStoreOrdersRequest(
        FROM member_store_orders o
        INNER JOIN stores s ON s.id = o.store_id
        WHERE s.slug = $1 AND s.status = 'active'
-         AND (o.buyer_user_id = $2 OR ${merchantPermission("read")})
+         AND (o.buyer_user_id = $2 OR ${merchantPermission(2, 3)})
        ORDER BY o.created_at DESC LIMIT 100`,
       [slug, session.user.id, ["store.order.read", "account.order.read"]],
     );
@@ -288,7 +288,7 @@ export async function handleMemberStoreOrdersRequest(
      SET status = $1, merchant_note = COALESCE(NULLIF($2, ''), merchant_note), updated_at = NOW()
      FROM stores s
      WHERE o.id = $3 AND o.store_id = s.id AND s.slug = $4 AND s.status = 'active'
-       AND ${merchantPermission("manage")}
+       AND ${merchantPermission(5, 6)}
        AND (
          ($1 = 'accepted' AND o.status = 'pending_merchant_review') OR
          ($1 = 'rejected' AND o.status = 'pending_merchant_review') OR
