@@ -40,7 +40,15 @@ export default function ShopManagementPage(){
   }catch(cause){setError(cause instanceof Error?cause.message:t.error);}
   finally{setAddingProduct(false);}
  }
- async function updateStock(product:Product){\n  const raw=stockDrafts[product.id]??String(product.stockQuantity); const quantity=Number(raw);\n  if(!Number.isSafeInteger(quantity)||quantity<0){setError(locale==="ar"?"أدخل كمية صحيحة غير سالبة.":"Enter a valid non-negative whole number.");return;}\n  setSavingStockId(product.id);setError("");setMessage("");\n  try{const result=await api<{product:Product}>(slug,{method:"PATCH",body:JSON.stringify({stockQuantity:quantity})},`/products/${product.id}`);setProducts(current=>current.map(item=>item.id===product.id?result.product:item));setStockDrafts(current=>({...current,[product.id]:String(result.product.stockQuantity)}));setMessage(t.stockSaved);}\n  catch(cause){setError(cause instanceof Error?cause.message:t.error);}\n  finally{setSavingStockId("");}\n }\n async function updateProductStatus(product:Product,status:Product["status"]){
+ async function updateStock(product:Product){
+  const raw=stockDrafts[product.id]??String(product.stockQuantity); const quantity=Number(raw);
+  if(!Number.isSafeInteger(quantity)||quantity<0){setError(locale==="ar"?"أدخل كمية صحيحة غير سالبة.":"Enter a valid non-negative whole number.");return;}
+  setSavingStockId(product.id);setError("");setMessage("");
+  try{const result=await api<{product:Product}>(slug,{method:"PATCH",body:JSON.stringify({stockQuantity:quantity})},`/products/${product.id}`);setProducts(current=>current.map(item=>item.id===product.id?result.product:item));setStockDrafts(current=>({...current,[product.id]:String(result.product.stockQuantity)}));setMessage(t.stockSaved);}
+  catch(cause){setError(cause instanceof Error?cause.message:t.error);}
+  finally{setSavingStockId("");}
+ }
+ async function updateProductStatus(product:Product,status:Product["status"]){
   try{
    const result=await api<{product:Product}>(slug,{method:"PATCH",body:JSON.stringify({status})},`/products/${product.id}`);
    setProducts(current=>current.map(item=>item.id===product.id?result.product:item));
@@ -93,7 +101,8 @@ export default function ShopManagementPage(){
        <div className="shops-product-media">{product.imageUrl?<img src={product.imageUrl} alt={product.title} loading="lazy"/>:<span>W</span>}</div>
        <div className="shops-product-content"><div className="shops-product-top"><h3>{product.title}</h3><strong>{product.price} {product.currency}</strong></div>
         {product.description&&<p>{product.description}</p>}
-        <small>{t.stock}: {product.stockQuantity}{product.sku? ` · ${product.sku}`:""}</small>\n        <div className="mt-3 flex flex-wrap items-end gap-2"><label className="min-w-0 flex-1 text-xs font-semibold">{t.stock}<input aria-label={`${t.stock}: ${product.title}`} type="number" min="0" step="1" value={stockDrafts[product.id]??String(product.stockQuantity)} onChange={event=>setStockDrafts(current=>({...current,[product.id]:event.target.value}))} className="mt-1 w-full rounded-lg border border-[#ded7c8] bg-white px-3 py-2 text-sm text-[#14233b]"/></label><button type="button" onClick={()=>void updateStock(product)} disabled={savingStockId===product.id||Number(stockDrafts[product.id]??product.stockQuantity)===product.stockQuantity}>{savingStockId===product.id?t.updatingStock:t.updateStock}</button></div>
+        <small>{t.stock}: {product.stockQuantity}{product.sku? ` · ${product.sku}`:""}</small>
+        <div className="mt-3 flex flex-wrap items-end gap-2"><label className="min-w-0 flex-1 text-xs font-semibold">{t.stock}<input aria-label={`${t.stock}: ${product.title}`} type="number" min="0" step="1" value={stockDrafts[product.id]??String(product.stockQuantity)} onChange={event=>setStockDrafts(current=>({...current,[product.id]:event.target.value}))} className="mt-1 w-full rounded-lg border border-[#ded7c8] bg-white px-3 py-2 text-sm text-[#14233b]"/></label><button type="button" onClick={()=>void updateStock(product)} disabled={savingStockId===product.id||Number(stockDrafts[product.id]??product.stockQuantity)===product.stockQuantity}>{savingStockId===product.id?t.updatingStock:t.updateStock}</button></div>
         <div className="shops-product-actions"><span className={`shops-product-status status-${product.status}`}>{product.status==="active"?t.published:product.status==="archived"?t.archived:t.draft}</span>
          <button type="button" onClick={()=>void updateProductStatus(product,product.status==="active"?"draft":"active")}>{product.status==="active"?t.draft:t.published}</button>
         </div>
