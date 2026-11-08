@@ -161,10 +161,14 @@ describe("member store order requests", () => {
     const baseUrl = await startServer();
     const response = await fetch(`${baseUrl}/api/stores/demo/orders/22222222-2222-4222-8222-222222222222`);
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({
+    const body = await response.json();
+    expect(body).toMatchObject({
       success: true,
       events: [{ eventType: "order.status_changed", fromStatus: "accepted", toStatus: "shipped" }],
     });
+    expect(body.events[0]).not.toHaveProperty("metadata");
+    expect(body.events[0]).not.toHaveProperty("trackingNumber");
+    expect(body.events[0]).not.toHaveProperty("trackingUrl");
     expect(String(query.mock.calls[0][0])).toContain("o.buyer_user_id = $3");
     expect(String(query.mock.calls[1][0])).toContain("FROM member_store_order_events");
     expect(String(query.mock.calls[1][0])).not.toContain("tracking_number");
