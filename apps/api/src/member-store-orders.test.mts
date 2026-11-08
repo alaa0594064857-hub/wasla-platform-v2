@@ -259,8 +259,8 @@ describe("member store order requests", () => {
     expect(response.status).toBe(404);
     const sql = String(clientQuery.mock.calls[1][0]);
     expect(sql).toContain("o.status = 'accepted'");
-    expect(sql).toContain("store.order.manage");
-    expect(sql).toContain("account.order.manage");
+    expect(sql).toContain("p.permission_key = ANY(6::text[])");
+    expect(clientQuery.mock.calls[1][1][5]).toEqual(["store.order.manage", "account.order.manage"]);
     expect(clientQuery).toHaveBeenCalledWith("ROLLBACK");
     expect(clientQuery).not.toHaveBeenCalledWith(expect.stringContaining("INSERT INTO notifications"), expect.anything());
   });
