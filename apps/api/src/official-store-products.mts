@@ -1,7 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { getDatabasePool } from "./database.js";
 import { authorizePlatformPermission } from "./platform-security.mjs";
-import { ensurePriceApprovalTables } from "./official-store-pricing.mjs";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const fields = [
@@ -83,7 +82,6 @@ export async function handleOfficialStoreProductsRequest(
     const db = getDatabasePool();
     if (publicCatalogue) {
       if (request.method !== "GET") { reply(response, 405, { success: false, error: "Method not allowed" }); return; }
-      await ensurePriceApprovalTables();
       const destinationCountry = new URL(request.url || "/", "http://localhost").searchParams.get("country")?.toUpperCase();
       if (!destinationCountry || !/^[A-Z]{2}$/.test(destinationCountry)) {
         reply(response, 400, { success: false, error: "Choose a valid two-letter delivery country to view destination-specific prices" }); return;
@@ -122,7 +120,6 @@ export async function handleOfficialStoreProductsRequest(
 
     const access = await authorizePlatformPermission(request, response, "platform.manage");
     if (!access) return;
-    await ensurePriceApprovalTables();
 
     if (request.method === "GET" && !productId) {
       const result = await db.query(
