@@ -46,7 +46,7 @@ export function isOfferEligibleForDestination(
       offer.direct_to_customer_confirmed !== true || offer.supplier_identity_verified !== true ||
       offer.specifications_verified !== true || Number(offer.minimum_order_quantity) !== 1 ||
       offer.shipping_cost === null || offer.shipping_cost === undefined ||
-      !validCurrency(offer.shipping_currency) || !offer.quote_valid_until ||
+      typeof offer.shipping_currency !== "string" || !validCurrency(offer.shipping_currency) || !offer.quote_valid_until ||
       !(new Date(String(offer.quote_valid_until)).getTime() > Date.now()) || !offer.last_verified_at) return false;
   const countries = Array.isArray(offer.ships_to_countries) ? offer.ships_to_countries : [];
   return countries.includes(destinationCountry);
