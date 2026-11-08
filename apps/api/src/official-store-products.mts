@@ -171,7 +171,14 @@ export async function handleOfficialStoreProductsRequest(
       if (request.method === "POST") {
         reply(response, 409, { success: false, error: "Create the product as a draft, approve a destination-specific price, then publish it." }); return;
       }
-      const approval = await db.query(
+      const currentProduct = await db.query(
+        `SELECT status FROM official_store_products WHERE id = $1 LIMIT 1`,
+        [productId],
+      );
+      if (!currentProduct.rows[0]) {
+        reply(response, 404, { success: false, error: "Official store product not found" }); return;
+      }
+      const approval = currentProduct.rows[0].status === "published" ? { rows: [{}] } : await db.query(
         `SELECT 1
          FROM official_store_price_approvals approval
          INNER JOIN official_store_product_source_offers offer
