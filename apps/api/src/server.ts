@@ -655,6 +655,19 @@ async function handleRequest(
     return;
   }
 
+  const productReviewsMatch = requestUrl.pathname.match(/^\\/api\\/products\\/([0-9a-f-]{36})\\/reviews$/i);
+  if (productReviewsMatch) {
+    try {
+      const { handleVerifiedProductReviewsRequest } = await import("./verified-product-reviews.mjs");
+      await handleVerifiedProductReviewsRequest(request, response, productReviewsMatch[1]);
+    } catch (error) {
+      console.error("WASLA verified product reviews route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Product reviews service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const storeProductDetailMatch = requestUrl.pathname.match(
     /^\/api\/stores\/([^/]+)\/products\/([0-9a-f-]{36})$/,
   );
@@ -820,7 +833,7 @@ if (process.env.NODE_ENV !== "test") {
   const server = createWaslaServer();
 
   void import("./database.js")
-    .then(async ({ ensureRegistrationTypeColumn, ensureAccountOwnerRole, ensureStoreOwnerRole, ensurePlatformOwnerRole, ensurePersonalThemesTable, ensureStoreProductsTable, ensureNetworkTables, ensureProductInquiryTables, ensureSubscriptionBillingTables, ensureMemberStoreOrderTables }) => {
+    .then(async ({ ensureRegistrationTypeColumn, ensureAccountOwnerRole, ensureStoreOwnerRole, ensurePlatformOwnerRole, ensurePersonalThemesTable, ensureStoreProductsTable, ensureNetworkTables, ensureProductInquiryTables, ensureVerifiedReviewTables, ensureSubscriptionBillingTables, ensureMemberStoreOrderTables }) => {
       const { ensureAuthorizationRoles } = await import("./authorization-bootstrap.mjs");
       await ensureRegistrationTypeColumn();
       await ensureAuthorizationRoles();
@@ -834,6 +847,7 @@ if (process.env.NODE_ENV !== "test") {
       const { ensureMessagesTables } = await import("./messages.mjs");
       await ensureMessagesTables();
       await ensureProductInquiryTables();
+      await ensureVerifiedReviewTables();
       await ensureSubscriptionBillingTables();
       const { ensureNotificationsTable } = await import("./notifications.mjs");
       await ensureNotificationsTable();
