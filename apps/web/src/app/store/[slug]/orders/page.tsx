@@ -89,7 +89,6 @@ export default function MemberStoreOrdersPage() {
     submitted: "تاريخ الإرسال",
     noPayment: "هذا طلب وليس عملية شراء مدفوعة. قبول البائع لا يخصم المخزون ولا يحصّل الأموال ولا ينشئ شحنة.",
     updated: "تم تحديث حالة الطلب.",
-    updated: "تم تحديث حالة الطلب.",
     updateError: "تعذر تحديث الطلب. قد لا تملك صلاحية إدارة هذا المتجر.",
     history: "سجل حركة الطلب", historyLoading: "جارٍ تحميل السجل...", historyError: "تعذر تحميل سجل الطلب.", historyEmpty: "لا توجد أحداث مسجلة.",
     createdEvent: "إنشاء الطلب", statusChange: "تغيير الحالة", eventSource: "المصدر", from: "من", to: "إلى"
