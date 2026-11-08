@@ -34,7 +34,7 @@ afterEach(async () => {
 
 describe("official store customer final quote decisions", () => {
   it("does not disclose another customer's quote", async () => {
-    const client = { query: vi.fn().mockResolvedValueOnce({ rows: [{ id: orderId, customer_user_id: "someone-else", final_quote_status: "pending_customer" }] }), release: vi.fn() };
+    const client = { query: vi.fn().mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [{ id: orderId, customer_user_id: "someone-else", final_quote_status: "pending_customer" }] }), release: vi.fn() };
     mocks.connect.mockResolvedValueOnce(client);
     const base = await startServer();
     const response = await fetch(base, {
@@ -43,12 +43,12 @@ describe("official store customer final quote decisions", () => {
     });
     expect(response.status).toBe(404);
     expect(client.query.mock.calls.at(-1)?.[0]).toBe("ROLLBACK");
-    expect(client.query).toHaveBeenCalledTimes(2);
+    expect(client.query).toHaveBeenCalledTimes(3);
     expect(client.release).toHaveBeenCalledOnce();
   });
 
   it("rejects a second decision after a quote has already been decided", async () => {
-    const client = { query: vi.fn().mockResolvedValueOnce({ rows: [{ id: orderId, customer_user_id: customerId, final_quote_status: "accepted", final_quote_expires_at: new Date(Date.now() + 3600000) }] }), release: vi.fn() };
+    const client = { query: vi.fn().mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [{ id: orderId, customer_user_id: customerId, final_quote_status: "accepted", final_quote_expires_at: new Date(Date.now() + 3600000) }] }), release: vi.fn() };
     mocks.connect.mockResolvedValueOnce(client);
     const base = await startServer();
     const response = await fetch(base, {
@@ -65,6 +65,7 @@ describe("official store customer final quote decisions", () => {
 
   it("expires an overdue quote and records a system event without payment", async () => {
     const client = { query: vi.fn()
+      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ id: orderId, customer_user_id: customerId, final_quote_status: "pending_customer", final_quote_expires_at: new Date(Date.now() - 1000) }] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] })
@@ -76,15 +77,16 @@ describe("official store customer final quote decisions", () => {
       body: JSON.stringify({ decision: "accepted" }),
     });
     expect(response.status).toBe(409);
-    expect(String(client.query.mock.calls[1][0])).toContain("final_quote_status = 'expired'");
-    expect(String(client.query.mock.calls[2][0])).toContain("'final_quote_expired'");
-    expect(String(client.query.mock.calls[2][0])).toContain('"paymentEnabled":false');
+    expect(String(client.query.mock.calls[2][0])).toContain("final_quote_status = 'expired'");
+    expect(String(client.query.mock.calls[3][0])).toContain("'final_quote_expired'");
+    expect(String(client.query.mock.calls[3][0])).toContain('"paymentEnabled":false');
     expect(client.query.mock.calls.at(-1)?.[0]).toBe("COMMIT");
     expect(client.release).toHaveBeenCalledOnce();
   });
 
   it("accepts only the authenticated customer's pending unexpired quote and never enables payment", async () => {
     const client = { query: vi.fn()
+      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ id: orderId, customer_user_id: customerId, final_quote_status: "pending_customer", final_quote_expires_at: new Date(Date.now() + 3600000) }] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] })
@@ -97,10 +99,10 @@ describe("official store customer final quote decisions", () => {
     });
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ success: true, decision: "accepted", paymentEnabled: false });
-    expect(String(client.query.mock.calls[1][0])).toContain("SET final_quote_status = $2");
-    expect(client.query.mock.calls[1][1]).toEqual([orderId, "accepted"]);
-    expect(String(client.query.mock.calls[2][0])).toContain("'final_quote_accepted'");
-    expect(JSON.parse(client.query.mock.calls[2][1][3])).toMatchObject({
+    expect(String(client.query.mock.calls[2][0])).toContain("SET final_quote_status = $2");
+    expect(client.query.mock.calls[2][1]).toEqual([orderId, "accepted"]);
+    expect(String(client.query.mock.calls[3][0])).toContain("'final_quote_accepted'");
+    expect(JSON.parse(client.query.mock.calls[3][1][3])).toMatchObject({
       decision: "accepted", paymentEnabled: false, supplierPurchasePlaced: false,
     });
     expect(client.query.mock.calls.at(-1)?.[0]).toBe("COMMIT");
