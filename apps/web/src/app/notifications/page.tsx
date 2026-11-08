@@ -80,8 +80,8 @@ export default function NotificationsPage() {
 
   const title = ar ? "مركز الإشعارات" : "Notification center";
   const intro = ar
-    ? "تنبيهات دعوات الحسابات والرسائل واستفسارات المنتجات وطلبات المتجر الرسمي في مكان واحد."
-    : "Account invitations, messages, product inquiries and store order updates in one place.";
+    ? "تنبيهات دعوات الحسابات والرسائل واستفسارات المنتجات وطلبات المتاجر الأعضاء والمتجر الرسمي في مكان واحد."
+    : "Account invitations, messages, product inquiries, and member-store and official-store order updates in one place.";
 
   return <main className="wasla-notifications-page" dir={ar ? "rtl" : "ltr"} lang={locale}>
     <WorkspaceHeader section="account" />
