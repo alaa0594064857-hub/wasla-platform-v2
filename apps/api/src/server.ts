@@ -176,6 +176,32 @@ async function handleRequest(
     return;
   }
 
+  const officialStoreFinalQuoteOwnerMatch = requestUrl.pathname.match(/^\/api\/platform\/official-store\/orders\/([0-9a-f-]{36})\/final-quote$/i);
+  if (officialStoreFinalQuoteOwnerMatch) {
+    try {
+      const { handleOfficialStoreFinalQuoteIssue } = await import("./official-store-final-quotes.mjs");
+      await handleOfficialStoreFinalQuoteIssue(request, response, officialStoreFinalQuoteOwnerMatch[1]);
+    } catch (error) {
+      console.error("WASLA final quote issue error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Final quote service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const officialStoreFinalQuoteCustomerMatch = requestUrl.pathname.match(/^\/api\/official-store\/orders\/([0-9a-f-]{36})\/quote-decision$/i);
+  if (officialStoreFinalQuoteCustomerMatch) {
+    try {
+      const { handleOfficialStoreFinalQuoteDecision } = await import("./official-store-final-quotes.mjs");
+      await handleOfficialStoreFinalQuoteDecision(request, response, officialStoreFinalQuoteCustomerMatch[1]);
+    } catch (error) {
+      console.error("WASLA final quote decision error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Quote decision service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const officialStoreSupplierReviewMatch = requestUrl.pathname.match(/^\/api\/platform\/official-store\/orders\/([0-9a-f-]{36})\/supplier-confirmation$/i);
   if (officialStoreSupplierReviewMatch) {
     try {
