@@ -172,7 +172,7 @@ export default function OfficialStoreOrdersPage() {
           </div>
         </section>}
         {reviewMessage && !reviewError && <p role="status" style={{ color: "#26734a" }}>{reviewMessage}</p>}
-        {selected.order.supplierConfirmationStatus === "accepted" && selected.order.orderStatus === "supplier_confirmed" && selected.order.finalQuoteStatus !== "accepted" && <section style={{ marginTop: 22, padding: 16, borderRadius: 12, background: "#eef5f1", border: "1px solid #bfd6c8" }}>
+        {selected.order.supplierConfirmationStatus === "accepted" && selected.order.orderStatus === "supplier_confirmed" && selected.order.finalQuoteStatus !== "accepted" && (selected.order.finalQuoteStatus !== "pending_customer" || (selected.order.finalQuoteExpiresAt && new Date(String(selected.order.finalQuoteExpiresAt)).getTime() <= Date.now())) && <section style={{ marginTop: 22, padding: 16, borderRadius: 12, background: "#eef5f1", border: "1px solid #bfd6c8" }}>
           <h3 style={{ color: navy, marginTop: 0 }}>{ar ? "إصدار عرض السعر النهائي للعميل" : "Issue final customer quote"}</h3>
           <p style={{ color: muted, lineHeight: 1.8 }}>{ar ? "أدخل السعر النهائي الشامل ومدة التوصيل. قبول العميل لا يشغّل الدفع أو الشراء." : "Enter the final customer price and delivery estimate. Customer acceptance does not enable payment or purchasing."}</p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 10 }}>
