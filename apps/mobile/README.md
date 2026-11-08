@@ -9,7 +9,7 @@ This workspace is the first native mobile foundation for WASLA, built with Expo 
 - iOS bundle identifier: `com.wasla.app`.
 - Bilingual Arabic/English starter screen with an RTL/LTR language switch.
 - Typed API client for the public, destination-specific official-store catalogue.
-- Better Auth Expo integration on the API and mobile client, using Expo SecureStore for native session/cookie persistence.
+- Better Auth Expo integration v1.7.18 on the API and mobile client, using Expo SecureStore for native session/cookie persistence. Version 1.7.18 is above the published 1.7.16 security fix threshold.
 - Initial email/password sign-in and session-aware sign-out UI; account registration and verification UX are still pending.
 - Configurable API base URL via `EXPO_PUBLIC_WASLA_API_URL`; the current hosted API URL is the default.
 
@@ -28,7 +28,7 @@ Use a compatible Expo Go version or an EAS development build for device testing.
 
 ## API and authentication boundary
 
-The mobile API client calls the public official-store catalogue using the selected two-letter destination country. The API now enables the Better Auth Expo server plugin, trusts the `wasla://` deep-link origin, and the mobile client uses the matching Expo client plugin with `expo-secure-store`. The starter UI supports email/password sign-in and session-aware sign-out. This integration is source-code only until dependencies are installed and the API is successfully deployed; verify sign-in, email-verification behavior, session persistence and sign-out on physical devices before production use.
+The mobile API client calls the public official-store catalogue using the selected two-letter destination country. The API now enables Better Auth Expo v1.7.18, trusts the `wasla://` deep-link origin, and the mobile client uses the matching v1.7.18 Expo client plugin with `expo-secure-store`. The Better Auth core and Drizzle adapter were aligned to v1.7.18 as well. The starter UI supports email/password sign-in and session-aware sign-out. This integration is source-code only until dependencies are installed and the API is successfully deployed; verify sign-in, email-verification behavior, session persistence and sign-out on physical devices before production use.
 
 ## Required before calling this a usable app
 
