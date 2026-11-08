@@ -56,6 +56,7 @@ describe("WASLA owner AI order context", () => {
     mocks.query
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ enabled: true, pausedReason: null, updatedAt: new Date().toISOString() }] })
       .mockResolvedValueOnce({ rows: [{ title_en: "Sample catalogue item" }] })
       .mockResolvedValueOnce({ rows: [{ supplier_name: "Private supplier" }] })
@@ -86,7 +87,7 @@ describe("WASLA owner AI order context", () => {
       success: true, advisoryOnly: true,
       dataContext: { mode: "read_only", officialStoreOrdersIncluded: 1 },
     });
-    const sql = String(mocks.query.mock.calls[5][0]);
+    const sql = String(mocks.query.mock.calls[6][0]);
     expect(sql).toContain("FROM official_store_orders");
     expect(sql).toContain("LIMIT 50");
     expect(sql).not.toContain("customer_user_id");
