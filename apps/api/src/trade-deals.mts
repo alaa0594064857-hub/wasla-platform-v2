@@ -238,7 +238,13 @@ export async function handleTradeDealResponse(req: IncomingMessage, res: ServerR
         [deal.supplier_account_id, userId],
       );
       const isSupplierParty = supplierMember.rows.length > 0;
-      if (deal.proposed_by_user_id === userId || (userId === deal.buyer_user_id && !isSupplierParty)) {
+      const isBuyerParty = userId === deal.buyer_user_id;
+      if (isBuyerParty && isSupplierParty) {
+        await client.query("ROLLBACK");
+        reply(res, 403, { success: false, error: "A user cannot act as both parties in one deal" });
+        return;
+      }
+      if (deal.proposed_by_user_id === userId || isBuyerParty) {
         await client.query("ROLLBACK");
         reply(res, 403, { success: false, error: "The proposing party cannot approve its own deal" });
         return;
