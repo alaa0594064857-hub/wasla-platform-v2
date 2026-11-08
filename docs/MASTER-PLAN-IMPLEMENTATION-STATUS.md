@@ -643,3 +643,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - The notification inbox copy is bilingual. Regression tests cover manager recipient filtering and buyer notification on merchant decision.
 - Final-head GitHub API-quality run `42487629390` and CI run `42487629273` both passed. CI includes API tests, migrations/constraints, authorization seeding, TypeScript checks, API build and Web production build.
 - This is in-app notification persistence only; no external push/email delivery is claimed. Render deployment remains blocked by exhausted pipeline build minutes, so PR #20 is merged to GitHub but not live on the hosted services. Hosted two-account verification remains outstanding.
+
+
+## Member-store cancellation notifications — 2026-11-08
+
+- PR #21 merged to `main` as `d0ef51c2af51fe925b46b9e9cab24288073defb3`.
+- When a buyer cancels their own member-store request while it is pending merchant review, active store/account members with order-read or order-manage permissions receive an in-app notification in the same transaction as the status change and audit event. The buyer is excluded.
+- Existing buyer cancellation eligibility and merchant permissions are unchanged. No payment, stock reservation/decrement, supplier purchase or shipping is triggered.
+- Final-head GitHub CI run `42488876434` and API-quality run `42488876367` both passed, including API tests, migrations/constraints, TypeScript checks, API build and Web production build.
+- Notifications remain in-app only; external push/email delivery and hosted two-account verification remain outstanding. Render deployment is still blocked by exhausted pipeline build minutes, so this change is merged to GitHub but not live on hosted services.
