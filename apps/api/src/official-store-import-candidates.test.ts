@@ -79,6 +79,45 @@ describe("official-store supplier candidate import safeguards", () => {
     expect(data.note).toMatch(/No images were copied or published/);
   });
 
+  it("requires an approved registry record when an external marketplace is named", async () => {
+    const baseUrl = await startServer();
+    const response = await fetch(baseUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...validPayload, sourcePlatform: "Alibaba.com" }),
+    });
+
+    expect(response.status).toBe(403);
+    expect(mocks.connect).not.toHaveBeenCalled();
+  });
+
+  it("keeps the external marketplace separate from the merchant-feed ingestion adapter", async () => {
+    mocks.clientQuery.mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ id: "source-1" }] })
+      .mockResolvedValueOnce({ rows: [{ id: "candidate-alibaba", proposed_title: "Sample product" }] })
+      .mockResolvedValueOnce({ rows: [] });
+    const baseUrl = await startServer();
+    const response = await fetch(baseUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...validPayload,
+        sourcePlatform: "Alibaba.com",
+        dataSourceId: "11111111-1111-4111-8111-111111111111",
+      }),
+    });
+    const data = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(data).toMatchObject({ success: true, provider: "merchant_feed", sourcePlatform: "Alibaba.com" });
+    expect(mocks.clientQuery.mock.calls[1][1]).toEqual([
+      "11111111-1111-4111-8111-111111111111", "platform-owner", "Alibaba.com",
+    ]);
+    expect(mocks.clientQuery.mock.calls[2][1][10]).toBe("Alibaba.com");
+    expect(mocks.clientQuery.mock.calls[0][0]).toBe("BEGIN");
+    expect(mocks.clientQuery.mock.calls[3][0]).toBe("COMMIT");
+  });
+
   it("rejects a registered data source unless it is approved for this owner and provider", async () => {
     mocks.clientQuery.mockResolvedValueOnce({ rows: [] });
     const baseUrl = await startServer();
