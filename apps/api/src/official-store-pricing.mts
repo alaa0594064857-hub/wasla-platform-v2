@@ -36,6 +36,22 @@ export function isValidDestinationCountry(value: unknown): value is string {
   return typeof value === "string" && /^[A-Z]{2}$/.test(value);
 }
 
+export function isOfferEligibleForDestination(
+  offer: Record<string, unknown> | null | undefined,
+  productId: string,
+  destinationCountry: string,
+): boolean {
+  if (!offer || offer.product_id !== productId || offer.offer_status !== "approved" ||
+      !["available", "limited"].includes(String(offer.availability_status)) ||
+      offer.direct_to_customer_confirmed !== true || offer.supplier_identity_verified !== true ||
+      offer.specifications_verified !== true || Number(offer.minimum_order_quantity) !== 1 ||
+      offer.shipping_cost === null || offer.shipping_cost === undefined ||
+      !validCurrency(offer.shipping_currency) || !offer.quote_valid_until ||
+      !(new Date(String(offer.quote_valid_until)).getTime() > Date.now()) || !offer.last_verified_at) return false;
+  const countries = Array.isArray(offer.ships_to_countries) ? offer.ships_to_countries : [];
+  return countries.includes(destinationCountry);
+}
+
 function validAmount(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1_000_000_000;
 }
@@ -117,8 +133,7 @@ export async function handleOfficialStorePricingRequest(request: IncomingMessage
       supplier_price: string; supplier_currency: string; shipping_cost: string;
       shipping_currency: string; ships_to_countries: unknown;
     } | undefined;
-    const countries = Array.isArray(offer?.ships_to_countries) ? offer.ships_to_countries : [];
-    if (!offer || !countries.includes(body.destinationCountry)) {
+    if (!isOfferEligibleForDestination(offer as unknown as Record<string, unknown> | undefined, body.productId, body.destinationCountry)) {
       reply(response, 409, { success: false, error: "The selected offer is not approved, verified, current, or available for this destination country" }); return;
     }
     // Supplier and shipping costs always come from the verified offer, never from editable client fields.
