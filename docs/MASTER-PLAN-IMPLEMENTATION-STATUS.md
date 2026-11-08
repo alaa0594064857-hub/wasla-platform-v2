@@ -786,3 +786,13 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Added seven API regression tests for invoice authentication, numbered draft creation and commission amount snapshots, payer-party validation, invoice-to-ledger synchronization on issue, HTTPS payment evidence, blocking payment of drafts, and restoring a commission entry to recorded when an issued invoice is cancelled.
 - Added the new test file to the API test script. Final-head API Quality run `42499320588` and WASLA CI run `42499320600` both completed successfully. CI covered API tests, migrations, authorization seeding, database constraints, TypeScript checks, API build and Web production build.
 - Test coverage only; no runtime or database behavior changed. Still pending: dedicated commission-ledger API tests, authenticated owner end-to-end testing and hosted verification after Render deployment is available.
+
+
+## Commission ledger and invoice state-boundary hardening — 2026-11-08
+
+- PR #37 merged to `main` as `0d1dacd6eb3f2eb3c91c18dbdfd3016bfa411050`.
+- The commission ledger can no longer mark entries invoiced or paid directly. Those transitions are now controlled by the dedicated invoice lifecycle.
+- Waivers require an owner reason and are allowed only for a recorded entry with no open or paid invoice. The bilingual ledger UI reflects this boundary and no longer offers direct paid/invoiced controls.
+- Added API regression coverage for unauthenticated access, blocking direct invoice/payment state changes, required waiver reasons, open/paid invoice protection and waiver event history.
+- Final-head API Quality run `42499573576` and WASLA CI run `42499573311` both completed successfully, including API tests, TypeScript checks, API build and Web production build.
+- Merged to GitHub `main`; not deployed or verified on Render because pipeline build minutes remain exhausted. No payment collection or funds movement was added.
