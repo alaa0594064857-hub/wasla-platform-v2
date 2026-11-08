@@ -3,6 +3,7 @@ import { fromNodeHeaders } from "better-auth/node";
 import { auth } from "./auth.mjs";
 import { getDatabasePool } from "./database.js";
 import { authorizePlatformPermission } from "./platform-security.mjs";
+import { createNotification } from "./notifications.mjs";
 
 type AgreementAction = "accept" | "reject";
 function send(response: ServerResponse, status: number, data: Record<string, unknown>) {
@@ -125,7 +126,8 @@ export async function handleBrokerageAgreements(request: IncomingMessage, respon
       const client=await db.connect();
       try {
         await client.query("BEGIN");
-        const pair=await client.query(`SELECT b.account_id AS buyer_account_id,s.account_id AS supplier_account_id
+        const pair=await client.query(`SELECT b.account_id AS buyer_account_id,s.account_id AS supplier_account_id,
+            b.created_by_user_id AS buyer_submitter_user_id,s.created_by_user_id AS supplier_submitter_user_id
           FROM trade_opportunities b CROSS JOIN trade_opportunities s
           WHERE b.id=$1 AND s.id=$2 AND b.opportunity_type='buyer_request' AND s.opportunity_type='supplier_offer'
             AND b.review_status='approved' AND s.review_status='approved'
@@ -140,6 +142,30 @@ export async function handleBrokerageAgreements(request: IncomingMessage, respon
           [buyerId,supplierId,buyerAccount,supplierAccount,payer,rate,currency,terms,new Date(expiry).toISOString(),userId]);
         await client.query(`INSERT INTO trade_brokerage_agreement_events (agreement_id,actor_user_id,event_type,note)
           VALUES ($1,$2,'created','Drafted by WASLA for separate acceptance by both parties')`,[inserted.rows[0].id,userId]);
+        await createNotification(client, {
+          userId: pair.rows[0].buyer_submitter_user_id,
+          type: "trade_deal",
+          titleAr: "اتفاقية وساطة جديدة بانتظار موافقتك",
+          titleEn: "A new brokerage agreement needs your acceptance",
+          bodyAr: "جهّزت WASLA شروط الوساطة لهذه الفرصة. راجع التفاصيل واقبل أو ارفض من مساحة التجارة.",
+          bodyEn: "WASLA prepared brokerage terms for this opportunity. Review and accept or reject them in Trade.",
+          actionUrl: "/trade/agreements",
+          resourceId: inserted.rows[0].id,
+          metadata: { agreementId: inserted.rows[0].id, status: "pending_acceptance" },
+        });
+        if (pair.rows[0].supplier_submitter_user_id !== pair.rows[0].buyer_submitter_user_id) {
+          await createNotification(client, {
+            userId: pair.rows[0].supplier_submitter_user_id,
+            type: "trade_deal",
+            titleAr: "اتفاقية وساطة جديدة بانتظار موافقتك",
+            titleEn: "A new brokerage agreement needs your acceptance",
+            bodyAr: "جهّزت WASLA شروط الوساطة لهذه الفرصة. راجع التفاصيل واقبل أو ارفض من مساحة التجارة.",
+            bodyEn: "WASLA prepared brokerage terms for this opportunity. Review and accept or reject them in Trade.",
+            actionUrl: "/trade/agreements",
+            resourceId: inserted.rows[0].id,
+            metadata: { agreementId: inserted.rows[0].id, status: "pending_acceptance" },
+          });
+        }
         await client.query("COMMIT");
         send(response,201,{success:true,agreement:inserted.rows[0],message:"Terms prepared. No brokerage engagement is active until both parties accept."}); return;
       } catch(error) { await client.query("ROLLBACK"); throw error; }
@@ -154,7 +180,12 @@ export async function handleBrokerageAgreements(request: IncomingMessage, respon
     const client=await db.connect();
     try {
       await client.query("BEGIN");
-      const locked=await client.query(`SELECT * FROM trade_brokerage_agreements WHERE id=$1 FOR UPDATE`,[agreementId]);
+      const locked=await client.query(`SELECT g.*,b.created_by_user_id AS buyer_submitter_user_id,
+        s.created_by_user_id AS supplier_submitter_user_id
+        FROM trade_brokerage_agreements g
+        JOIN trade_opportunities b ON b.id=g.buyer_opportunity_id
+        JOIN trade_opportunities s ON s.id=g.supplier_opportunity_id
+        WHERE g.id=$1 FOR UPDATE OF g`,[agreementId]);
       if (!locked.rowCount) { await client.query("ROLLBACK"); send(response,404,{success:false,error:"Agreement not found"}); return; }
       const agreement=locked.rows[0];
       const buyerParty=await hasTradePermission(agreement.buyer_account_id,userId);
@@ -177,6 +208,19 @@ export async function handleBrokerageAgreements(request: IncomingMessage, respon
         await client.query(`UPDATE trade_brokerage_agreements SET status='rejected',updated_at=NOW() WHERE id=$1`,[agreementId]);
         await client.query(`INSERT INTO trade_brokerage_agreement_events (agreement_id,actor_user_id,actor_account_id,event_type,note)
           VALUES ($1,$2,$3,'rejected',$4)`,[agreementId,userId,actingAccount,str(data.note,1000)||null]);
+        const otherPartyUserId = actingAccount === agreement.buyer_account_id
+          ? agreement.supplier_submitter_user_id : agreement.buyer_submitter_user_id;
+        await createNotification(client, {
+          userId: otherPartyUserId,
+          type: "trade_deal",
+          titleAr: "تم رفض اتفاقية الوساطة",
+          titleEn: "The brokerage agreement was rejected",
+          bodyAr: str(data.note,1000) || "رفض الطرف الآخر شروط اتفاقية الوساطة.",
+          bodyEn: str(data.note,1000) || "The other party rejected the brokerage terms.",
+          actionUrl: "/trade/agreements",
+          resourceId: agreementId,
+          metadata: { agreementId, status: "rejected" },
+        });
         await client.query("COMMIT"); send(response,200,{success:true,status:"rejected"}); return;
       }
       const buyerPartyActing=actingAccount===agreement.buyer_account_id;
@@ -189,6 +233,36 @@ export async function handleBrokerageAgreements(request: IncomingMessage, respon
             updated_at=NOW() WHERE id=$1 RETURNING *`,[agreementId,userId]);
       await client.query(`INSERT INTO trade_brokerage_agreement_events (agreement_id,actor_user_id,actor_account_id,event_type)
         VALUES ($1,$2,$3,$4)`,[agreementId,userId,actingAccount,buyerPartyActing?"buyer_accepted":"supplier_accepted"]);
+      if (updated.rows[0].status === "active") {
+        const recipients = new Set([agreement.buyer_submitter_user_id, agreement.supplier_submitter_user_id]);
+        for (const recipient of recipients) {
+          await createNotification(client, {
+            userId: recipient,
+            type: "trade_deal",
+            titleAr: "أصبحت اتفاقية الوساطة نشطة",
+            titleEn: "The brokerage agreement is now active",
+            bodyAr: "وافق الطرفان على شروط الوساطة. لم يتم تحصيل أي دفعة عبر WASLA.",
+            bodyEn: "Both parties accepted the brokerage terms. No payment was collected by WASLA.",
+            actionUrl: "/trade/agreements",
+            resourceId: agreementId,
+            metadata: { agreementId, status: "active" },
+          });
+        }
+      } else {
+        const otherPartyUserId = buyerPartyActing
+          ? agreement.supplier_submitter_user_id : agreement.buyer_submitter_user_id;
+        await createNotification(client, {
+          userId: otherPartyUserId,
+          type: "trade_deal",
+          titleAr: "تم تسجيل موافقة على اتفاقية الوساطة",
+          titleEn: "A party accepted the brokerage agreement",
+          bodyAr: "وافق الطرف الأول على الشروط. ما زالت موافقة الطرف الآخر مطلوبة لتفعيل الاتفاقية.",
+          bodyEn: "One party accepted the terms. The other party must still accept before the agreement becomes active.",
+          actionUrl: "/trade/agreements",
+          resourceId: agreementId,
+          metadata: { agreementId, status: "pending_acceptance" },
+        });
+      }
       await client.query("COMMIT");
       send(response,200,{success:true,agreement:updated.rows[0],message:updated.rows[0].status==="active"?"Both parties accepted. The brokerage engagement is recorded as active; no payment has been collected.":"Acceptance recorded for your party. The other party must still accept."}); return;
     } catch(error) { await client.query("ROLLBACK"); throw error; }
