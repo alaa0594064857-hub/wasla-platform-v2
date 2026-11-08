@@ -71,7 +71,7 @@ export async function handleMemberStoreReturn(req: IncomingMessage, res: ServerR
    }else if(action==="received"){
     const member=await client.query("SELECT 1 WHERE "+merchantSql,[request.storeId,session.user.id,["store.order.manage","account.order.manage"]]);
     if(!member.rowCount){await client.query("ROLLBACK");send(res,403,{success:false,error:"Store order management permission required"});return;}
-    if(request.status!=="approved"){await client.query("ROLLBACK");send(res,409,{success:false,error:"Only an approved return can be marked received"});return;}
+    if(request.status!=="approved"||request.requestedResolution!=="return"){await client.query("ROLLBACK");send(res,409,{success:false,error:"Only an approved physical return can be marked received; replacement fulfillment is not enabled yet"});return;}
     result=await client.query("UPDATE member_store_return_requests SET status='item_received',item_received_at=NOW(),updated_at=NOW() WHERE id=$1 RETURNING id,status,item_received_at AS \"itemReceivedAt\"",[request.id]);
    }else{
     if(request.buyerId!==session.user.id){await client.query("ROLLBACK");send(res,403,{success:false,error:"Only the buyer can close this request"});return;}
