@@ -6,7 +6,6 @@ import { authorizePlatformPermission } from "./platform-security.mjs";
 const send=(r:ServerResponse,s:number,d:Record<string,unknown>)=>{r.writeHead(s,{"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store","X-Content-Type-Options":"nosniff"});r.end(JSON.stringify(d));};
 const isUuid=(v:unknown):v is string=>typeof v==="string"&&/^[0-9a-f-]{36}$/i.test(v);
 const str=(v:unknown,n:number)=>typeof v==="string"?v.trim().slice(0,n):"";
-const validHttps=(v:string)=>{try{const u=new URL(v);return u.protocol==="https:"&&!u.username&&!u.password;}catch{return false;}};
 async function read(req:IncomingMessage){let raw="";for await(const c of req){raw+=c.toString();if(Buffer.byteLength(raw)>12000)throw new Error("large");}const x:unknown=JSON.parse(raw||"{}");if(!x||typeof x!=="object"||Array.isArray(x))throw new Error("body");return x as Record<string,unknown>;}
 export async function ensureBrokerageCommissionTables(){
  const db=getDatabasePool();
@@ -46,15 +45,23 @@ export async function handleBrokerageCommissionLedger(req:IncomingMessage,res:Se
    }catch(e){await client.query("ROLLBACK");if((e as {code?:string})?.code==="23505"){send(res,409,{success:false,error:"This trade reference is already recorded for the agreement."});return;}throw e;}finally{client.release();}
   }
   if(!entryId||!isUuid(entryId)){send(res,400,{success:false,error:"Valid ledger entry ID required"});return;}
-  const status=str(data.status,16),evidence=str(data.evidenceUrl,2000),note=str(data.note,2000)||null;
-  if(!["recorded","invoiced","paid","waived"].includes(status)||(evidence&&!validHttps(evidence))||(status==="paid"&&!evidence)){send(res,400,{success:false,error:"Choose a valid status. Paid requires an HTTPS evidence URL."});return;}
+  const status=str(data.status,16),note=str(data.note,2000);
+  if(status!=="waived"||note.length<5){send(res,400,{success:false,error:"Only a waiver with a reason can be recorded here. Invoice and payment statuses must be updated through the commission invoice workflow."});return;}
   const client=await db.connect();
   try{
    await client.query("BEGIN");
-   const old=await client.query("SELECT status FROM trade_brokerage_commission_entries WHERE id=$1 FOR UPDATE",[entryId]);
+   const old=await client.query(`SELECT e.status,
+     EXISTS(SELECT 1 FROM trade_brokerage_commission_invoices i
+       WHERE i.commission_entry_id=e.id AND i.status IN ('draft','issued','paid')) AS has_invoice
+     FROM trade_brokerage_commission_entries e WHERE e.id=$1 FOR UPDATE OF e`,[entryId]);
    if(!old.rowCount){await client.query("ROLLBACK");send(res,404,{success:false,error:"Ledger entry not found"});return;}
-   const saved=await client.query("UPDATE trade_brokerage_commission_entries SET status=$2,evidence_url=$3,note=COALESCE($4,note),updated_at=NOW() WHERE id=$1 RETURNING *",[entryId,status,evidence||null,note]);
-   await client.query("INSERT INTO trade_brokerage_commission_events(entry_id,actor_user_id,event_type,from_status,to_status,note) VALUES($1,$2,'status_changed',$3,$4,$5)",[entryId,session.user.id,old.rows[0].status,status,note]);
+   if(old.rows[0].status!=="recorded"||old.rows[0].has_invoice){
+     await client.query("ROLLBACK");
+     send(res,409,{success:false,error:"Only a recorded commission without an open or paid invoice can be waived."});
+     return;
+   }
+   const saved=await client.query("UPDATE trade_brokerage_commission_entries SET status='waived',note=$2,updated_at=NOW() WHERE id=$1 RETURNING *",[entryId,note]);
+   await client.query("INSERT INTO trade_brokerage_commission_events(entry_id,actor_user_id,event_type,from_status,to_status,note) VALUES($1,$2,'status_changed',$3,'waived',$4)",[entryId,session.user.id,old.rows[0].status,note]);
    await client.query("COMMIT");send(res,200,{success:true,entry:saved.rows[0]});return;
   }catch(e){await client.query("ROLLBACK");throw e;}finally{client.release();}
  }catch(e){console.error("WASLA commission ledger error:",e);if(!res.headersSent)send(res,500,{success:false,error:"Commission ledger request failed"});else res.destroy(e instanceof Error?e:undefined);}
