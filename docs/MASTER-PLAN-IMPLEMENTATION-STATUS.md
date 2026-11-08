@@ -688,3 +688,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - The notification center now surfaces network/server failures instead of silently ignoring them and updates the unread count after a successful read.
 - Final-head CI run `42490606318` and API-quality run `42490606208` both completed successfully. CI included shared-package checks, API tests, migrations/constraints, authorization seeding, TypeScript checks, API build and Web production build.
 - UI-only change; no database schema, permissions, or order/payment behavior changed. The commit is merged to GitHub but is not live on Render because pipeline build minutes remain exhausted.
+
+
+## Notification mark-all-read feedback — 2026-11-08
+
+- PR #26 merged to `main` as `d1923c5ff2166f1ce530e562132da17e59d4e16e`.
+- The notification center prevents duplicate mark-all-read submissions, displays a bilingual in-progress label and disables the action while the request is running.
+- Network/server failures now produce a bilingual error message, and the loading state is reliably reset.
+- Final-head CI run `42490860737` and API-quality run `42490860638` both completed successfully. CI covered shared-package tests/type checks, API tests, migrations, authorization seeding, database constraints, TypeScript checks, API build and Web production build.
+- UI-only change; no API, database, permissions, or order/payment behavior changed. The change is merged to GitHub but is not live on Render because pipeline build minutes remain exhausted.
