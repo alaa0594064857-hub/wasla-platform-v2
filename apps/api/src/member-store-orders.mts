@@ -236,7 +236,7 @@ export async function handleMemberStoreOrdersRequest(
     respond(response, 400, { success: false, error: "Invalid request body" });
     return;
   }
-  if (!isObject(body) || !["accepted", "rejected", "cancelled"].includes(String(body.status))) {
+  if (!isObject(body) || !["accepted", "rejected"].includes(String(body.status))) {
     respond(response, 400, { success: false, error: "Invalid order status" });
     return;
   }
@@ -256,8 +256,7 @@ export async function handleMemberStoreOrdersRequest(
        AND ${merchantPermission(5, 6)}
        AND (
          ($1 = 'accepted' AND o.status = 'pending_merchant_review') OR
-         ($1 = 'rejected' AND o.status = 'pending_merchant_review') OR
-
+         ($1 = 'rejected' AND o.status = 'pending_merchant_review')
        )
      RETURNING o.id, o.order_number AS "orderNumber", o.status, o.updated_at AS "updatedAt"`,
     [body.status, note, orderId, slug, session.user.id, ["store.order.manage", "account.order.manage"]],
