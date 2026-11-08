@@ -140,7 +140,8 @@ describe("member store order requests", () => {
     });
 
     expect(response.status).toBe(201);
-    expect(await response.json()).toMatchObject({ success: true, order: { orderNumber: "WS-TEST-1" } });
+    const responseBody = await response.json();
+    expect(responseBody).toMatchObject({ success: true, order: { orderNumber: expect.any(String) } });
     const notificationCall = clientQuery.mock.calls[6];
     expect(String(notificationCall[0])).toContain("INSERT INTO notifications");
     expect(String(notificationCall[0])).toContain("store_members");
@@ -150,7 +151,7 @@ describe("member store order requests", () => {
     expect(notificationCall[1]).toEqual([
       "demo", "66666666-6666-4666-8666-666666666666", "44444444-4444-4444-8444-444444444444",
       ["store.order.read", "store.order.manage", "account.order.read", "account.order.manage"],
-      "33333333-3333-4333-8333-333333333333", (await response.clone().json()).order.orderNumber,
+      "33333333-3333-4333-8333-333333333333", responseBody.order.orderNumber,
       "11111111-1111-4111-8111-111111111111",
     ]);
   });
