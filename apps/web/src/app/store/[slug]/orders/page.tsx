@@ -53,6 +53,7 @@ export default function MemberStoreOrdersPage() {
     subtotal: "الإجمالي المسجل",
     note: "ملاحظة العميل",
     merchantNote: "ملاحظة المتجر",
+    stockAtRequest: "المخزون المسجل وقت الطلب (للاسترشاد)",
     pending: "بانتظار مراجعة البائع",
     accepted: "قبله البائع",
     rejected: "رفضه البائع",
@@ -77,6 +78,7 @@ export default function MemberStoreOrdersPage() {
     subtotal: "Recorded subtotal",
     note: "Customer note",
     merchantNote: "Store note",
+    stockAtRequest: "Stock recorded when the request was placed (reference only)",
     pending: "Awaiting merchant review",
     accepted: "Accepted by merchant",
     rejected: "Rejected by merchant",
@@ -155,7 +157,7 @@ export default function MemberStoreOrdersPage() {
             </div>
             <div className="mt-4 divide-y divide-[#eee8dc]">
               {order.items.map(line => <div key={line.productId} className="flex flex-wrap justify-between gap-2 py-3">
-                <div><p className="font-semibold">{line.title}</p><p className="text-xs text-slate-500">{line.sku || "—"} · {line.quantity} × {line.unitPrice} {line.currency}</p></div>
+                <div><p className="font-semibold">{line.title}</p><p className="text-xs text-slate-500">{line.sku || "—"} · {line.quantity} × {line.unitPrice} {line.currency}</p>{isMerchantView && <p className="mt-1 text-xs text-slate-500">{copy.stockAtRequest}: {line.availabilityAtRequest}</p>}</div>
                 <p className="font-bold">{(Number(line.unitPrice) * line.quantity).toFixed(2)} {line.currency}</p>
               </div>)}
             </div>
