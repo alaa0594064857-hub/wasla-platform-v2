@@ -67,7 +67,11 @@ describe("WASLA trade opportunity review history", () => {
   });
 
   it("does not query decision history when platform authorization fails", async () => {
-    mocks.authorize.mockResolvedValueOnce(null);
+    mocks.authorize.mockImplementationOnce(async (_request, response) => {
+      response.writeHead(403, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({ success: false, error: "Insufficient platform permissions" }));
+      return null;
+    });
     const baseUrl = await startServer();
     const response = await fetch(`${baseUrl}/api/trade/opportunities/review-history`);
     expect(response.status).toBe(200);
