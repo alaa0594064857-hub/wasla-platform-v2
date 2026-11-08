@@ -151,6 +151,7 @@ export default function PublicProductPage() {
             <div className="flex flex-wrap items-center justify-between gap-2"><strong>{review.title || (ar ? "تقييم مشتري" : "Buyer review")}</strong><span className="text-[#9b792f]" aria-label={`${review.rating} / 5`}>{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)} <small className="text-slate-500">{review.rating}/5</small></span></div>
             <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-700">{review.body}</p>
             <small className="mt-2 block text-slate-500">{review.buyerLabel} · {new Date(review.createdAt).toLocaleDateString(ar ? "ar" : "en")}</small>
+            {review.storeResponse && <div className="mt-4 rounded-xl border border-[#e5dfd1] bg-[#f7f4ec] p-4"><strong className="text-sm">{ar ? "رد المتجر" : "Store response"}</strong><p className="mt-2 whitespace-pre-wrap text-sm leading-7">{review.storeResponse}</p></div>}
           </article>) : <p className="rounded-xl bg-[#f7f4ec] p-4 text-sm text-slate-600">{ar ? "لا توجد تقييمات منشورة بعد." : "No published reviews yet."}</p>}
         </div>
         <div className="mt-7 border-t border-[#eee8dc] pt-6">
