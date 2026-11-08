@@ -46,7 +46,7 @@ export default function OwnerOfficialStorePage() {
     loading: "جارٍ تحميل المنتجات...", loadError: "تعذر تحميل المنتجات.", saveError: "تعذر حفظ المنتج. راجع الحقول.",
     inventory: "لا تدير WASLA مخزوناً مركزياً. حالة التوفر يحدّثها المورد أو فريق المتجر بعد التأكد.",
     payments: "لا يوجد تحصيل مدفوعات مفعّل هنا. إعدادات الدفع والطلبات ستنفذ في مرحلة مستقلة.",
-    productStatus: "النشر", supplierNote: "المورد يحتفظ بالمنتج ويتولى تنفيذه؛ لا نضيف كمية مخزون للمنصة."
+    productStatus: "النشر", supplierNote: "المورد يحتفظ بالمنتج ويتولى تنفيذه؛ لا نضيف كمية مخزون للمنصة.", priceGate: "يجب اعتماد سعر بيع موثق لكل دولة من شاشة عروض الموردين قبل نشر المنتج. السعر المعتمد وحده يظهر لعملاء تلك الدولة."
   } : {
     title: "Official WASLA Store administration", subtitle: "Manage platform-owned products separately from member stores.",
     back: "Back to owner center", denied: "This page is restricted to the platform owner.",
@@ -60,7 +60,7 @@ export default function OwnerOfficialStorePage() {
     loading: "Loading products...", loadError: "Could not load products.", saveError: "Could not save product. Check the fields.",
     inventory: "WASLA does not manage central inventory. Availability must be confirmed with the supplier.",
     payments: "Payment collection is not enabled here. Orders and checkout will be implemented separately.",
-    productStatus: "Publication", supplierNote: "The supplier retains and fulfills the product; no platform stock quantity is recorded."
+    productStatus: "Publication", supplierNote: "The supplier retains and fulfills the product; no platform stock quantity is recorded.", priceGate: "Approve a verified customer price for at least one destination in Supplier Offers before publishing. Customers only see the approved price for their own destination."
   };
 
   async function loadProducts() {
@@ -128,7 +128,7 @@ export default function OwnerOfficialStorePage() {
         headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
       });
       const data = await response.json();
-      if (!response.ok || !data.success) throw new Error("save");
+      if (!response.ok || !data.success) { setError(typeof data.error === "string" ? data.error : t.saveError); return; }
       setForm({ ...emptyForm }); setEditingId(null);
       await loadProducts();
     } catch { setError(t.saveError); }
@@ -152,7 +152,7 @@ export default function OwnerOfficialStorePage() {
         </Link></div>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}><Link href="/owner/official-store/sourcing" style={styles.back}>{ar ? "مراجعة الموردين ←" : "Supplier sourcing review →"}</Link><span style={styles.tag}>PLATFORM-OWNED</span></div>
     </header>
-    <section style={styles.notice}><strong>{t.inventory}</strong><p>{t.supplierNote}</p><p>{t.payments}</p></section>
+    <section style={styles.notice}><strong>{t.inventory}</strong><p>{t.supplierNote}</p><p>{t.priceGate}</p><p>{t.payments}</p></section>
     <section style={styles.panel}>
       <h2>{editingId ? t.edit : t.add}</h2>
       <form onSubmit={save} style={styles.form}>
