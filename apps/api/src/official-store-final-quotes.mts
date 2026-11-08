@@ -70,9 +70,20 @@ export async function handleOfficialStoreFinalQuoteIssue(
   try {
     await client.query("BEGIN");
     const current = await client.query(
-      `SELECT id, customer_user_id AS "customerUserId", supplier_confirmation_status AS "supplierStatus",
-              order_status AS "orderStatus", final_quote_status AS "quoteStatus"
-       FROM official_store_orders WHERE id = $1 FOR UPDATE`, [orderId]);
+      `SELECT o.id, o.customer_user_id AS "customerUserId",
+              o.supplier_confirmation_status AS "supplierStatus",
+              o.order_status AS "orderStatus", o.final_quote_status AS "quoteStatus",
+              o.product_id AS "productId", o.source_platform AS "sourcePlatform",
+              o.supplier_name_snapshot AS "supplierName",
+              o.supplier_unit_cost::text AS "supplierUnitCost",
+              o.supplier_shipping_cost::text AS "supplierShippingCost",
+              o.supplier_cost_currency AS "supplierCostCurrency",
+              o.supplier_shipping_currency AS "supplierShippingCurrency",
+              o.shipping_address->>'country' AS "destinationCountry",
+              (SELECT e.details->>'sourceOfferId' FROM official_store_order_events e
+               WHERE e.order_id = o.id AND e.event_type = 'supplier_confirmation_requested'
+               ORDER BY e.created_at DESC LIMIT 1) AS "sourceOfferId"
+       FROM official_store_orders o WHERE o.id = $1 FOR UPDATE OF o`, [orderId]);
     const order = current.rows[0];
     if (!order) { await client.query("ROLLBACK"); reply(response, 404, { success: false, error: "Order not found" }); return; }
     if (order.supplierStatus !== "accepted" || order.orderStatus !== "supplier_confirmed") {
@@ -80,6 +91,29 @@ export async function handleOfficialStoreFinalQuoteIssue(
     }
     if (order.quoteStatus === "accepted") {
       await client.query("ROLLBACK"); reply(response, 409, { success: false, error: "Customer already accepted this quote; create a new request for changes" }); return;
+    }
+    if (!order.sourceOfferId || !order.productId || !order.destinationCountry) {
+      await client.query("ROLLBACK"); reply(response, 409, { success: false, error: "The verified supplier offer for this request is unavailable" }); return;
+    }
+    const offerCheck = await client.query(
+      `SELECT id FROM official_store_product_source_offers
+       WHERE id = $1 AND product_id = $2 AND source_platform = $3
+         AND supplier_name = $4 AND supplier_price::text = $5
+         AND shipping_cost::text = $6 AND supplier_currency = $7
+         AND shipping_currency = $8
+         AND offer_status = 'approved'
+         AND availability_status IN ('available', 'limited')
+         AND direct_to_customer_confirmed = TRUE
+         AND supplier_identity_verified = TRUE AND specifications_verified = TRUE
+         AND minimum_order_quantity = 1
+         AND quote_valid_until > NOW() AND last_verified_at IS NOT NULL
+         AND ships_to_countries @> to_jsonb(ARRAY[$9::text])
+       LIMIT 1`,
+      [order.sourceOfferId, order.productId, order.sourcePlatform, order.supplierName,
+       order.supplierUnitCost, order.supplierShippingCost, order.supplierCostCurrency,
+       order.supplierShippingCurrency, order.destinationCountry]);
+    if (!offerCheck.rows[0]) {
+      await client.query("ROLLBACK"); reply(response, 409, { success: false, error: "The supplier quote is no longer current and verified; obtain renewed supplier confirmation first" }); return;
     }
     const expiresAt = new Date(Date.now() + Number(validityHours) * 3600000);
     const updated = await client.query(
