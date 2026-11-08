@@ -3,6 +3,7 @@ import { fromNodeHeaders } from "better-auth/node";
 import { auth } from "./auth.mjs";
 import { getDatabasePool } from "./database.js";
 import { authorizePlatformPermission } from "./platform-security.mjs";
+import { createNotification } from "./notifications.mjs";
 
 type OpportunityType = "buyer_request" | "supplier_offer";
 type ReviewStatus = "pending_review" | "approved" | "rejected" | "closed";
@@ -309,7 +310,7 @@ export async function handleTradeOpportunitiesRequest(
       await client.query("BEGIN");
       const updated = await client.query(
         `UPDATE trade_opportunities SET review_status=$2, reviewed_by_user_id=$3, reviewed_at=NOW(), updated_at=NOW()
-         WHERE id=$1 AND review_status IN ('pending_review','approved') RETURNING id, review_status`,
+         WHERE id=$1 AND review_status='pending_review' RETURNING id, review_status, created_by_user_id`,
         [opportunityId, status, userId],
       );
       if (!updated.rowCount) {
@@ -322,6 +323,19 @@ export async function handleTradeOpportunitiesRequest(
          VALUES ($1,$2,$3,$4)`,
         [opportunityId, userId, status, note || null],
       );
+      const decisionAr = status === "approved" ? "اعتماد" : status === "rejected" ? "رفض" : "إغلاق";
+      const decisionEn = status === "approved" ? "approved" : status === "rejected" ? "rejected" : "closed";
+      await createNotification(client, {
+        userId: updated.rows[0].created_by_user_id,
+        type: "trade_deal",
+        titleAr: "تمت مراجعة فرصتك في WASLA",
+        titleEn: "Your WASLA trade opportunity was reviewed",
+        bodyAr: `تم ${decisionAr} الفرصة: ${note || "لا توجد ملاحظة إضافية."}`,
+        bodyEn: `Your opportunity was ${decisionEn}: ${note || "No additional note was provided."}`,
+        actionUrl: "/trade",
+        resourceId: opportunityId,
+        metadata: { opportunityId, reviewStatus: status },
+      });
       await client.query("COMMIT");
       reply(response, 200, { success: true, opportunity: updated.rows[0] });
     } catch (error) {
