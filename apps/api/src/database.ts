@@ -479,7 +479,7 @@ export async function ensureMemberStoreOrderTables(): Promise<void> {
         store_id uuid NOT NULL REFERENCES stores(id) ON DELETE RESTRICT,
         buyer_user_id uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
         status varchar(32) NOT NULL DEFAULT 'pending_merchant_review'
-          CHECK (status IN ('pending_merchant_review', 'accepted', 'rejected', 'cancelled')),
+          CHECK (status IN ('pending_merchant_review', 'accepted', 'rejected', 'cancelled', 'shipped', 'completed')),
         currency varchar(3) NOT NULL,
         items jsonb NOT NULL,
         subtotal numeric(14,2) NOT NULL CHECK (subtotal >= 0),
@@ -490,6 +490,20 @@ export async function ensureMemberStoreOrderTables(): Promise<void> {
         updated_at timestamptz NOT NULL DEFAULT NOW(),
         UNIQUE (store_id, buyer_user_id, idempotency_key)
       )
+    `);
+    await client.query(`
+      ALTER TABLE member_store_orders
+        ADD COLUMN IF NOT EXISTS carrier_name varchar(100),
+        ADD COLUMN IF NOT EXISTS tracking_number varchar(120),
+        ADD COLUMN IF NOT EXISTS tracking_url text,
+        ADD COLUMN IF NOT EXISTS shipped_at timestamptz,
+        ADD COLUMN IF NOT EXISTS delivery_confirmed_at timestamptz
+    `);
+    await client.query(`ALTER TABLE member_store_orders DROP CONSTRAINT IF EXISTS member_store_orders_status_check`);
+    await client.query(`
+      ALTER TABLE member_store_orders
+      ADD CONSTRAINT member_store_orders_status_check
+      CHECK (status IN ('pending_merchant_review', 'accepted', 'rejected', 'cancelled', 'shipped', 'completed'))
     `);
     await client.query(`
       CREATE INDEX IF NOT EXISTS member_store_orders_store_created_idx
