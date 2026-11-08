@@ -74,7 +74,7 @@ describe("WASLA trade opportunity review history", () => {
     });
     const baseUrl = await startServer();
     const response = await fetch(`${baseUrl}/api/trade/opportunities/review-history`);
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(403);
     expect(mocks.query).not.toHaveBeenCalled();
   });
 
