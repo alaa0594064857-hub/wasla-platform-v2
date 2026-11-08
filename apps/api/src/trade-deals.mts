@@ -216,21 +216,27 @@ export async function handleTradeDealResponse(req: IncomingMessage, res: ServerR
       await client.query("BEGIN");
       const found = await client.query(
         `SELECT d.id, d.buyer_user_id, d.supplier_account_id, d.status,
-                d.proposed_by_user_id
+                d.proposed_by_user_id, a.status AS account_status
          FROM trade_deals d
+         INNER JOIN accounts a ON a.id = d.supplier_account_id
          WHERE d.id = $1
            AND (d.buyer_user_id = $2 OR EXISTS (
              SELECT 1 FROM account_members am
              WHERE am.account_id = d.supplier_account_id
                AND am.user_id = $2 AND am.status = 'active'
            ))
-         FOR UPDATE`,
+         FOR UPDATE OF d`,
         [dealId, userId],
       );
       const deal = found.rows[0];
       if (!deal) {
         await client.query("ROLLBACK");
         reply(res, 404, { success: false, error: "Trade deal not found" });
+        return;
+      }
+      if (deal.account_status !== "active") {
+        await client.query("ROLLBACK");
+        reply(res, 409, { success: false, error: "The supplier account is not active" });
         return;
       }
       const supplierMember = await client.query(
