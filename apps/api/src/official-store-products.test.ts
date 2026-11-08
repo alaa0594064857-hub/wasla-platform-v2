@@ -37,28 +37,25 @@ afterEach(async () => {
 
 describe("official WASLA Store public catalogue", () => {
   it("returns only public product fields and requires a currently approved verified direct-shipping offer", async () => {
-    mocks.query.mockResolvedValueOnce({
-      rows: [{
-        id: "product-1",
-        title_ar: "منتج",
-        title_en: "Product",
-        price: "20.00",
-        currency: "EUR",
-        availability_status: "available",
-        deliveryCountries: ["TR", "DE"],
-        estimatedDeliveryDaysMin: 4,
-        estimatedDeliveryDaysMax: 8,
-      }],
-    });
+    mocks.query.mockImplementation(async (sql: unknown) => String(sql).includes("SELECT p.id")
+      ? { rows: [{
+          id: "product-1", title_ar: "منتج", title_en: "Product", price: "20.00",
+          currency: "EUR", availability_status: "available", deliveryCountries: ["TR"],
+          estimatedDeliveryDaysMin: 4, estimatedDeliveryDaysMax: 8,
+        }] }
+      : { rows: [] });
     const baseUrl = await startServer(true);
-    const response = await fetch(baseUrl);
+    const response = await fetch(`${baseUrl}?country=TR`);
     const data = await response.json();
 
     expect(response.status).toBe(200);
     expect(data).toMatchObject({ success: true, products: [{ id: "product-1", title_en: "Product", deliveryCountries: ["TR", "DE"], estimatedDeliveryDaysMin: 4, estimatedDeliveryDaysMax: 8 }] });
     expect(JSON.stringify(data)).not.toMatch(/supplier_name|supplier_price|supplier_reference|source_product_url|shipping_cost/i);
-    const sql = String(mocks.query.mock.calls[0][0]);
+    const sql = String(mocks.query.mock.calls.find(call => String(call[0]).includes("SELECT p.id"))?.[0]);
     expect(sql).toContain("s.status = 'active'");
+    expect(sql).toContain("official_store_price_approvals");
+    expect(sql).toContain("approval.status = 'active'");
+    expect(sql).toContain("approval.destination_country = $1");
     expect(sql).toContain("o.offer_status = 'approved'");
     expect(sql).toContain("o.direct_to_customer_confirmed = TRUE");
     expect(sql).toContain("o.supplier_identity_verified = TRUE");
@@ -72,6 +69,15 @@ describe("official WASLA Store public catalogue", () => {
     expect(sql).not.toContain("supplier_name");
     expect(sql).not.toContain("supplier_price");
     expect(sql).not.toContain("p.supplier_dropship_confirmed = TRUE");
+  });
+
+  it("requires a destination country before returning public prices", async () => {
+    const baseUrl = await startServer(true);
+    const response = await fetch(baseUrl);
+    const data = await response.json();
+    expect(response.status).toBe(400);
+    expect(data.success).toBe(false);
+    expect(mocks.query).not.toHaveBeenCalled();
   });
 
   it("keeps the public catalogue read-only", async () => {
