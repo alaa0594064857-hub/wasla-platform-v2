@@ -101,6 +101,26 @@ describe("member store order requests", () => {
   });
 
 
+  it("notifies the buyer when a merchant accepts a pending request", async () => {
+    clientQuery
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "22222222-2222-4222-8222-222222222222", orderNumber: "WS-ACCEPT", buyerUserId: "77777777-7777-4777-8777-777777777777", status: "accepted" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: null, rows: [] });
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/stores/demo/orders/22222222-2222-4222-8222-222222222222`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "accepted", note: "Ready for processing" }),
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ success: true, order: { status: "accepted" } });
+    const notificationCall = clientQuery.mock.calls[3];
+    expect(String(notificationCall[0])).toContain("INSERT INTO notifications");
+    expect(String(notificationCall[0])).toContain("Your order request was accepted");
+    expect(notificationCall[1]).toEqual(["77777777-7777-4777-8777-777777777777", "accepted", "demo", "22222222-2222-4222-8222-222222222222", "WS-ACCEPT"]);
+  });
   it("notifies only active store/account order managers when a buyer submits a request", async () => {
     clientQuery
       .mockResolvedValueOnce({ rowCount: null, rows: [] }) // begin
