@@ -852,3 +852,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Confirms the request is recorded as `expired` (not `rejected`), closed safely, customer notified, and payment/purchasing remain disabled.
 - Final-head WASLA CI run `42502623751` and API Quality run `42502623750` both passed.
 - Test-only change; no runtime behavior or schema changed. Render deployment and hosted verification remain pending due exhausted build minutes.
+
+
+## Official-store final customer quote decision regression coverage — 2026-11-08
+
+- PR #44 merged to `main` as `fee02dab1e4322e581f6b495073267f97b88c708`.
+- Added handler-level regression tests for customer ownership isolation (another customer's quote returns 404), rejection of duplicate decisions (409 with rollback and no event), expiry of overdue quotes (expired status and system event), and acceptance of a pending unexpired quote.
+- Acceptance is explicitly verified to keep `paymentEnabled: false` and `supplierPurchasePlaced: false`; the event type is checked through its parameterized SQL value.
+- Final-head WASLA CI run `42506039900` and API Quality run `42506039977` both passed.
+- Test-only change; no runtime behavior or schema changed. Merged to GitHub `main`; Render deployment and hosted customer/owner verification remain pending while build minutes are exhausted.
