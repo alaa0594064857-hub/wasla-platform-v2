@@ -92,4 +92,26 @@ describe("private in-app notifications", () => {
     expect(mocks.query.mock.calls[0][1]).toEqual(["11111111-1111-4111-8111-111111111111", "notification-owner"]);
     expect(String(mocks.query.mock.calls[0][0])).toContain("WHERE id = $1 AND user_id = $2");
   });
+
+  it("rejects unauthenticated notification reads without querying private data", async () => {
+    mocks.getSession.mockResolvedValueOnce(null);
+
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/notifications`);
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ success: false, error: "Authentication required" });
+    expect(mocks.query).not.toHaveBeenCalled();
+  });
+
+  it("rejects unsupported notification methods", async () => {
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/notifications`, { method: "POST" });
+
+    expect(response.status).toBe(405);
+    expect(await response.json()).toEqual({ success: false, error: "Method not allowed" });
+    expect(mocks.getSession).not.toHaveBeenCalled();
+    expect(mocks.query).not.toHaveBeenCalled();
+  });
+
 });
