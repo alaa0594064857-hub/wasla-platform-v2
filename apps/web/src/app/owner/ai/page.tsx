@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useLocale } from "../../../components/locale-provider";
 
 type Message = { role: "user" | "assistant"; content: string };
-type Status = { configured: boolean; managerEnabled: boolean; pausedReason: string | null; model: string | null; provider?: string; engine?: string; readOnlyDataAccess?: boolean; capabilities: string[]; limitations: string[] };
+type AuditEntry = { id: string; model: string; prompt_preview: string; response_preview: string; createdAt: string };
+type Status = { configured: boolean; managerEnabled: boolean; pausedReason: string | null; model: string | null; provider?: string; engine?: string; readOnlyDataAccess?: boolean; auditTrail?: AuditEntry[]; capabilities: string[]; limitations: string[] };
 export default function OwnerAiAssistantPage() {
   const { locale } = useLocale();
   const ar = locale === "ar";
@@ -91,6 +92,19 @@ export default function OwnerAiAssistantPage() {
       <p className="text-sm">{ar ? "أنشئ مفتاحاً مجانياً من Google AI Studio، ثم أضفه في Render كمتغير سري باسم GEMINI_API_KEY لخدمة wasla-api. لا ترسل المفتاح في المحادثة ولا تضعه في كود الموقع." : "Create a free API key in Google AI Studio, then add it in Render as a secret named GEMINI_API_KEY for the wasla-api service. Never share the key in chat or place it in website code."}</p>
       <p className="text-xs text-slate-600">{ar ? "النموذج الافتراضي: gemini-3.5-flash-lite. سنستخدم الطبقة المجانية فقط؛ عند بلوغ الحصة سيتوقف الرد حتى تتجدد، ولن يحدث تحويل إلى خطة مدفوعة." : "Default model: gemini-3.5-flash-lite. Free tier only; if its quota is reached, replies pause until reset. No paid fallback is enabled."}</p>
     </section> : null}
+    <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-bold">{ar ? "سجل نشاط مدير الذكاء الاصطناعي" : "AI manager activity log"}</h2>
+        <span className="text-xs text-slate-500">{ar ? "آخر 20 طلباً للمالك فقط" : "Latest 20 owner requests only"}</span>
+      </div>
+      {!status?.auditTrail?.length ? <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-500">{ar ? "لا توجد محادثات مسجلة حتى الآن." : "No recorded conversations yet."}</p> :
+        <ol className="space-y-3">{status.auditTrail.map(entry => <li key={entry.id} className="rounded-xl border border-slate-100 p-3">
+          <div className="flex flex-wrap justify-between gap-2 text-xs text-slate-500"><span>{entry.model}</span><time dateTime={entry.createdAt}>{new Date(entry.createdAt).toLocaleString(locale)}</time></div>
+          <p className="mt-2 text-sm font-semibold">{entry.prompt_preview}</p>
+          <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-600">{entry.response_preview}</p>
+        </li>)}</ol>}
+      <p className="text-xs text-slate-500">{ar ? "هذا سجل تدقيق خاص بالمالك، ويعرض مقتطفات محدودة فقط. لا يتضمن بيانات العملاء الشخصية." : "Private owner audit history with limited excerpts only; customer personal data is not included."}</p>
+    </section>
     <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {[
         [ar ? "تحليل فرص المنتجات" : "Opportunity analysis", ar ? "مراجعة دليل الطلب والتكلفة والهامش." : "Review demand evidence, costs, and margin."],
