@@ -937,3 +937,14 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Validates carrier identifier, provider event ID, tracking reference and canonical ISO timestamp; derives an idempotency key from carrier + provider event ID.
 - Even a normalized `delivered` event remains `verificationState: pending` and `proofOfDeliveryVerified: false`. Normalization is not authentication, shipment/order matching, delivery evidence or permission to complete an order.
 - The carrier-specific adapter must verify native signatures, match the exact tracking reference to the correct shipment, enforce replay/idempotency, preserve provider raw-event audit evidence safely, and apply a monotonic transition policy before any state change. No carrier is selected or connected.
+
+
+## Member-store returns and exchanges — 2026-11-09
+
+- Draft PR #49 adds an authenticated buyer request for return or replacement on shipped/completed member-store orders, with reason/details validation and one active request per order.
+- Authorized store/account order managers can approve or reject with a recorded response; after approval, the merchant can record receipt of the returned item; the buyer can close a rejected request or a received return.
+- The order page exposes the current request and bilingual buyer/merchant controls. Return requests are audited and stored separately from delivery complaints.
+- This is an operational workflow only. It does not initiate refunds, payment reversals, chargebacks, replacement shipment creation, carrier actions or supplier purchases. A replacement fulfillment step, explicit merchant return policy/window configuration, legal policy review and payment-provider integration remain outstanding.
+- No arbitrary statutory return window is hardcoded; eligibility is limited to shipped/completed orders pending approved store policy and applicable-law review.
+- PR #49 is stacked on PR #48 and remains a draft. Final-head CI and database execution tests are pending; do not treat this workflow as production-verified until checks pass.
+- No PR was merged, no Render deployment was triggered, and no paid service or payment setting was changed.
