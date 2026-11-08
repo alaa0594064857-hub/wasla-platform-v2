@@ -912,3 +912,11 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Database bootstrap creates the dispute table and indexes idempotently. No funds are held, no chargebacks or settlement are performed, and no payment/purchase is triggered.
 - API regression tests and API TypeScript build passed on the initial API implementation head 3947fc127cf1062dbe7c388d4af5f1cd5e914de2. The subsequent customer-facing UI and order-query integration commits require a fresh final-head full CI run before this item is considered verified.
 - No PR merge, Render deployment, build-minute purchase, or production migration was performed.
+
+## Member-store append-only order event ledger — 2026-11-08
+
+- Draft branch `feat/member-order-event-ledger`, stacked on PR #47, adds `member_store_order_events` with actor, event type, before/after state, source, reason code, idempotency key, safe metadata and timestamp.
+- A database trigger records order creation, every status transition, and manual shipment-detail changes inside the same database transaction as the order write. The application sets the authenticated actor in transaction-local database context; buyer and merchant actors are distinguished.
+- Event rows reject UPDATE and DELETE at the database layer. Existing orders receive one idempotent legacy snapshot event; their historical transitions are not fabricated.
+- Event metadata deliberately excludes tracking numbers and tracking URLs. No carrier integration, proof-of-delivery verification, customer event timeline, delivery evidence adjudication, or review-eligibility changes are claimed in this increment.
+- API regression expectations were updated for the actor-context parameter. Final-head CI and database execution verification remain pending; this branch is not merged or deployed.
