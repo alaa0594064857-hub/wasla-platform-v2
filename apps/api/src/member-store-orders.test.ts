@@ -83,8 +83,10 @@ describe("member store order requests", () => {
     expect(await response.json()).toEqual({ success: true, orders: [] });
     const sql = String(query.mock.calls[0][0]);
     expect(sql).toContain("o.buyer_user_id = $2");
-    expect(sql).toContain("store.order.read");
-    expect(sql).toContain("account.order.read");
+    expect(query.mock.calls[0][1]).toEqual([
+      "demo", "11111111-1111-4111-8111-111111111111",
+      ["store.order.read", "account.order.read"],
+    ]);
     expect(sql).toContain("LIMIT 100");
   });
 });
