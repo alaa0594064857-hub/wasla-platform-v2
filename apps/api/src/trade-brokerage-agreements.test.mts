@@ -69,6 +69,31 @@ afterEach(async () => {
 });
 
 describe("WASLA Trade brokerage agreement access and acceptance", () => {
+  it("does not expose an agreement to a member of an inactive buyer or supplier account", async () => {
+    mocks.query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
+
+    const baseUrl = await startServer(agreement.id);
+    const response = await fetch(`${baseUrl}/api/trade/brokerage-agreements/${agreement.id}`);
+
+    expect(response.status).toBe(404);
+    expect(String(mocks.query.mock.calls[0][0])).toContain("a.status='active'");
+    expect(String(mocks.query.mock.calls[0][0])).toContain("am.status='active'");
+    expect(String(mocks.query.mock.calls[0][0])).toContain("p.permission_key='account.trade.read'");
+  });
+
+  it("limits agreement listings to active buyer or supplier accounts with trade-read permission", async () => {
+    mocks.query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
+
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/trade/brokerage-agreements`);
+
+    expect(response.status).toBe(200);
+    expect(String(mocks.query.mock.calls[0][0])).toContain("a.status='active'");
+    expect(String(mocks.query.mock.calls[0][0])).toContain("am.status='active'");
+    expect(String(mocks.query.mock.calls[0][0])).toContain("p.permission_key='account.trade.read'");
+  });
+
+
   it("rejects unauthenticated agreement requests without reading agreement data", async () => {
     mocks.getSession.mockResolvedValueOnce(null);
 

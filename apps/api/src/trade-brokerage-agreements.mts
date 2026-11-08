@@ -87,18 +87,18 @@ export async function handleBrokerageAgreements(request: IncomingMessage, respon
       const query = agreementId
         ? await db.query(`SELECT g.* FROM trade_brokerage_agreements g
           WHERE g.id=$1 AND (
-            EXISTS (SELECT 1 FROM account_members am WHERE am.account_id=g.buyer_account_id AND am.user_id=$2 AND am.status='active'
+            EXISTS (SELECT 1 FROM account_members am JOIN accounts a ON a.id=am.account_id AND a.status='active' WHERE am.account_id=g.buyer_account_id AND am.user_id=$2 AND am.status='active'
               AND EXISTS (SELECT 1 FROM role_permissions rp JOIN permissions p ON p.id=rp.permission_id AND p.scope_type=rp.scope_type
                 WHERE rp.role_id=am.role_id AND rp.scope_type=am.role_scope AND p.permission_key='account.trade.read'))
-            OR EXISTS (SELECT 1 FROM account_members am WHERE am.account_id=g.supplier_account_id AND am.user_id=$2 AND am.status='active'
+            OR EXISTS (SELECT 1 FROM account_members am JOIN accounts a ON a.id=am.account_id AND a.status='active' WHERE am.account_id=g.supplier_account_id AND am.user_id=$2 AND am.status='active'
               AND EXISTS (SELECT 1 FROM role_permissions rp JOIN permissions p ON p.id=rp.permission_id AND p.scope_type=rp.scope_type
                 WHERE rp.role_id=am.role_id AND rp.scope_type=am.role_scope AND p.permission_key='account.trade.read'))
           ) LIMIT 1`,[agreementId,userId])
         : await db.query(`SELECT g.* FROM trade_brokerage_agreements g
-          WHERE EXISTS (SELECT 1 FROM account_members am WHERE am.account_id=g.buyer_account_id AND am.user_id=$1 AND am.status='active'
+          WHERE EXISTS (SELECT 1 FROM account_members am JOIN accounts a ON a.id=am.account_id AND a.status='active' WHERE am.account_id=g.buyer_account_id AND am.user_id=$1 AND am.status='active'
             AND EXISTS (SELECT 1 FROM role_permissions rp JOIN permissions p ON p.id=rp.permission_id AND p.scope_type=rp.scope_type
               WHERE rp.role_id=am.role_id AND rp.scope_type=am.role_scope AND p.permission_key='account.trade.read'))
-             OR EXISTS (SELECT 1 FROM account_members am WHERE am.account_id=g.supplier_account_id AND am.user_id=$1 AND am.status='active'
+             OR EXISTS (SELECT 1 FROM account_members am JOIN accounts a ON a.id=am.account_id AND a.status='active' WHERE am.account_id=g.supplier_account_id AND am.user_id=$1 AND am.status='active'
             AND EXISTS (SELECT 1 FROM role_permissions rp JOIN permissions p ON p.id=rp.permission_id AND p.scope_type=rp.scope_type
               WHERE rp.role_id=am.role_id AND rp.scope_type=am.role_scope AND p.permission_key='account.trade.read'))
           ORDER BY g.created_at DESC LIMIT 100`,[userId]);
