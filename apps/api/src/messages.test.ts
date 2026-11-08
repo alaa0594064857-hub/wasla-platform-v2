@@ -133,6 +133,22 @@ describe("product-based private messaging", () => {
     expect(mocks.query).not.toHaveBeenCalled();
   });
 
+  it("rejects oversized request bodies before querying messages", async () => {
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "x".repeat(12_001),
+    });
+
+    expect(response.status).toBe(413);
+    expect(await response.json()).toEqual({
+      success: false,
+      error: "Request body too large",
+    });
+    expect(mocks.query).not.toHaveBeenCalled();
+  });
+
   it("requires exactly one recipientId or productId", async () => {
     const baseUrl = await startServer();
     const response = await fetch(`${baseUrl}/api/messages`, {
