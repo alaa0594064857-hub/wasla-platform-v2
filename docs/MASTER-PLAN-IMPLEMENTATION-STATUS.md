@@ -652,3 +652,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Existing buyer cancellation eligibility and merchant permissions are unchanged. No payment, stock reservation/decrement, supplier purchase or shipping is triggered.
 - Final-head GitHub CI run `42488876434` and API-quality run `42488876367` both passed, including API tests, migrations/constraints, TypeScript checks, API build and Web production build.
 - Notifications remain in-app only; external push/email delivery and hosted two-account verification remain outstanding. Render deployment is still blocked by exhausted pipeline build minutes, so this change is merged to GitHub but not live on hosted services.
+
+
+## Notification-center copy clarification — 2026-11-08
+
+- PR #22 merged to `main` as `9e96528cf6b706345dd745ef6a0f61772f6d2ef7`.
+- Updated the Arabic and English notification-center introduction to explicitly include member-store order updates as well as official-store updates.
+- No API, authorization, notification delivery or order-state behavior changed.
+- Final-head CI run `42489226922` and API-quality run `42489226826` both passed; CI included API tests, database migrations/constraints, TypeScript checks, API build and Web production build.
+- The copy update is merged to GitHub; Render deployment remains blocked by exhausted pipeline build minutes, so it is not yet live on the hosted site.
