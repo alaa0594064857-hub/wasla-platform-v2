@@ -11,11 +11,18 @@ vi.mock("./database.js", () => ({ getDatabasePool: vi.fn() }));
 
 let server: Server | undefined;
 const query = vi.fn();
+const clientQuery = vi.fn();
+const release = vi.fn();
+const connect = vi.fn();
 beforeEach(() => {
   vi.mocked(auth.api.getSession).mockResolvedValue({ user: { id: "11111111-1111-4111-8111-111111111111" } } as never);
   vi.mocked(authorizePlatformPermission).mockResolvedValue({ userId: "11111111-1111-4111-8111-111111111111", roleNames: ["platform_admin"], permissions: ["platform.reports.manage"] } as never);
   query.mockReset();
-  vi.mocked(getDatabasePool).mockReturnValue({ query } as never);
+  clientQuery.mockReset();
+  release.mockReset();
+  connect.mockReset();
+  connect.mockResolvedValue({ query: clientQuery, release });
+  vi.mocked(getDatabasePool).mockReturnValue({ query, connect } as never);
 });
 afterEach(async () => {
   if (server?.listening) await new Promise<void>((resolve, reject) => server!.close(error => error ? reject(error) : resolve()));
@@ -63,4 +70,42 @@ describe("review reports and appeals", () => {
     expect(await response.json()).toMatchObject({ success: true, reports: [], appeals: [] });
     expect(authorizePlatformPermission).toHaveBeenCalledWith(expect.anything(), expect.anything(), "platform.reports.manage");
   });
+  it("resolves a report only for authorized moderators and hides the review when actioned", async () => {
+    clientQuery.mockResolvedValueOnce({ rowCount: null, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ reviewId: id, status: "open" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: null, rows: [] });
+    const base = await startServer();
+    const disputeId = "55555555-5555-4555-8555-555555555555";
+    const response = await fetch(base + "/api/platform/review-disputes/report/" + disputeId, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "actioned", note: "Confirmed policy violation." }),
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ success: true, dispute: { status: "actioned" } });
+    expect(String(clientQuery.mock.calls[1][0])).toContain("FOR UPDATE");
+    expect(String(clientQuery.mock.calls[3][0])).toContain("SET status = 'hidden'");
+    expect(String(clientQuery.mock.calls[4][0])).toContain("INSERT INTO audit_logs");
+    expect(clientQuery).toHaveBeenCalledWith("COMMIT");
+    expect(release).toHaveBeenCalled();
+  });
+
+  it("returns an overturned appeal to moderation rather than publishing it automatically", async () => {
+    clientQuery.mockResolvedValueOnce({ rowCount: null, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ reviewId: id, status: "open" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: null, rows: [] });
+    const base = await startServer();
+    const disputeId = "66666666-6666-4666-8666-666666666666";
+    const response = await fetch(base + "/api/platform/review-disputes/appeal/" + disputeId, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "overturned", note: "Return for a fresh moderation review." }),
+    });
+    expect(response.status).toBe(200);
+    expect(String(clientQuery.mock.calls[3][0])).toContain("SET status = 'pending_moderation'");
+    expect(String(clientQuery.mock.calls[4][0])).toContain("review.appeal.overturned");
+  });
+
 });
