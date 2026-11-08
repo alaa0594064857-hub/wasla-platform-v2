@@ -345,10 +345,19 @@ export async function ensureVerifiedReviewTables(): Promise<void> {
       body varchar(2000) NOT NULL CHECK (length(trim(body)) BETWEEN 10 AND 2000),
       status varchar(24) NOT NULL DEFAULT 'pending_moderation'
         CHECK (status IN ('pending_moderation', 'published', 'rejected', 'hidden')),
+      moderated_by uuid REFERENCES users(id) ON DELETE SET NULL,
+      moderation_note varchar(1000),
+      moderated_at timestamptz,
       created_at timestamptz NOT NULL DEFAULT NOW(),
       updated_at timestamptz NOT NULL DEFAULT NOW(),
       UNIQUE (order_id, product_id)
     )
+  `);
+  await db.query(`
+    ALTER TABLE verified_product_reviews
+      ADD COLUMN IF NOT EXISTS moderated_by uuid REFERENCES users(id) ON DELETE SET NULL,
+      ADD COLUMN IF NOT EXISTS moderation_note varchar(1000),
+      ADD COLUMN IF NOT EXISTS moderated_at timestamptz
   `);
   await db.query(`CREATE INDEX IF NOT EXISTS verified_product_reviews_public_idx ON verified_product_reviews (product_id, created_at DESC) WHERE status = 'published'`);
   await db.query(`CREATE INDEX IF NOT EXISTS verified_product_reviews_buyer_idx ON verified_product_reviews (buyer_user_id, created_at DESC)`);
