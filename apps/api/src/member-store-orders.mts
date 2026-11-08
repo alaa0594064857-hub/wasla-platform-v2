@@ -29,9 +29,6 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function merchantPermission(userPlaceholder: number, permissionsPlaceholder: number) {
-  const keys = permission === "read"
-    ? ["store.order.read", "account.order.read"]
-    : ["store.order.manage", "account.order.manage"];
   return `(
     EXISTS (
       SELECT 1 FROM account_members am
@@ -47,7 +44,7 @@ function merchantPermission(userPlaceholder: number, permissionsPlaceholder: num
       INNER JOIN role_permissions rp ON rp.role_id = r.id AND rp.scope_type = r.scope_type
       INNER JOIN permissions p ON p.id = rp.permission_id AND p.scope_type = rp.scope_type
       WHERE sm.store_id = s.id AND sm.user_id = ${userPlaceholder}
-        AND sm.status = 'active' AND p.permission_key = ANY($3::text[])
+        AND sm.status = 'active' AND p.permission_key = ANY(${permissionsPlaceholder}::text[])
     )
   )`;
 }
@@ -295,7 +292,7 @@ export async function handleMemberStoreOrdersRequest(
          ($1 = 'fulfilled' AND o.status = 'accepted')
        )
      RETURNING o.id, o.order_number AS "orderNumber", o.status, o.updated_at AS "updatedAt"`,
-    [body.status, note, orderId, slug, ["store.order.manage", "account.order.manage"]],
+    [body.status, note, orderId, slug, session.user.id, ["store.order.manage", "account.order.manage"]],
   );
   if (result.rowCount !== 1) {
     respond(response, 404, { success: false, error: "Order not found, access denied, or transition not allowed" });
