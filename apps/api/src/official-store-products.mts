@@ -130,6 +130,16 @@ export async function handleOfficialStoreProductsRequest(
                 price::text AS price, currency, supplier_name, supplier_account_id,
                 supplier_contact_user_id, supplier_product_reference,
                 availability_status, fulfillment_notes, image_url, status,
+                COALESCE((
+                  SELECT jsonb_agg(jsonb_build_object(
+                    'destinationCountry', approval.destination_country,
+                    'price', approval.customer_price::text,
+                    'currency', approval.currency,
+                    'approvedAt', approval.approved_at
+                  ) ORDER BY approval.destination_country)
+                  FROM official_store_price_approvals approval
+                  WHERE approval.product_id = official_store_products.id AND approval.status = 'active'
+                ), '[]'::jsonb) AS "activePriceApprovals",
                 created_at, updated_at
          FROM official_store_products ORDER BY created_at DESC LIMIT 250`,
       );
