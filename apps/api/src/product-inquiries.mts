@@ -107,8 +107,12 @@ export async function handleProductInquiriesRequest(
     if (replyMatch && request.method === "POST") {
       let replyBody: unknown;
       try { replyBody = await readBody(request); }
-      catch {
-        respond(response, 400, { success: false, error: "Invalid request body" });
+      catch (error) {
+        const tooLarge = error instanceof Error && error.message === "Request body too large";
+        respond(response, tooLarge ? 413 : 400, {
+          success: false,
+          error: tooLarge ? "Request body too large" : "Invalid request body",
+        });
         return;
       }
       if (!isObject(replyBody) || typeof replyBody.message !== "string" ||
@@ -116,17 +120,20 @@ export async function handleProductInquiriesRequest(
         respond(response, 400, { success: false, error: "A reply between 1 and 3000 characters is required" });
         return;
       }
-      const access = await db.query(
-        `SELECT id, sender_user_id FROM product_inquiries WHERE id = $1 AND recipient_user_id = $2 AND status <> 'closed'`,
-        [replyMatch[1], userId],
-      );
-      if (!access.rowCount) {
-        respond(response, 404, { success: false, error: "Open inquiry not found for this seller" });
-        return;
-      }
       const client = await db.connect();
       try {
         await client.query("BEGIN");
+        const access = await client.query(
+          `SELECT id, sender_user_id FROM product_inquiries
+           WHERE id = $1 AND recipient_user_id = $2 AND status <> 'closed'
+           FOR UPDATE`,
+          [replyMatch[1], userId],
+        );
+        if (!access.rowCount) {
+          await client.query("ROLLBACK");
+          respond(response, 404, { success: false, error: "Open inquiry not found for this seller" });
+          return;
+        }
         const inserted = await client.query(
           `INSERT INTO product_inquiry_replies (inquiry_id, sender_user_id, body)
            VALUES ($1, $2, $3) RETURNING id, sender_user_id AS "senderUserId",
@@ -161,8 +168,12 @@ export async function handleProductInquiriesRequest(
     if (statusMatch && request.method === "PATCH") {
       let statusBody: unknown;
       try { statusBody = await readBody(request); }
-      catch {
-        respond(response, 400, { success: false, error: "Invalid request body" });
+      catch (error) {
+        const tooLarge = error instanceof Error && error.message === "Request body too large";
+        respond(response, tooLarge ? 413 : 400, {
+          success: false,
+          error: tooLarge ? "Request body too large" : "Invalid request body",
+        });
         return;
       }
       if (!isObject(statusBody) || !["new", "replied", "closed"].includes(String(statusBody.status))) {
@@ -205,10 +216,14 @@ export async function handleProductInquiriesRequest(
 
     let body: unknown;
     try { body = await readBody(request); }
-    catch {
-      respond(response, 400, { success: false, error: "Invalid request body" });
-      return;
-    }
+    catch (error) {
+        const tooLarge = error instanceof Error && error.message === "Request body too large";
+        respond(response, tooLarge ? 413 : 400, {
+          success: false,
+          error: tooLarge ? "Request body too large" : "Invalid request body",
+        });
+        return;
+      }
     if (!isObject(body) || typeof body.productId !== "string" ||
         !/^[0-9a-f-]{36}$/i.test(body.productId) ||
         typeof body.message !== "string" ||

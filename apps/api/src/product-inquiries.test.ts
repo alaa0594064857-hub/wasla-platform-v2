@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 
-const mocks = vi.hoisted(() => ({ getSession: vi.fn(), query: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getSession: vi.fn(), query: vi.fn(), connect: vi.fn() }));
 vi.mock("./auth.mjs", () => ({ auth: { api: { getSession: mocks.getSession } } }));
-vi.mock("./database.js", () => ({ getDatabasePool: () => ({ query: mocks.query }) }));
+vi.mock("./database.js", () => ({ getDatabasePool: () => ({ query: mocks.query, connect: mocks.connect }) }));
 
 let handleProductInquiriesRequest: (request: IncomingMessage, response: ServerResponse) => Promise<void>;
 let server: Server | undefined;
@@ -60,6 +60,66 @@ describe("private product inquiry access", () => {
     expect(mocks.query).toHaveBeenCalledOnce();
     expect(mocks.query.mock.calls[0][1]).toEqual(["11111111-1111-4111-8111-111111111111", "signed-in-user"]);
     expect(String(mocks.query.mock.calls[0][0])).toContain("sender_user_id = $2 OR recipient_user_id = $2");
+  });
+
+  it("locks the open inquiry inside the reply transaction before inserting a reply", async () => {
+    const client = { query: vi.fn(), release: vi.fn() };
+    mocks.connect.mockResolvedValueOnce(client);
+    client.query
+      .mockResolvedValueOnce({ rows: [] }) // BEGIN
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "11111111-1111-4111-8111-111111111111", sender_user_id: "customer-user" }] }) // locked inquiry
+      .mockResolvedValueOnce({ rows: [{ id: "reply-1", senderUserId: "seller-user", body: "Yes, available." }] })
+      .mockResolvedValueOnce({ rows: [] }) // status update
+      .mockResolvedValueOnce({ rows: [] }) // notification
+      .mockResolvedValueOnce({ rows: [] }); // COMMIT
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/product-inquiries/11111111-1111-4111-8111-111111111111/replies`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: "Yes, available." }),
+    });
+
+    expect(response.status).toBe(201);
+    expect(await response.json()).toMatchObject({ success: true, reply: { id: "reply-1" } });
+    expect(String(client.query.mock.calls[1][0])).toContain("FOR UPDATE");
+    expect(String(client.query.mock.calls[1][0])).toContain("status <> 'closed'");
+    expect(client.query.mock.calls.at(-1)?.[0]).toBe("COMMIT");
+    expect(client.release).toHaveBeenCalledOnce();
+  });
+
+  it("does not insert a reply when the inquiry was closed before the transaction acquired its lock", async () => {
+    const client = { query: vi.fn(), release: vi.fn() };
+    mocks.connect.mockResolvedValueOnce(client);
+    client.query
+      .mockResolvedValueOnce({ rows: [] }) // BEGIN
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] }) // no longer open
+      .mockResolvedValueOnce({ rows: [] }); // ROLLBACK
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/product-inquiries/11111111-1111-4111-8111-111111111111/replies`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: "A reply after closure." }),
+    });
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ success: false, error: "Open inquiry not found for this seller" });
+    expect(client.query).toHaveBeenCalledTimes(3);
+    expect(client.query.mock.calls[2][0]).toBe("ROLLBACK");
+    expect(client.release).toHaveBeenCalledOnce();
+  });
+
+  it("returns 413 when an inquiry request body exceeds the size limit", async () => {
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/product-inquiries`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "x".repeat(12_001),
+    });
+
+    expect(response.status).toBe(413);
+    expect(await response.json()).toEqual({ success: false, error: "Request body too large" });
+    expect(mocks.query).not.toHaveBeenCalled();
+    expect(mocks.connect).not.toHaveBeenCalled();
   });
 
   it("allows only the assigned seller recipient to change inquiry status", async () => {
