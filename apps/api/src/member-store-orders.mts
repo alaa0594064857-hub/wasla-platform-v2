@@ -356,7 +356,11 @@ export async function handleMemberStoreOrdersRequest(
          ($1 = 'cancelled' AND o.buyer_user_id = $5 AND o.status = 'pending_merchant_review') OR
          ($1 IN ('accepted', 'rejected') AND o.status = 'pending_merchant_review' AND ${merchantPermission(5, 6)}) OR
          ($1 = 'shipped' AND o.status = 'accepted' AND ${merchantPermission(5, 6)}) OR
-         ($1 = 'completed' AND o.buyer_user_id = $5 AND o.status = 'shipped')
+         ($1 = 'completed' AND o.buyer_user_id = $5 AND o.status = 'shipped'
+         AND NOT EXISTS (
+           SELECT 1 FROM member_store_order_disputes d
+           WHERE d.order_id = o.id AND d.status IN ('open', 'merchant_responded')
+         ))
        )
      RETURNING o.id, o.order_number AS "orderNumber", o.buyer_user_id AS "buyerUserId",
                o.status, o.carrier_name AS "carrierName", o.tracking_number AS "trackingNumber",
