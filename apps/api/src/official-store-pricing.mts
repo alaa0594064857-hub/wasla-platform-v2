@@ -88,7 +88,7 @@ function normalizeLine(line: CostLine, target: string): { type: string; sourceAm
   };
 }
 
-async function ensurePriceApprovalTables(): Promise<void> {
+export async function ensurePriceApprovalTables(): Promise<void> {
   const db = getDatabasePool();
   await db.query(`
     CREATE TABLE IF NOT EXISTS official_store_price_previews (
