@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { getOfficialStoreProducts, OfficialStoreProduct, WaslaApiError } from "./src/api";
+import { authClient } from "./src/auth-client";
 import {
   Pressable,
   SafeAreaView,
@@ -36,7 +37,13 @@ const copy = {
     error: "تعذر الاتصال بالكتالوج. حاول مرة أخرى لاحقاً.",
     price: "السعر",
     available: "متوفر",
-    limited: "توفر محدود"
+    limited: "توفر محدود",
+    email: "البريد الإلكتروني",
+    password: "كلمة المرور",
+    signIn: "تسجيل الدخول",
+    signOut: "تسجيل الخروج",
+    signedIn: "تم تسجيل الدخول",
+    authError: "تعذر تسجيل الدخول. تحقق من البريد وكلمة المرور."
   },
   en: {
     direction: "ltr" as const,
@@ -59,7 +66,13 @@ const copy = {
     error: "Could not connect to the catalogue. Please try again.",
     price: "Price",
     available: "Available",
-    limited: "Limited availability"
+    limited: "Limited availability",
+    email: "Email address",
+    password: "Password",
+    signIn: "Sign in",
+    signOut: "Sign out",
+    signedIn: "You are signed in",
+    authError: "Sign-in failed. Check your email and password."
   }
 };
 
@@ -78,6 +91,26 @@ export default function App() {
   const [products, setProducts] = useState<OfficialStoreProduct[]>([]);
   const [catalogueLoading, setCatalogueLoading] = useState(false);
   const [catalogueError, setCatalogueError] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const { data: session, isPending: sessionLoading } = authClient.useSession();
+
+  async function handleSignIn() {
+    if (!email.trim() || !password || authBusy) return;
+    setAuthBusy(true);
+    setAuthError("");
+    try {
+      const result = await authClient.signIn.email({ email: email.trim(), password });
+      if (result.error) setAuthError(t.authError);
+      else setPassword("");
+    } catch {
+      setAuthError(t.authError);
+    } finally {
+      setAuthBusy(false);
+    }
+  }
 
   async function loadCatalogue() {
     setCatalogueLoading(true);
@@ -170,7 +203,7 @@ const styles = StyleSheet.create({
   moduleCard: { width: "48%", minHeight: 118, flexGrow: 1, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#ECE6D9", borderRadius: 16, padding: 16, justifyContent: "space-between" },
   moduleIcon: { color: "#B18A4A", fontSize: 25, fontWeight: "700" },
   moduleTitle: { color: "#14283F", fontSize: 15, fontWeight: "800" },
-  catalogue: { marginTop: 28, borderRadius: 16, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#ECE6D9", padding: 16, gap: 12 },\n  catalogueTitle: { color: "#14283F", fontSize: 19, fontWeight: "900" },\n  countryInput: { borderWidth: 1, borderColor: "#D8D1C2", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 12, color: "#14283F" },\n  catalogueButton: { backgroundColor: "#14283F", padding: 14, borderRadius: 11, alignItems: "center" },\n  productCard: { borderTopWidth: 1, borderTopColor: "#ECE6D9", paddingTop: 12, gap: 5 },\n  productTitle: { color: "#14283F", fontSize: 15, fontWeight: "800" },\n  productPrice: { color: "#5E6873", fontSize: 13 },\n  productStatus: { color: "#A17B3D", fontSize: 12, fontWeight: "700" },\n  errorText: { color: "#B42318", fontSize: 13 },\n  note: { marginTop: 24, borderRadius: 14, backgroundColor: "#EEE9DD", padding: 15 },
+  authCard: { marginTop: 28, borderRadius: 16, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#ECE6D9", padding: 16, gap: 12 },\n  catalogue: { marginTop: 20, borderRadius: 16, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#ECE6D9", padding: 16, gap: 12 },\n  catalogueTitle: { color: "#14283F", fontSize: 19, fontWeight: "900" },\n  countryInput: { borderWidth: 1, borderColor: "#D8D1C2", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 12, color: "#14283F" },\n  catalogueButton: { backgroundColor: "#14283F", padding: 14, borderRadius: 11, alignItems: "center" },\n  productCard: { borderTopWidth: 1, borderTopColor: "#ECE6D9", paddingTop: 12, gap: 5 },\n  productTitle: { color: "#14283F", fontSize: 15, fontWeight: "800" },\n  productPrice: { color: "#5E6873", fontSize: 13 },\n  productStatus: { color: "#A17B3D", fontSize: 12, fontWeight: "700" },\n  errorText: { color: "#B42318", fontSize: 13 },\n  note: { marginTop: 24, borderRadius: 14, backgroundColor: "#EEE9DD", padding: 15 },
   noteText: { color: "#626A72", fontSize: 12, lineHeight: 19 },
   footer: { marginTop: 28, textAlign: "center", color: "#899099", fontSize: 12 }
 });
