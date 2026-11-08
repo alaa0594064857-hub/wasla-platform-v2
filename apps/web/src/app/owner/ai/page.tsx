@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useLocale } from "../../../components/locale-provider";
 
 type Message = { role: "user" | "assistant"; content: string };
-type Status = { configured: boolean; model: string | null; provider?: string; engine?: string; readOnlyDataAccess?: boolean; capabilities: string[]; limitations: string[] };
+type Status = { configured: boolean; managerEnabled: boolean; pausedReason: string | null; model: string | null; provider?: string; engine?: string; readOnlyDataAccess?: boolean; capabilities: string[]; limitations: string[] };
 export default function OwnerAiAssistantPage() {
   const { locale } = useLocale();
   const ar = locale === "ar";
@@ -16,6 +16,8 @@ export default function OwnerAiAssistantPage() {
   const [error, setError] = useState("");
   const [productPrompt, setProductPrompt] = useState("");
   const [draftBusy, setDraftBusy] = useState(false);
+  const [controlBusy, setControlBusy] = useState(false);
+  const [pauseReason, setPauseReason] = useState("Owner maintenance");
   const [createdDraft, setCreatedDraft] = useState<{ id: string; title_ar: string; title_en: string; status: string; price: string; currency: string; warnings: string[] } | null>(null);
 
   useEffect(() => {
@@ -26,10 +28,27 @@ export default function OwnerAiAssistantPage() {
       .catch(() => { if (active) setError(ar ? "تعذر التحقق من حالة خدمة الذكاء الاصطناعي أو صلاحية الحساب." : "Could not verify AI service status or account access."); });
     return () => { active = false; };
   }, [ar]);
+  async function toggleManager() {
+    if (!status || controlBusy) return;
+    const enabled = !status.managerEnabled;
+    setControlBusy(true); setError("");
+    try {
+      const response = await fetch("/api/platform/ai/assistant", {
+        method: "PATCH", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled, reason: enabled ? null : pauseReason.trim() })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || "Could not update AI manager control");
+      setStatus(current => current ? { ...current, managerEnabled: data.managerEnabled, pausedReason: data.pausedReason } : current);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : (ar ? "تعذر تغيير حالة المدير." : "Could not change manager state."));
+    } finally { setControlBusy(false); }
+  }
   async function createProductDraft(event: FormEvent) {
     event.preventDefault();
     const prompt = productPrompt.trim();
-    if (!prompt || draftBusy || !status?.configured) return;
+    if (!prompt || draftBusy || !status?.configured || !status.managerEnabled) return;
     setDraftBusy(true); setError(""); setCreatedDraft(null);
     try {
       const response = await fetch("/api/platform/ai/product-drafts", {
@@ -49,7 +68,7 @@ export default function OwnerAiAssistantPage() {
   async function send(event: FormEvent) {
     event.preventDefault();
     const content = draft.trim();
-    if (!content || busy || !status?.configured) return;
+    if (!content || busy || !status?.configured || !status.managerEnabled) return;
     const next = [...messages, { role: "user" as const, content }].slice(-12);
     setMessages(next); setDraft(""); setBusy(true); setError("");
     try {
@@ -63,9 +82,10 @@ export default function OwnerAiAssistantPage() {
   return <main dir={ar ? "rtl" : "ltr"} lang={locale} className="mx-auto min-h-screen w-full max-w-5xl space-y-6 px-6 py-8 text-slate-900">
     <header className="flex flex-wrap items-center justify-between gap-3">
       <div><Link href="/owner" className="text-sm text-slate-500 hover:underline">← {ar ? "مركز المالك" : "Owner center"}</Link><p className="mt-3 text-xs font-semibold tracking-[.2em] text-amber-700">WASLA AI OPERATIONS</p><h1 className="mt-1 text-3xl font-bold">{ar ? "مدير WASLA الذكي" : "WASLA AI Manager"}</h1><p className="mt-2 max-w-2xl text-sm text-slate-600">{ar ? "مساعد تشغيلي للمالك لتحليل فرص المنتجات والموردين والتسعير والمخاطر." : "An owner-facing operations copilot for product opportunities, suppliers, pricing, and risk."}</p></div>
-      <span className="rounded-full border border-slate-200 px-3 py-1 text-xs">{status?.configured ? (ar ? "Gemini متصل" : "Gemini connected") : (ar ? "بانتظار مفتاح Gemini المجاني" : "Waiting for Gemini free-tier key")}</span>
+      <div className="flex flex-wrap items-center gap-2"><span className="rounded-full border border-slate-200 px-3 py-1 text-xs">{status?.configured ? (ar ? "Gemini متصل" : "Gemini connected") : (ar ? "بانتظار مفتاح Gemini المجاني" : "Waiting for Gemini free-tier key")}</span><span className={"rounded-full border px-3 py-1 text-xs " + (status?.managerEnabled ? "border-emerald-200 text-emerald-800" : "border-amber-300 text-amber-800")}>{status?.managerEnabled ? (ar ? "المدير نشط" : "Manager active") : (ar ? "المدير متوقف" : "Manager paused")}</span><button type="button" onClick={() => void toggleManager()} disabled={!status || controlBusy} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold disabled:opacity-50">{controlBusy ? "…" : status?.managerEnabled ? (ar ? "إيقاف المدير" : "Pause manager") : (ar ? "استئناف المدير" : "Resume manager")}</button></div>
     </header>
     {error ? <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{error}</div> : null}
+    {status && !status.managerEnabled ? <section className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"><strong>{ar ? "مدير WASLA متوقف مؤقتاً" : "WASLA AI Manager is paused"}</strong><p className="mt-1">{status.pausedReason || (ar ? "أوقفه المالك." : "Paused by the owner.")} · {ar ? "لن تعمل المحادثة أو مسودات المنتجات حتى استئنافه." : "Chat and product drafts are disabled until it is resumed."}</p><label className="mt-3 block text-xs">{ar ? "سبب الإيقاف" : "Pause reason"}<input value={pauseReason} onChange={event => setPauseReason(event.target.value)} maxLength={500} className="mt-1 w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm" /></label></section> : null}
     {status && !status.configured ? <section className="space-y-2 rounded-2xl border border-amber-200 bg-amber-50 p-5">
       <h2 className="font-bold">{ar ? "مفتاح Gemini المجاني مطلوب" : "Gemini free-tier key required"}</h2>
       <p className="text-sm">{ar ? "أنشئ مفتاحاً مجانياً من Google AI Studio، ثم أضفه في Render كمتغير سري باسم GEMINI_API_KEY لخدمة wasla-api. لا ترسل المفتاح في المحادثة ولا تضعه في كود الموقع." : "Create a free API key in Google AI Studio, then add it in Render as a secret named GEMINI_API_KEY for the wasla-api service. Never share the key in chat or place it in website code."}</p>
@@ -87,7 +107,7 @@ export default function OwnerAiAssistantPage() {
       </div>
       <form onSubmit={send} className="flex flex-col gap-2 border-t px-5 py-4 sm:flex-row">
         <textarea value={draft} onChange={event => setDraft(event.target.value)} maxLength={3000} rows={2} placeholder={ar ? "اكتب سؤالك لمدير WASLA أو تفاصيل الفرصة..." : "Ask WASLA AI a question or describe an opportunity..."} className="min-h-12 flex-1 resize-y rounded-xl border border-slate-300 p-3 text-sm outline-none focus:border-amber-600" />
-        <button type="submit" disabled={!status?.configured || busy || !draft.trim()} className="rounded-xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">{busy ? (ar ? "جارٍ الإرسال..." : "Sending...") : (ar ? "إرسال" : "Send")}</button>
+        <button type="submit" disabled={!status?.configured || !status.managerEnabled || busy || !draft.trim()} className="rounded-xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">{busy ? (ar ? "جارٍ الإرسال..." : "Sending...") : (ar ? "إرسال" : "Send")}</button>
       </form>
     </section>
     <section className="space-y-4 rounded-2xl border border-amber-200 bg-white p-6">
@@ -96,7 +116,7 @@ export default function OwnerAiAssistantPage() {
         <p className="mt-1 text-sm text-slate-600">{ar ? "اكتب وصف المنتج والمعلومات المتوفرة. سيُنشئ المدير مسودة خاصة غير منشورة، ولن يخترع المورد أو السعر أو الشحن أو الصور." : "Describe the product using the facts you have. The manager creates a private unpublished draft and will not invent supplier, price, shipping, or image details."}</p>
       </div>
       <form onSubmit={createProductDraft} className="space-y-3">
-        <textarea value={productPrompt} onChange={event => setProductPrompt(event.target.value)} maxLength={5000} rows={5} required disabled={!status?.configured || draftBusy} className="w-full rounded-xl border border-slate-300 p-3 text-sm" placeholder={ar ? "مثال: قارورة حرارية من الستانلس ستيل، سعة 1 لتر، لون أسود..." : "Example: Stainless steel insulated bottle, 1 litre, black..."} />
+        <textarea value={productPrompt} onChange={event => setProductPrompt(event.target.value)} maxLength={5000} rows={5} required disabled={!status?.configured || !status.managerEnabled || draftBusy} className="w-full rounded-xl border border-slate-300 p-3 text-sm" placeholder={ar ? "مثال: قارورة حرارية من الستانلس ستيل، سعة 1 لتر، لون أسود..." : "Example: Stainless steel insulated bottle, 1 litre, black..."} />
         <button type="submit" disabled={!status?.configured || draftBusy || !productPrompt.trim()} className="rounded-xl bg-amber-700 px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">{draftBusy ? (ar ? "جارٍ تجهيز المسودة..." : "Creating draft...") : (ar ? "أنشئ مسودة المنتج" : "Create product draft")}</button>
       </form>
       {createdDraft ? <div role="status" className="space-y-2 rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-sm">
