@@ -71,5 +71,35 @@ describe("trade deal response party separation", () => {
     expect(statements.at(-1)).toBe("ROLLBACK");
     expect(statements.some((sql) => sql.includes("UPDATE trade_deals"))).toBe(false);
     expect(mocks.release).toHaveBeenCalledOnce();
+  }); 
+  it("rejects a deal response when the supplier account is inactive", async () => {
+    mocks.query
+      .mockResolvedValueOnce({ rows: [] }) // BEGIN
+      .mockResolvedValueOnce({
+        rows: [{
+          id: dealId,
+          buyer_user_id: "00000000-0000-4000-8000-000000000011",
+          supplier_account_id: supplierAccountId,
+          status: "proposed",
+          proposed_by_user_id: "00000000-0000-4000-8000-000000000011",
+          account_status: "suspended",
+        }],
+      })
+      .mockResolvedValueOnce({ rows: [] }); // ROLLBACK
+
+    const response = makeResponse();
+    await handleTradeDealResponse(makeRequest(), response as unknown as ServerResponse, dealId);
+
+    expect(response.statusCode).toBe(409);
+    expect(JSON.parse(response.body)).toEqual({
+      success: false,
+      error: "The supplier account is not active",
+    });
+    const statements = mocks.query.mock.calls.map(([sql]) => String(sql));
+    expect(statements.at(-1)).toBe("ROLLBACK");
+    expect(statements.some((sql) => sql.includes("UPDATE trade_deals"))).toBe(false);
+    expect(statements).toHaveLength(3);
+    expect(mocks.release).toHaveBeenCalledOnce();
   });
+
 });
