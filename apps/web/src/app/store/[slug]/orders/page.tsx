@@ -206,6 +206,30 @@ export default function MemberStoreOrdersPage() {
     return copy.pending;
   }
 
+  function eventTypeText(eventType: string) {
+    const labels: Record<string, [string, string]> = {
+      "order.created": ["إنشاء الطلب", "Order created"],
+      "order.legacy_snapshot": ["سجل سابق قبل تفعيل سجل الأحداث", "Legacy snapshot"],
+      "order.status_changed": ["تغيير حالة الطلب", "Order status changed"],
+      "shipment.manual_recorded": ["تسجيل بيانات الشحن يدويًا", "Shipment details recorded manually"],
+    };
+    const label = labels[eventType];
+    return label ? label[ar ? 0 : 1] : eventType;
+  }
+
+  function sourceText(source: string) {
+    const labels: Record<string, [string, string]> = {
+      application: ["النظام", "Application"],
+      merchant_manual: ["إدخال يدوي من المتجر", "Merchant-entered"],
+      owner_manual: ["إدخال يدوي من الإدارة", "Owner-entered"],
+      carrier_api: ["واجهة شركة الشحن", "Carrier API"],
+      carrier_webhook: ["إشعار شركة الشحن", "Carrier webhook"],
+      legacy_migration: ["ترحيل سجل سابق", "Legacy migration"],
+    };
+    const label = labels[source];
+    return label ? label[ar ? 0 : 1] : source;
+  }
+
   return <main className="min-h-screen bg-[#f7f4ec] text-[#14233b]" dir={ar ? "rtl" : "ltr"} lang={locale}>
     <header className="border-b border-[#e5dfd1] bg-white px-5 py-4">
       <Link href="/" className="font-bold tracking-wide">WASLA <span className="text-[#b89545]">وصلة</span></Link>
@@ -235,9 +259,9 @@ export default function MemberStoreOrdersPage() {
               {orderEvents[order.id] && (orderEvents[order.id].length === 0
                 ? <p className="mt-3 text-sm text-slate-500">{copy.historyEmpty}</p>
                 : <ol className="mt-3 space-y-3 border-s-2 border-[#e5dfd1] ps-4">{orderEvents[order.id].map(event => <li key={event.id} className="text-sm">
-                    <p className="font-semibold">{event.eventType === "order_created" ? copy.createdEvent : event.eventType === "status_changed" ? copy.statusChange : event.eventType}</p>
-                    {(event.fromStatus || event.toStatus) && <p className="mt-1 text-slate-600">{event.fromStatus ? `${copy.from}: ${event.fromStatus}` : ""}{event.fromStatus && event.toStatus ? " · " : ""}{event.toStatus ? `${copy.to}: ${event.toStatus}` : ""}</p>}
-                    <p className="mt-1 text-xs text-slate-500">{copy.eventSource}: {event.source} · {new Date(event.createdAt).toLocaleString(locale)}</p>
+                    <p className="font-semibold">{eventTypeText(event.eventType)}</p>
+                    {(event.fromStatus || event.toStatus) && <p className="mt-1 text-slate-600">{event.fromStatus ? `${copy.from}: ${statusText(event.fromStatus)}` : ""}{event.fromStatus && event.toStatus ? " · " : ""}{event.toStatus ? `${copy.to}: ${statusText(event.toStatus)}` : ""}</p>}
+                    <p className="mt-1 text-xs text-slate-500">{copy.eventSource}: {sourceText(event.source)} · {new Date(event.createdAt).toLocaleString(locale)}</p>
                   </li>)}</ol>)}
             </section>
             <div className="mt-4 divide-y divide-[#eee8dc]">
