@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { randomUUID } from "node:crypto";
 import { authorizePlatformPermission } from "./platform-security.mjs";
 import { getDatabasePool } from "./database.js";
 
@@ -87,12 +88,111 @@ function normalizeLine(line: CostLine, target: string): { type: string; sourceAm
   };
 }
 
+async function ensurePriceApprovalTables(): Promise<void> {
+  const db = getDatabasePool();
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS official_store_price_previews (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      product_id UUID NOT NULL REFERENCES official_store_products(id) ON DELETE CASCADE,
+      offer_id UUID NOT NULL REFERENCES official_store_product_source_offers(id) ON DELETE RESTRICT,
+      destination_country CHAR(2) NOT NULL,
+      currency CHAR(3) NOT NULL,
+      customer_price NUMERIC(14,2) NOT NULL CHECK (customer_price >= 0),
+      breakdown JSONB NOT NULL,
+      created_by UUID NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '30 minutes'),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS official_store_price_approvals (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      product_id UUID NOT NULL REFERENCES official_store_products(id) ON DELETE CASCADE,
+      offer_id UUID NOT NULL REFERENCES official_store_product_source_offers(id) ON DELETE RESTRICT,
+      destination_country CHAR(2) NOT NULL,
+      currency CHAR(3) NOT NULL,
+      customer_price NUMERIC(14,2) NOT NULL CHECK (customer_price >= 0),
+      breakdown JSONB NOT NULL,
+      approved_by UUID NOT NULL,
+      approved_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','superseded','revoked'))
+    )
+  `);
+  await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS official_store_one_active_price_per_destination
+    ON official_store_price_approvals(product_id, destination_country) WHERE status = 'active'`);
+  await db.query(`CREATE INDEX IF NOT EXISTS official_store_price_approvals_public_lookup
+    ON official_store_price_approvals(destination_country, status, product_id)`);
+}
+
+async function handleApprovePrice(request: IncomingMessage, response: ServerResponse, userId: string): Promise<void> {
+  let body: Record<string, unknown> | null;
+  try { body = await readBody(request); } catch { reply(response, 400, { success: false, error: "Invalid request body" }); return; }
+  if (!body || typeof body.previewId !== "string" || !UUID.test(body.previewId)) {
+    reply(response, 400, { success: false, error: "A valid price preview ID is required" }); return;
+  }
+  const db = getDatabasePool();
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+    const previewResult = await client.query(
+      `SELECT id, product_id, offer_id, destination_country, currency, customer_price::text AS customer_price, breakdown
+       FROM official_store_price_previews WHERE id = $1 AND created_by = $2 AND expires_at > NOW() FOR UPDATE`,
+      [body.previewId, userId],
+    );
+    const preview = previewResult.rows[0] as {
+      id: string; product_id: string; offer_id: string; destination_country: string;
+      currency: string; customer_price: string; breakdown: Record<string, unknown>;
+    } | undefined;
+    if (!preview) {
+      await client.query("ROLLBACK");
+      reply(response, 409, { success: false, error: "Price preview expired or unavailable. Recalculate before approval." }); return;
+    }
+    const offerResult = await client.query(
+      `SELECT id, product_id, supplier_price::text AS supplier_price, supplier_currency,
+              shipping_cost::text AS shipping_cost, shipping_currency, minimum_order_quantity,
+              ships_to_countries, direct_to_customer_confirmed, supplier_identity_verified,
+              specifications_verified, quote_valid_until, last_verified_at, availability_status, offer_status
+       FROM official_store_product_source_offers WHERE id = $1 AND product_id = $2 FOR UPDATE`,
+      [preview.offer_id, preview.product_id],
+    );
+    const offer = offerResult.rows[0] as Record<string, unknown> | undefined;
+    if (!offer || !isOfferEligibleForDestination(offer, preview.product_id, preview.destination_country)) {
+      await client.query("ROLLBACK");
+      reply(response, 409, { success: false, error: "Supplier offer is no longer eligible. Recalculate with a current approved offer." }); return;
+    }
+    await client.query(
+      `UPDATE official_store_price_approvals SET status = 'superseded'
+       WHERE product_id = $1 AND destination_country = $2 AND status = 'active'`,
+      [preview.product_id, preview.destination_country],
+    );
+    const approved = await client.query(
+      `INSERT INTO official_store_price_approvals
+        (product_id, offer_id, destination_country, currency, customer_price, breakdown, approved_by)
+       VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7)
+       RETURNING id, product_id, offer_id, destination_country, currency, customer_price::text AS customer_price, approved_at, status`,
+      [preview.product_id, preview.offer_id, preview.destination_country, preview.currency, preview.customer_price, JSON.stringify(preview.breakdown), userId],
+    );
+    await client.query(
+      `INSERT INTO official_store_activity_log (actor_type, actor_user_id, product_id, action, details)
+       VALUES ('human',$1,$2,'official_store.price.approved',$3::jsonb)`,
+      [userId, preview.product_id, JSON.stringify({ approvalId: approved.rows[0].id, offerId: preview.offer_id, destinationCountry: preview.destination_country, currency: preview.currency, customerPrice: preview.customer_price })],
+    );
+    await client.query("COMMIT");
+    reply(response, 200, { success: true, approval: approved.rows[0], publishable: true });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally { client.release(); }
+}
+
 /** Owner-only deterministic price preview. It never publishes a price or places an order. */
-export async function handleOfficialStorePricingRequest(request: IncomingMessage, response: ServerResponse): Promise<void> {
+export async function handleOfficialStorePricingRequest(request: IncomingMessage, response: ServerResponse, action: "preview" | "approve" = "preview"): Promise<void> {
   try {
     const access = await authorizePlatformPermission(request, response, "platform.manage");
     if (!access) return;
     if (request.method !== "POST") { reply(response, 405, { success: false, error: "Method not allowed" }); return; }
+    await ensurePriceApprovalTables();
+    if (action === "approve") { await handleApprovePrice(request, response, access.userId); return; }
     let body: Record<string, unknown> | null;
     try { body = await readBody(request); }
     catch (error) {
@@ -188,9 +288,8 @@ export async function handleOfficialStorePricingRequest(request: IncomingMessage
     const grossMarginPercent = finalPrice > 0
       ? Number(((finalPrice - roundedCost) / finalPrice * 100).toFixed(2))
       : 0;
-    reply(response, 200, {
-      success: true, previewOnly: true, published: false, productId, offerId, currency: target, destinationCountry,
-      breakdown: {
+    const previewId = randomUUID();
+    const breakdown = {
          supplierCost: { amount: supplierCost, currency: supplierCurrency, convertedAmount: supplier, fxRate: supplierFxRate,
           ...(supplierCurrency !== target ? { fxRateAsOf: body.supplierFxRateAsOf, fxSource: supplierFxSource } : {}) },
         shippingCost: { amount: shippingCost, currency: shippingCurrency, convertedAmount: shipping, fxRate: shippingFxRate,
@@ -199,7 +298,16 @@ export async function handleOfficialStorePricingRequest(request: IncomingMessage
         margin: { percent: marginPercent, fixedAmount: body.fixedMargin ?? 0, total: roundedMargin },
         finalCustomerPrice: finalPrice,
         grossMarginPercent,
-      },
+      };
+    await db.query(
+      `INSERT INTO official_store_price_previews
+        (id, product_id, offer_id, destination_country, currency, customer_price, breakdown, created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8)`,
+      [previewId, productId, offerId, destinationCountry, target, finalPrice, JSON.stringify(breakdown), access.userId],
+    );
+    reply(response, 200, {
+      success: true, previewOnly: true, published: false, previewId, productId, offerId, currency: target, destinationCountry,
+      breakdown,
       warnings: ["Taxes, customs, duties and payment fees are not estimated; add verified amounts as explicit cost lines.", "FX rates are supplied by the operator and must be timestamped within the last 24 hours; no live exchange-rate feed is assumed.", "This preview uses the selected verified supplier offer but does not approve a customer price, update the catalogue, expose supplier details to customers, publish products or place orders."],
     });
   } catch (error) {
