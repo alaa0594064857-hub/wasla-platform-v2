@@ -843,3 +843,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - The repeated review returns HTTP 409, rolls back the transaction, creates no duplicate notification and releases the database client.
 - Final-head WASLA CI run `42502446786` and API Quality run `42502446958` both completed successfully. CI passed shared/API tests, migrations, authorization seed, database constraints, TypeScript checks, API build and Web production build.
 - Test-only change; no runtime behavior, schema, payment, procurement or fulfilment behavior changed. Merged to GitHub `main`; Render deployment and hosted owner/customer verification remain pending while pipeline build minutes are exhausted.
+
+
+## Official-store expired supplier confirmation regression coverage — 2026-11-08
+
+- PR #43 merged to `main` as `6bedbcf556006676070ca5cc6f750ce422bc190d`.
+- Added regression coverage for the explicit `expired` supplier-confirmation decision.
+- Confirms the request is recorded as `expired` (not `rejected`), closed safely, customer notified, and payment/purchasing remain disabled.
+- Final-head WASLA CI run `42502623751` and API Quality run `42502623750` both passed.
+- Test-only change; no runtime behavior or schema changed. Render deployment and hosted verification remain pending due exhausted build minutes.
