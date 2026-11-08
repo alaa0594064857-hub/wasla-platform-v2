@@ -104,9 +104,13 @@ export async function handleOfficialStoreImportCandidatesRequest(request: Incomi
     }
     if (!body) { reply(response, 400, { success: false, error: "A JSON object is required" }); return; }
     const provider = textValue(body.provider, 32).toLowerCase();
+    const sourcePlatform = textValue(body.sourcePlatform, 80) || provider;
     const dataSourceId = textValue(body.dataSourceId, 64);
     const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     if (dataSourceId && !UUID.test(dataSourceId)) { reply(response, 400, { success: false, error: "Invalid registered data source" }); return; }
+    if (!sourcePlatform || (!dataSourceId && sourcePlatform.toLowerCase() !== provider)) {
+      reply(response, 403, { success: false, error: "A registered approved data source is required when importing from an external source platform." }); return;
+    }
     const supplierName = textValue(body.supplierName, 180);
     const productUrl = body.productUrl;
     if (!supplierName || !https(productUrl) || !body.payload || typeof body.payload !== "object" || Array.isArray(body.payload)) {
@@ -137,7 +141,7 @@ export async function handleOfficialStoreImportCandidatesRequest(request: Incomi
            WHERE id=$1 AND created_by=$2 AND permission_status='approved'
              AND lower(provider)=lower($3)
            FOR SHARE`,
-          [dataSourceId, access.userId, provider],
+          [dataSourceId, access.userId, sourcePlatform],
         );
         if (!source.rows.length) {
           await client.query("ROLLBACK");
@@ -147,7 +151,7 @@ export async function handleOfficialStoreImportCandidatesRequest(request: Incomi
       }
       for (const item of candidates) {
         const evidence = [
-          { type: "source_product_url", url: productUrl, provider },
+          { type: "source_product_url", url: productUrl, sourcePlatform, adapter: provider },
           ...(supplierEvidenceUrl ? [{ type: "supplier_evidence_url", url: supplierEvidenceUrl }] : []),
           ...(specificationEvidenceUrl ? [{ type: "product_specification", url: specificationEvidenceUrl }] : []),
           ...item.imageUrls.map(url => ({ type: "image_reference", url, rights_status: "unreviewed" })),
@@ -167,7 +171,7 @@ export async function handleOfficialStoreImportCandidatesRequest(request: Incomi
           [supplierName, new URL(productUrl).origin, item.sku || item.barcode || null,
            item.title + (item.variant ? " — " + item.variant : ""), item.description || null,
            item.price, item.currency, availability, "Direct-to-customer fulfilment not verified",
-           JSON.stringify(evidence), provider, productUrl, dataSourceId || null],
+           JSON.stringify(evidence), sourcePlatform, productUrl, dataSourceId || null],
         );
         created.push(result.rows[0]);
       }
@@ -179,8 +183,8 @@ export async function handleOfficialStoreImportCandidatesRequest(request: Incomi
       client.release();
     }
     reply(response, 201, {
-      success: true, provider, importedCount: created.length, candidates: created,
-      note: "Imported as unverified owner-review candidates only. A registered source is linked only when an approved source owned by the importing account was selected. No images were copied or published; image rights, supplier identity, availability, exact variant and direct shipping require review.",
+      success: true, provider, sourcePlatform, importedCount: created.length, candidates: created,
+      note: "Imported as unverified owner-review candidates only. A registered source is linked only when an approved source owned by the importing account was selected; external source-platform names are preserved separately from the ingestion adapter. No images were copied or published; image rights, supplier identity, availability, exact variant and direct shipping require review.",
     });
   } catch (error) {
     console.error("WASLA official store import candidate error:", error);
