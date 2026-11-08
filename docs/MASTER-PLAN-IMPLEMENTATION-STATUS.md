@@ -964,11 +964,13 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Remaining product work: merchant-configurable return policies with buyer-visible disclosure (no universal statutory deadline hardcoded), replacement shipment fulfillment, payment-provider refund/reversal integration, and end-to-end/database verification.
 - No merge, Render deployment, paid build-minute purchase, domain purchase, or production database mutation was performed.
 
-## PR chain readiness review — 2026-11-09
+## PR chain readiness review — 2026-11-09 (updated)
 
-- PR #46 head `a63428bcb57b23e5818d80c169e9306190f8fb4e`: API quality and full WASLA CI both passed. GitHub currently reports the PR as `mergeable=false` / `mergeable_state=dirty`, so its branch conflict must be resolved before any merge.
-- PR #47 head `9a2954ce1da934a44067b00ef4b08b3602f76c91`: API quality passed; full repository CI has not been confirmed on this exact head.
-- PR #48 head `21b7e1fc8b2601f727464d95b9129e04ad348f6a`: API quality passed; full repository CI has not been confirmed on this exact head.
-- PR #49 latest head `92d7d55375bc051ef9ed368629a7600cf14897f2`: API quality passed, including tests and build. Full repository CI has not been confirmed on this exact head.
-- All four PRs remain open drafts and unmerged. Merge order remains #46 → #47 → #48 → #49, but #46 conflict resolution and full CI validation are required first.
+- PR #46 head `dd0e07d803b5e75c3514d20a15d49570b2657119`: mergeable; API quality workflow run `42531203484` passed, and full WASLA CI run `42531203469` passed. The full run covered shared-package tests/typecheck, API tests/typecheck/build, database migrations and constraints, authorization seeding, and the production web build.
+- PR #47 head `9a2954ce1da934a44067b00ef4b08b3602f76c91`: mergeable; API quality workflow run `42521913421` passed. Full repository CI has not been confirmed on this exact head.
+- PR #48 head `21b7e1fc8b2601f727464d95b9129e04ad348f6a`: mergeable; API quality workflow run `42527326786` passed. Full repository CI has not been confirmed on this exact head.
+- PR #49 head `32bd5b5b1bcdbf58fe2e53b9a2765b0e1e0e8237`: mergeable; API quality workflow run `42529654440` passed. Full repository CI has not been confirmed on this exact head.
+- PR #46's earlier merge conflict was resolved in its branch by restoring the bilingual link from review-dispute administration to order-dispute administration. The corrected head is the one covered by both successful workflows above.
+- All four PRs remain open drafts and unmerged. Their dependency order is #46 → #47 → #48 → #49. Mergeability is not merge authorization; no PR was merged.
+- Remaining verification before release: run full repository CI against the final stacked chain, perform hosted buyer/merchant/admin end-to-end tests, review carrier-specific integration and delivery proof, implement merchant-configurable return policies and replacement fulfillment, and complete payment/refund and legal/provider prerequisites.
 - No Render deployment, paid build-minute purchase, domain purchase, or production database mutation was performed.
