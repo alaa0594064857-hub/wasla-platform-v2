@@ -192,7 +192,6 @@ export async function handleOfficialStorePricingRequest(request: IncomingMessage
     const access = await authorizePlatformPermission(request, response, "platform.manage");
     if (!access) return;
     if (request.method !== "POST") { reply(response, 405, { success: false, error: "Method not allowed" }); return; }
-    await ensurePriceApprovalTables();
     if (action === "approve") { await handleApprovePrice(request, response, access.userId); return; }
     let body: Record<string, unknown> | null;
     try { body = await readBody(request); }
