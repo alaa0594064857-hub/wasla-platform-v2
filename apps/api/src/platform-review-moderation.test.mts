@@ -50,10 +50,14 @@ describe("platform review moderation", () => {
   const reviewId = "22222222-2222-4222-8222-222222222222";
 
   it("requires platform moderation permission", async () => {
-    vi.mocked(authorizePlatformPermission).mockResolvedValueOnce(null as never);
+    vi.mocked(authorizePlatformPermission).mockImplementationOnce(async (_request, response) => {
+      response.writeHead(403, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({ success: false, error: "Insufficient platform permissions" }));
+      return null;
+    });
     const base = await startServer();
     const response = await fetch(`${base}/api/platform/reviews`);
-    expect(response.status).toBe(200); // authorization helper owns the response
+    expect(response.status).toBe(403);
     expect(query).not.toHaveBeenCalled();
   });
 
