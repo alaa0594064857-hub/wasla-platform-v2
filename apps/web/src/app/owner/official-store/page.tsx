@@ -11,6 +11,7 @@ type Product = {
   description_en: string | null; price: string; currency: string; supplier_name: string | null;
   availability_status: "available" | "limited" | "unavailable" | "needs_confirmation";
   fulfillment_notes: string | null; image_url: string | null; status: "draft" | "published" | "archived";
+  activePriceApprovals?: Array<{ destinationCountry: string; price: string; currency: string; approvedAt: string }>;
 };
 
 const emptyForm = {
@@ -184,6 +185,9 @@ export default function OwnerOfficialStorePage() {
             <strong>{ar ? product.title_ar : product.title_en}</strong>
             <small>{product.price} {product.currency} · {t.productStatus}: {statusLabel(product.status)} · {availabilityLabel(product.availability_status)}</small>
             {product.supplier_name && <small>{t.supplier}: {product.supplier_name}</small>}
+            <small>{ar ? "الأسعار المعتمدة حسب الدولة:" : "Approved destination prices:"} {(product.activePriceApprovals || []).length
+              ? product.activePriceApprovals!.map(item => `${item.destinationCountry}: ${item.price} ${item.currency}`).join(" · ")
+              : (ar ? "لا يوجد سعر معتمد بعد" : "No approved price yet")}</small>
           </div>
           <button type="button" style={styles.secondary} onClick={() => beginEdit(product)}>{t.editAction}</button>
         </article>)}
