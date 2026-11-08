@@ -14,6 +14,15 @@ type Order = {
   ownerReviewRequired: boolean; supplierPurchaseStatus: string; createdAt: string;
 };
 type Event = { id: string; actorType: string; eventType: string; details: Record<string, unknown>; createdAt: string };
+type OrderDetail = Record<string, unknown> & {
+  id?: string;
+  supplierConfirmationStatus?: string;
+  orderStatus?: string;
+  finalQuoteStatus?: string | null;
+  finalQuoteAmount?: string | null;
+  finalQuoteCurrency?: string | null;
+  finalQuoteExpiresAt?: string | null;
+};
 
 const navy = "#14243a", gold = "#9b783d", cream = "#f7f4ed", muted = "#738092";
 
@@ -21,7 +30,7 @@ export default function OfficialStoreOrdersPage() {
   const { locale } = useLocale();
   const ar = locale === "ar";
   const [orders, setOrders] = useState<Order[]>([]);
-  const [selected, setSelected] = useState<{ order: Record<string, unknown>; events: Event[] } | null>(null);
+  const [selected, setSelected] = useState<{ order: OrderDetail; events: Event[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [detailLoading, setDetailLoading] = useState(false);
