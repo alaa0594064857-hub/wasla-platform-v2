@@ -138,6 +138,26 @@ describe("owner supplier confirmation review", () => {
     expect(client.release).toHaveBeenCalledOnce();
   });
 
+  it("rejects a second review after the supplier request has already been decided", async () => {
+    const client = { query: vi.fn(), release: vi.fn() };
+    mocks.connect.mockResolvedValueOnce(client);
+    client.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ ...orderRow(), supplierConfirmationStatus: "accepted", orderStatus: "supplier_confirmed" }] })
+      .mockResolvedValueOnce({ rows: [] });
+    const base = await startServer();
+    const response = await fetch(base, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ decision: "rejected", note: "A repeated review must not change the prior decision." }),
+    });
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ success: false });
+    expect(client.query).toHaveBeenCalledTimes(3);
+    expect(client.query.mock.calls.at(-1)?.[0]).toBe("ROLLBACK");
+    expect(client.query.mock.calls.some(([sql]) => String(sql).includes("INSERT INTO notifications"))).toBe(false);
+    expect(client.release).toHaveBeenCalledOnce();
+  });
+
   it("closes a rejected supplier request without payment or procurement", async () => {
     const client = { query: vi.fn(), release: vi.fn() };
     mocks.connect.mockResolvedValueOnce(client);
