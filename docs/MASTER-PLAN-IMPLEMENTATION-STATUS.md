@@ -601,3 +601,13 @@ Do not describe the platform as commercially launch-ready based only on successf
 - PR #16: bilingual navigation link from the public member-store page to its order list.
 - PR #16 CI and API quality workflows both passed before merge. All three PRs are merged to `main`.
 - These are order requests, not paid purchases. They do not collect payment, reserve/decrement stock, contact suppliers, purchase goods, or perform shipping/fulfilment.
+
+
+## Member-store inventory quantity controls — 2026-11-08
+
+- PR #17 merged to `main` as `bd7b9a09f00cb5056a5adf28dd91afb70be7aee6`.
+- Added bilingual inventory quantity input and save controls to the member-store management page.
+- Merchants can update their own product stock quantity through the existing permission-protected product API; input must be a non-negative whole number.
+- The UI updates the displayed quantity after a successful response. No automatic stock reservation or decrement occurs when a buyer submits an order request; merchant inventory remains merchant-controlled.
+- GitHub Actions CI run `42485664972` and API-quality run `42485664976` both passed on the final PR head. This included API tests, database migrations/constraints, authorization seeding, TypeScript checks, API build and Web production build.
+- Render deployment remains blocked by exhausted pipeline minutes. The merged inventory controls are not yet live on the hosted site. Merchant/buyer end-to-end browser testing remains outstanding.
