@@ -668,6 +668,19 @@ async function handleRequest(
     return;
   }
 
+  const productReviewEditMatch = requestUrl.pathname.match(/^\/api\/products\/([0-9a-f-]{36})\/reviews\/([0-9a-f-]{36})$/i);
+  if (productReviewEditMatch) {
+    try {
+      const { handleVerifiedProductReviewEditRequest } = await import("./verified-product-reviews.mjs");
+      await handleVerifiedProductReviewEditRequest(request, response, productReviewEditMatch[1], productReviewEditMatch[2]);
+    } catch (error) {
+      console.error("WASLA verified product review edit error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Product review edit service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const productReviewsMatch = requestUrl.pathname.match(/^\/api\/products\/([0-9a-f-]{36})\/reviews$/i);
   if (productReviewsMatch) {
     try {
