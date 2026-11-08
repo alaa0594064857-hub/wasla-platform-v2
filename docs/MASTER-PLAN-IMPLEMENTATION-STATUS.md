@@ -742,3 +742,11 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Added regression tests for detail and list access when the account is inactive.
 - Final-head API-quality run `42493654320` and CI run `42493654345` both completed successfully.
 - No schema, payment, or order behavior changed. This commit is merged to GitHub but is not live on Render while pipeline build minutes remain exhausted. Hosted two-account verification remains outstanding.
+
+## Trade opportunity list authorization hardening — 2026-11-08
+
+- PR #32 merged to `main` as `a586cad7af4badffa20bd0aa25b115749f637e02`.
+- Member-facing opportunity listings now require an active account, active account membership, and the existing `account.trade.read` permission.
+- Added regression coverage for inactive-account authorization and unauthenticated access without querying private opportunity data.
+- Final-head API-quality run `42493941527` and CI run `42493941511` both completed successfully. CI covered shared-package tests/type checks, API tests, migrations, authorization seeding, database constraints, TypeScript checks, API build and Web production build.
+- No payment, supplier outreach, or order behavior changed. The commit is merged to GitHub but is not live on Render because pipeline build minutes remain exhausted. Hosted two-account verification remains outstanding.
