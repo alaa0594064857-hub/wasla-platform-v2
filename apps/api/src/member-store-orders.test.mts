@@ -150,6 +150,27 @@ describe("member store order requests", () => {
     expect(String(notificationCall[0])).toContain("Your order request was accepted");
     expect(notificationCall[1]).toEqual(["77777777-7777-4777-8777-777777777777", "accepted", "demo", "22222222-2222-4222-8222-222222222222", "WS-ACCEPT"]);
   });
+  it("returns a safe event timeline only to the buyer or an authorized store member", async () => {
+    query
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "22222222-2222-4222-8222-222222222222" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{
+        id: "99999999-9999-4999-8999-999999999999", eventType: "order.status_changed",
+        fromStatus: "accepted", toStatus: "shipped", source: "application",
+        reasonCode: null, metadata: { carrierName: "DHL" }, createdAt: "2026-11-08T12:00:00Z",
+      }] });
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/stores/demo/orders/22222222-2222-4222-8222-222222222222`);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      success: true,
+      events: [{ eventType: "order.status_changed", fromStatus: "accepted", toStatus: "shipped" }],
+    });
+    expect(String(query.mock.calls[0][0])).toContain("o.buyer_user_id = $3");
+    expect(String(query.mock.calls[1][0])).toContain("FROM member_store_order_events");
+    expect(String(query.mock.calls[1][0])).not.toContain("tracking_number");
+    expect(String(query.mock.calls[1][0])).not.toContain("tracking_url");
+  });
+
   it("notifies only active store/account order managers when a buyer submits a request", async () => {
     clientQuery
       .mockResolvedValueOnce({ rowCount: null, rows: [] }) // begin
