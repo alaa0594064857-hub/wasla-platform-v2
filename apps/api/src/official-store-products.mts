@@ -139,6 +139,19 @@ export async function handleOfficialStoreProductsRequest(
                   ) ORDER BY approval.destination_country)
                   FROM official_store_price_approvals approval
                   WHERE approval.product_id = official_store_products.id AND approval.status = 'active'
+                    AND EXISTS (
+                      SELECT 1 FROM official_store_product_source_offers offer
+                      WHERE offer.id = approval.offer_id AND offer.product_id = approval.product_id
+                        AND offer.offer_status = 'approved'
+                        AND offer.availability_status IN ('available','limited')
+                        AND offer.direct_to_customer_confirmed = TRUE
+                        AND offer.supplier_identity_verified = TRUE
+                        AND offer.specifications_verified = TRUE
+                        AND offer.minimum_order_quantity = 1
+                        AND offer.shipping_cost IS NOT NULL AND offer.shipping_currency IS NOT NULL
+                        AND offer.quote_valid_until > NOW() AND offer.last_verified_at IS NOT NULL
+                        AND offer.ships_to_countries @> to_jsonb(ARRAY[approval.destination_country::text]::text[])
+                    )
                 ), '[]'::jsonb) AS "activePriceApprovals",
                 created_at, updated_at
          FROM official_store_products ORDER BY created_at DESC LIMIT 250`,
