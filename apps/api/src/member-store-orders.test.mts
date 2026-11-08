@@ -76,6 +76,30 @@ describe("member store order requests", () => {
     expect(connect).not.toHaveBeenCalled();
   });
 
+  it("allows a buyer to cancel only their own pending order request", async () => {
+    clientQuery
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "22222222-2222-4222-8222-222222222222", orderNumber: "WS-TEST", status: "cancelled" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: null, rows: [] });
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/stores/demo/orders/22222222-2222-4222-8222-222222222222`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "cancelled" }),
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ success: true, order: { status: "cancelled" } });
+    const updateSql = String(clientQuery.mock.calls[1][0]);
+    expect(updateSql).toContain("o.buyer_user_id = $5");
+    expect(updateSql).toContain("o.status = 'pending_merchant_review'");
+    expect(updateSql).toContain("merchantPermission");
+    expect(clientQuery.mock.calls[1][1]).toEqual([
+      "cancelled", "", "22222222-2222-4222-8222-222222222222", "demo",
+      "11111111-1111-4111-8111-111111111111", ["store.order.manage", "account.order.manage"],
+    ]);
+  });
+
   it("lists only buyer-owned orders or orders the merchant may read", async () => {
     query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
     const baseUrl = await startServer();
