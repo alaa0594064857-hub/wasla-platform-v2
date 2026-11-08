@@ -40,6 +40,7 @@ export default function MemberStoreOrdersPage() {
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [merchantNotes, setMerchantNotes] = useState<Record<string, string>>({});
 
   const copy = ar ? {
     title: "طلبات المتجر",
@@ -58,6 +59,7 @@ export default function MemberStoreOrdersPage() {
     cancelled: "ملغي",
     accept: "قبول الطلب",
     reject: "رفض الطلب",
+    notePlaceholder: "أضف ملاحظة للعميل (اختياري)",
     cancel: "إلغاء الطلب",
     buyer: "العميل",
     submitted: "تاريخ الإرسال",
@@ -81,6 +83,7 @@ export default function MemberStoreOrdersPage() {
     cancelled: "Cancelled",
     accept: "Accept request",
     reject: "Reject request",
+    notePlaceholder: "Add a note for the customer (optional)",
     cancel: "Cancel request",
     buyer: "Buyer",
     submitted: "Submitted",
@@ -105,14 +108,14 @@ export default function MemberStoreOrdersPage() {
 
   useEffect(() => { void load(); }, [load]);
 
-  async function updateOrder(orderId: string, status: "accepted" | "rejected" | "cancelled") {
+  async function updateOrder(orderId: string, status: "accepted" | "rejected" | "cancelled", note = "") {
     if (busy) return;
     setBusy(orderId); setMessage(""); setError("");
     try {
       const response = await fetch(`/api/stores/${encodeURIComponent(slug)}/orders/${orderId}`, {
         method: "PATCH", credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status })
+        body: JSON.stringify({ status, note: note.trim() })
       });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error("update");
@@ -162,9 +165,12 @@ export default function MemberStoreOrdersPage() {
             {!isMerchantView && order.status === "pending_merchant_review" && <div className="mt-4">
               <button disabled={busy === order.id} onClick={() => void updateOrder(order.id, "cancelled")} className="rounded-lg border border-red-700 px-4 py-2 text-sm font-semibold text-red-700 disabled:opacity-50">{copy.cancel}</button>
             </div>}
-            {isMerchantView && order.status === "pending_merchant_review" && <div className="mt-4 flex flex-wrap gap-3">
-              <button disabled={busy === order.id} onClick={() => void updateOrder(order.id, "accepted")} className="rounded-lg bg-[#14233b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{copy.accept}</button>
-              <button disabled={busy === order.id} onClick={() => void updateOrder(order.id, "rejected")} className="rounded-lg border border-red-700 px-4 py-2 text-sm font-semibold text-red-700 disabled:opacity-50">{copy.reject}</button>
+            {isMerchantView && order.status === "pending_merchant_review" && <div className="mt-4 space-y-3">
+              <textarea value={merchantNotes[order.id] ?? ""} onChange={event => setMerchantNotes(current => ({ ...current, [order.id]: event.target.value.slice(0, 2000) }))} maxLength={2000} rows={3} placeholder={copy.notePlaceholder} className="w-full rounded-lg border border-[#e5dfd1] p-3 text-sm outline-none focus:border-[#b89545]" />
+              <div className="flex flex-wrap gap-3">
+              <button disabled={busy === order.id} onClick={() => void updateOrder(order.id, "accepted", merchantNotes[order.id] ?? "")} className="rounded-lg bg-[#14233b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{copy.accept}</button>
+              <button disabled={busy === order.id} onClick={() => void updateOrder(order.id, "rejected", merchantNotes[order.id] ?? "")} className="rounded-lg border border-red-700 px-4 py-2 text-sm font-semibold text-red-700 disabled:opacity-50">{copy.reject}</button>
+              </div>
             </div>}
           </article>;
         })}</div>}
