@@ -44,7 +44,7 @@ export async function handleReviewDisputeSubmission(
       (body.details !== undefined && (typeof body.details !== "string" || body.details.trim().length > 1000))) {
       respond(response, 400, { success: false, error: "Choose a report reason and optional details up to 1000 characters" }); return;
     }
-    const review = await db.query("SELECT id FROM verified_product_reviews WHERE id = $1 AND status = 'published'", [reviewId]);
+    const review = await db.query("SELECT id FROM verified_product_reviews WHERE id = $1 AND status = 'published' AND buyer_user_id <> $2", [reviewId, session.user.id]);
     if (!review.rowCount) { respond(response, 404, { success: false, error: "Published review not found" }); return; }
     const inserted = await db.query(
       `INSERT INTO verified_product_review_reports (review_id, reporter_user_id, reason, details)
