@@ -724,3 +724,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Final-head WASLA CI run `42492922203` and API-quality run `42492922186` both completed successfully. CI covered shared-package tests/type checks, API tests, migrations, authorization seeding, database constraints, TypeScript checks, API build and Web production build.
 - Test-only change; no runtime behavior, schema, authorization, payment, or order behavior changed.
 - Remaining: add explicit coverage for an active account member who lacks the required trade permission, then complete hosted two-account verification after Render deployment is possible. Render pipeline build minutes remain exhausted; this commit is not live on hosted services.
+
+
+## Trade permission regression coverage — 2026-11-08
+
+- PR #30 merged to `main` as `ef6250208bb8d7f93f7590390cb73322dd78b637`.
+- Added an API regression test proving an active account member without `account.trade.create` is denied with 403; the test verifies permission-scoped authorization, transaction rollback and database-client release.
+- Final-head API-quality run `42493219799` and CI run `42493219533` both completed successfully.
+- Test-only change; no production behavior, schema, payment, or order flow changed.
+- The merged commit is on GitHub but is not live on Render because pipeline build minutes remain exhausted. Hosted two-account verification remains outstanding.
