@@ -177,6 +177,7 @@ async function handleApprovePrice(request: IncomingMessage, response: ServerResp
        VALUES ('human',$1,$2,'official_store.price.approved',$3::jsonb)`,
       [userId, preview.product_id, JSON.stringify({ approvalId: approved.rows[0].id, offerId: preview.offer_id, destinationCountry: preview.destination_country, currency: preview.currency, customerPrice: preview.customer_price })],
     );
+    await client.query("DELETE FROM official_store_price_previews WHERE id = $1", [preview.id]);
     await client.query("COMMIT");
     reply(response, 200, { success: true, approval: approved.rows[0], publishable: true });
   } catch (error) {
