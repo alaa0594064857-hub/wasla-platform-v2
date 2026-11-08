@@ -733,3 +733,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Final-head API-quality run `42493219799` and CI run `42493219533` both completed successfully.
 - Test-only change; no production behavior, schema, payment, or order flow changed.
 - The merged commit is on GitHub but is not live on Render because pipeline build minutes remain exhausted. Hosted two-account verification remains outstanding.
+
+
+## Brokerage agreement read authorization hardening — 2026-11-08
+
+- PR #31 merged to `main` as `18d4e81bbb11f9a5edf07a339043b574ed4b6ff5`.
+- Agreement detail reads and account-scoped agreement listings now require both active account status and active membership, in addition to the existing `account.trade.read` permission.
+- Added regression tests for detail and list access when the account is inactive.
+- Final-head API-quality run `42493654320` and CI run `42493654345` both completed successfully.
+- No schema, payment, or order behavior changed. This commit is merged to GitHub but is not live on Render while pipeline build minutes remain exhausted. Hosted two-account verification remains outstanding.
