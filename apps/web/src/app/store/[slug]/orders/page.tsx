@@ -40,7 +40,7 @@ export default function MemberStoreOrdersPage() {
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [merchantNotes, setMerchantNotes] = useState<Record<string, string>>({});
+  const [merchantNotes, setMerchantNotes] = useState<Record<string, string>>({});\n  const [shippingDetails, setShippingDetails] = useState<Record<string, { carrierName: string; trackingNumber: string; trackingUrl: string }>>({});
 
   const copy = ar ? {
     title: "طلبات المتجر",
@@ -110,14 +110,14 @@ export default function MemberStoreOrdersPage() {
 
   useEffect(() => { void load(); }, [load]);
 
-  async function updateOrder(orderId: string, status: "accepted" | "rejected" | "cancelled", note = "") {
+  async function updateOrder(orderId: string, status: "accepted" | "rejected" | "cancelled" | "shipped" | "completed", note = "", shipping?: { carrierName: string; trackingNumber: string; trackingUrl: string }) {
     if (busy) return;
     setBusy(orderId); setMessage(""); setError("");
     try {
       const response = await fetch(`/api/stores/${encodeURIComponent(slug)}/orders/${orderId}`, {
         method: "PATCH", credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status, note: note.trim() })
+        body: JSON.stringify({ status, note: note.trim(), ...(shipping ?? {}) })
       });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error("update");
@@ -130,7 +130,7 @@ export default function MemberStoreOrdersPage() {
 
   function statusText(status: string) {
     if (status === "accepted") return copy.accepted;
-    if (status === "rejected") return copy.rejected;
+    if (status === "shipped") return copy.shipped;\n    if (status === "completed") return copy.completed;\n    if (status === "rejected") return copy.rejected;
     if (status === "cancelled") return copy.cancelled;
     return copy.pending;
   }
@@ -162,10 +162,26 @@ export default function MemberStoreOrdersPage() {
               </div>)}
             </div>
             <p className="mt-3 font-bold">{copy.subtotal}: {order.subtotal} {order.currency}</p>
+            {order.carrierName && <div className="mt-4 rounded-xl border border-[#e5dfd1] bg-[#f7f4ec] p-4 text-sm">
+              <strong>{copy.tracking}</strong>
+              <p className="mt-2">{copy.carrier}: {order.carrierName} · {copy.trackingNumber}: <b dir="ltr">{order.trackingNumber}</b></p>
+              {order.trackingUrl && <a href={order.trackingUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-[#9b792f] underline">{copy.tracking}: ↗</a>}
+              {order.shippedAt && <p className="mt-1 text-xs text-slate-500">{new Date(order.shippedAt).toLocaleString(locale)}</p>}
+              {order.deliveryConfirmedAt && <p className="mt-1 text-xs text-slate-500">{copy.completed}: {new Date(order.deliveryConfirmedAt).toLocaleString(locale)}</p>}
+            </div>}
             {order.buyerNote && <p className="mt-3 text-sm text-slate-600"><strong>{copy.note}:</strong> {order.buyerNote}</p>}
             {order.merchantNote && <p className="mt-2 text-sm text-slate-600"><strong>{copy.merchantNote}:</strong> {order.merchantNote}</p>}
+            {!isMerchantView && order.status === "shipped" && <div className="mt-4">
+              <button disabled={busy === order.id} onClick={() => void updateOrder(order.id, "completed")} className="rounded-lg bg-[#14233b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{copy.confirmDelivery}</button>
+            </div>}
             {!isMerchantView && order.status === "pending_merchant_review" && <div className="mt-4">
               <button disabled={busy === order.id} onClick={() => void updateOrder(order.id, "cancelled")} className="rounded-lg border border-red-700 px-4 py-2 text-sm font-semibold text-red-700 disabled:opacity-50">{copy.cancel}</button>
+            </div>}
+            {isMerchantView && order.status === "accepted" && <div className="mt-4 space-y-3 rounded-xl border border-[#e5dfd1] bg-[#faf8f3] p-4">
+              <label className="block text-sm font-semibold">{copy.carrier}<input value={shippingDetails[order.id]?.carrierName ?? ""} onChange={event => setShippingDetails(current => ({ ...current, [order.id]: { carrierName: event.target.value, trackingNumber: current[order.id]?.trackingNumber ?? "", trackingUrl: current[order.id]?.trackingUrl ?? "" } }))} maxLength={100} required className="mt-1 block w-full rounded-lg border border-[#e5dfd1] bg-white p-2" /></label>
+              <label className="block text-sm font-semibold">{copy.trackingNumber}<input value={shippingDetails[order.id]?.trackingNumber ?? ""} onChange={event => setShippingDetails(current => ({ ...current, [order.id]: { carrierName: current[order.id]?.carrierName ?? "", trackingNumber: event.target.value, trackingUrl: current[order.id]?.trackingUrl ?? "" } }))} maxLength={120} required className="mt-1 block w-full rounded-lg border border-[#e5dfd1] bg-white p-2" /></label>
+              <label className="block text-sm font-semibold">{copy.trackingUrl}<input type="url" inputMode="url" placeholder="https://..." value={shippingDetails[order.id]?.trackingUrl ?? ""} onChange={event => setShippingDetails(current => ({ ...current, [order.id]: { carrierName: current[order.id]?.carrierName ?? "", trackingNumber: current[order.id]?.trackingNumber ?? "", trackingUrl: event.target.value } }))} maxLength={1000} required className="mt-1 block w-full rounded-lg border border-[#e5dfd1] bg-white p-2" /></label>
+              <button disabled={busy === order.id} onClick={() => void updateOrder(order.id, "shipped", merchantNotes[order.id] ?? "", shippingDetails[order.id])} className="rounded-lg bg-[#14233b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{copy.markShipped}</button>
             </div>}
             {isMerchantView && order.status === "pending_merchant_review" && <div className="mt-4 space-y-3">
               <textarea value={merchantNotes[order.id] ?? ""} onChange={event => setMerchantNotes(current => ({ ...current, [order.id]: event.target.value.slice(0, 2000) }))} maxLength={2000} rows={3} placeholder={copy.notePlaceholder} className="w-full rounded-lg border border-[#e5dfd1] p-3 text-sm outline-none focus:border-[#b89545]" />
