@@ -9,6 +9,8 @@ This workspace is the first native mobile foundation for WASLA, built with Expo 
 - iOS bundle identifier: `com.wasla.app`.
 - Bilingual Arabic/English starter screen with an RTL/LTR language switch.
 - Typed API client for the public, destination-specific official-store catalogue.
+- Better Auth Expo integration on the API and mobile client, using Expo SecureStore for native session/cookie persistence.
+- Initial email/password sign-in and session-aware sign-out UI; account registration and verification UX are still pending.
 - Configurable API base URL via `EXPO_PUBLIC_WASLA_API_URL`; the current hosted API URL is the default.
 
 ## Run locally
@@ -26,11 +28,11 @@ Use a compatible Expo Go version or an EAS development build for device testing.
 
 ## API and authentication boundary
 
-The mobile API client currently calls the public official-store catalogue using the selected two-letter destination country. It does not store passwords or authentication tokens. Authenticated account features must use a supported Better Auth React Native/Expo integration with secure device storage and server-verified sessions before they are enabled.
+The mobile API client calls the public official-store catalogue using the selected two-letter destination country. The API now enables the Better Auth Expo server plugin, trusts the `wasla://` deep-link origin, and the mobile client uses the matching Expo client plugin with `expo-secure-store`. The starter UI supports email/password sign-in and session-aware sign-out. This integration is source-code only until dependencies are installed and the API is successfully deployed; verify sign-in, email-verification behavior, session persistence and sign-out on physical devices before production use.
 
 ## Required before calling this a usable app
 
-1. Implement secure authentication/session management for React Native.
+1. Validate Better Auth Expo integration, session persistence, email verification and sign-out on Android/iOS.
 2. Add typed authenticated API methods for profile, member shops, business accounts, trade opportunities, messages, notifications and orders.
 3. Implement navigation and complete loading, empty, error and offline states for each screen.
 4. Add push-notification registration and server-side device-token management with user consent.
