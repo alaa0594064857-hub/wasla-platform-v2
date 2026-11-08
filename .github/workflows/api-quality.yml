@@ -45,3 +45,5 @@ jobs:
         run: pnpm --filter @wasla/api test
       - name: Build API
         run: pnpm --filter @wasla/api build
+      - name: Typecheck mobile app
+        run: pnpm --filter @wasla/mobile typecheck
