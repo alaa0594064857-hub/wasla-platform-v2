@@ -158,6 +158,42 @@ describe("owner supplier confirmation review", () => {
     expect(client.release).toHaveBeenCalledOnce();
   });
 
+
+  it("records an expired supplier confirmation without treating it as a rejection", async () => {
+    const client = { query: vi.fn(), release: vi.fn() };
+    mocks.connect.mockResolvedValueOnce(client);
+    client.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [orderRow()] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{
+        id: orderId, orderStatus: "cancelled", supplierConfirmationStatus: "expired",
+        paymentStatus: "not_enabled", supplierPurchaseStatus: "not_placed", ownerReviewRequired: true,
+      }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+    const base = await startServer();
+    const response = await fetch(base, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ decision: "expired", note: "The supplier confirmation window elapsed without a response." }),
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      success: true,
+      order: { orderStatus: "cancelled", supplierConfirmationStatus: "expired", paymentStatus: "not_enabled", supplierPurchaseStatus: "not_placed" },
+    });
+    expect(client.query).toHaveBeenCalledTimes(6);
+    expect(String(client.query.mock.calls[3][0])).toContain("official_store_order_events");
+    expect(client.query.mock.calls[3][1][2]).toBe("supplier_confirmation_expired");
+    expect(JSON.parse(client.query.mock.calls[3][1][3])).toMatchObject({
+      decision: "expired", paymentEnabled: false, supplierPurchasePlaced: false,
+    });
+    expect(String(client.query.mock.calls[4][0])).toContain("INSERT INTO notifications");
+    expect(client.query.mock.calls[4][1][1]).toBe("تعذر تأكيد توفر المنتج");
+    expect(client.query.mock.calls.at(-1)?.[0]).toBe("COMMIT");
+    expect(client.release).toHaveBeenCalledOnce();
+  });
+
   it("closes a rejected supplier request without payment or procurement", async () => {
     const client = { query: vi.fn(), release: vi.fn() };
     mocks.connect.mockResolvedValueOnce(client);
