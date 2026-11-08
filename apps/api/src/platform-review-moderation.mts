@@ -91,6 +91,8 @@ export async function handlePlatformReviewModerationRequest(
     return;
   }
 
+  const decision = body.status as "published" | "rejected" | "hidden";
+  const moderationNote = typeof body.note === "string" ? body.note.trim() || null : null;
   const client = await db.connect();
   try {
     await client.query("BEGIN");
@@ -101,7 +103,7 @@ export async function handlePlatformReviewModerationRequest(
        WHERE id = $1
        RETURNING id, product_id AS "productId", status,
                  moderation_note AS "moderationNote", moderated_at AS "moderatedAt"`,
-      [reviewId, body.status, access.userId, typeof body.note === "string" ? body.note.trim() || null : null],
+      [reviewId, decision, access.userId, moderationNote],
     );
     if (!updated.rowCount) {
       await client.query("ROLLBACK");
@@ -111,8 +113,8 @@ export async function handlePlatformReviewModerationRequest(
     await client.query(
       `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, metadata)
        VALUES ($1, $2, 'verified_product_review', $3, $4::jsonb)`,
-      [access.userId, `review.${body.status}`, reviewId,
-        JSON.stringify({ status: body.status, note: typeof body.note === "string" ? body.note.trim() : null })],
+      [access.userId, `review.${decision}`, reviewId,
+        JSON.stringify({ status: decision, note: moderationNote })],
     );
     await client.query("COMMIT");
     respond(response, 200, { success: true, review: updated.rows[0] });
