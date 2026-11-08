@@ -55,6 +55,7 @@ export default function OfficialStoreSourceOffersPage() {
   const [candidateReviewBusyId, setCandidateReviewBusyId] = useState("");
   const [sourcingCandidateId, setSourcingCandidateId] = useState("");
   const [pricingForm, setPricingForm] = useState({ supplierCost: "", supplierCurrency: "USD", supplierFxRate: "", supplierFxRateAsOf: "", supplierFxSource: "", shippingCost: "", shippingCurrency: "USD", shippingFxRate: "", shippingFxRateAsOf: "", shippingFxSource: "", displayCurrency: "USD", marginPercent: "20", fixedMargin: "0", additionalCost: "", additionalCostCurrency: "USD", additionalCostFxRate: "", additionalCostFxRateAsOf: "", additionalCostFxSource: "", additionalCostType: "other_cost" });
+  const [pricingCosts, setPricingCosts] = useState([{ id: "cost-1", type: "tax", amount: "", currency: "USD", fxRate: "", fxRateAsOf: "", fxSource: "" }]);
   const [pricingBusy, setPricingBusy] = useState(false);
   const [pricingResult, setPricingResult] = useState<{ currency: string; breakdown: { costSubtotal: number; margin: { total: number }; finalCustomerPrice: number; grossMarginPercent: number }; warnings: string[] } | null>(null);
 
@@ -229,15 +230,17 @@ export default function OfficialStoreSourceOffersPage() {
       const targetCurrency = pricingForm.displayCurrency.trim().toUpperCase();
       const supplierCurrency = pricingForm.supplierCurrency.trim().toUpperCase();
       const shippingCurrency = pricingForm.shippingCurrency.trim().toUpperCase();
-      const additionalCurrency = pricingForm.additionalCostCurrency.trim().toUpperCase();
-      const costs = pricingForm.additionalCost.trim() ? [{
-        type: pricingForm.additionalCostType, amount: Number(pricingForm.additionalCost), currency: additionalCurrency,
-        ...(additionalCurrency !== targetCurrency ? {
-          fxRate: Number(pricingForm.additionalCostFxRate),
-          fxRateAsOf: pricingForm.additionalCostFxRateAsOf ? new Date(pricingForm.additionalCostFxRateAsOf).toISOString() : "",
-          fxSource: pricingForm.additionalCostFxSource.trim(),
-        } : {}),
-      }] : [];
+      const costs = pricingCosts.filter(line => line.amount.trim()).map(line => {
+        const currency = line.currency.trim().toUpperCase();
+        return {
+          type: line.type, amount: Number(line.amount), currency,
+          ...(currency !== targetCurrency ? {
+            fxRate: Number(line.fxRate),
+            fxRateAsOf: line.fxRateAsOf ? new Date(line.fxRateAsOf).toISOString() : "",
+            fxSource: line.fxSource.trim(),
+          } : {}),
+        };
+      });
       const body = {
         supplierCost: Number(pricingForm.supplierCost), supplierCurrency,
         ...(supplierCurrency !== targetCurrency ? {
@@ -465,14 +468,18 @@ export default function OfficialStoreSourceOffersPage() {
         <label style={labelStyle}>{t.displayCurrencyLabel}<input required maxLength={3} value={pricingForm.displayCurrency} onChange={e => setPricingForm(s => ({ ...s, displayCurrency: e.target.value }))} style={inputStyle}/></label>
         <label style={labelStyle}>{t.marginLabel}<input required type="number" min="0" max="500" step="0.1" value={pricingForm.marginPercent} onChange={e => setPricingForm(s => ({ ...s, marginPercent: e.target.value }))} style={inputStyle}/></label>
         <label style={labelStyle}>{t.fixedMarginLabel}<input required type="number" min="0" step="0.01" value={pricingForm.fixedMargin} onChange={e => setPricingForm(s => ({ ...s, fixedMargin: e.target.value }))} style={inputStyle}/></label>
-        <label style={labelStyle}>{t.extraCostLabel}<input type="number" min="0" step="0.01" value={pricingForm.additionalCost} onChange={e => setPricingForm(s => ({ ...s, additionalCost: e.target.value }))} style={inputStyle}/></label>
-        <label style={labelStyle}>{t.extraCostType}<select value={pricingForm.additionalCostType} onChange={e => setPricingForm(s => ({ ...s, additionalCostType: e.target.value }))} style={inputStyle}><option value="payment_fee">payment_fee</option><option value="tax">tax</option><option value="customs">customs</option><option value="other_cost">other_cost</option></select></label>
-        <label style={labelStyle}>{t.currency}<input maxLength={3} value={pricingForm.additionalCostCurrency} onChange={e => setPricingForm(s => ({ ...s, additionalCostCurrency: e.target.value }))} style={inputStyle}/></label>
-        {pricingForm.additionalCost.trim() && pricingForm.additionalCostCurrency.trim().toUpperCase() !== pricingForm.displayCurrency.trim().toUpperCase() && <>
-          <label style={labelStyle}>{t.fxRateLabel}<input required type="number" min="0.000000001" step="any" value={pricingForm.additionalCostFxRate} onChange={e => setPricingForm(s => ({ ...s, additionalCostFxRate: e.target.value }))} style={inputStyle}/></label>
-          <label style={labelStyle}>{t.fxDateLabel}<input required type="datetime-local" value={pricingForm.additionalCostFxRateAsOf} onChange={e => setPricingForm(s => ({ ...s, additionalCostFxRateAsOf: e.target.value }))} style={inputStyle}/></label>
-          <label style={labelStyle}>{t.fxSourceLabel}<input required value={pricingForm.additionalCostFxSource} onChange={e => setPricingForm(s => ({ ...s, additionalCostFxSource: e.target.value }))} style={inputStyle}/></label>
-        </>}
+        {pricingCosts.map((line, index) => <div key={line.id} style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 10, padding: 12, border: "1px solid #e2e5eb", borderRadius: 10 }}>
+          <label style={labelStyle}>{t.extraCostLabel} #{index + 1}<input type="number" min="0" step="0.01" value={line.amount} onChange={e => setPricingCosts(rows => rows.map(item => item.id === line.id ? { ...item, amount: e.target.value } : item))} style={inputStyle}/></label>
+          <label style={labelStyle}>{t.extraCostType}<select value={line.type} onChange={e => setPricingCosts(rows => rows.map(item => item.id === line.id ? { ...item, type: e.target.value } : item))} style={inputStyle}><option value="payment_fee">payment_fee</option><option value="tax">tax</option><option value="customs">customs</option><option value="other_cost">other_cost</option></select></label>
+          <label style={labelStyle}>{t.currency}<input maxLength={3} value={line.currency} onChange={e => setPricingCosts(rows => rows.map(item => item.id === line.id ? { ...item, currency: e.target.value } : item))} style={inputStyle}/></label>
+          {line.amount.trim() && line.currency.trim().toUpperCase() !== pricingForm.displayCurrency.trim().toUpperCase() && <>
+            <label style={labelStyle}>{t.fxRateLabel}<input required type="number" min="0.000000001" step="any" value={line.fxRate} onChange={e => setPricingCosts(rows => rows.map(item => item.id === line.id ? { ...item, fxRate: e.target.value } : item))} style={inputStyle}/></label>
+            <label style={labelStyle}>{t.fxDateLabel}<input required type="datetime-local" value={line.fxRateAsOf} onChange={e => setPricingCosts(rows => rows.map(item => item.id === line.id ? { ...item, fxRateAsOf: e.target.value } : item))} style={inputStyle}/></label>
+            <label style={labelStyle}>{t.fxSourceLabel}<input required value={line.fxSource} onChange={e => setPricingCosts(rows => rows.map(item => item.id === line.id ? { ...item, fxSource: e.target.value } : item))} style={inputStyle}/></label>
+          </>}
+          <button type="button" disabled={pricingCosts.length === 1} onClick={() => setPricingCosts(rows => rows.filter(item => item.id !== line.id))} style={{ justifySelf: "start", border: "1px solid #b42318", color: "#b42318", background: "white", borderRadius: 8, padding: "7px 10px" }}>{ar ? "حذف البند" : "Remove cost"}</button>
+        </div>)}
+        <button type="button" disabled={pricingCosts.length >= 20} onClick={() => setPricingCosts(rows => [...rows, { id: `cost-${Date.now()}`, type: "other_cost", amount: "", currency: pricingForm.displayCurrency.toUpperCase(), fxRate: "", fxRateAsOf: "", fxSource: "" }])} style={{ justifySelf: "start", border: "1px solid #b18a3c", color: "#7d602d", background: "white", borderRadius: 8, padding: "8px 12px" }}>{ar ? "إضافة تكلفة أخرى" : "Add another cost"} ({pricingCosts.length}/20)</button>
         <button disabled={pricingBusy} type="submit" style={{ padding: "11px 15px", border: 0, borderRadius: 10, background: "#27344d", color: "white", fontWeight: 700 }}>{pricingBusy ? t.calculating : t.calculate}</button>
       </form>
       <p style={{ fontSize: 12, opacity: .75 }}>{t.pricingWarning}</p>
