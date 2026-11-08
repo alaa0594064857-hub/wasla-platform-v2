@@ -661,3 +661,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - No API, authorization, notification delivery or order-state behavior changed.
 - Final-head CI run `42489226922` and API-quality run `42489226826` both passed; CI included API tests, database migrations/constraints, TypeScript checks, API build and Web production build.
 - The copy update is merged to GitHub; Render deployment remains blocked by exhausted pipeline build minutes, so it is not yet live on the hosted site.
+
+
+## Merchant order stock snapshot visibility — 2026-11-08
+
+- PR #23 merged to `main` as `5c846d43e6a14e7d18906c6b177760533821316a`.
+- Authorized merchant order-review screens now show the stock quantity recorded when the buyer submitted the request, labelled as a reference-only historical snapshot. Buyers do not see this internal merchant information.
+- No current inventory is inferred from the snapshot, and no stock reservation or automatic decrement is introduced.
+- Final-head GitHub CI run `42489437709` and API-quality run `42489437713` both completed successfully. CI included API tests, migrations/constraints, authorization seeding, TypeScript checks, API build and Web production build.
+- The change is merged to GitHub but is not live on Render while pipeline build minutes remain exhausted. Hosted merchant/buyer verification remains outstanding.
