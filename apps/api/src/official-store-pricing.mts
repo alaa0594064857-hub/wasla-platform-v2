@@ -133,37 +133,45 @@ export async function handleOfficialStorePricingRequest(request: IncomingMessage
       supplier_price: string; supplier_currency: string; shipping_cost: string;
       shipping_currency: string; ships_to_countries: unknown;
     } | undefined;
-    if (!isOfferEligibleForDestination(offer as unknown as Record<string, unknown> | undefined, body.productId, body.destinationCountry)) {
+    if (!offer || !isOfferEligibleForDestination(offer as unknown as Record<string, unknown>, body.productId, body.destinationCountry)) {
       reply(response, 409, { success: false, error: "The selected offer is not approved, verified, current, or available for this destination country" }); return;
     }
     // Supplier and shipping costs always come from the verified offer, never from editable client fields.
-    body = { ...body, supplierCost: Number(offer.supplier_price), supplierCurrency: offer.supplier_currency,
-      shippingCost: Number(offer.shipping_cost), shippingCurrency: offer.shipping_currency };
-    if (!validAmount(body.supplierCost) || !validCurrency(body.supplierCurrency) ||
-        !validAmount(body.shippingCost) || !validCurrency(body.shippingCurrency)) {
+    const supplierCost = Number(offer.supplier_price);
+    const supplierCurrency = offer.supplier_currency;
+    const shippingCost = Number(offer.shipping_cost);
+    const shippingCurrency = offer.shipping_currency;
+    const target = body.displayCurrency as string;
+    const destinationCountry = body.destinationCountry as string;
+    const productId = body.productId as string;
+    const offerId = body.offerId as string;
+    const marginPercent = body.marginPercent as number;
+    if (!validAmount(supplierCost) || !validCurrency(supplierCurrency) ||
+        !validAmount(shippingCost) || !validCurrency(shippingCurrency)) {
       reply(response, 409, { success: false, error: "The verified supplier offer contains invalid cost data" }); return;
     }
-    const target = body.displayCurrency;
     let supplierFxRate = 1;
     let shippingFxRate = 1;
-    if (body.supplierCurrency !== target) {
+    const supplierFxSource = body.supplierFxSource;
+    const shippingFxSource = body.shippingFxSource;
+    if (supplierCurrency !== target) {
       if (typeof body.supplierFxRate !== "number" || !Number.isFinite(body.supplierFxRate) || body.supplierFxRate <= 0 ||
           !isFreshFxRateTimestamp(body.supplierFxRateAsOf) ||
-          typeof body.supplierFxSource !== "string" || !body.supplierFxSource.trim() || body.supplierFxSource.length > 180) {
+          typeof supplierFxSource !== "string" || !supplierFxSource.trim() || supplierFxSource.length > 180) {
         reply(response, 400, { success: false, error: "Supplier currency conversion requires a positive FX rate with a source timestamp no older than 24 hours and a source reference" }); return;
       }
       supplierFxRate = body.supplierFxRate;
     }
-    if (body.shippingCurrency !== target) {
+    if (shippingCurrency !== target) {
       if (typeof body.shippingFxRate !== "number" || !Number.isFinite(body.shippingFxRate) || body.shippingFxRate <= 0 ||
           !isFreshFxRateTimestamp(body.shippingFxRateAsOf) ||
-          typeof body.shippingFxSource !== "string" || !body.shippingFxSource.trim() || body.shippingFxSource.length > 180) {
+          typeof shippingFxSource !== "string" || !shippingFxSource.trim() || shippingFxSource.length > 180) {
         reply(response, 400, { success: false, error: "Shipping currency conversion requires a positive FX rate with a source timestamp no older than 24 hours and a source reference" }); return;
       }
       shippingFxRate = body.shippingFxRate;
     }
-    const supplier = body.supplierCost * supplierFxRate;
-    const shipping = body.shippingCost * shippingFxRate;
+    const supplier = supplierCost * supplierFxRate;
+    const shipping = shippingCost * shippingFxRate;
     const rawCosts = (body.costs ?? []) as CostLine[];
     const costs = rawCosts.map(line => normalizeLine(line, target));
     if (costs.some(line => line === null)) {
@@ -171,7 +179,7 @@ export async function handleOfficialStorePricingRequest(request: IncomingMessage
     }
     const additional = (costs as NonNullable<typeof costs[number]>[]).reduce((sum, line) => sum + line.targetAmount, 0);
     const costSubtotal = supplier + shipping + additional;
-    const margin = costSubtotal * (body.marginPercent / 100) + Number(body.fixedMargin ?? 0);
+    const margin = costSubtotal * (marginPercent / 100) + Number(body.fixedMargin ?? 0);
     const digits = currencyDigits(target);
     const factor = 10 ** digits;
     const finalPrice = Math.ceil((costSubtotal + margin) * factor - 1e-10) / factor;
@@ -181,14 +189,14 @@ export async function handleOfficialStorePricingRequest(request: IncomingMessage
       ? Number(((finalPrice - roundedCost) / finalPrice * 100).toFixed(2))
       : 0;
     reply(response, 200, {
-      success: true, previewOnly: true, published: false, productId: body.productId, offerId: body.offerId, currency: target, destinationCountry: body.destinationCountry,
+      success: true, previewOnly: true, published: false, productId, offerId, currency: target, destinationCountry,
       breakdown: {
-        supplierCost: { amount: body.supplierCost, currency: body.supplierCurrency, convertedAmount: supplier, fxRate: supplierFxRate,
-          ...(body.supplierCurrency !== target ? { fxRateAsOf: body.supplierFxRateAsOf, fxSource: body.supplierFxSource } : {}) },
-        shippingCost: { amount: body.shippingCost, currency: body.shippingCurrency, convertedAmount: shipping, fxRate: shippingFxRate,
-          ...(body.shippingCurrency !== target ? { fxRateAsOf: body.shippingFxRateAsOf, fxSource: body.shippingFxSource } : {}) },
+         supplierCost: { amount: supplierCost, currency: supplierCurrency, convertedAmount: supplier, fxRate: supplierFxRate,
+          ...(supplierCurrency !== target ? { fxRateAsOf: body.supplierFxRateAsOf, fxSource: supplierFxSource } : {}) },
+        shippingCost: { amount: shippingCost, currency: shippingCurrency, convertedAmount: shipping, fxRate: shippingFxRate,
+          ...(shippingCurrency !== target ? { fxRateAsOf: body.shippingFxRateAsOf, fxSource: shippingFxSource } : {}) },
         additionalCosts: costs, costSubtotal: roundedCost,
-        margin: { percent: body.marginPercent, fixedAmount: body.fixedMargin ?? 0, total: roundedMargin },
+        margin: { percent: marginPercent, fixedAmount: body.fixedMargin ?? 0, total: roundedMargin },
         finalCustomerPrice: finalPrice,
         grossMarginPercent,
       },
