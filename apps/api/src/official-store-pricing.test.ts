@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 let isFreshFxRateTimestamp: (value: unknown, now?: number) => value is string;
+let isValidDestinationCountry: (value: unknown) => value is string;
 beforeEach(async () => {
-  ({ isFreshFxRateTimestamp } = await import("./official-store-pricing.mjs"));
+  ({ isFreshFxRateTimestamp, isValidDestinationCountry } = await import("./official-store-pricing.mjs"));
 });
 
 describe("official store FX freshness", () => {
@@ -21,5 +22,20 @@ describe("official store FX freshness", () => {
     expect(isFreshFxRateTimestamp("2026-11-08T12:06:00.000Z", now)).toBe(false);
     expect(isFreshFxRateTimestamp("not-a-date", now)).toBe(false);
     expect(isFreshFxRateTimestamp(null, now)).toBe(false);
+  });
+});
+
+
+describe("official store destination scoping", () => {
+  it("accepts uppercase two-letter ISO-style country codes", () => {
+    expect(isValidDestinationCountry("TR")).toBe(true);
+    expect(isValidDestinationCountry("US")).toBe(true);
+  });
+
+  it("rejects missing, lowercase and malformed destination codes", () => {
+    expect(isValidDestinationCountry("tr")).toBe(false);
+    expect(isValidDestinationCountry("TUR")).toBe(false);
+    expect(isValidDestinationCountry("")).toBe(false);
+    expect(isValidDestinationCountry(null)).toBe(false);
   });
 });
