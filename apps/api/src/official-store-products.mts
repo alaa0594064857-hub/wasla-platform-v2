@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { getDatabasePool } from "./database.js";
 import { authorizePlatformPermission } from "./platform-security.mjs";
+import { ensurePriceApprovalTables } from "./official-store-pricing.mjs";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const fields = [
@@ -82,46 +83,40 @@ export async function handleOfficialStoreProductsRequest(
     const db = getDatabasePool();
     if (publicCatalogue) {
       if (request.method !== "GET") { reply(response, 405, { success: false, error: "Method not allowed" }); return; }
+      await ensurePriceApprovalTables();
+      const destinationCountry = new URL(request.url || "/", "http://localhost").searchParams.get("country")?.toUpperCase();
+      if (!destinationCountry || !/^[A-Z]{2}$/.test(destinationCountry)) {
+        reply(response, 400, { success: false, error: "Choose a valid two-letter delivery country to view destination-specific prices" }); return;
+      }
       const result = await db.query(
         `SELECT p.id, p.title_ar, p.title_en, p.description_ar, p.description_en,
-                p.price::text AS price, p.currency, p.availability_status,
+                approval.customer_price::text AS price, approval.currency, p.availability_status,
                 p.image_url, p.created_at,
-                offer.ships_to_countries AS "deliveryCountries",
+                ARRAY[approval.destination_country] AS "deliveryCountries",
                 offer.estimated_shipping_days_min AS "estimatedDeliveryDaysMin",
                 offer.estimated_shipping_days_max AS "estimatedDeliveryDaysMax"
          FROM official_store_products p
          INNER JOIN official_store_settings s ON s.singleton_id = TRUE AND s.status = 'active'
-         INNER JOIN LATERAL (
-           SELECT o.ships_to_countries, o.estimated_shipping_days_min,
-                  o.estimated_shipping_days_max
-           FROM official_store_product_source_offers o
-           WHERE o.product_id = p.id
-             AND o.offer_status = 'approved'
-             AND o.availability_status IN ('available', 'limited')
-             AND o.direct_to_customer_confirmed = TRUE
-             AND o.supplier_identity_verified = TRUE
-             AND o.specifications_verified = TRUE
-             AND o.minimum_order_quantity = 1
-             AND o.shipping_cost IS NOT NULL
-             AND o.shipping_currency IS NOT NULL
-             AND CASE
-               WHEN jsonb_typeof(o.ships_to_countries) = 'array'
-               THEN jsonb_array_length(o.ships_to_countries) > 0
-               ELSE FALSE
-             END
-             AND o.estimated_shipping_days_min IS NOT NULL
-             AND o.estimated_shipping_days_max IS NOT NULL
-             AND o.quote_valid_until > NOW()
-             AND o.last_verified_at IS NOT NULL
-           ORDER BY o.last_verified_at DESC, o.updated_at DESC
-           LIMIT 1
-         ) offer ON TRUE
-         WHERE p.status = 'published' AND s.status = 'active'
-           AND p.availability_status IN ('available', 'limited')
+         INNER JOIN official_store_price_approvals approval
+           ON approval.product_id = p.id AND approval.status = 'active'
+          AND approval.destination_country = $1
+         INNER JOIN official_store_product_source_offers offer
+           ON offer.id = approval.offer_id AND offer.product_id = p.id
+          AND offer.offer_status = 'approved'
+          AND offer.availability_status IN ('available', 'limited')
+          AND offer.direct_to_customer_confirmed = TRUE
+          AND offer.supplier_identity_verified = TRUE
+          AND offer.specifications_verified = TRUE
+          AND offer.minimum_order_quantity = 1
+          AND offer.shipping_cost IS NOT NULL AND offer.shipping_currency IS NOT NULL
+          AND offer.quote_valid_until > NOW() AND offer.last_verified_at IS NOT NULL
+          AND offer.ships_to_countries @> to_jsonb(ARRAY[$1]::text[])
+         WHERE p.status = 'published' AND p.availability_status IN ('available', 'limited')
          ORDER BY p.created_at DESC
          LIMIT 100`,
+        [destinationCountry],
       );
-      reply(response, 200, { success: true, products: result.rows });
+      reply(response, 200, { success: true, destinationCountry, products: result.rows });
       return;
     }
 
