@@ -834,3 +834,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - The customer response payload is also checked for these private supplier/source fields; supplier operational details remain confined to the owner-side order desk.
 - Final-head WASLA CI run `42500811962` and API Quality run `42500812016` both completed successfully.
 - Test-only change; no runtime behavior or schema changed. Merged to GitHub `main`; not deployed or hosted-verified on Render because pipeline build minutes remain exhausted.
+
+
+## Official-store supplier review idempotency regression coverage — 2026-11-08
+
+- PR #42 merged to `main` as `4dd87678bd2f570bbbf4ecf8e2c3b8e9d3a3d3e7`.
+- Added regression coverage proving a supplier confirmation request that has already been decided cannot receive a second conflicting review.
+- The repeated review returns HTTP 409, rolls back the transaction, creates no duplicate notification and releases the database client.
+- Final-head WASLA CI run `42502446786` and API Quality run `42502446958` both completed successfully. CI passed shared/API tests, migrations, authorization seed, database constraints, TypeScript checks, API build and Web production build.
+- Test-only change; no runtime behavior, schema, payment, procurement or fulfilment behavior changed. Merged to GitHub `main`; Render deployment and hosted owner/customer verification remain pending while pipeline build minutes are exhausted.
