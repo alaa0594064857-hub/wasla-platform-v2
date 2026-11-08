@@ -58,6 +58,8 @@ describe("platform audit endpoint", () => {
     expect(mocks.query.mock.calls[0][1]).toEqual([25]);
     const sql = String(mocks.query.mock.calls[0][0]);
     expect(sql).toContain("ORDER BY \"createdAt\" DESC");
+    expect(sql).toContain("official_store_activity_log");
+    expect(sql).toContain("'official_store'");
     expect(sql).toContain("trade_opportunity_events");
     expect(sql).toContain("trade_brokerage_agreement_events");
     expect(sql).toContain("trade_brokerage_commission_events");
