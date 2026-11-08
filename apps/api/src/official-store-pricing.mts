@@ -1,5 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { authorizePlatformPermission } from "./platform-security.mjs";
+import { getDatabasePool } from "./database.js";
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type CostLine = { type: string; amount: number; currency: string; fxRate?: number; fxRateAsOf?: string; fxSource?: string };
 
@@ -80,15 +83,50 @@ export async function handleOfficialStorePricingRequest(request: IncomingMessage
       reply(response, error instanceof Error && error.message === "BODY_TOO_LARGE" ? 413 : 400,
         { success: false, error: "Invalid request body" }); return;
     }
-    if (!body || !validAmount(body.supplierCost) || !validCurrency(body.supplierCurrency) ||
-        !validAmount(body.shippingCost) || !validCurrency(body.shippingCurrency) ||
+    if (!body || typeof body.productId !== "string" || !UUID.test(body.productId) ||
+        typeof body.offerId !== "string" || !UUID.test(body.offerId) ||
         !validCurrency(body.displayCurrency) ||
         !isValidDestinationCountry(body.destinationCountry) ||
         typeof body.marginPercent !== "number" || !Number.isFinite(body.marginPercent) ||
         body.marginPercent < 0 || body.marginPercent > 500 ||
         !validAmount(body.fixedMargin ?? 0) ||
         (body.costs !== undefined && (!Array.isArray(body.costs) || body.costs.length > 20))) {
-      reply(response, 400, { success: false, error: "Provide a 2-letter destination country, valid supplier/shipping costs, ISO currencies, margin percentage, fixed margin and up to 20 additional cost lines" }); return;
+      reply(response, 400, { success: false, error: "Select a verified supplier offer and provide a destination country, display currency, margin and up to 20 additional cost lines" }); return;
+    }
+    const db = getDatabasePool();
+    const offerResult = await db.query(
+      `SELECT id, product_id, supplier_price::text AS supplier_price, supplier_currency,
+              shipping_cost::text AS shipping_cost, shipping_currency, minimum_order_quantity,
+              ships_to_countries, direct_to_customer_confirmed, supplier_identity_verified,
+              specifications_verified, quote_valid_until, last_verified_at, availability_status,
+              offer_status
+       FROM official_store_product_source_offers
+       WHERE id = $1 AND product_id = $2
+         AND offer_status = 'approved'
+         AND availability_status IN ('available', 'limited')
+         AND direct_to_customer_confirmed = TRUE
+         AND supplier_identity_verified = TRUE
+         AND specifications_verified = TRUE
+         AND minimum_order_quantity = 1
+         AND shipping_cost IS NOT NULL AND shipping_currency IS NOT NULL
+         AND quote_valid_until > NOW() AND last_verified_at IS NOT NULL
+       LIMIT 1`,
+      [body.offerId, body.productId],
+    );
+    const offer = offerResult.rows[0] as {
+      supplier_price: string; supplier_currency: string; shipping_cost: string;
+      shipping_currency: string; ships_to_countries: unknown;
+    } | undefined;
+    const countries = Array.isArray(offer?.ships_to_countries) ? offer.ships_to_countries : [];
+    if (!offer || !countries.includes(body.destinationCountry)) {
+      reply(response, 409, { success: false, error: "The selected offer is not approved, verified, current, or available for this destination country" }); return;
+    }
+    // Supplier and shipping costs always come from the verified offer, never from editable client fields.
+    body = { ...body, supplierCost: Number(offer.supplier_price), supplierCurrency: offer.supplier_currency,
+      shippingCost: Number(offer.shipping_cost), shippingCurrency: offer.shipping_currency };
+    if (!validAmount(body.supplierCost) || !validCurrency(body.supplierCurrency) ||
+        !validAmount(body.shippingCost) || !validCurrency(body.shippingCurrency)) {
+      reply(response, 409, { success: false, error: "The verified supplier offer contains invalid cost data" }); return;
     }
     const target = body.displayCurrency;
     let supplierFxRate = 1;
@@ -128,7 +166,7 @@ export async function handleOfficialStorePricingRequest(request: IncomingMessage
       ? Number(((finalPrice - roundedCost) / finalPrice * 100).toFixed(2))
       : 0;
     reply(response, 200, {
-      success: true, previewOnly: true, published: false, currency: target, destinationCountry: body.destinationCountry,
+      success: true, previewOnly: true, published: false, productId: body.productId, offerId: body.offerId, currency: target, destinationCountry: body.destinationCountry,
       breakdown: {
         supplierCost: { amount: body.supplierCost, currency: body.supplierCurrency, convertedAmount: supplier, fxRate: supplierFxRate,
           ...(body.supplierCurrency !== target ? { fxRateAsOf: body.supplierFxRateAsOf, fxSource: body.supplierFxSource } : {}) },
@@ -139,7 +177,7 @@ export async function handleOfficialStorePricingRequest(request: IncomingMessage
         finalCustomerPrice: finalPrice,
         grossMarginPercent,
       },
-      warnings: ["Taxes, customs, duties and payment fees are not estimated; add verified amounts as explicit cost lines.", "FX rates are supplied by the operator and must be timestamped within the last 24 hours; no live exchange-rate feed is assumed.", "This preview does not update the catalogue, expose supplier details to customers, publish products or place orders."],
+      warnings: ["Taxes, customs, duties and payment fees are not estimated; add verified amounts as explicit cost lines.", "FX rates are supplied by the operator and must be timestamped within the last 24 hours; no live exchange-rate feed is assumed.", "This preview uses the selected verified supplier offer but does not approve a customer price, update the catalogue, expose supplier details to customers, publish products or place orders."],
     });
   } catch (error) {
     console.error("WASLA official store pricing error:", error);
