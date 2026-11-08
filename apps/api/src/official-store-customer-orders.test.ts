@@ -45,9 +45,17 @@ describe("official store customer supplier-confirmation requests", () => {
     const base = await startServer();
     const response = await fetch(base);
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ success: true, requests: [{ orderNumber: "WS-1" }] });
+    const customerPayload = await response.json();
+    expect(customerPayload).toMatchObject({ success: true, requests: [{ orderNumber: "WS-1" }] });
     expect(mocks.query.mock.calls[0][1]).toEqual(["customer-1"]);
-    expect(String(mocks.query.mock.calls[0][0])).toContain("WHERE customer_user_id = $1");
+    const customerQuery = String(mocks.query.mock.calls[0][0]);
+    expect(customerQuery).toContain("WHERE customer_user_id = $1");
+    expect(customerQuery).not.toContain("supplier_name");
+    expect(customerQuery).not.toContain("source_platform");
+    expect(customerQuery).not.toContain("supplier_unit_cost");
+    expect(customerQuery).not.toContain("supplier_order_url");
+    expect(customerQuery).not.toContain("supplier_tracking_url");
+    expect(JSON.stringify(customerPayload)).not.toMatch(/supplierName|supplier_name|sourcePlatform|source_platform|supplierCost|supplierOrderUrl|supplierTrackingUrl/i);
   });
 
   it("rejects a request without explicit customer confirmation", async () => {
