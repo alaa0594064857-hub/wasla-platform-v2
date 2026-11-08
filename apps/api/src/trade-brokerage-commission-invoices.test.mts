@@ -79,6 +79,7 @@ describe("WASLA brokerage commission invoice lifecycle", () => {
 
   it("creates a numbered invoice draft from the commission amount snapshot", async () => {
     mocks.query
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: entryId, status: "recorded", commission_amount: "125.000000", commission_currency: "USD", commission_payer: "supplier" }] })
       .mockResolvedValueOnce({ rowCount: 0, rows: [] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: invoiceId, invoice_sequence: "42" }] })
@@ -94,14 +95,16 @@ describe("WASLA brokerage commission invoice lifecycle", () => {
 
     expect(response.status).toBe(201);
     expect(await response.json()).toMatchObject({ success: true, invoice: { invoice_number: "WASLA-COM-2026-000042", amount: "125.000000", currency: "USD" } });
-    expect(String(mocks.query.mock.calls[2][0])).toContain("INSERT INTO trade_brokerage_commission_invoices");
-    expect(mocks.query.mock.calls[2][1]).toContain("supplier");
+    expect(String(mocks.query.mock.calls[3][0])).toContain("INSERT INTO trade_brokerage_commission_invoices");
+    expect(mocks.query.mock.calls[3][1]).toContain("supplier");
     expect(mocks.query.mock.calls.at(-1)?.[0]).toBe("COMMIT");
     expect(mocks.release).toHaveBeenCalledOnce();
   });
 
   it("does not create an invoice for a party other than the agreed commission payer", async () => {
-    mocks.query.mockResolvedValueOnce({ rowCount: 1, rows: [{ id: entryId, status: "recorded", commission_amount: "125", commission_currency: "USD", commission_payer: "supplier" }] });
+    mocks.query
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: entryId, status: "recorded", commission_amount: "125", commission_currency: "USD", commission_payer: "supplier" }] });
 
     const baseUrl = await startServer();
     const response = await fetch(`${baseUrl}/api/trade/brokerage-agreements/commission-invoices`, {
@@ -117,6 +120,7 @@ describe("WASLA brokerage commission invoice lifecycle", () => {
 
   it("marks the linked commission entry invoiced when an invoice is issued", async () => {
     mocks.query
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [invoice] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ ...invoice, status: "issued" }] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [] })
@@ -130,13 +134,14 @@ describe("WASLA brokerage commission invoice lifecycle", () => {
     });
 
     expect(response.status).toBe(200);
-    expect(String(mocks.query.mock.calls[2][0])).toContain("UPDATE trade_brokerage_commission_entries SET status='invoiced'");
-    expect(String(mocks.query.mock.calls[3][0])).toContain("trade_brokerage_commission_invoice_events");
+    expect(String(mocks.query.mock.calls[3][0])).toContain("UPDATE trade_brokerage_commission_entries SET status='invoiced'");
+    expect(String(mocks.query.mock.calls[4][0])).toContain("trade_brokerage_commission_invoice_events");
     expect(mocks.query.mock.calls.at(-1)?.[0]).toBe("COMMIT");
   });
 
   it("requires an issued invoice and HTTPS evidence before recording payment", async () => {
     mocks.query
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ ...invoice, status: "draft" }] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [] });
 
@@ -169,6 +174,7 @@ describe("WASLA brokerage commission invoice lifecycle", () => {
 
   it("rolls a cancelled invoice's linked commission entry back to recorded", async () => {
     mocks.query
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ ...invoice, status: "issued" }] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ ...invoice, status: "cancelled" }] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [] })
@@ -183,7 +189,7 @@ describe("WASLA brokerage commission invoice lifecycle", () => {
     });
 
     expect(response.status).toBe(200);
-    expect(String(mocks.query.mock.calls[2][0])).toContain("UPDATE trade_brokerage_commission_entries SET status='recorded'");
+    expect(String(mocks.query.mock.calls[3][0])).toContain("UPDATE trade_brokerage_commission_entries SET status='recorded'");
     expect(mocks.query.mock.calls.at(-1)?.[0]).toBe("COMMIT");
   });
 });
