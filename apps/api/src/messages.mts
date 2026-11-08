@@ -363,10 +363,13 @@ export async function handleMessagesRequest(
     }
   } catch (error) {
     console.error("WASLA messages API error:", error);
-    respond(response, error instanceof Error && error.message === "Request body too large" ? 413 : 500, {
+    const tooLarge = error instanceof Error && error.message === "Request body too large";
+    const invalidJson = error instanceof SyntaxError;
+    respond(response, tooLarge ? 413 : invalidJson ? 400 : 500, {
       success: false,
-      error: error instanceof Error && error.message === "Request body too large"
-        ? "Request body too large" : "Could not process messaging request",
+      error: tooLarge ? "Request body too large"
+        : invalidJson ? "Invalid JSON request body"
+        : "Could not process messaging request",
     });
   }
 }
