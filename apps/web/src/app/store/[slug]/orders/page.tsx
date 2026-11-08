@@ -341,7 +341,8 @@ export default function MemberStoreOrdersPage() {
                   }} className="rounded-lg border border-red-700 px-4 py-2 font-semibold text-red-700 disabled:opacity-50">{ar ? "رفض الطلب" : "Reject request"}</button>
                 </div>
               </div>}
-              {isMerchantView && order.returnStatus === "approved" && <button disabled={returnBusy === order.id} onClick={() => void returnAction(order, "received")} className="mt-3 rounded-lg border border-[#14233b] px-4 py-2 font-semibold">{ar ? "تأكيد استلام المنتج المُعاد" : "Confirm returned item received"}</button>}
+              {isMerchantView && order.returnStatus === "approved" && order.returnResolution === "return" && <button disabled={returnBusy === order.id} onClick={() => void returnAction(order, "received")} className="mt-3 rounded-lg border border-[#14233b] px-4 py-2 font-semibold">{ar ? "تأكيد استلام المنتج المُعاد" : "Confirm returned item received"}</button>}
+              {isMerchantView && order.returnStatus === "approved" && order.returnResolution === "replacement" && <p className="mt-3 text-xs text-slate-600">{ar ? "تمت الموافقة على الاستبدال. تنفيذ شحن البديل سيُفعّل بعد استكمال تكامل الشحن." : "Replacement approved. Dispatching the replacement will be enabled after shipping integration."}</p>}
               {!isMerchantView && ["rejected","item_received"].includes(order.returnStatus ?? "") && <button disabled={returnBusy === order.id} onClick={() => void returnAction(order, "close")} className="mt-3 rounded-lg border border-[#14233b] px-4 py-2 font-semibold">{ar ? "إغلاق طلب الإرجاع" : "Close return request"}</button>}
             </section>}
             {!isMerchantView && !order.returnRequestId && ["shipped","completed"].includes(order.status) && <section className="mt-4 space-y-2 rounded-xl border border-[#e5dfd1] p-4">
