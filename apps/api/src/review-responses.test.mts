@@ -26,5 +26,20 @@ describe('seller review responses',()=>{
   expect(String(clientQuery.mock.calls[1][0])).toContain("r.status='published'");expect(String(clientQuery.mock.calls[1][0])).toContain('store_members');
   expect(String(clientQuery.mock.calls[2][0])).toContain('ON CONFLICT (review_id) DO NOTHING');expect(String(clientQuery.mock.calls[3][0])).toContain('review.store_response_submitted');expect(clientQuery).toHaveBeenCalledWith('COMMIT');
  });
+ it('denies a user who is not an active member of the review store',async()=>{
+  clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]}).mockResolvedValueOnce({rowCount:0,rows:[]}).mockResolvedValueOnce({rowCount:null,rows:[]});
+  const base=await start();const r=await fetch(base+'/api/reviews/'+reviewId+'/response',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({body:'A helpful response from the store.'})});
+  expect(r.status).toBe(404);expect(clientQuery).toHaveBeenCalledWith('ROLLBACK');expect(clientQuery).not.toHaveBeenCalledWith(expect.stringContaining('INSERT INTO verified_product_review_responses'),expect.anything());
+ });
+ it('prevents duplicate responses to the same review',async()=>{
+  clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]}).mockResolvedValueOnce({rowCount:1,rows:[{storeId:'33333333-3333-4333-8333-333333333333'}]}).mockResolvedValueOnce({rowCount:0,rows:[]}).mockResolvedValueOnce({rowCount:null,rows:[]});
+  const base=await start();const r=await fetch(base+'/api/reviews/'+reviewId+'/response',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({body:'A second response should be blocked.'})});
+  expect(r.status).toBe(409);expect(await r.json()).toMatchObject({success:false});expect(clientQuery).toHaveBeenCalledWith('ROLLBACK');
+ });
+ it('records a moderator approval and audit event transactionally',async()=>{
+  clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]}).mockResolvedValueOnce({rowCount:1,rows:[{id:'44444444-4444-4444-8444-444444444444',reviewId,status:'pending_moderation'}]}).mockResolvedValueOnce({rowCount:1,rows:[{id:'44444444-4444-4444-8444-444444444444',reviewId,status:'published'}]}).mockResolvedValueOnce({rowCount:1,rows:[]}).mockResolvedValueOnce({rowCount:null,rows:[]});
+  const base=await start();const id='44444444-4444-4444-8444-444444444444';const r=await fetch(base+'/api/platform/review-responses/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'published',note:'Approved after review'})});
+  expect(r.status).toBe(200);expect(await r.json()).toMatchObject({success:true,response:{status:'published'}});expect(String(clientQuery.mock.calls[2][0])).toContain('moderated_by=$3');expect(String(clientQuery.mock.calls[3][0])).toContain('review.store_response.');expect(clientQuery).toHaveBeenCalledWith('COMMIT');
+ });
  it('restricts response moderation to platform moderators',async()=>{query.mockResolvedValueOnce({rowCount:0,rows:[]});const base=await start();const r=await fetch(base+'/api/platform/review-responses');expect(r.status).toBe(200);expect(await r.json()).toMatchObject({success:true,responses:[]});expect(authorizePlatformPermission).toHaveBeenCalledWith(expect.anything(),expect.anything(),'platform.reports.manage');});
 });
