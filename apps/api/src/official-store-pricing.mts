@@ -29,6 +29,10 @@ function validCurrency(value: unknown): value is string {
   return typeof value === "string" && /^[A-Z]{3}$/.test(value);
 }
 
+export function isValidDestinationCountry(value: unknown): value is string {
+  return typeof value === "string" && /^[A-Z]{2}$/.test(value);
+}
+
 function validAmount(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1_000_000_000;
 }
@@ -79,7 +83,7 @@ export async function handleOfficialStorePricingRequest(request: IncomingMessage
     if (!body || !validAmount(body.supplierCost) || !validCurrency(body.supplierCurrency) ||
         !validAmount(body.shippingCost) || !validCurrency(body.shippingCurrency) ||
         !validCurrency(body.displayCurrency) ||
-        typeof body.destinationCountry !== "string" || !/^[A-Z]{2}$/.test(body.destinationCountry) ||
+        !isValidDestinationCountry(body.destinationCountry) ||
         typeof body.marginPercent !== "number" || !Number.isFinite(body.marginPercent) ||
         body.marginPercent < 0 || body.marginPercent > 500 ||
         !validAmount(body.fixedMargin ?? 0) ||
