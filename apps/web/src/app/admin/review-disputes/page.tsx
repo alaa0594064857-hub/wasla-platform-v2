@@ -87,6 +87,7 @@ export default function AdminReviewDisputesPage() {
     <WorkspaceHeader section="account" />
     <div style={{ width: "min(1100px, calc(100% - 32px))", margin: "32px auto 64px" }}>
       <Link href="/admin/reviews" style={{ color: "#806638", fontSize: 13 }}>{t.back}</Link>
+      <Link href="/admin/order-disputes" style={{ display: "inline-block", marginInlineStart: 16, color: "#806638", fontSize: 13, textDecoration: "underline" }}>{ar ? "شكاوى الطلبات" : "Order complaints"}</Link>
       <h1 style={{ fontSize: "clamp(26px, 4vw, 38px)", margin: "20px 0 8px" }}>{t.title}</h1>
       <p style={{ color: "#647184", lineHeight: 1.8 }}>{t.intro}</p>
       {error && <p role="alert" style={{ padding: 12, background: "#fff0eb", borderRadius: 8 }}>{error} <button onClick={() => void load()}>{ar ? "إعادة المحاولة" : "Retry"}</button></p>}
