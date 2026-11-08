@@ -679,3 +679,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Added coverage that unsupported HTTP methods are rejected before session or database access.
 - API-quality run `42489957996` and CI run `42489957877` both completed successfully. CI covered shared-package tests/type checks, API tests, migrations, authorization seeding, database constraints, TypeScript checks, API build, and Web production build.
 - Tests only; no runtime behavior or database schema changed. This merged commit is on GitHub and is not yet deployed to Render because pipeline build minutes remain exhausted.
+
+
+## Notification open/read reliability — 2026-11-08
+
+- PR #25 merged to `main` as `3f819b376febc4cacdcf235b9f31d77d05a9ce04`.
+- Opening an unread notification now waits for the mark-as-read request before navigating to its internal destination.
+- The notification center now surfaces network/server failures instead of silently ignoring them and updates the unread count after a successful read.
+- Final-head CI run `42490606318` and API-quality run `42490606208` both completed successfully. CI included shared-package checks, API tests, migrations/constraints, authorization seeding, TypeScript checks, API build and Web production build.
+- UI-only change; no database schema, permissions, or order/payment behavior changed. The commit is merged to GitHub but is not live on Render because pipeline build minutes remain exhausted.
