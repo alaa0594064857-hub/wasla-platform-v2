@@ -173,7 +173,8 @@ describe("WASLA Trade brokerage agreement access and acceptance", () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ success: true, status: "rejected" });
-    expect(String(mocks.query.mock.calls[4][0])).toContain("event_type");
+    expect(String(mocks.query.mock.calls[4][0])).toContain("status='rejected'");
+    expect(String(mocks.query.mock.calls[5][0])).toContain("event_type");
     expect(mocks.query.mock.calls.at(-1)?.[0]).toBe("COMMIT");
     expect(mocks.query.mock.calls.some(([sql]) => String(sql).includes("buyer_accepted_at"))).toBe(false);
   });
