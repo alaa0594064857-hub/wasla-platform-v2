@@ -95,3 +95,80 @@ export async function handlePlatformReviewDisputes(
   ]);
   respond(response, 200, { success: true, reports: reports.rows, appeals: appeals.rows });
 }
+
+
+/** Resolve a report or appeal with an immutable audit event in the same transaction. */
+export async function handlePlatformReviewDisputeDecision(
+  request: IncomingMessage, response: ServerResponse, kind: "report" | "appeal", id: string,
+): Promise<void> {
+  if (request.method !== "PATCH") { respond(response, 405, { success: false, error: "Method not allowed" }); return; }
+  if (!uuid.test(id)) { respond(response, 400, { success: false, error: "Invalid dispute id" }); return; }
+  const access = await authorizePlatformPermission(request, response, "platform.reports.manage");
+  if (!access) return;
+  let body: unknown;
+  try { body = await readBody(request); }
+  catch (error) {
+    const tooLarge = error instanceof Error && error.message === "Request body too large";
+    respond(response, tooLarge ? 413 : 400, { success: false, error: tooLarge ? "Request body too large" : "Invalid request body" }); return;
+  }
+  if (!isObject(body)) { respond(response, 400, { success: false, error: "Invalid request body" }); return; }
+  const allowed = kind === "report" ? ["reviewed", "dismissed", "actioned"] : ["upheld", "overturned"];
+  if (typeof body.status !== "string" || !allowed.includes(body.status) ||
+    (body.note !== undefined && (typeof body.note !== "string" || body.note.trim().length > 1000))) {
+    respond(response, 400, { success: false, error: "Invalid dispute decision or note" }); return;
+  }
+  const db = getDatabasePool();
+  const client = await db.connect();
+  const table = kind === "report" ? "verified_product_review_reports" : "verified_product_review_appeals";
+  try {
+    await client.query("BEGIN");
+    const selected = await client.query(
+      \`SELECT id, review_id AS "reviewId", status FROM \${table} WHERE id = $1 FOR UPDATE\`, [id],
+    );
+    if (!selected.rowCount || selected.rows[0].status !== "open") {
+      await client.query("ROLLBACK");
+      respond(response, selected.rowCount ? 409 : 404, { success: false, error: selected.rowCount ? "Dispute is already resolved" : "Dispute not found" }); return;
+    }
+    const decision = body.status as string;
+    if (kind === "report") {
+      await client.query(
+        \`UPDATE verified_product_review_reports SET status = $2, reviewed_by = $3, reviewed_at = NOW() WHERE id = $1\`,
+        [id, decision, access.userId],
+      );
+      if (decision === "actioned") {
+        await client.query(
+          \`UPDATE verified_product_reviews SET status = 'hidden', moderated_by = $2,
+           moderation_note = $3, moderated_at = NOW(), updated_at = NOW()
+           WHERE id = $1 AND status = 'published'\`,
+          [selected.rows[0].reviewId, access.userId,
+            typeof body.note === "string" ? body.note.trim() || "Hidden after review report" : "Hidden after review report"],
+        );
+      }
+    } else {
+      await client.query(
+        \`UPDATE verified_product_review_appeals SET status = $2, reviewed_by = $3,
+         reviewed_at = NOW(), resolution_note = $4 WHERE id = $1\`,
+        [id, decision, access.userId, typeof body.note === "string" ? body.note.trim() || null : null],
+      );
+      if (decision === "overturned") {
+        await client.query(
+          \`UPDATE verified_product_reviews SET status = 'pending_moderation', moderated_by = $2,
+           moderation_note = $3, moderated_at = NOW(), updated_at = NOW()
+           WHERE id = $1 AND status IN ('rejected','hidden')\`,
+          [selected.rows[0].reviewId, access.userId, "Appeal accepted; returned to moderation"],
+        );
+      }
+    }
+    await client.query(
+      \`INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, metadata)
+       VALUES ($1, $2, $3, $4, $5::jsonb)\`,
+      [access.userId, \`review.\${kind}.\${decision}\`, \`verified_product_review_\${kind}\`, id,
+        JSON.stringify({ reviewId: selected.rows[0].reviewId, note: typeof body.note === "string" ? body.note.trim() : null })],
+    );
+    await client.query("COMMIT");
+    respond(response, 200, { success: true, dispute: { id, kind, status: decision } });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally { client.release(); }
+}
