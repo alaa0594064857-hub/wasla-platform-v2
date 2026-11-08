@@ -640,6 +640,21 @@ async function handleRequest(
 
 
 
+  const memberStoreOrderMatch = requestUrl.pathname.match(/^\\/api\\/stores\\/([^/]+)\\/orders(?:\\/([0-9a-f-]{36}))?$/i);
+  if (memberStoreOrderMatch) {
+    try {
+      const { handleMemberStoreOrdersRequest } = await import("./member-store-orders.mjs");
+      await handleMemberStoreOrdersRequest(
+        request, response, decodeURIComponent(memberStoreOrderMatch[1]), memberStoreOrderMatch[2],
+      );
+    } catch (error) {
+      console.error("WASLA member store orders route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Member store orders service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const storeProductDetailMatch = requestUrl.pathname.match(
     /^\/api\/stores\/([^/]+)\/products\/([0-9a-f-]{36})$/,
   );
@@ -805,7 +820,7 @@ if (process.env.NODE_ENV !== "test") {
   const server = createWaslaServer();
 
   void import("./database.js")
-    .then(async ({ ensureRegistrationTypeColumn, ensureAccountOwnerRole, ensureStoreOwnerRole, ensurePlatformOwnerRole, ensurePersonalThemesTable, ensureStoreProductsTable, ensureNetworkTables, ensureProductInquiryTables, ensureSubscriptionBillingTables }) => {
+    .then(async ({ ensureRegistrationTypeColumn, ensureAccountOwnerRole, ensureStoreOwnerRole, ensurePlatformOwnerRole, ensurePersonalThemesTable, ensureStoreProductsTable, ensureNetworkTables, ensureProductInquiryTables, ensureSubscriptionBillingTables, ensureMemberStoreOrderTables }) => {
       const { ensureAuthorizationRoles } = await import("./authorization-bootstrap.mjs");
       await ensureRegistrationTypeColumn();
       await ensureAuthorizationRoles();
@@ -814,6 +829,7 @@ if (process.env.NODE_ENV !== "test") {
       await ensurePlatformOwnerRole();
       await ensurePersonalThemesTable();
       await ensureStoreProductsTable();
+      await ensureMemberStoreOrderTables();
       await ensureNetworkTables();
       const { ensureMessagesTables } = await import("./messages.mjs");
       await ensureMessagesTables();
