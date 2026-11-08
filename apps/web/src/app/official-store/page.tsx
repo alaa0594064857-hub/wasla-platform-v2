@@ -29,6 +29,7 @@ export default function OfficialStorePage() {
   const [failed, setFailed] = useState(false);
   const [selected, setSelected] = useState<OfficialProduct | null>(null);
   const [destinationCountry, setDestinationCountry] = useState("");
+  const [catalogueCountry, setCatalogueCountry] = useState("");
   const [customerNote, setCustomerNote] = useState("");
   const [requesting, setRequesting] = useState(false);
   const [requestMessage, setRequestMessage] = useState("");
@@ -44,6 +45,7 @@ export default function OfficialStorePage() {
     empty: "نعمل على تجهيز المنتجات والتحقق من الموردين قبل فتح المتجر للعملاء. لن نعرض منتجات غير مؤكدة.",
     unavailable: "تعذر تحميل الكتالوج حالياً. حاول مرة أخرى لاحقاً.",
     products: "منتجات المتجر الرسمي",
+    catalogueCountry: "اختر دولة التوصيل لعرض المنتجات والأسعار المعتمدة", countryRequired: "أدخل رمز الدولة من حرفين، مثل TR لتركيا أو US لأمريكا.",
     details: "التفاصيل",
     close: "إغلاق",
     requestConfirmation: "اطلب تأكيد التوفر والتوصيل",
@@ -76,6 +78,7 @@ export default function OfficialStorePage() {
     empty: "We are preparing the catalogue and confirming suppliers before opening the store to customers. Unverified products will not be listed.",
     unavailable: "The catalogue could not be loaded. Please try again later.",
     products: "Official store products",
+    catalogueCountry: "Choose a delivery country to view products and approved prices", countryRequired: "Enter a two-letter country code, such as TR or US.",
     details: "Details",
     close: "Close",
     requestConfirmation: "Request availability and delivery confirmation",
@@ -146,7 +149,12 @@ export default function OfficialStorePage() {
 
   useEffect(() => {
     let active = true;
-    fetch("/api/official-store/products", { cache: "no-store" })
+    if (!/^[A-Z]{2}$/.test(catalogueCountry)) {
+      setProducts([]); setLoading(false); setFailed(false);
+      return () => { active = false; };
+    }
+    setLoading(true); setFailed(false);
+    fetch(`/api/official-store/products?country=${encodeURIComponent(catalogueCountry)}`, { cache: "no-store" })
       .then(async response => {
         const data = await response.json();
         if (!response.ok || !data.success) throw new Error("catalogue");
@@ -156,7 +164,7 @@ export default function OfficialStorePage() {
       .catch(() => { if (active) setFailed(true); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, []);
+  }, [catalogueCountry]);
 
   return <main className="min-h-screen bg-[#f5f1e8] text-[#17253a]" dir={ar ? "rtl" : "ltr"} lang={locale}>
     <WorkspaceHeader section="account" />
@@ -171,6 +179,12 @@ export default function OfficialStorePage() {
       </div>
     </section>
     <section className="mx-auto max-w-6xl px-5 py-12 md:px-8">
+      <div className="mb-6 max-w-sm">
+        <label className="block text-sm font-semibold">{copy.catalogueCountry}
+          <input value={catalogueCountry} onChange={event => setCatalogueCountry(event.target.value.toUpperCase().slice(0,2))} maxLength={2} pattern="[A-Za-z]{2}" placeholder="TR" className="mt-2 w-full rounded-xl border border-[#d9cfbb] bg-white px-4 py-3 text-base text-[#17253a]" />
+        </label>
+        <p className="mt-2 text-xs text-slate-500">{copy.countryRequired}</p>
+      </div>
       <div className="mb-7 flex flex-wrap items-end justify-between gap-3">
         <div><span className="text-xs font-bold tracking-widest text-[#9a742d]">WASLA OFFICIAL</span><h2 className="mt-2 text-2xl font-bold">{copy.products}</h2></div>
         <span className="rounded-full border border-[#d7c79f] bg-[#fffaf0] px-4 py-2 text-xs font-semibold text-[#755b29]">{copy.storePromise}</span>
@@ -191,7 +205,7 @@ export default function OfficialStorePage() {
               <p className="mt-2 line-clamp-3 min-h-16 text-sm leading-7 text-slate-600">{(ar ? product.description_ar : product.description_en) || ""}</p>
               <div className="mt-4 flex items-center justify-between gap-3">
                 <strong className="text-lg text-[#8b6828]">{product.price} {product.currency}</strong>
-                <button type="button" onClick={() => { setSelected(product); setDestinationCountry(product.deliveryCountries[0] || ""); setCustomerNote(""); setRequestMessage(""); setRequestError(false); }} className="rounded-lg bg-[#17253a] px-4 py-2.5 text-sm font-semibold text-white">{copy.details}</button>
+                <button type="button" onClick={() => { setSelected(product); setDestinationCountry(catalogueCountry); setCustomerNote(""); setRequestMessage(""); setRequestError(false); }} className="rounded-lg bg-[#17253a] px-4 py-2.5 text-sm font-semibold text-white">{copy.details}</button>
               </div>
             </div>
           </article>)}
