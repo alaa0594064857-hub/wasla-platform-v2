@@ -157,7 +157,7 @@ export default function OfficialStoreRequestsPage() {
             </div>
           </div>}
           {item.finalQuoteStatus === "accepted" && <p className="mt-4 rounded-xl bg-[#e8f2e9] p-4 text-sm">{ar ? "وافقت على عرض السعر. الدفع والشراء غير مفعّلين بعد." : "You accepted the quote. Payment and purchasing are not enabled yet."}</p>}
-          {item.finalQuoteStatus === "expired" && <p className="mt-4 rounded-xl bg-[#f5f1e8] p-4 text-sm">{ar ? "انتهت صلاحية عرض السعر. تواصل مع WASLA لطلب تحديثه." : "This quote expired. Contact WASLA for an updated quote."}</p>}
+          {(item.finalQuoteStatus === "expired" || (item.finalQuoteStatus === "pending_customer" && item.finalQuoteExpiresAt && new Date(item.finalQuoteExpiresAt).getTime() <= Date.now())) && <p className="mt-4 rounded-xl bg-[#f5f1e8] p-4 text-sm">{ar ? "انتهت صلاحية عرض السعر. تواصل مع WASLA لطلب تحديثه." : "This quote expired. Contact WASLA for an updated quote."}</p>}
 
           <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
             <p><strong>{copy.destination}:</strong> {item.destinationCountry || "—"}</p>
