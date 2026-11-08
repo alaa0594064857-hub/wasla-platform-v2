@@ -716,6 +716,32 @@ async function handleRequest(
     return;
   }
 
+  const memberStoreReturnMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/orders\/([0-9a-f-]{36})\/return(?:\/(response|received|close))?$/i);
+  if (memberStoreReturnMatch) {
+    try {
+      const { handleMemberStoreReturn } = await import("./member-store-returns.mjs");
+      const action = memberStoreReturnMatch[3] === "response" ? "respond" : memberStoreReturnMatch[3] === "received" ? "received" : memberStoreReturnMatch[3] === "close" ? "close" : "submit";
+      await handleMemberStoreReturn(request, response, decodeURIComponent(memberStoreReturnMatch[1]), memberStoreReturnMatch[2], action);
+    } catch (error) {
+      console.error("WASLA member store return error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Return request service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+  const platformMemberStoreReturnsMatch = requestUrl.pathname.match(/^\/api\/platform\/store-returns(?:\/([0-9a-f-]{36}))?$/i);
+  if (platformMemberStoreReturnsMatch) {
+    try {
+      const { handlePlatformMemberStoreReturns } = await import("./member-store-returns.mjs");
+      await handlePlatformMemberStoreReturns(request, response, platformMemberStoreReturnsMatch[1]);
+    } catch (error) {
+      console.error("WASLA platform store returns error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Platform returns service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const memberStoreOrderMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/orders(?:\/([0-9a-f-]{36}))?$/i);
   if (memberStoreOrderMatch) {
     try {
