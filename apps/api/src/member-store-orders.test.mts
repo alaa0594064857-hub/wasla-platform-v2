@@ -101,6 +101,34 @@ describe("member store order requests", () => {
   });
 
 
+  it("notifies active store/account order managers when a buyer cancels a pending request", async () => {
+    clientQuery
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "22222222-2222-4222-8222-222222222222", orderNumber: "WS-CANCEL", buyerUserId: "11111111-1111-4111-8111-111111111111", status: "cancelled" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: null, rows: [] });
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/stores/demo/orders/22222222-2222-4222-8222-222222222222`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "cancelled" }),
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ success: true, order: { status: "cancelled" } });
+    const notificationCall = clientQuery.mock.calls[3];
+    expect(String(notificationCall[0])).toContain("INSERT INTO notifications");
+    expect(String(notificationCall[0])).toContain("A buyer cancelled an order request");
+    expect(String(notificationCall[0])).toContain("store_members");
+    expect(String(notificationCall[0])).toContain("account_members");
+    expect(String(notificationCall[0])).toContain("recipients.user_id <> $4");
+    expect(notificationCall[1]).toEqual([
+      "demo", "22222222-2222-4222-8222-222222222222",
+      ["store.order.read", "store.order.manage", "account.order.read", "account.order.manage"],
+      "11111111-1111-4111-8111-111111111111", "WS-CANCEL",
+    ]);
+  });
+
   it("notifies the buyer when a merchant accepts a pending request", async () => {
     clientQuery
       .mockResolvedValueOnce({ rowCount: null, rows: [] })
