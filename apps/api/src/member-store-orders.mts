@@ -89,8 +89,13 @@ export async function handleMemberStoreOrdersRequest(
         `SELECT id, event_type AS "eventType", from_status AS "fromStatus",
                 to_status AS "toStatus", source, reason_code AS "reasonCode",
                 created_at AS "createdAt"
-         FROM member_store_order_events
-         WHERE order_id = $1
+         FROM (
+           SELECT id, event_type, from_status, to_status, source, reason_code, created_at
+           FROM member_store_order_events
+           WHERE order_id = $1
+           ORDER BY created_at DESC, id DESC
+           LIMIT 200
+         ) recent_events
          ORDER BY created_at ASC, id ASC`,
         [orderId],
       );
