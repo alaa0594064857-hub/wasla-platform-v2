@@ -27,6 +27,9 @@ export default function PublicProductPage() {
   const [reviewBody, setReviewBody] = useState("");
   const [reviewBusy, setReviewBusy] = useState(false);
   const [reviewMessage, setReviewMessage] = useState("");
+  const [sellerResponseBody, setSellerResponseBody] = useState("");
+  const [sellerResponseBusy, setSellerResponseBusy] = useState(false);
+  const [sellerResponseMessage, setSellerResponseMessage] = useState("");
   useEffect(() => {
     let active = true;
     fetch(`/api/public/products/${encodeURIComponent(params.id)}`, { cache: "no-store" })
