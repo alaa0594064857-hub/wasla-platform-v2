@@ -28,11 +28,11 @@ async function readBody(request: IncomingMessage): Promise<Record<string, unknow
     ? parsed as Record<string, unknown> : null;
 }
 
-function validAmount(value: unknown): value is number {
+export function validAmount(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value > 0 && value <= 100000000;
 }
 
-function validCurrency(value: unknown): value is string {
+export function validCurrency(value: unknown): value is string {
   return typeof value === "string" && /^[A-Z]{3}$/.test(value);
 }
 
