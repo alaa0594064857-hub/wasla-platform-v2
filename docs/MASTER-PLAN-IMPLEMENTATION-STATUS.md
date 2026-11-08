@@ -922,3 +922,9 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Adds an authenticated order-events API for the buyer or an authorized store member. It returns the ordered lifecycle timeline with safe metadata only; tracking numbers and tracking URLs are excluded from event metadata.
 - Review creation rejects completed orders with an unresolved member-store order dispute (`open` or `merchant_responded`); the check runs in the same locked eligibility query. Buyer receipt confirmation is also blocked while such a dispute is active, preventing a disputed order from being completed around the case workflow. Carrier integrations, signed webhooks, independent proof-of-delivery verification, staff adjudication and post-submission review suspension remain unimplemented.
 - API regression expectations were updated for the actor-context parameter. Final-head CI and database execution verification remain pending; this branch is not merged or deployed.
+
+## Carrier webhook security foundation — 2026-11-09
+
+- Adds a small, independently tested WASLA internal webhook signature verifier: HMAC-SHA256 over timestamp plus the exact raw request body, constant-time comparison, minimum 32-byte secret, and a five-minute replay window by default.
+- This is an internal normalized ingress contract only. It is not claimed to match DHL, UPS, FedEx, Turkish carriers or any provider-native signature scheme; a selected carrier adapter must validate the provider's own signature and map its events before forwarding.
+- No public webhook route, carrier account, provider secret, carrier API polling, shipment status mutation or delivery-proof verification is enabled. Carrier selection and credentials remain a prerequisite.
