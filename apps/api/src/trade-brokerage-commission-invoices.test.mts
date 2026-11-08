@@ -115,7 +115,7 @@ describe("WASLA brokerage commission invoice lifecycle", () => {
 
     expect(response.status).toBe(400);
     expect(String(mocks.query.mock.calls.at(-1)?.[0])).toBe("ROLLBACK");
-    expect(mocks.query).toHaveBeenCalledOnce();
+    expect(mocks.query).toHaveBeenCalledTimes(3);
   });
 
   it("marks the linked commission entry invoiced when an invoice is issued", async () => {
@@ -158,6 +158,7 @@ describe("WASLA brokerage commission invoice lifecycle", () => {
 
   it("does not allow a draft invoice to be marked paid even with HTTPS evidence", async () => {
     mocks.query
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ ...invoice, status: "draft" }] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [] });
 
