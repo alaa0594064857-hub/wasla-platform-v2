@@ -253,7 +253,6 @@ export async function handleMemberStoreOrdersRequest(
      SET status = $1, merchant_note = CASE WHEN $1 = 'cancelled' THEN merchant_note ELSE COALESCE(NULLIF($2, ''), merchant_note) END, updated_at = NOW()
      FROM stores s
      WHERE o.id = $3 AND o.store_id = s.id AND s.slug = $4 AND s.status = 'active'
-       AND ${merchantPermission(5, 6)}
        AND (
          ($1 = 'cancelled' AND o.buyer_user_id = $5 AND o.status = 'pending_merchant_review') OR
          ($1 IN ('accepted', 'rejected') AND o.status = 'pending_merchant_review' AND ${merchantPermission(5, 6)} )
