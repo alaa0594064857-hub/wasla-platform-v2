@@ -928,3 +928,11 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Adds a small, independently tested WASLA internal webhook signature verifier: HMAC-SHA256 over timestamp plus the exact raw request body, constant-time comparison, minimum 32-byte secret, and a five-minute replay window by default.
 - This is an internal normalized ingress contract only. It is not claimed to match DHL, UPS, FedEx, Turkish carriers or any provider-native signature scheme; a selected carrier adapter must validate the provider's own signature and map its events before forwarding.
 - No public webhook route, carrier account, provider secret, carrier API polling, shipment status mutation or delivery-proof verification is enabled. Carrier selection and credentials remain a prerequisite.
+
+
+## Carrier event normalization contract — 2026-11-09
+
+- Adds a provider-neutral pure normalizer for a deliberately small set of shipment lifecycle events (`picked_up`, `in_transit`, `out_for_delivery`, `delivery_attempted`, `delivered`, exceptions and shipment creation). Unknown provider event codes are rejected rather than guessed.
+- Validates carrier identifier, provider event ID, tracking reference and canonical ISO timestamp; derives an idempotency key from carrier + provider event ID.
+- Even a normalized `delivered` event remains `verificationState: pending` and `proofOfDeliveryVerified: false`. Normalization is not authentication, shipment/order matching, delivery evidence or permission to complete an order.
+- The carrier-specific adapter must verify native signatures, match the exact tracking reference to the correct shipment, enforce replay/idempotency, preserve provider raw-event audit evidence safely, and apply a monotonic transition policy before any state change. No carrier is selected or connected.
