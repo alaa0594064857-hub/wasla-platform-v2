@@ -670,3 +670,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - No current inventory is inferred from the snapshot, and no stock reservation or automatic decrement is introduced.
 - Final-head GitHub CI run `42489437709` and API-quality run `42489437713` both completed successfully. CI included API tests, migrations/constraints, authorization seeding, TypeScript checks, API build and Web production build.
 - The change is merged to GitHub but is not live on Render while pipeline build minutes remain exhausted. Hosted merchant/buyer verification remains outstanding.
+
+
+## Notification access regression coverage — 2026-11-08
+
+- PR #24 merged to `main` as `6f1c76de87e000fa7033ff7464aea404fd21fc55`.
+- Added API regression tests proving unauthenticated requests cannot read private in-app notifications and do not trigger private database queries.
+- Added coverage that unsupported HTTP methods are rejected before session or database access.
+- API-quality run `42489957996` and CI run `42489957877` both completed successfully. CI covered shared-package tests/type checks, API tests, migrations, authorization seeding, database constraints, TypeScript checks, API build, and Web production build.
+- Tests only; no runtime behavior or database schema changed. This merged commit is on GitHub and is not yet deployed to Render because pipeline build minutes remain exhausted.
