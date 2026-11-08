@@ -825,3 +825,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Successful draft path is verified to insert a private `draft` product with a zero-value USD placeholder and a transactional audit event; supplier, stock, shipping, image rights, purchase and payment are not invented or created.
 - API Quality run `42500594606` passed API tests and API build. WASLA CI run `42500594605` passed shared tests/typecheck, API tests, migrations, authorization seed, database constraints, API TypeScript/build and Web production build.
 - Gemini secret and hosted runtime remain unconfigured/unverified; changes are merged to GitHub `main` but not deployed to Render while build minutes are exhausted.
+
+
+## Official-store customer privacy regression coverage — 2026-11-08
+
+- PR #41 merged to `main` as `09d9e5ec72cb1f4c21cde74333d118bfa4f7b177`.
+- Strengthened customer order-history tests to verify the query is scoped to the authenticated customer and excludes supplier names, source platform, supplier costs, supplier order URLs and supplier tracking URLs.
+- The customer response payload is also checked for these private supplier/source fields; supplier operational details remain confined to the owner-side order desk.
+- Final-head WASLA CI run `42500811962` and API Quality run `42500812016` both completed successfully.
+- Test-only change; no runtime behavior or schema changed. Merged to GitHub `main`; not deployed or hosted-verified on Render because pipeline build minutes remain exhausted.
