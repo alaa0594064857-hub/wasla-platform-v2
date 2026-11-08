@@ -25,6 +25,7 @@ export default function NotificationsPage() {
   const [items, setItems] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [markingAllRead, setMarkingAllRead] = useState(false);
   const [error, setError] = useState("");
 
   const loadNotifications = useCallback(async () => {
@@ -79,18 +80,28 @@ export default function NotificationsPage() {
   };
 
   const markAllRead = async () => {
-    const response = await fetch("/api/notifications/read-all", {
-      method: "PATCH",
-      credentials: "include",
-      cache: "no-store",
-    });
-    if (!response.ok) {
-      setError(ar ? "تعذر تحديث حالة الإشعارات." : "Could not update notification status.");
-      return;
+    if (markingAllRead || unreadCount === 0) return;
+    setMarkingAllRead(true);
+    setError("");
+    try {
+      const response = await fetch("/api/notifications/read-all", {
+        method: "PATCH",
+        credentials: "include",
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        setError(ar ? "تعذر تحديث حالة الإشعارات." : "Could not update notification status.");
+        return;
+      }
+      const readAt = new Date().toISOString();
+      setItems(current => current.map(item => ({ ...item, readAt: item.readAt ?? readAt })));
+      setUnreadCount(0);
+      window.dispatchEvent(new Event("wasla:notifications-updated"));
+    } catch {
+      setError(ar ? "تعذر الاتصال لتحديث الإشعارات." : "Could not reach the service to update notifications.");
+    } finally {
+      setMarkingAllRead(false);
     }
-    setItems(current => current.map(item => ({ ...item, readAt: item.readAt ?? new Date().toISOString() })));
-    setUnreadCount(0);
-    window.dispatchEvent(new Event("wasla:notifications-updated"));
   };
 
   const title = ar ? "مركز الإشعارات" : "Notification center";
@@ -115,8 +126,10 @@ export default function NotificationsPage() {
         <button type="button" onClick={() => void loadNotifications()} disabled={loading}>
           {ar ? "تحديث" : "Refresh"}
         </button>
-        <button type="button" onClick={() => void markAllRead()} disabled={unreadCount === 0}>
-          {ar ? "تعليم الكل كمقروء" : "Mark all as read"}
+        <button type="button" onClick={() => void markAllRead()} disabled={unreadCount === 0 || markingAllRead}>
+          {markingAllRead
+            ? (ar ? "جارٍ التحديث..." : "Updating...")
+            : (ar ? "تعليم الكل كمقروء" : "Mark all as read")}
         </button>
       </div>
       {error && <p role="alert" style={{ color: "#a33d3d", padding: 12 }}>{error}</p>}
