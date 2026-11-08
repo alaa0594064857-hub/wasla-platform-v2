@@ -93,7 +93,7 @@ describe("member store order requests", () => {
     const updateSql = String(clientQuery.mock.calls[1][0]);
     expect(updateSql).toContain("o.buyer_user_id = $5");
     expect(updateSql).toContain("o.status = 'pending_merchant_review'");
-    expect(updateSql).toContain("p.permission_key = ANY($6::text[])");
+    expect(updateSql).toContain("p.permission_key = ANY(6::text[])");
     expect(clientQuery.mock.calls[1][1]).toEqual([
       "cancelled", "", "22222222-2222-4222-8222-222222222222", "demo",
       "11111111-1111-4111-8111-111111111111", ["store.order.manage", "account.order.manage"],
