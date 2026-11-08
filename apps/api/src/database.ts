@@ -330,6 +330,93 @@ export async function ensureStoreOwnerRole(): Promise<void> {
 }
 
 
+/** Verified-purchase product reviews; creation is tied to a completed member-store order line. */
+export async function ensureVerifiedReviewTables(): Promise<void> {
+  const db = getDatabasePool();
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS verified_product_reviews (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      order_id uuid NOT NULL REFERENCES member_store_orders(id) ON DELETE RESTRICT,
+      product_id uuid NOT NULL REFERENCES store_products(id) ON DELETE RESTRICT,
+      store_id uuid NOT NULL REFERENCES stores(id) ON DELETE RESTRICT,
+      buyer_user_id uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+      rating smallint NOT NULL CHECK (rating BETWEEN 1 AND 5),
+      title varchar(120),
+      body varchar(2000) NOT NULL CHECK (length(trim(body)) BETWEEN 10 AND 2000),
+      status varchar(24) NOT NULL DEFAULT 'pending_moderation'
+        CHECK (status IN ('pending_moderation', 'published', 'rejected', 'hidden')),
+      moderated_by uuid REFERENCES users(id) ON DELETE SET NULL,
+      moderation_note varchar(1000),
+      moderated_at timestamptz,
+      created_at timestamptz NOT NULL DEFAULT NOW(),
+      updated_at timestamptz NOT NULL DEFAULT NOW(),
+      UNIQUE (order_id, product_id)
+    )
+  `);
+  await db.query(`
+    ALTER TABLE verified_product_reviews
+      ADD COLUMN IF NOT EXISTS moderated_by uuid REFERENCES users(id) ON DELETE SET NULL,
+      ADD COLUMN IF NOT EXISTS moderation_note varchar(1000),
+      ADD COLUMN IF NOT EXISTS moderated_at timestamptz
+  `);
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS verified_product_review_edits (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      review_id uuid NOT NULL REFERENCES verified_product_reviews(id) ON DELETE RESTRICT,
+      editor_user_id uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+      previous_rating smallint NOT NULL CHECK (previous_rating BETWEEN 1 AND 5),
+      previous_title varchar(120),
+      previous_body varchar(2000) NOT NULL,
+      previous_status varchar(24) NOT NULL,
+      changed_at timestamptz NOT NULL DEFAULT NOW()
+    )
+  `);
+  await db.query(`CREATE INDEX IF NOT EXISTS verified_product_review_edits_review_idx ON verified_product_review_edits (review_id, changed_at DESC)`);
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS verified_product_review_reports (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      review_id uuid NOT NULL REFERENCES verified_product_reviews(id) ON DELETE RESTRICT,
+      reporter_user_id uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+      reason varchar(32) NOT NULL CHECK (reason IN ('spam','abuse','harassment','conflict_of_interest','personal_information','other')),
+      details varchar(1000),
+      status varchar(20) NOT NULL DEFAULT 'open' CHECK (status IN ('open','reviewed','dismissed','actioned')),
+      reviewed_by uuid REFERENCES users(id) ON DELETE SET NULL,
+      reviewed_at timestamptz,
+      created_at timestamptz NOT NULL DEFAULT NOW(),
+      UNIQUE (review_id, reporter_user_id)
+    )
+  `);
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS verified_product_review_appeals (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      review_id uuid NOT NULL REFERENCES verified_product_reviews(id) ON DELETE RESTRICT,
+      appellant_user_id uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+      reason varchar(1000) NOT NULL CHECK (length(trim(reason)) BETWEEN 10 AND 1000),
+      status varchar(20) NOT NULL DEFAULT 'open' CHECK (status IN ('open','upheld','overturned')),
+      reviewed_by uuid REFERENCES users(id) ON DELETE SET NULL,
+      reviewed_at timestamptz,
+      resolution_note varchar(1000),
+      created_at timestamptz NOT NULL DEFAULT NOW()
+    )
+  `);
+  await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS verified_product_review_one_open_appeal_idx ON verified_product_review_appeals (review_id) WHERE status = 'open'`);
+  await db.query(`CREATE INDEX IF NOT EXISTS verified_product_review_reports_queue_idx ON verified_product_review_reports (status, created_at)`);
+  await db.query(`CREATE INDEX IF NOT EXISTS verified_product_review_appeals_queue_idx ON verified_product_review_appeals (status, created_at)`);
+  await db.query(`CREATE INDEX IF NOT EXISTS verified_product_reviews_public_idx ON verified_product_reviews (product_id, created_at DESC) WHERE status = 'published'`);
+  await db.query(`CREATE INDEX IF NOT EXISTS verified_product_reviews_buyer_idx ON verified_product_reviews (buyer_user_id, created_at DESC)`);
+  await db.query(`CREATE TABLE IF NOT EXISTS verified_product_review_responses (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    review_id uuid NOT NULL UNIQUE REFERENCES verified_product_reviews(id) ON DELETE RESTRICT,
+    store_id uuid NOT NULL REFERENCES stores(id) ON DELETE RESTRICT,
+    author_user_id uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    body varchar(1500) NOT NULL CHECK (length(trim(body)) BETWEEN 5 AND 1500),
+    status varchar(24) NOT NULL DEFAULT 'pending_moderation' CHECK (status IN ('pending_moderation','published','rejected')),
+    moderated_by uuid REFERENCES users(id) ON DELETE SET NULL, moderation_note varchar(1000), moderated_at timestamptz,
+    created_at timestamptz NOT NULL DEFAULT NOW(), updated_at timestamptz NOT NULL DEFAULT NOW()
+  )`);
+  await db.query(`CREATE INDEX IF NOT EXISTS verified_product_review_responses_queue_idx ON verified_product_review_responses (status, created_at)`);
+}
+
 /** Separate inquiry records from private direct-message conversations. */
 export async function ensureProductInquiryTables(): Promise<void> {
   const { ensureProductInquiryTables: createTables } = await import("./product-inquiries.mjs");
@@ -479,7 +566,7 @@ export async function ensureMemberStoreOrderTables(): Promise<void> {
         store_id uuid NOT NULL REFERENCES stores(id) ON DELETE RESTRICT,
         buyer_user_id uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
         status varchar(32) NOT NULL DEFAULT 'pending_merchant_review'
-          CHECK (status IN ('pending_merchant_review', 'accepted', 'rejected', 'cancelled')),
+          CHECK (status IN ('pending_merchant_review', 'accepted', 'rejected', 'cancelled', 'shipped', 'completed')),
         currency varchar(3) NOT NULL,
         items jsonb NOT NULL,
         subtotal numeric(14,2) NOT NULL CHECK (subtotal >= 0),
@@ -490,6 +577,20 @@ export async function ensureMemberStoreOrderTables(): Promise<void> {
         updated_at timestamptz NOT NULL DEFAULT NOW(),
         UNIQUE (store_id, buyer_user_id, idempotency_key)
       )
+    `);
+    await client.query(`
+      ALTER TABLE member_store_orders
+        ADD COLUMN IF NOT EXISTS carrier_name varchar(100),
+        ADD COLUMN IF NOT EXISTS tracking_number varchar(120),
+        ADD COLUMN IF NOT EXISTS tracking_url text,
+        ADD COLUMN IF NOT EXISTS shipped_at timestamptz,
+        ADD COLUMN IF NOT EXISTS delivery_confirmed_at timestamptz
+    `);
+    await client.query(`ALTER TABLE member_store_orders DROP CONSTRAINT IF EXISTS member_store_orders_status_check`);
+    await client.query(`
+      ALTER TABLE member_store_orders
+      ADD CONSTRAINT member_store_orders_status_check
+      CHECK (status IN ('pending_merchant_review', 'accepted', 'rejected', 'cancelled', 'shipped', 'completed'))
     `);
     await client.query(`
       CREATE INDEX IF NOT EXISTS member_store_orders_store_created_idx

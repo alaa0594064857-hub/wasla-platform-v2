@@ -402,6 +402,56 @@ async function handleRequest(
     return;
   }
 
+  const reviewDisputeMatch = requestUrl.pathname.match(/^\/api\/reviews\/([0-9a-f-]{36})\/(report|appeal)$/i);
+  if (reviewDisputeMatch) {
+    try {
+      const { handleReviewDisputeSubmission } = await import("./review-disputes.mjs");
+      await handleReviewDisputeSubmission(request, response, reviewDisputeMatch[1], reviewDisputeMatch[2] as "report" | "appeal");
+    } catch (error) {
+      console.error("WASLA review dispute submission error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Review dispute service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+  const reviewDisputeDecisionMatch = requestUrl.pathname.match(/^\/api\/platform\/review-disputes\/(report|appeal)\/([0-9a-f-]{36})$/i);
+  if (reviewDisputeDecisionMatch) {
+    try {
+      const { handlePlatformReviewDisputeDecision } = await import("./review-disputes.mjs");
+      await handlePlatformReviewDisputeDecision(request, response, reviewDisputeDecisionMatch[1] as "report" | "appeal", reviewDisputeDecisionMatch[2]);
+    } catch (error) {
+      console.error("WASLA review dispute decision error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Review dispute decision service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/platform/review-disputes") {
+    try {
+      const { handlePlatformReviewDisputes } = await import("./review-disputes.mjs");
+      await handlePlatformReviewDisputes(request, response);
+    } catch (error) {
+      console.error("WASLA platform review disputes error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Review dispute queue error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const platformReviewMatch = requestUrl.pathname.match(/^\/api\/platform\/reviews(?:\/([0-9a-f-]{36}))?$/i);
+  if (platformReviewMatch) {
+    try {
+      const { handlePlatformReviewModerationRequest } = await import("./platform-review-moderation.mjs");
+      await handlePlatformReviewModerationRequest(request, response, platformReviewMatch[1]);
+    } catch (error) {
+      console.error("WASLA platform review moderation route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Review moderation service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/platform/audit") {
     try {
       const { handlePlatformAuditRequest } = await import("./platform-audit.mjs");
@@ -655,6 +705,44 @@ async function handleRequest(
     return;
   }
 
+  const productReviewEditMatch = requestUrl.pathname.match(/^\/api\/products\/([0-9a-f-]{36})\/reviews\/([0-9a-f-]{36})$/i);
+  if (productReviewEditMatch) {
+    try {
+      const { handleVerifiedProductReviewEditRequest } = await import("./verified-product-reviews.mjs");
+      await handleVerifiedProductReviewEditRequest(request, response, productReviewEditMatch[1], productReviewEditMatch[2]);
+    } catch (error) {
+      console.error("WASLA verified product review edit error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Product review edit service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const sellerReviewResponseMatch = requestUrl.pathname.match(/^\/api\/reviews\/([0-9a-f-]{36})\/response$/i);
+  if (sellerReviewResponseMatch) {
+    try { const { handleSellerReviewResponse } = await import('./review-responses.mjs'); await handleSellerReviewResponse(request, response, sellerReviewResponseMatch[1]); }
+    catch (error) { console.error('WASLA seller review response error:', error); if (!response.headersSent) sendJson(response, 500, { success: false, error: 'Seller review response service error' }); else response.destroy(error instanceof Error ? error : undefined); }
+    return;
+  }
+  const platformReviewResponsesMatch = requestUrl.pathname.match(/^\/api\/platform\/review-responses(?:\/([0-9a-f-]{36}))?$/i);
+  if (platformReviewResponsesMatch) {
+    try { const { handlePlatformReviewResponses } = await import('./review-responses.mjs'); await handlePlatformReviewResponses(request, response, platformReviewResponsesMatch[1]); }
+    catch (error) { console.error('WASLA platform review responses error:', error); if (!response.headersSent) sendJson(response, 500, { success: false, error: 'Platform review responses service error' }); else response.destroy(error instanceof Error ? error : undefined); }
+    return;
+  }
+  const productReviewsMatch = requestUrl.pathname.match(/^\/api\/products\/([0-9a-f-]{36})\/reviews$/i);
+  if (productReviewsMatch) {
+    try {
+      const { handleVerifiedProductReviewsRequest } = await import("./verified-product-reviews.mjs");
+      await handleVerifiedProductReviewsRequest(request, response, productReviewsMatch[1]);
+    } catch (error) {
+      console.error("WASLA verified product reviews route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Product reviews service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const storeProductDetailMatch = requestUrl.pathname.match(
     /^\/api\/stores\/([^/]+)\/products\/([0-9a-f-]{36})$/,
   );
@@ -820,7 +908,7 @@ if (process.env.NODE_ENV !== "test") {
   const server = createWaslaServer();
 
   void import("./database.js")
-    .then(async ({ ensureRegistrationTypeColumn, ensureAccountOwnerRole, ensureStoreOwnerRole, ensurePlatformOwnerRole, ensurePersonalThemesTable, ensureStoreProductsTable, ensureNetworkTables, ensureProductInquiryTables, ensureSubscriptionBillingTables, ensureMemberStoreOrderTables }) => {
+    .then(async ({ ensureRegistrationTypeColumn, ensureAccountOwnerRole, ensureStoreOwnerRole, ensurePlatformOwnerRole, ensurePersonalThemesTable, ensureStoreProductsTable, ensureNetworkTables, ensureProductInquiryTables, ensureVerifiedReviewTables, ensureSubscriptionBillingTables, ensureMemberStoreOrderTables }) => {
       const { ensureAuthorizationRoles } = await import("./authorization-bootstrap.mjs");
       await ensureRegistrationTypeColumn();
       await ensureAuthorizationRoles();
@@ -834,6 +922,7 @@ if (process.env.NODE_ENV !== "test") {
       const { ensureMessagesTables } = await import("./messages.mjs");
       await ensureMessagesTables();
       await ensureProductInquiryTables();
+      await ensureVerifiedReviewTables();
       await ensureSubscriptionBillingTables();
       const { ensureNotificationsTable } = await import("./notifications.mjs");
       await ensureNotificationsTable();
