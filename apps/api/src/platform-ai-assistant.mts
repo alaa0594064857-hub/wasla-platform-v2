@@ -79,7 +79,18 @@ export async function handlePlatformAiAssistantRequest(req: IncomingMessage, res
     const model = process.env.GEMINI_MODEL?.trim() || "gemini-3.5-flash-lite";
     const control = await getPlatformAiManagerControl();
     if (req.method === "GET") {
-      reply(res, 200, { success: true, configured: Boolean(apiKey), managerEnabled: control.enabled, pausedReason: control.pausedReason, provider: "Google Gemini", engine: "gemini-free-tier", model: apiKey ? model : null, readOnlyDataAccess: true, capabilities: ["arabic_english_chat", "read_recent_official_store_products", "read_recent_supplier_offers", "read_recent_official_store_orders", "product_opportunity_analysis", "supplier_evidence_review", "pricing_risk_guidance", "owner_kill_switch"], limitations: ["read_only_snapshot_limited_to_30_products_50_supplier_offers_and_50_orders", "free_tier_quota_applies", "no_live_marketplace_access", "no_supplier_contact", "no_product_publication", "no_order_creation_or_payments", "do_not_send_sensitive_customer_data"] });
+      await ensureAiAuditTable();
+      const audit = await getDatabasePool().query(
+        `SELECT id, model, LEFT(user_message, 240) AS prompt_preview,
+                LEFT(assistant_message, 320) AS response_preview,
+                created_at AS "createdAt"
+         FROM platform_ai_assistant_audit
+         WHERE owner_user_id = $1
+         ORDER BY created_at DESC
+         LIMIT 20`,
+        [access.userId],
+      );
+      reply(res, 200, { success: true, configured: Boolean(apiKey), managerEnabled: control.enabled, pausedReason: control.pausedReason, provider: "Google Gemini", engine: "gemini-free-tier", model: apiKey ? model : null, readOnlyDataAccess: true, auditTrail: audit.rows, capabilities: ["arabic_english_chat", "read_recent_official_store_products", "read_recent_supplier_offers", "read_recent_official_store_orders", "product_opportunity_analysis", "supplier_evidence_review", "pricing_risk_guidance", "owner_kill_switch", "owner_audit_history"], limitations: ["read_only_snapshot_limited_to_30_products_50_supplier_offers_and_50_orders", "audit_history_limited_to_20_latest_owner_requests", "free_tier_quota_applies", "no_live_marketplace_access", "no_supplier_contact", "no_product_publication", "no_order_creation_or_payments", "do_not_send_sensitive_customer_data"] });
       return;
     }
     if (req.method === "PATCH") {

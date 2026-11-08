@@ -100,6 +100,23 @@ describe("WASLA owner AI order context", () => {
     expect(upstreamBody.systemInstruction.parts[0].text).not.toContain("customer@example.com");
   });
 
+  it("returns only the authenticated owner's latest bounded audit history", async () => {
+    mocks.query.mockResolvedValue({ rows: [
+      { id: "audit-1", model: "gemini-test", prompt_preview: "Review supplier quote", response_preview: "Evidence is incomplete.", createdAt: new Date().toISOString() },
+    ] });
+    const base = await startServer();
+    const response = await fetch(base);
+    const data = await response.json();
+    expect(response.status).toBe(200);
+    expect(data.auditTrail).toHaveLength(1);
+    expect(data.auditTrail[0].id).toBe("audit-1");
+    const auditQuery = mocks.query.mock.calls.find(call => String(call[0]).includes("FROM platform_ai_assistant_audit"));
+    expect(auditQuery).toBeDefined();
+    expect(String(auditQuery?.[0])).toContain("WHERE owner_user_id = $1");
+    expect(String(auditQuery?.[0])).toContain("LIMIT 20");
+    expect(auditQuery?.[1]).toEqual(["owner-1"]);
+  });
+
   it("does not expose AI data when owner authorization fails", async () => {
     mocks.authorize.mockImplementationOnce((_request, response) => {
       response.writeHead(403, { "Content-Type": "application/json" });
