@@ -9,6 +9,7 @@ This workspace is the first native mobile foundation for WASLA, built with Expo 
 - iOS bundle identifier: `com.wasla.app`.
 - Bilingual Arabic/English starter screen with an RTL/LTR language switch.
 - Typed API client for the public, destination-specific official-store catalogue.
+- Authenticated profile API methods for reading and updating the signed-in user's profile, using the Better Auth Expo cookie from secure storage.
 - Better Auth Expo integration v1.7.18 on the API and mobile client, using Expo SecureStore for native session/cookie persistence. Version 1.7.18 is above the published 1.7.16 security fix threshold.
 - Initial email/password sign-in and session-aware sign-out UI; account registration and verification UX are still pending.
 - Configurable API base URL via `EXPO_PUBLIC_WASLA_API_URL`; the current hosted API URL is the default.
@@ -33,7 +34,7 @@ The mobile API client calls the public official-store catalogue using the select
 ## Required before calling this a usable app
 
 1. Validate Better Auth Expo integration, session persistence, email verification and sign-out on Android/iOS.
-2. Add typed authenticated API methods for profile, member shops, business accounts, trade opportunities, messages, notifications and orders.
+2. Add the profile screen and typed authenticated API methods for member shops, business accounts, trade opportunities, messages, notifications and orders.
 3. Implement navigation and complete loading, empty, error and offline states for each screen.
 4. Add push-notification registration and server-side device-token management with user consent.
 5. Verify authorization boundaries, Arabic RTL layout, accessibility and device sizes.
