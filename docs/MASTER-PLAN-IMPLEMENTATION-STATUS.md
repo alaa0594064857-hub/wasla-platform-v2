@@ -618,3 +618,11 @@ Do not describe the platform as commercially launch-ready based only on successf
 - PR #17 is merged to `main` as `bd7b9a09f00cb5056a5adf28dd91afb70be7aee6`.
 - Final-head GitHub CI run `42485664972` and API-quality run `42485664976` both completed successfully. CI included API tests, database migrations/constraints, authorization seeding, TypeScript checks, API build and Web production build.
 - Inventory quantity controls are committed and validated in GitHub, but are not deployed to Render because the workspace has exhausted pipeline build minutes. Do not describe them as live until deployment and hosted verification succeed.
+
+
+## Buyer cancellation for member-store requests — 2026-11-08
+
+- PR #18 merged to `main` as `c0d7acf79c08615c1ac40c096e9b485890a09217`.
+- Final-head API quality run `42486225387` and CI run `42486225384` completed successfully, including API tests, database migrations/constraints, TypeScript checks, API build, and Web production build.
+- Buyers can cancel only their own requests while they remain pending merchant review. Merchant accept/reject remains permission-controlled; the existing audit trail records status changes.
+- This does not trigger payment, stock changes, supplier purchase, or shipment. The change is merged to GitHub but is not live on Render until deployment succeeds; Render build minutes remain exhausted.
