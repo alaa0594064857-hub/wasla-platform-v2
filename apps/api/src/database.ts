@@ -672,6 +672,20 @@ export async function ensureMemberStoreOrderTables(): Promise<void> {
     `);
     await client.query(`DROP TRIGGER IF EXISTS member_store_order_events_immutable ON member_store_order_events`);
     await client.query(`
+      CREATE OR REPLACE FUNCTION wasla_reject_delivery_evidence_mutation()
+      RETURNS trigger LANGUAGE plpgsql AS $wasla$
+      BEGIN
+        RAISE EXCEPTION 'member_store_delivery_evidence is append-only';
+      END;
+      $wasla$
+    `);
+    await client.query(`DROP TRIGGER IF EXISTS member_store_delivery_evidence_immutable ON member_store_delivery_evidence`);
+    await client.query(`
+      CREATE TRIGGER member_store_delivery_evidence_immutable
+      BEFORE UPDATE OR DELETE ON member_store_delivery_evidence
+      FOR EACH ROW EXECUTE FUNCTION wasla_reject_delivery_evidence_mutation()
+    `);
+    await client.query(`
       CREATE TRIGGER member_store_order_events_immutable
       BEFORE UPDATE OR DELETE ON member_store_order_events
       FOR EACH ROW EXECUTE FUNCTION wasla_reject_order_event_mutation()
@@ -696,14 +710,14 @@ export async function ensureMemberStoreOrderTables(): Promise<void> {
         IF OLD.tracking_number IS DISTINCT FROM NEW.tracking_number OR OLD.tracking_url IS DISTINCT FROM NEW.tracking_url OR OLD.carrier_name IS DISTINCT FROM NEW.carrier_name THEN
           event_key := 'db:shipment:' || txid_current()::text;
           INSERT INTO member_store_shipments (order_id,store_id,fulfiller_user_id,carrier_name,tracking_reference,tracking_url,status,source,idempotency_key)
-          VALUES (NEW.id,NEW.store_id,actor_id,NEW.carrier_name,NEW.tracking_number,NEW.tracking_url,'shipped',CASE WHEN actor_kind='buyer' THEN 'owner_manual' ELSE 'merchant_manual' END,event_key)
+          VALUES (NEW.id,NEW.store_id,actor_id,NEW.carrier_name,NEW.tracking_number,NEW.tracking_url,'shipped','merchant_manual',event_key)
           ON CONFLICT (order_id,idempotency_key) DO NOTHING;
           INSERT INTO member_store_delivery_evidence (order_id,shipment_id,source,actor_user_id,verification_state,decision_reason,idempotency_key)
           SELECT NEW.id,sh.id,'merchant_self_report',actor_id,'informational','Merchant-entered shipment details are not independent proof of delivery',event_key
           FROM member_store_shipments sh WHERE sh.order_id=NEW.id AND sh.idempotency_key=event_key
           ON CONFLICT (order_id,idempotency_key) DO NOTHING;
           INSERT INTO member_store_order_events (order_id,store_id,actor_type,actor_user_id,event_type,from_status,to_status,source,reason_code,idempotency_key,metadata)
-          VALUES (NEW.id,NEW.store_id,actor_kind,actor_id,'shipment.manual_recorded',OLD.status,NEW.status,CASE WHEN actor_kind='buyer' THEN 'owner_manual' ELSE 'merchant_manual' END,'merchant_shipment_entry',event_key,jsonb_build_object('carrierName',NEW.carrier_name));
+          VALUES (NEW.id,NEW.store_id,actor_kind,actor_id,'shipment.manual_recorded',OLD.status,NEW.status,'merchant_manual','merchant_shipment_entry',event_key,jsonb_build_object('carrierName',NEW.carrier_name));
         END IF;
         IF TG_OP = 'UPDATE' AND OLD.status IS DISTINCT FROM NEW.status AND NEW.status = 'completed' AND actor_kind = 'buyer' THEN
           INSERT INTO member_store_delivery_evidence (order_id,source,actor_user_id,observed_at,received_at,verification_state,decision_reason,idempotency_key)
