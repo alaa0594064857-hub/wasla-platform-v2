@@ -150,7 +150,7 @@ export default function App() {
           <Text style={[styles.eyebrow, rtl && styles.textRight]}>{t.eyebrow}</Text>
           <Text style={[styles.title, rtl && styles.textRight]}>{t.title}</Text>
           <Text style={[styles.subtitle, rtl && styles.textRight]}>{t.subtitle}</Text>
-          <Pressable accessibilityRole="button" style={styles.primaryButton}>
+          <Pressable accessibilityRole="button" style={styles.primaryButton} onPress={() => void loadCatalogue()}>
             <Text style={styles.primaryButtonText}>{t.explore}</Text>
           </Pressable>
         </View>
