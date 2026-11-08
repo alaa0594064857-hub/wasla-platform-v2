@@ -7,7 +7,7 @@ import { authClient } from "@/lib/auth-client";
 import { useLocale } from "@/components/locale-provider";
 
 type Product = { id: string; title: string; description?: string; price: string; currency: string; imageUrl?: string; videoUrl?: string; sellerCheckoutUrl?: string | null; storeName: string; storeSlug: string };
-type ProductReview = { id: string; rating: number; title: string | null; body: string; createdAt: string; buyerLabel: string };
+type ProductReview = { id: string; rating: number; title: string | null; body: string; createdAt: string; buyerLabel: string; storeResponse?: string | null; storeResponseCreatedAt?: string | null };
 
 export default function PublicProductPage() {
   const params = useParams<{ id: string }>();
