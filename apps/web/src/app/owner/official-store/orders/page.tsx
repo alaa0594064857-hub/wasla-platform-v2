@@ -30,6 +30,13 @@ export default function OfficialStoreOrdersPage() {
   const [reviewSaving, setReviewSaving] = useState(false);
   const [reviewMessage, setReviewMessage] = useState("");
   const [reviewError, setReviewError] = useState(false);
+  const [quoteAmount, setQuoteAmount] = useState("");
+  const [quoteCurrency, setQuoteCurrency] = useState("USD");
+  const [quoteMinDays, setQuoteMinDays] = useState("5");
+  const [quoteMaxDays, setQuoteMaxDays] = useState("10");
+  const [quoteValidity, setQuoteValidity] = useState("48");
+  const [quoteNote, setQuoteNote] = useState("");
+  const [quoteBusy, setQuoteBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
@@ -76,6 +83,29 @@ export default function OfficialStoreOrdersPage() {
       setReviewError(true);
       setReviewMessage(error instanceof Error ? error.message : (ar ? "تعذر حفظ المراجعة." : "Could not save supplier review."));
     } finally { setReviewSaving(false); }
+  }
+
+  async function issueFinalQuote(orderId: string) {
+    if (quoteBusy) return;
+    setQuoteBusy(true); setReviewMessage(""); setReviewError(false);
+    try {
+      const response = await fetch("/api/platform/official-store/orders/" + orderId + "/final-quote", {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: Number(quoteAmount), currency: quoteCurrency.toUpperCase(),
+          shippingDaysMin: Number(quoteMinDays), shippingDaysMax: Number(quoteMaxDays),
+          validityHours: Number(quoteValidity), customerNote: quoteNote.trim()
+        })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(typeof data.error === "string" ? data.error : "quote");
+      setQuoteAmount(""); setQuoteNote("");
+      setReviewMessage(ar ? "تم إرسال عرض السعر النهائي للعميل. لم يتم تحصيل أي مبلغ." : "Final quote sent to the customer. No payment was collected.");
+      await load(); await openOrder(orderId);
+    } catch (error) {
+      setReviewError(true);
+      setReviewMessage(error instanceof Error ? error.message : (ar ? "تعذر إرسال العرض." : "Could not issue quote."));
+    } finally { setQuoteBusy(false); }
   }
 
   const label = (value: unknown) => typeof value === "string" && value ? value.replaceAll("_", " ") : "—";
@@ -142,6 +172,21 @@ export default function OfficialStoreOrdersPage() {
           </div>
         </section>}
         {reviewMessage && !reviewError && <p role="status" style={{ color: "#26734a" }}>{reviewMessage}</p>}
+        {selected.order.supplierConfirmationStatus === "accepted" && selected.order.orderStatus === "supplier_confirmed" && selected.order.finalQuoteStatus !== "accepted" && <section style={{ marginTop: 22, padding: 16, borderRadius: 12, background: "#eef5f1", border: "1px solid #bfd6c8" }}>
+          <h3 style={{ color: navy, marginTop: 0 }}>{ar ? "إصدار عرض السعر النهائي للعميل" : "Issue final customer quote"}</h3>
+          <p style={{ color: muted, lineHeight: 1.8 }}>{ar ? "أدخل السعر النهائي الشامل ومدة التوصيل. قبول العميل لا يشغّل الدفع أو الشراء." : "Enter the final customer price and delivery estimate. Customer acceptance does not enable payment or purchasing."}</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 10 }}>
+            <label>{ar ? "السعر النهائي" : "Final price"}<input type="number" min="0.01" step="0.01" value={quoteAmount} onChange={e => setQuoteAmount(e.target.value)} style={{ display: "block", width: "100%", padding: 10, marginTop: 5 }} /></label>
+            <label>{ar ? "العملة" : "Currency"}<input maxLength={3} value={quoteCurrency} onChange={e => setQuoteCurrency(e.target.value.toUpperCase())} style={{ display: "block", width: "100%", padding: 10, marginTop: 5 }} /></label>
+            <label>{ar ? "أقل مدة توصيل (يوم)" : "Min delivery days"}<input type="number" min="0" max="365" value={quoteMinDays} onChange={e => setQuoteMinDays(e.target.value)} style={{ display: "block", width: "100%", padding: 10, marginTop: 5 }} /></label>
+            <label>{ar ? "أقصى مدة توصيل (يوم)" : "Max delivery days"}<input type="number" min="0" max="365" value={quoteMaxDays} onChange={e => setQuoteMaxDays(e.target.value)} style={{ display: "block", width: "100%", padding: 10, marginTop: 5 }} /></label>
+            <label>{ar ? "صلاحية العرض (ساعة)" : "Quote validity (hours)"}<input type="number" min="1" max="336" value={quoteValidity} onChange={e => setQuoteValidity(e.target.value)} style={{ display: "block", width: "100%", padding: 10, marginTop: 5 }} /></label>
+          </div>
+          <label style={{ display: "block", marginTop: 10 }}>{ar ? "ملاحظة للعميل (اختياري)" : "Customer note (optional)"}<textarea maxLength={1000} value={quoteNote} onChange={e => setQuoteNote(e.target.value)} rows={2} style={{ display: "block", width: "100%", padding: 10, marginTop: 5 }} /></label>
+          <button disabled={quoteBusy || !quoteAmount || Number(quoteAmount) <= 0 || !/^[A-Z]{3}$/.test(quoteCurrency) || Number(quoteMinDays) < 0 || Number(quoteMaxDays) < Number(quoteMinDays) || Number(quoteMaxDays) > 365 || Number(quoteValidity) < 1 || Number(quoteValidity) > 336} onClick={() => void issueFinalQuote(String(selected.order.id))} style={{ marginTop: 12, background: navy, color: "#fff", border: 0, borderRadius: 9, padding: "10px 14px", fontWeight: 700 }}>{quoteBusy ? "…" : (ar ? "إرسال عرض السعر للعميل" : "Send final quote to customer")}</button>
+        </section>}
+        {selected.order.finalQuoteStatus && selected.order.finalQuoteStatus !== "not_issued" && <p style={{ marginTop: 12, padding: 12, background: cream, borderRadius: 9 }}>{ar ? "حالة عرض السعر" : "Quote status"}: {label(selected.order.finalQuoteStatus)} · {selected.order.finalQuoteAmount || "—"} {selected.order.finalQuoteCurrency || ""} · {selected.order.finalQuoteExpiresAt ? date(selected.order.finalQuoteExpiresAt) : "—"}</p>}
+
                 <h3 style={{ color: navy, marginTop: 22 }}>{ar ? "سجل الأحداث" : "Event history"}</h3>
         {selected.events.length ? selected.events.map(event => <div key={event.id} style={{ padding: "10px 0", borderBottom: "1px solid #e7e9ec" }}><strong>{label(event.eventType)}</strong><div style={{ color: muted, fontSize: 13 }}>{label(event.actorType)} · {date(event.createdAt)}</div><pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", fontSize: 12 }}>{JSON.stringify(event.details, null, 2)}</pre></div>) : <p style={{ color: muted }}>{ar ? "لا توجد أحداث مسجلة." : "No recorded events."}</p>}
       </section>}
