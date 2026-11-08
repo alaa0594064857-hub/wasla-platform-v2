@@ -402,6 +402,19 @@ async function handleRequest(
     return;
   }
 
+  const platformReviewMatch = requestUrl.pathname.match(/^\\/api\\/platform\\/reviews(?:\\/([0-9a-f-]{36}))?$/i);
+  if (platformReviewMatch) {
+    try {
+      const { handlePlatformReviewModerationRequest } = await import("./platform-review-moderation.mjs");
+      await handlePlatformReviewModerationRequest(request, response, platformReviewMatch[1]);
+    } catch (error) {
+      console.error("WASLA platform review moderation route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Review moderation service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/platform/audit") {
     try {
       const { handlePlatformAuditRequest } = await import("./platform-audit.mjs");
