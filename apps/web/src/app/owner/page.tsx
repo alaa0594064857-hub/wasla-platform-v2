@@ -131,6 +131,7 @@ export default function PlatformOwnerPage() {
     { id: "security", label: copy.security, icon: "◈", href: "#security" },
     { id: "settings", label: copy.settings, icon: "⚙", href: "#settings" },
     { id: "subscriptions", label: ar ? "خطط الاشتراك" : "Subscription plans", icon: "＄", href: "/owner/subscriptions" },
+    { id: "subscription-lifecycle", label: ar ? "إدارة الاشتراكات" : "Subscription lifecycle", icon: "◷", href: "/owner/subscription-lifecycle" },
     { id: "official-store", label: ar ? "متجر WASLA الرسمي" : "Official WASLA Store", icon: "▣", href: "/owner/official-store" },
     { id: "trade-opportunities", label: ar ? "مراجعة فرص Trade" : "Trade opportunity review", icon: "⇄", href: "/owner/trade/opportunities" },
     { id: "ai", label: ar ? "مدير WASLA AI" : "WASLA AI Manager", icon: "✳", href: "/owner/ai" },

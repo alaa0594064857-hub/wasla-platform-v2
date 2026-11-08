@@ -445,6 +445,23 @@ export async function ensureSubscriptionBillingTables(): Promise<void> {
           UNIQUE (payment_provider, provider_event_id)
       )
     `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS subscription_admin_events (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        subscription_id uuid NOT NULL REFERENCES subscriptions(id) ON DELETE RESTRICT,
+        actor_user_id uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+        event_type varchar(32) NOT NULL CHECK (event_type IN ('created', 'status_changed')),
+        from_status varchar(24),
+        to_status varchar(24) NOT NULL,
+        reason text NOT NULL CHECK (length(trim(reason)) >= 8),
+        evidence_url text,
+        created_at timestamptz NOT NULL DEFAULT NOW()
+      )
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS subscription_admin_events_subscription_created_idx
+      ON subscription_admin_events (subscription_id, created_at DESC)
+    `);
   } finally {
     client.release();
   }
