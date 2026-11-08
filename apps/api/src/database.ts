@@ -404,6 +404,17 @@ export async function ensureVerifiedReviewTables(): Promise<void> {
   await db.query(`CREATE INDEX IF NOT EXISTS verified_product_review_appeals_queue_idx ON verified_product_review_appeals (status, created_at)`);
   await db.query(`CREATE INDEX IF NOT EXISTS verified_product_reviews_public_idx ON verified_product_reviews (product_id, created_at DESC) WHERE status = 'published'`);
   await db.query(`CREATE INDEX IF NOT EXISTS verified_product_reviews_buyer_idx ON verified_product_reviews (buyer_user_id, created_at DESC)`);
+  await db.query(`CREATE TABLE IF NOT EXISTS verified_product_review_responses (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    review_id uuid NOT NULL UNIQUE REFERENCES verified_product_reviews(id) ON DELETE RESTRICT,
+    store_id uuid NOT NULL REFERENCES stores(id) ON DELETE RESTRICT,
+    author_user_id uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    body varchar(1500) NOT NULL CHECK (length(trim(body)) BETWEEN 5 AND 1500),
+    status varchar(24) NOT NULL DEFAULT 'pending_moderation' CHECK (status IN ('pending_moderation','published','rejected')),
+    moderated_by uuid REFERENCES users(id) ON DELETE SET NULL, moderation_note varchar(1000), moderated_at timestamptz,
+    created_at timestamptz NOT NULL DEFAULT NOW(), updated_at timestamptz NOT NULL DEFAULT NOW()
+  )`);
+  await db.query(`CREATE INDEX IF NOT EXISTS verified_product_review_responses_queue_idx ON verified_product_review_responses (status, created_at)`);
 }
 
 /** Separate inquiry records from private direct-message conversations. */
