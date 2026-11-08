@@ -73,6 +73,7 @@ export async function handleOfficialStoreFinalQuoteIssue(
       `SELECT o.id, o.customer_user_id AS "customerUserId",
               o.supplier_confirmation_status AS "supplierStatus",
               o.order_status AS "orderStatus", o.final_quote_status AS "quoteStatus",
+              o.final_quote_expires_at AS "quoteExpiresAt",
               o.product_id AS "productId", o.source_platform AS "sourcePlatform",
               o.supplier_name_snapshot AS "supplierName",
               o.supplier_unit_cost::text AS "supplierUnitCost",
