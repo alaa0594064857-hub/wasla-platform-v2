@@ -690,6 +690,32 @@ async function handleRequest(
 
 
 
+  const memberOrderDisputeMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/orders\/([0-9a-f-]{36})\/dispute(?:\/(response|close))?$/i);
+  if (memberOrderDisputeMatch) {
+    try {
+      const { handleMemberOrderDispute } = await import("./member-store-order-disputes.mjs");
+      const action = memberOrderDisputeMatch[3] === "response" ? "respond" : memberOrderDisputeMatch[3] === "close" ? "close" : "submit";
+      await handleMemberOrderDispute(request, response, decodeURIComponent(memberOrderDisputeMatch[1]), memberOrderDisputeMatch[2], action);
+    } catch (error) {
+      console.error("WASLA member order dispute error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Order complaint service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+  const platformMemberOrderDisputeMatch = requestUrl.pathname.match(/^\/api\/platform\/order-disputes(?:\/([0-9a-f-]{36}))?$/i);
+  if (platformMemberOrderDisputeMatch) {
+    try {
+      const { handlePlatformMemberOrderDisputes } = await import("./member-store-order-disputes.mjs");
+      await handlePlatformMemberOrderDisputes(request, response, platformMemberOrderDisputeMatch[1]);
+    } catch (error) {
+      console.error("WASLA platform order dispute error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Platform order dispute service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const memberStoreOrderMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/orders(?:\/([0-9a-f-]{36}))?$/i);
   if (memberStoreOrderMatch) {
     try {
