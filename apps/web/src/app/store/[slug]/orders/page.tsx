@@ -30,6 +30,12 @@ type StoreOrder = {
   trackingUrl: string | null;
   shippedAt: string | null;
   deliveryConfirmedAt: string | null;
+  disputeId: string | null;
+  disputeReason: string | null;
+  disputeDetails: string | null;
+  disputeStatus: string | null;
+  merchantResponse: string | null;
+  moderatorNote: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -47,6 +53,9 @@ export default function MemberStoreOrdersPage() {
   const [error, setError] = useState("");
   const [merchantNotes, setMerchantNotes] = useState<Record<string, string>>({});
   const [shippingDetails, setShippingDetails] = useState<Record<string, { carrierName: string; trackingNumber: string; trackingUrl: string }>>({});
+  const [complaintDetails, setComplaintDetails] = useState<Record<string, string>>({});
+  const [merchantResponses, setMerchantResponses] = useState<Record<string, string>>({});
+  const [disputeBusy, setDisputeBusy] = useState("");
 
   const copy = ar ? {
     title: "طلبات المتجر",
@@ -140,6 +149,31 @@ export default function MemberStoreOrdersPage() {
     } finally { setBusy(""); }
   }
 
+  async function disputeAction(order: StoreOrder, action: "submit" | "respond" | "close") {
+    if (disputeBusy) return;
+    const value = action === "submit" ? complaintDetails[order.id] ?? "" : merchantResponses[order.id] ?? "";
+    if (action !== "close" && value.trim().length < 10) {
+      setError(ar ? "اكتب تفاصيل لا تقل عن 10 أحرف." : "Enter at least 10 characters.");
+      return;
+    }
+    setDisputeBusy(order.id); setError(""); setMessage("");
+    try {
+      const suffix = action === "respond" ? "/response" : action === "close" ? "/close" : "";
+      const response = await fetch(`/api/stores/${encodeURIComponent(slug)}/orders/${order.id}/dispute${suffix}`, {
+        method: action === "close" ? "PATCH" : "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(action === "submit" ? { reason: "other", details: value } : action === "respond" ? { response: value } : {})
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || "dispute");
+      setMessage(ar ? "تم تحديث الشكوى بنجاح." : "Complaint updated successfully.");
+      setComplaintDetails(v => ({ ...v, [order.id]: "" }));
+      setMerchantResponses(v => ({ ...v, [order.id]: "" }));
+      await load();
+    } catch (e) { setError(e instanceof Error ? e.message : (ar ? "تعذر تحديث الشكوى." : "Could not update complaint.")); }
+    finally { setDisputeBusy(""); }
+  }
+
   function statusText(status: string) {
     if (status === "accepted") return copy.accepted;
     if (status === "shipped") return copy.shipped;
@@ -185,6 +219,22 @@ export default function MemberStoreOrdersPage() {
             </div>}
             {order.buyerNote && <p className="mt-3 text-sm text-slate-600"><strong>{copy.note}:</strong> {order.buyerNote}</p>}
             {order.merchantNote && <p className="mt-2 text-sm text-slate-600"><strong>{copy.merchantNote}:</strong> {order.merchantNote}</p>}
+            {order.disputeId && <section className="mt-4 rounded-xl border border-[#d8bd79] bg-[#fff9eb] p-4 text-sm">
+              <strong>{ar ? "شكوى الطلب" : "Order complaint"} · {order.disputeStatus}</strong>
+              {order.disputeDetails && <p className="mt-2 whitespace-pre-wrap">{order.disputeDetails}</p>}
+              {order.merchantResponse && <p className="mt-2 border-t border-[#e8d9b6] pt-2"><b>{ar ? "رد المتجر:" : "Store response:"}</b> {order.merchantResponse}</p>}
+              {order.moderatorNote && <p className="mt-2"><b>{ar ? "قرار WASLA:" : "WASLA decision:"}</b> {order.moderatorNote}</p>}
+              {isMerchantView && order.disputeStatus === "open" && <div className="mt-3 space-y-2">
+                <textarea rows={3} maxLength={3000} value={merchantResponses[order.id] ?? ""} onChange={e => setMerchantResponses(v => ({ ...v, [order.id]: e.target.value }))} placeholder={ar ? "اكتب رد المتجر..." : "Write the store response..."} className="w-full rounded-lg border border-[#e5dfd1] bg-white p-3" />
+                <button disabled={disputeBusy === order.id || (merchantResponses[order.id] ?? "").trim().length < 10} onClick={() => void disputeAction(order, "respond")} className="rounded-lg bg-[#14233b] px-4 py-2 font-semibold text-white disabled:opacity-50">{ar ? "إرسال الرد" : "Send response"}</button>
+              </div>}
+              {!isMerchantView && ["resolved", "dismissed"].includes(order.disputeStatus ?? "") && <button disabled={disputeBusy === order.id} onClick={() => void disputeAction(order, "close")} className="mt-3 rounded-lg border border-[#14233b] px-4 py-2 font-semibold">{ar ? "إغلاق الشكوى" : "Close complaint"}</button>}
+            </section>}
+            {!isMerchantView && !order.disputeId && ["accepted", "shipped", "completed"].includes(order.status) && <section className="mt-4 space-y-2 rounded-xl border border-[#e5dfd1] p-4">
+              <strong>{ar ? "تقديم شكوى على الطلب" : "Report an order issue"}</strong>
+              <textarea rows={3} maxLength={3000} value={complaintDetails[order.id] ?? ""} onChange={e => setComplaintDetails(v => ({ ...v, [order.id]: e.target.value }))} placeholder={ar ? "اشرح المشكلة بالتفصيل..." : "Describe the issue..."} className="w-full rounded-lg border border-[#e5dfd1] p-3" />
+              <button disabled={disputeBusy === order.id || (complaintDetails[order.id] ?? "").trim().length < 10} onClick={() => void disputeAction(order, "submit")} className="rounded-lg bg-[#14233b] px-4 py-2 font-semibold text-white disabled:opacity-50">{ar ? "إرسال الشكوى" : "Submit complaint"}</button>
+            </section>}
             {!isMerchantView && order.status === "shipped" && <div className="mt-4">
               <button disabled={busy === order.id} onClick={() => void updateOrder(order.id, "completed")} className="rounded-lg bg-[#14233b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{copy.confirmDelivery}</button>
             </div>}
