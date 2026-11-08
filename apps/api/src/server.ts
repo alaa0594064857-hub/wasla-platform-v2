@@ -402,6 +402,30 @@ async function handleRequest(
     return;
   }
 
+  const reviewDisputeMatch = requestUrl.pathname.match(/^\/api\/reviews\/([0-9a-f-]{36})\/(report|appeal)$/i);
+  if (reviewDisputeMatch) {
+    try {
+      const { handleReviewDisputeSubmission } = await import("./review-disputes.mjs");
+      await handleReviewDisputeSubmission(request, response, reviewDisputeMatch[1], reviewDisputeMatch[2] as "report" | "appeal");
+    } catch (error) {
+      console.error("WASLA review dispute submission error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Review dispute service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+  if (requestUrl.pathname === "/api/platform/review-disputes") {
+    try {
+      const { handlePlatformReviewDisputes } = await import("./review-disputes.mjs");
+      await handlePlatformReviewDisputes(request, response);
+    } catch (error) {
+      console.error("WASLA platform review disputes error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Review dispute queue error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const platformReviewMatch = requestUrl.pathname.match(/^\/api\/platform\/reviews(?:\/([0-9a-f-]{36}))?$/i);
   if (platformReviewMatch) {
     try {
