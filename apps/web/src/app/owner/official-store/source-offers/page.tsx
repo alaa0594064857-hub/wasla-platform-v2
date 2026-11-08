@@ -16,6 +16,7 @@ type Offer = {
   shipping_currency: string | null; minimum_order_quantity: number | null;
   availability_status: string; offer_status: string; supplier_identity_verified: boolean;
   specifications_verified: boolean; direct_to_customer_confirmed: boolean;
+  ships_to_countries?: string[]; quote_valid_until?: string; last_verified_at?: string | null;
 };
 
 const initial = {
@@ -461,7 +462,7 @@ export default function OfficialStoreSourceOffersPage() {
           setPricingResult(null);
         }} style={inputStyle}>
           <option value="">{t.choosePricingOffer}</option>
-          {offers.filter(offer => offer.offer_status === "approved" && offer.availability_status !== "unavailable" && offer.minimum_order_quantity === 1 && offer.direct_to_customer_confirmed && offer.supplier_identity_verified && offer.specifications_verified && offer.shipping_cost !== null).map(offer => <option key={offer.id} value={offer.id}>{offer.title_en} — {offer.supplier_name} ({offer.supplier_price} {offer.supplier_currency})</option>)}
+          {offers.filter(offer => offer.offer_status === "approved" && ["available", "limited"].includes(offer.availability_status) && offer.minimum_order_quantity === 1 && offer.direct_to_customer_confirmed && offer.supplier_identity_verified && offer.specifications_verified && offer.shipping_cost !== null && Boolean(offer.last_verified_at) && Boolean(offer.quote_valid_until && Date.parse(offer.quote_valid_until) > Date.now()) && (pricingForm.destinationCountry.trim().length !== 2 || (offer.ships_to_countries || []).includes(pricingForm.destinationCountry.trim().toUpperCase()))).map(offer => <option key={offer.id} value={offer.id}>{offer.title_en} — {offer.supplier_name} ({offer.supplier_price} {offer.supplier_currency})</option>)}
         </select></label>
         <label style={labelStyle}>{t.supplierCostLabel}<input required readOnly type="number" min="0" step="0.01" value={pricingForm.supplierCost} style={inputStyle}/></label>
         <label style={labelStyle}>{t.currency}<input required maxLength={3} value={pricingForm.supplierCurrency} onChange={e => setPricingForm(s => ({ ...s, supplierCurrency: e.target.value }))} style={inputStyle}/></label>
