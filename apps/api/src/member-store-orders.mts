@@ -236,7 +236,7 @@ export async function handleMemberStoreOrdersRequest(
     respond(response, 400, { success: false, error: "Invalid request body" });
     return;
   }
-  if (!isObject(body) || !["accepted", "rejected"].includes(String(body.status))) {
+  if (!isObject(body) || !["accepted", "rejected", "cancelled"].includes(String(body.status))) {
     respond(response, 400, { success: false, error: "Invalid order status" });
     return;
   }
@@ -250,13 +250,12 @@ export async function handleMemberStoreOrdersRequest(
     await client.query("BEGIN");
     const result = await client.query(
     `UPDATE member_store_orders o
-     SET status = $1, merchant_note = COALESCE(NULLIF($2, ''), merchant_note), updated_at = NOW()
+     SET status = $1, merchant_note = CASE WHEN $1 = 'cancelled' THEN merchant_note ELSE COALESCE(NULLIF($2, ''), merchant_note) END, updated_at = NOW()
      FROM stores s
      WHERE o.id = $3 AND o.store_id = s.id AND s.slug = $4 AND s.status = 'active'
-       AND ${merchantPermission(5, 6)}
        AND (
-         ($1 = 'accepted' AND o.status = 'pending_merchant_review') OR
-         ($1 = 'rejected' AND o.status = 'pending_merchant_review')
+         ($1 = 'cancelled' AND o.buyer_user_id = $5 AND o.status = 'pending_merchant_review') OR
+         ($1 IN ('accepted', 'rejected') AND o.status = 'pending_merchant_review' AND ${merchantPermission(5, 6)} )
        )
      RETURNING o.id, o.order_number AS "orderNumber", o.status, o.updated_at AS "updatedAt"`,
     [body.status, note, orderId, slug, session.user.id, ["store.order.manage", "account.order.manage"]],
