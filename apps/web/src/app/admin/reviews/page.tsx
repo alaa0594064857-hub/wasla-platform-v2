@@ -163,6 +163,7 @@ export default function AdminReviewModerationPage() {
           <p style={{ color: "#9a7940", fontSize: 12, fontWeight: 800, letterSpacing: 2 }}>{copy.eyebrow}</p>
           <h1 style={{ fontSize: "clamp(28px, 4vw, 40px)", margin: "8px 0" }}>{copy.title}</h1>
           <p style={{ color: "#647184", maxWidth: 760, lineHeight: 1.9 }}>{copy.intro}</p>
+          <Link href="/admin/review-disputes" style={{ display: "inline-block", marginTop: 12, color: "#806638", fontWeight: 800, textDecoration: "underline" }}>{ar ? "فتح البلاغات والاعتراضات" : "Open reports & appeals"}</Link>
         </header>
 
         {error && <div role="alert" style={{ padding: 14, border: "1px solid #e4b8a8", background: "#fff3ed", borderRadius: 12, marginBottom: 16 }}>{error}<button type="button" onClick={() => void load()} style={{ marginInlineStart: 12, textDecoration: "underline" }}>{copy.retry}</button></div>}
