@@ -103,7 +103,7 @@ export async function ensurePriceApprovalTables(): Promise<void> {
       currency CHAR(3) NOT NULL,
       customer_price NUMERIC(18,6) NOT NULL CHECK (customer_price >= 0),
       breakdown JSONB NOT NULL,
-      created_by UUID NOT NULL,
+      created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '30 minutes'),
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
@@ -117,7 +117,7 @@ export async function ensurePriceApprovalTables(): Promise<void> {
       currency CHAR(3) NOT NULL,
       customer_price NUMERIC(18,6) NOT NULL CHECK (customer_price >= 0),
       breakdown JSONB NOT NULL,
-      approved_by UUID NOT NULL,
+      approved_by UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
       approved_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','superseded','revoked'))
     )
@@ -126,6 +126,7 @@ export async function ensurePriceApprovalTables(): Promise<void> {
     ON official_store_price_approvals(product_id, destination_country) WHERE status = 'active'`);
   await db.query(`CREATE INDEX IF NOT EXISTS official_store_price_approvals_public_lookup
     ON official_store_price_approvals(destination_country, status, product_id)`);
+  await db.query(`DELETE FROM official_store_price_previews WHERE expires_at < NOW() - INTERVAL '7 days'`);
 }
 
 async function handleApprovePrice(request: IncomingMessage, response: ServerResponse, userId: string): Promise<void> {
