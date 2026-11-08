@@ -313,6 +313,38 @@ export async function handleMemberStoreOrdersRequest(
          '/store/' || $3 || '/orders', $4, jsonb_build_object('orderNumber', $5, 'status', $2))`,
       [result.rows[0].buyerUserId, body.status, slug, orderId, result.rows[0].orderNumber],
     );
+  } else {
+    await client.query(
+      `INSERT INTO notifications
+         (user_id, type, title_ar, title_en, body_ar, body_en, action_url, resource_id, metadata)
+       SELECT DISTINCT recipients.user_id, 'member_store_order',
+              'ألغى العميل طلبه', 'A buyer cancelled an order request',
+              'تم إلغاء الطلب رقم ' || $5, 'Order request ' || $5 || ' was cancelled',
+              '/store/' || $1 || '/orders', $2,
+              jsonb_build_object('orderNumber', $5, 'status', 'cancelled')
+       FROM (
+         SELECT am.user_id
+         FROM account_members am
+         JOIN stores s ON s.account_id = am.account_id
+         JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
+         JOIN role_permissions rp ON rp.role_id = r.id AND rp.scope_type = r.scope_type
+         JOIN permissions p ON p.id = rp.permission_id AND p.scope_type = rp.scope_type
+         WHERE s.slug = $1 AND s.status = 'active' AND am.status = 'active'
+           AND p.permission_key = ANY($3::text[])
+         UNION
+         SELECT sm.user_id
+         FROM store_members sm
+         JOIN stores s ON s.id = sm.store_id
+         JOIN roles r ON r.id = sm.role_id AND r.scope_type = sm.role_scope
+         JOIN role_permissions rp ON rp.role_id = r.id AND rp.scope_type = r.scope_type
+         JOIN permissions p ON p.id = rp.permission_id AND p.scope_type = rp.scope_type
+         WHERE s.slug = $1 AND s.status = 'active' AND sm.status = 'active'
+           AND p.permission_key = ANY($3::text[])
+       ) recipients
+       WHERE recipients.user_id <> $4`,
+      [slug, orderId, ["store.order.read", "store.order.manage", "account.order.read", "account.order.manage"],
+        session.user.id, result.rows[0].orderNumber],
+    );
   }
   await client.query("COMMIT");
   respond(response, 200, { success: true, order: result.rows[0] });
