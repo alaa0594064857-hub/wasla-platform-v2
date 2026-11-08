@@ -58,7 +58,7 @@ describe("official store customer final quote decisions", () => {
     expect(response.status).toBe(409);
     expect(await response.json()).toMatchObject({ success: false });
     expect(client.query.mock.calls.at(-1)?.[0]).toBe("ROLLBACK");
-    expect(client.query).toHaveBeenCalledTimes(2);
+    expect(client.query).toHaveBeenCalledTimes(3);
     expect(client.query.mock.calls.some(([sql]) => String(sql).includes("INSERT INTO official_store_order_events"))).toBe(false);
     expect(client.release).toHaveBeenCalledOnce();
   });
