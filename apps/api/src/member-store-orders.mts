@@ -300,7 +300,7 @@ export async function handleMemberStoreOrdersRequest(
     const result = await client.query(
     `UPDATE member_store_orders o
      SET status = $1,
-         merchant_note = CASE WHEN $1 = 'cancelled' THEN merchant_note ELSE COALESCE(NULLIF($2, ''), merchant_note) END,
+         merchant_note = CASE WHEN $1 IN ('cancelled', 'completed') THEN merchant_note ELSE COALESCE(NULLIF($2, ''), merchant_note) END,
          carrier_name = CASE WHEN $1 = 'shipped' THEN $7 ELSE carrier_name END,
          tracking_number = CASE WHEN $1 = 'shipped' THEN $8 ELSE tracking_number END,
          tracking_url = CASE WHEN $1 = 'shipped' THEN $9 ELSE tracking_url END,
