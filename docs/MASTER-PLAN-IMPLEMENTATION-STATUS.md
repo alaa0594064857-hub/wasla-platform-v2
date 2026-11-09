@@ -1011,3 +1011,6 @@ This checkpoint supersedes the earlier mobile notes above where they describe fe
 
 - Improved the mobile member-store directory with an optional two-letter country filter (for example, TR) and a clear empty-state hint. The UI validates the country code before calling the already-tested public directory endpoint.
 - CI and API quality checks are pending for this small mobile UX update.
+
+- Follow-up storefront polish: corrected the introductory copy to describe store discovery rather than requiring a slug, and displayed the public business description in each directory result. No supplier-only fields are added to the customer view.
+- The previous country-filter checkpoint passed both WASLA CI and API quality checks. This copy/UI polish is awaiting its own CI run.
