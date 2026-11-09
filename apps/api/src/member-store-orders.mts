@@ -193,7 +193,7 @@ export async function handleMemberStoreOrdersRequest(
     try {
       await client.query("BEGIN");
       const store = await client.query(
-        "SELECT id, account_id AS \"accountId\" FROM stores WHERE slug = $1 AND status = 'active' FOR SHARE",
+        "SELECT id, account_id AS \"accountId\", return_policy AS \"returnPolicy\", return_policy_version AS \"returnPolicyVersion\" FROM stores WHERE slug = $1 AND status = 'active' FOR SHARE",
         [slug],
       );
       if (store.rowCount !== 1) {
@@ -252,14 +252,18 @@ export async function handleMemberStoreOrdersRequest(
       }
       const orderNumber = `WS-${Date.now().toString(36).toUpperCase()}-${randomUUID().slice(0, 6).toUpperCase()}`;
       const created = await client.query(
-        `WITH actor_context AS MATERIALIZED (SELECT set_config('wasla.actor_user_id', $9, true))
+        `WITH actor_context AS MATERIALIZED (SELECT set_config('wasla.actor_user_id', $11, true))
          INSERT INTO member_store_orders
-          (order_number, store_id, buyer_user_id, currency, items, subtotal, buyer_note, idempotency_key)
-         SELECT $1,$2,$3,$4,$5::jsonb,$6,$7,$8 FROM actor_context
+          (order_number, store_id, buyer_user_id, currency, items, subtotal, buyer_note, idempotency_key,
+           return_policy_snapshot, return_policy_version)
+         SELECT $1,$2,$3,$4,$5::jsonb,$6,$7,$8,$9::jsonb,$10 FROM actor_context
          RETURNING id, order_number AS "orderNumber", status, currency,
                    items, subtotal::text AS subtotal, created_at AS "createdAt"`,
         [orderNumber, store.rows[0].id, session.user.id, snapshots[0].currency,
-          JSON.stringify(snapshots), subtotal.toFixed(2), note || null, idempotencyKey ?? null, session.user.id],
+          JSON.stringify(snapshots), subtotal.toFixed(2), note || null, idempotencyKey ?? null,
+          store.rows[0].returnPolicy ? JSON.stringify(store.rows[0].returnPolicy) : null,
+          Number(store.rows[0].returnPolicyVersion) > 0 ? store.rows[0].returnPolicyVersion : null,
+          session.user.id],
       );
       await client.query(
         `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, store_id, metadata)
