@@ -145,7 +145,7 @@ export async function handleMemberStoreReturnPolicy(
   try {
     await client.query("BEGIN");
     const storeResult = await client.query(
-      `SELECT id, account_id AS "accountId" FROM stores
+      `SELECT id, account_id AS "accountId", return_policy AS "returnPolicy", return_policy_version AS "returnPolicyVersion" FROM stores
        WHERE slug=$1 AND status='active' FOR UPDATE`,
       [slug],
     );
@@ -172,8 +172,8 @@ export async function handleMemberStoreReturnPolicy(
         [store.id],
       );
       await client.query("COMMIT");
-      send(res, 200, { success: true, publishedPolicy: store.return_policy ?? null,
-        publishedVersion: store.return_policy_version, versions: versions.rows });
+      send(res, 200, { success: true, publishedPolicy: store.returnPolicy ?? null,
+        publishedVersion: store.returnPolicyVersion, versions: versions.rows });
       return;
     }
 
