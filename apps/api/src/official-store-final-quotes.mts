@@ -29,7 +29,8 @@ async function readBody(request: IncomingMessage): Promise<Record<string, unknow
 }
 
 export function validAmount(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value) && value > 0 && value <= 100000000;
+  return typeof value === "number" && Number.isFinite(value) && value > 0 && value <= 100000000 &&
+    Math.round(value * 100) === value * 100;
 }
 
 export function validCurrency(value: unknown): value is string {
