@@ -1014,3 +1014,10 @@ This checkpoint supersedes the earlier mobile notes above where they describe fe
 
 - Follow-up storefront polish: corrected the introductory copy to describe store discovery rather than requiring a slug, and displayed the public business description in each directory result. No supplier-only fields are added to the customer view.
 - The previous country-filter checkpoint passed both WASLA CI and API quality checks. This copy/UI polish is awaiting its own CI run.
+
+## Member-store order currency precision — 2026-11-09
+
+- Member-store order totals are now calculated with integer minor units (BigInt), not floating-point multiplication and unconditional two-decimal rounding.
+- The currency's ISO fraction digits are determined through `Intl.NumberFormat`: e.g. USD=2, JPY=0, KWD=3.
+- Orders reject unsupported currencies and prices with excess fractional digits; persisted subtotal and audit metadata use the correct currency precision.
+- Added API tests for USD, JPY, KWD totals and invalid JPY fractional precision. GitHub CI/API quality checks are pending for this change.
