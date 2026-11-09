@@ -908,3 +908,11 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Final-head GitHub Actions on commit `48501b28f3f44c6edf1e448595c822e3ef10dc29` both passed: WASLA CI run `42545343826` and API quality run `42545343839`.
 - CI success validates the repository checks, not a live mobile session or hosted deployment. Expo Android/iOS builds, physical-device QA, hosted two-account E2E, push notifications, checkout/payment, shipping/tracking, returns/refunds, and store submission remain outstanding.
 - Render deployment remains blocked by exhausted workspace pipeline minutes. No paid minute purchase or spend-limit change was made.
+
+
+## Mobile registration checkpoint — 2026-11-09
+
+- Added bilingual email/password registration UI to `apps/mobile/App.tsx`, including the six API-supported account types: buyer, company, supplier, manufacturer, trader, and brand.
+- Registration submits the required `registrationType` and selected `preferredLocale` to Better Auth, then displays a check-your-email confirmation. Existing sign-in remains available.
+- Updated the mobile README with the required production email/auth environment configuration and verification testing requirements.
+- GitHub Actions runs for the mobile registration change are still in progress at container initialization; this change is not marked as CI-verified yet. Physical-device registration, email delivery, deep-link verification, and session tests remain outstanding.
