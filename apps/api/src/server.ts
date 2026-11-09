@@ -716,6 +716,22 @@ async function handleRequest(
     return;
   }
 
+  const memberStoreReturnPolicyMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/return-policy(?:\/(manage|publish|unpublish))?$/i);
+  if (memberStoreReturnPolicyMatch) {
+    try {
+      const { handleMemberStoreReturnPolicy } = await import("./member-store-return-policy.mjs");
+      const suffix = memberStoreReturnPolicyMatch[2];
+      const mode = suffix ? "manage" : "public";
+      const action = suffix === "publish" ? "publish" : suffix === "unpublish" ? "unpublish" : suffix === "manage" ? (request.method === "PUT" ? "save" : "read") : "read";
+      await handleMemberStoreReturnPolicy(request, response, decodeURIComponent(memberStoreReturnPolicyMatch[1]), mode, action);
+    } catch (error) {
+      console.error("WASLA member store return policy error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Return policy service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const memberStoreReturnMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/orders\/([0-9a-f-]{36})\/return(?:\/(response|received|close))?$/i);
   if (memberStoreReturnMatch) {
     try {
