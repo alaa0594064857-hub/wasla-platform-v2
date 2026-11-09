@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { getOfficialStoreProducts, WaslaApiError } from "./src/api";
 import type { OfficialStoreProduct } from "./src/api";
 import { authClient } from "./src/auth-client";
+import { getMyProfile, updateMyProfile, type WaslaProfile } from "./src/profile";
 import {
   Pressable,
   SafeAreaView,
@@ -11,6 +12,7 @@ import {
   Text,
   TextInput,
   ActivityIndicator,
+  Image,
   View,
 } from "react-native";
 
@@ -44,7 +46,17 @@ const copy = {
     signIn: "تسجيل الدخول",
     signOut: "تسجيل الخروج",
     signedIn: "تم تسجيل الدخول",
-    authError: "تعذر تسجيل الدخول. تحقق من البريد وكلمة المرور."
+    authError: "تعذر تسجيل الدخول. تحقق من البريد وكلمة المرور.",
+    profile: "الملف الشخصي",
+    loadProfile: "تحميل الملف الشخصي",
+    displayName: "الاسم",
+    avatar: "رابط الصورة الشخصية (HTTPS)",
+    bio: "نبذة عنك",
+    website: "الموقع الإلكتروني",
+    saveProfile: "حفظ التعديلات",
+    profileSaved: "تم حفظ الملف الشخصي بنجاح.",
+    profileError: "تعذر تحميل أو حفظ الملف الشخصي.",
+    profileHint: "بياناتك الشخصية لا تظهر إلا بعد تسجيل الدخول."
   },
   en: {
     direction: "ltr" as const,
@@ -73,7 +85,17 @@ const copy = {
     signIn: "Sign in",
     signOut: "Sign out",
     signedIn: "You are signed in",
-    authError: "Sign-in failed. Check your email and password."
+    authError: "Sign-in failed. Check your email and password.",
+    profile: "My profile",
+    loadProfile: "Load profile",
+    displayName: "Display name",
+    avatar: "Profile image URL (HTTPS)",
+    bio: "About you",
+    website: "Website",
+    saveProfile: "Save changes",
+    profileSaved: "Your profile was saved.",
+    profileError: "Could not load or save your profile.",
+    profileHint: "Your profile details are available after sign-in."
   }
 };
 
@@ -96,6 +118,13 @@ export default function App() {
   const [password, setPassword] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState("");
+  const [profile, setProfile] = useState<WaslaProfile | null>(null);
+  const [profileBusy, setProfileBusy] = useState(false);
+  const [profileMessage, setProfileMessage] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [avatarReference, setAvatarReference] = useState("");
+  const [bio, setBio] = useState("");
+  const [website, setWebsite] = useState("");
   const { data: session, isPending: sessionLoading } = authClient.useSession();
 
   async function handleSignIn() {
@@ -112,6 +141,51 @@ export default function App() {
       setAuthBusy(false);
     }
   }
+
+
+  async function loadProfile() {
+    if (profileBusy) return;
+    setProfileBusy(true);
+    setProfileMessage("");
+    try {
+      const value = await getMyProfile();
+      setProfile(value);
+      setDisplayName(value.displayName);
+      setAvatarReference(value.avatarReference ?? "");
+      setBio(value.bio);
+      setWebsite(value.website);
+    } catch {
+      setProfileMessage(t.profileError);
+    } finally {
+      setProfileBusy(false);
+    }
+  }
+
+  async function saveProfile() {
+    if (profileBusy || !profile) return;
+    setProfileBusy(true);
+    setProfileMessage("");
+    try {
+      await updateMyProfile({
+        displayName: displayName.trim(),
+        avatarReference: avatarReference.trim() || null,
+        bio: bio.trim(),
+        website: website.trim(),
+        socialLinks: profile.socialLinks ?? {},
+      });
+      setProfile({ ...profile, displayName: displayName.trim(), avatarReference: avatarReference.trim() || null, bio: bio.trim(), website: website.trim() });
+      setProfileMessage(t.profileSaved);
+    } catch {
+      setProfileMessage(t.profileError);
+    } finally {
+      setProfileBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    if (session?.user && !profile && !profileBusy) void loadProfile();
+    if (!session?.user) { setProfile(null); setProfileMessage(""); }
+  }, [session?.user?.id]);
 
   async function loadCatalogue() {
     setCatalogueLoading(true);
@@ -176,6 +250,30 @@ export default function App() {
               <Pressable accessibilityRole="button" onPress={() => void authClient.signOut()} style={styles.catalogueButton}>
                 <Text style={styles.primaryButtonText}>{t.signOut}</Text>
               </Pressable>
+            </>
+          ) : (
+            <>
+              <Text style={[styles.catalogueTitle, rtl && styles.textRight]}>{t.profile}</Text>
+              <Text style={[styles.noteText, rtl && styles.textRight]}>{t.profileHint}</Text>
+              {profileBusy && !profile ? <ActivityIndicator color="#14283F" /> : null}
+              {profile ? (
+                <>
+                  {avatarReference.startsWith("https://") ? <Image source={{ uri: avatarReference }} style={styles.avatarPreview} /> : null}
+                  <Text style={[styles.noteText, rtl && styles.textRight]}>{profile.email}</Text>
+                  <TextInput value={displayName} onChangeText={setDisplayName} placeholder={t.displayName} style={[styles.countryInput, rtl && styles.textRight]} />
+                  <TextInput value={avatarReference} onChangeText={setAvatarReference} autoCapitalize="none" keyboardType="url" placeholder={t.avatar} style={styles.countryInput} />
+                  <TextInput value={bio} onChangeText={setBio} multiline maxLength={500} placeholder={t.bio} style={[styles.countryInput, styles.multilineInput, rtl && styles.textRight]} />
+                  <TextInput value={website} onChangeText={setWebsite} autoCapitalize="none" keyboardType="url" placeholder={t.website} style={styles.countryInput} />
+                  <Pressable accessibilityRole="button" onPress={() => void saveProfile()} disabled={profileBusy} style={styles.catalogueButton}>
+                    {profileBusy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>{t.saveProfile}</Text>}
+                  </Pressable>
+                </>
+              ) : (
+                <Pressable accessibilityRole="button" onPress={() => void loadProfile()} disabled={profileBusy} style={styles.catalogueButton}>
+                  {profileBusy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>{t.loadProfile}</Text>}
+                </Pressable>
+              )}
+              {!!profileMessage && <Text style={profileMessage === t.profileSaved ? styles.successText : styles.errorText}>{profileMessage}</Text>}
             </>
           ) : (
             <>
@@ -245,6 +343,9 @@ const styles = StyleSheet.create({
   authCard: { marginTop: 28, borderRadius: 16, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#ECE6D9", padding: 16, gap: 12 },
   catalogue: { marginTop: 20, borderRadius: 16, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#ECE6D9", padding: 16, gap: 12 },
   catalogueTitle: { color: "#14283F", fontSize: 19, fontWeight: "900" },
+  avatarPreview: { width: 84, height: 84, borderRadius: 42, alignSelf: "center", backgroundColor: "#EEE9DD" },
+  multilineInput: { minHeight: 92, textAlignVertical: "top" },
+  successText: { color: "#18794E", fontSize: 13 },
   countryInput: { borderWidth: 1, borderColor: "#D8D1C2", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 12, color: "#14283F" },
   catalogueButton: { backgroundColor: "#14283F", padding: 14, borderRadius: 11, alignItems: "center" },
   productCard: { borderTopWidth: 1, borderTopColor: "#ECE6D9", paddingTop: 12, gap: 5 },
