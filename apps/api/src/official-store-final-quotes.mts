@@ -28,13 +28,24 @@ async function readBody(request: IncomingMessage): Promise<Record<string, unknow
     ? parsed as Record<string, unknown> : null;
 }
 
-export function validAmount(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value) && value > 0 && value <= 100000000 &&
-    Math.round(value * 100) === value * 100;
+export function currencyFractionDigits(currency: unknown): number | null {
+  if (typeof currency !== "string" || !/^[A-Z]{3}$/.test(currency)) return null;
+  try {
+    return new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions().maximumFractionDigits;
+  } catch {
+    return null;
+  }
+}
+
+export function validAmount(value: unknown, currency: unknown): value is number {
+  const fractionDigits = currencyFractionDigits(currency);
+  if (fractionDigits === null || typeof value !== "number" || !Number.isFinite(value) ||
+      value <= 0 || value > 100000000) return false;
+  return Number(value.toFixed(fractionDigits)) === value;
 }
 
 export function validCurrency(value: unknown): value is string {
-  return typeof value === "string" && /^[A-Z]{3}$/.test(value);
+  return currencyFractionDigits(value) !== null;
 }
 
 /** Owner issues a time-limited, customer-facing quote only after supplier reconfirmation. */
@@ -58,7 +69,7 @@ export async function handleOfficialStoreFinalQuoteIssue(
   const maxDays = body?.shippingDaysMax;
   const validityHours = body?.validityHours ?? 48;
   const note = typeof body?.customerNote === "string" ? body.customerNote.trim() : "";
-  if (!validAmount(amount) || !validCurrency(currency) ||
+  if (!validAmount(amount, currency) || !validCurrency(currency) ||
       !Number.isInteger(minDays) || Number(minDays) < 0 || Number(minDays) > 365 ||
       !Number.isInteger(maxDays) || Number(maxDays) < Number(minDays) || Number(maxDays) > 365 ||
       !Number.isInteger(validityHours) || Number(validityHours) < 1 || Number(validityHours) > 336 ||
@@ -132,11 +143,11 @@ export async function handleOfficialStoreFinalQuoteIssue(
                  final_quote_currency AS "currency", final_quote_shipping_days_min AS "shippingDaysMin",
                  final_quote_shipping_days_max AS "shippingDaysMax", final_quote_expires_at AS "expiresAt",
                  final_quote_status AS "status"`,
-      [orderId, amount.toFixed(2), currency, minDays, maxDays, expiresAt]);
+      [orderId, amount.toFixed(currencyFractionDigits(currency) ?? 2), currency, minDays, maxDays, expiresAt]);
     await client.query(
       `INSERT INTO official_store_order_events (order_id, actor_type, actor_user_id, event_type, details)
        VALUES ($1, 'human', $2, 'final_quote_issued', $3::jsonb)`,
-      [orderId, access.userId, JSON.stringify({ amount: amount.toFixed(2), currency, shippingDaysMin: minDays,
+      [orderId, access.userId, JSON.stringify({ amount: amount.toFixed(currencyFractionDigits(currency) ?? 2), currency, shippingDaysMin: minDays,
         shippingDaysMax: maxDays, expiresAt: expiresAt.toISOString(), customerNote: note,
         paymentEnabled: false, supplierPurchasePlaced: false })]);
     await client.query(
