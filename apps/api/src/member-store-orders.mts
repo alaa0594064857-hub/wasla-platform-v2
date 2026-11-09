@@ -9,7 +9,7 @@ type OrderLine = { productId: string; quantity: number };
 function currencyFractionDigits(currency: string): number | null {
   try {
     const digits = new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions().maximumFractionDigits;
-    return Number.isInteger(digits) ? digits : null;
+    return Number.isInteger(digits) ? digits ?? null : null;
   } catch {
     return null;
   }
