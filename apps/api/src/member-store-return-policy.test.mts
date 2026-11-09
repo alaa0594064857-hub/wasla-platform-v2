@@ -86,8 +86,10 @@ describe("member store return policy API", () => {
     const response = await fetch(base + publicPath + "/manage");
     expect(response.status).toBe(403);
     expect(await response.json()).toMatchObject({ success: false });
-    expect(clientQuery.mock.calls[2][0]).toContain("store.settings.manage");
-    expect(clientQuery.mock.calls[2][0]).toContain("account.settings.manage");
+    expect(clientQuery.mock.calls[2][1][2]).toEqual([
+      "store.settings.manage",
+      "account.settings.manage",
+    ]);
     expect(clientQuery.mock.calls[3][0]).toBe("ROLLBACK");
     expect(release).toHaveBeenCalledOnce();
   });
