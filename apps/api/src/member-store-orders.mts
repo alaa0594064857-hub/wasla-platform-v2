@@ -5,6 +5,31 @@ import { auth } from "./auth.mjs";
 import { getDatabasePool } from "./database.js";
 
 type OrderLine = { productId: string; quantity: number };
+
+function currencyFractionDigits(currency: string): number | null {
+  try {
+    const digits = new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions().maximumFractionDigits;
+    return Number.isInteger(digits) ? digits : null;
+  } catch {
+    return null;
+  }
+}
+
+function decimalToMinorUnits(value: string, fractionDigits: number): bigint | null {
+  if (!/^\\d{1,12}(?:\\.\\d{1,6})?$/.test(value)) return null;
+  const [whole, fraction = ""] = value.split(".");
+  if (fraction.length > fractionDigits) return null;
+  return BigInt(whole) * (10n ** BigInt(fractionDigits)) +
+    BigInt((fraction + "0".repeat(fractionDigits)).slice(0, fractionDigits) || "0");
+}
+
+function minorUnitsToDecimal(value: bigint, fractionDigits: number): string {
+  if (fractionDigits === 0) return value.toString();
+  const scale = 10n ** BigInt(fractionDigits);
+  const whole = value / scale;
+  const fraction = (value % scale).toString().padStart(fractionDigits, "0");
+  return `${whole}.${fraction}`;
+}
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function respond(response: ServerResponse, status: number, data: Record<string, unknown>) {
@@ -170,12 +195,24 @@ export async function handleMemberStoreOrdersRequest(
         respond(response, 409, { success: false, error: "Products in one order must use the same currency" });
         return;
       }
-      const subtotal = snapshots.reduce((sum, item) => sum + Number(item.unitPrice) * item.quantity, 0);
-      if (!Number.isFinite(subtotal) || subtotal > 999999999999) {
+      const currency = snapshots[0].currency;
+      const fractionDigits = currencyFractionDigits(currency);
+      if (fractionDigits === null) {
         await client.query("ROLLBACK");
-        respond(response, 400, { success: false, error: "Order total is outside the supported range" });
+        respond(response, 400, { success: false, error: "Unsupported order currency" });
         return;
       }
+      const subtotalMinorUnits = snapshots.reduce<bigint | null>((sum, item) => {
+        const unitMinorUnits = decimalToMinorUnits(item.unitPrice, fractionDigits);
+        if (sum === null || unitMinorUnits === null) return null;
+        return sum + unitMinorUnits * BigInt(item.quantity);
+      }, 0n);
+      if (subtotalMinorUnits === null || subtotalMinorUnits > 999999999999n * (10n ** BigInt(fractionDigits))) {
+        await client.query("ROLLBACK");
+        respond(response, 400, { success: false, error: "Order total or currency precision is invalid" });
+        return;
+      }
+      const subtotal = minorUnitsToDecimal(subtotalMinorUnits, fractionDigits);
       const existing = idempotencyKey
         ? await client.query(
             `SELECT id, order_number AS "orderNumber", status FROM member_store_orders
@@ -196,13 +233,13 @@ export async function handleMemberStoreOrdersRequest(
          RETURNING id, order_number AS "orderNumber", status, currency,
                    items, subtotal::text AS subtotal, created_at AS "createdAt"`,
         [orderNumber, store.rows[0].id, session.user.id, snapshots[0].currency,
-          JSON.stringify(snapshots), subtotal.toFixed(2), note || null, idempotencyKey ?? null],
+          JSON.stringify(snapshots), subtotal, note || null, idempotencyKey ?? null],
       );
       await client.query(
         `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, store_id, metadata)
          VALUES ($1, 'member_store.order_requested', 'member_store_order', $2, $3, $4::jsonb)`,
         [session.user.id, created.rows[0].id, store.rows[0].id,
-          JSON.stringify({ orderNumber, itemCount: snapshots.length, subtotal: subtotal.toFixed(2) })],
+          JSON.stringify({ orderNumber, itemCount: snapshots.length, subtotal, currency })],
       );
       // Notify active account/store members with order permissions; never expose this alert to the buyer.
       await client.query(
