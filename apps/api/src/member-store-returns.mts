@@ -64,7 +64,7 @@ export async function handleMemberStoreReturn(req: IncomingMessage, res: ServerR
     const withinWindow=Number.isInteger(windowDays)&&windowDays>=1&&windowDays<=365&&Date.now()<=windowStart+windowDays*86400000;
     if(!withinWindow && reason!=="legal_rights_claim"){await client.query("ROLLBACK");send(res,409,{success:false,error:"The store-configured request window has passed. If you believe mandatory legal rights apply, submit a legal-rights claim for review."});return;}
    }
-   const prior=await client.query("SELECT id,status FROM member_store_return_requests WHERE order_id=$1 AND status NOT IN ('closed','rejected') LIMIT 1",[orderId]);
+   const prior=await client.query("SELECT id,status,item_received_at AS \"itemReceivedAt\" FROM member_store_return_requests WHERE order_id=$1 AND (status NOT IN ('closed','rejected') OR item_received_at IS NOT NULL) LIMIT 1",[orderId]);
    if(prior.rowCount){await client.query("ROLLBACK");send(res,409,{success:false,error:"An active return or exchange request already exists"});return;}
    result=await client.query("INSERT INTO member_store_return_requests(order_id,store_id,buyer_user_id,requested_resolution,reason,details) VALUES($1,$2,$3,$4,$5,$6) RETURNING id,status,requested_resolution AS \"requestedResolution\",created_at AS \"createdAt\"",[orderId,order.storeId,session.user.id,resolution,reason,details]);
   }else{

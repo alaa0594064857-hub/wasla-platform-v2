@@ -32,7 +32,7 @@ describe("member store returns and exchanges",()=>{
  it("prevents a second active request for the same order",async()=>{
   clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]}).mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"shipped",buyerId:buyer,storeId:store}]}).mockResolvedValueOnce({rowCount:1,rows:[{id:requestId,status:"submitted"}]}).mockResolvedValueOnce({rowCount:null,rows:[]});
   const base=await start();const r=await fetch(base+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({resolution:"replacement",reason:"wrong_item",details:"The delivered item is a different model."})});
-  expect(r.status).toBe(409);expect(String(clientQuery.mock.calls[3][0])).toBe("ROLLBACK");
+  expect(r.status).toBe(409);expect(String(clientQuery.mock.calls[2][0])).toContain("item_received_at IS NOT NULL");expect(String(clientQuery.mock.calls[3][0])).toBe("ROLLBACK");
  });
  it("blocks a return disabled by the order-time policy snapshot",async()=>{
   clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]}).mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"completed",buyerId:buyer,storeId:store,orderCreatedAt:new Date(),returnPolicySnapshot:{status:"published",acceptsReturns:false,acceptsExchanges:true,requestWindowDays:30}}]}).mockResolvedValueOnce({rowCount:null,rows:[]});
