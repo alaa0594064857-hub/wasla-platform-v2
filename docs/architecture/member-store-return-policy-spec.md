@@ -16,13 +16,7 @@ Date: 2026-11-09
 
 ## Data model
 
-Create an idempotent member_store_return_policies table:
-- store_id primary key / foreign key to stores(id) with cascade delete.
-- accepts_returns, accepts_exchanges booleans.
-- request_window_days integer constrained to a conservative product range (1–365); nullable only if product design explicitly supports “contact seller”.
-- item_conditions and exclusions as bounded text, with Arabic and English fields.
-- buyer_instructions_ar, buyer_instructions_en, contact_instructions_ar, contact_instructions_en bounded text.
-- published_at, created_at, updated_at; unpublished drafts must not be presented as published policy.
+The current implementation stores the active published JSON policy and version pointer on `stores` (`return_policy`, `return_policy_version`, `return_policy_published_at`) and keeps immutable version records in `member_store_return_policy_versions` with `draft`, `published`, and `withdrawn` states. Do not create a second competing policy table without an explicit migration decision.
 
 Add immutable policy snapshot columns or a normalized snapshot table associated with each member-store order. Snapshot the exact published values at order creation, not when the buyer later opens the order page. Existing orders receive an explicit policy_not_provided snapshot; do not invent historical policy content.
 
@@ -32,16 +26,23 @@ Add immutable policy snapshot columns or a normalized snapshot table associated 
 - Store owner/team API supports read, create, update, publish and unpublish; require existing store-management permissions and verify membership against the store ID.
 - Validate bilingual text lengths, boolean values, day range, and publication state server-side.
 - Use transactions for policy writes and append audit-log events for create/update/publish/unpublish. Never expose private draft text publicly.
-- Return request submission checks the order's immutable snapshot and resolution-specific enablement. Preserve a documented escalation path for exceptional/legal claims.
+- Return request submission checks the order's immutable snapshot and resolution-specific enablement. Preserve a support escalation path for exceptional/legal claims. Buyers can create one support escalation per return request for legal-rights review, merchant nonresponse, or another dispute; platform support can acknowledge or close the support record with a note. This is not a legal determination, refund, or override of merchant decisions.
 - Do not accept a client-supplied store ID as proof of ownership; derive store identity from the authenticated order/store relationship.
 
 ## Web UI
 
 - Add a bilingual policy editor in the member-store owner workspace.
-- Add a buyer-visible policy disclosure on public store/product pages and the buyer order page.
+- Add a buyer-visible policy disclosure on public store pages and the buyer order page, including a support escalation action on existing return requests.
 - Show the order-time snapshot on the order detail page, including when the store later changes its policy.
 - Explain that a request is not a refund and does not guarantee approval or shipment of a replacement.
 - Keep Arabic/English labels, validation errors, and empty states aligned with the existing locale handling.
+
+## Support escalation workflow
+
+- `POST /api/stores/:slug/orders/:orderId/return/escalation` creates a buyer-owned support record linked to the existing return request.
+- `GET /api/platform/store-return-escalations` lists open/acknowledged support records for users with `platform.reports.manage`.
+- `PATCH /api/platform/store-return-escalations/:id` records support acknowledgement or closure with an internal note and audit event.
+- Escalation records do not approve/reject returns, determine legal entitlement, issue refunds, or trigger fulfillment.
 
 ## Required verification before merge
 
