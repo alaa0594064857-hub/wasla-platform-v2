@@ -15,7 +15,7 @@ vi.mock("./database.js", () => ({
 }));
 
 let handleNotificationsRequest: (request: IncomingMessage, response: ServerResponse) => Promise<void>;
-let createNotification: (client: never, input: { userId: string; type: "message_received"; titleAr: string; titleEn: string; actionUrl: string }) => Promise<void>;
+let createNotification: typeof import("./notifications.mjs")["createNotification"];
 let server: Server | undefined;
 
 async function startServer(): Promise<string> {
@@ -50,7 +50,7 @@ describe("notification creation safeguards", () => {
   it.each(["https://attacker.example/path", "//attacker.example/path", "javascript:alert(1)", "/\\\\attacker.example/path"])(
     "rejects non-internal action URL %s before inserting",
     async (actionUrl) => {
-      const client = { query: vi.fn() } as never;
+      const client = { query: vi.fn() } as unknown as Parameters<typeof createNotification>[0];
       await expect(createNotification(client, {
         userId: "notification-owner",
         type: "message_received",
@@ -58,12 +58,12 @@ describe("notification creation safeguards", () => {
         titleEn: "Message",
         actionUrl,
       })).rejects.toThrow("Notification action must be an internal path");
-      expect((client as { query: ReturnType<typeof vi.fn> }).query).not.toHaveBeenCalled();
+      expect((client as unknown as { query: ReturnType<typeof vi.fn> }).query).not.toHaveBeenCalled();
     },
   );
 
   it("stores a valid internal action path with parameterized values", async () => {
-    const client = { query: vi.fn().mockResolvedValue({ rows: [] }) } as never;
+    const client = { query: vi.fn().mockResolvedValue({ rows: [] }) } as unknown as Parameters<typeof createNotification>[0];
     await createNotification(client, {
       userId: "notification-owner",
       type: "message_received",
