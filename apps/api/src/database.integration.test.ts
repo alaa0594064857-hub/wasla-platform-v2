@@ -161,7 +161,7 @@ describe("WASLA member-store order lifecycle schema", () => {
        WHERE table_schema='public'
          AND ((table_name='stores' AND column_name IN ('return_policy','return_policy_version'))
            OR (table_name='member_store_orders' AND column_name IN ('return_policy_snapshot','return_policy_version','inventory_committed_at'))
-           OR (table_name='member_store_return_requests' AND column_name='restocked_at'))`,
+           OR (table_name='member_store_return_requests' AND column_name IN ('items','restocked_at')))`,
     );
     const columns = new Set(policyColumns.rows.map((row) => `${row.table_name}:${row.column_name}`));
     expect(columns.has("stores:return_policy")).toBe(true);
@@ -170,5 +170,6 @@ describe("WASLA member-store order lifecycle schema", () => {
     expect(columns.has("member_store_orders:return_policy_version")).toBe(true);
     expect(columns.has("member_store_orders:inventory_committed_at")).toBe(true);
     expect(columns.has("member_store_return_requests:restocked_at")).toBe(true);
+    expect(columns.has("member_store_return_requests:items")).toBe(true);
   });
 });

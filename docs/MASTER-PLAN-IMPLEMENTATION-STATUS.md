@@ -1157,3 +1157,10 @@ This checkpoint supersedes the earlier mobile notes above where they describe fe
 - Restocking is opt-in, store-scoped, quantity-checked, overflow-safe and part of the same transaction as marking the return received; a failure rolls back both.
 - The return request records `restocked_at`; audit metadata records the decision and exact product quantities. Legacy orders without an inventory commitment marker cannot be restocked automatically.
 - This does not issue refunds, replacement shipments or payment reversals.
+
+
+## Partial return item selection — candidate (2026-11-10)
+
+- Buyers select the exact products and quantities they are returning; the API validates each line against the original order snapshot and stores an immutable item/quantity snapshot on the return request.
+- Merchant restocking uses only the items and quantities recorded on that return request, not every item in the original order. This prevents stock from being added for goods the buyer did not return.
+- Legacy return requests without item-level snapshots cannot be automatically restocked.

@@ -777,6 +777,7 @@ export async function ensureMemberStoreOrderTables(): Promise<void> {
         requested_resolution varchar(16) NOT NULL CHECK (requested_resolution IN ('return','replacement')),
         reason varchar(40) NOT NULL CHECK (reason IN ('damaged_or_defective','not_as_described','wrong_item','missing_items','other')),
         details varchar(3000) NOT NULL CHECK (length(trim(details)) >= 10),
+        items jsonb NOT NULL DEFAULT '[]'::jsonb,
         status varchar(24) NOT NULL DEFAULT 'submitted' CHECK (status IN ('submitted','approved','rejected','item_received','closed')),
         merchant_response varchar(2000),
         merchant_user_id uuid REFERENCES users(id) ON DELETE RESTRICT,
@@ -788,6 +789,7 @@ export async function ensureMemberStoreOrderTables(): Promise<void> {
         updated_at timestamptz NOT NULL DEFAULT NOW()
       )
     `);
+    await client.query(`ALTER TABLE member_store_return_requests ADD COLUMN IF NOT EXISTS items jsonb NOT NULL DEFAULT '[]'::jsonb`);
     await client.query(`ALTER TABLE member_store_return_requests ADD COLUMN IF NOT EXISTS restocked_at timestamptz`);
     await client.query(`
       CREATE INDEX IF NOT EXISTS member_store_return_requests_order_created_idx

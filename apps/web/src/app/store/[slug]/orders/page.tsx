@@ -40,6 +40,7 @@ type StoreOrder = {
   merchantResponse: string | null;
   moderatorNote: string | null;
   returnRequestId: string | null;
+  returnItems: OrderLine[] | null;
   returnResolution: string | null;
   returnReason: string | null;
   returnDetails: string | null;
@@ -76,6 +77,8 @@ export default function MemberStoreOrdersPage() {
   const [returnResolutions, setReturnResolutions] = useState<Record<string, string>>({});
   const [returnResponses, setReturnResponses] = useState<Record<string, string>>({});
   const [returnRestock, setReturnRestock] = useState<Record<string, boolean>>({});
+  const [returnItemSelections, setReturnItemSelections] = useState<Record<string, string[]>>({});
+  const [returnItemQuantities, setReturnItemQuantities] = useState<Record<string, Record<string, number>>>({});
   const [returnBusy, setReturnBusy] = useState("");
   const [canManagePolicy, setCanManagePolicy] = useState(false);
   const [escalationDetails, setEscalationDetails] = useState<Record<string, string>>({});
@@ -226,6 +229,18 @@ export default function MemberStoreOrdersPage() {
   async function returnAction(order: StoreOrder, action: "submit" | "respond" | "received" | "close") {
     if (returnBusy) return;
     const details = action === "submit" ? returnDetails[order.id] ?? "" : returnResponses[order.id] ?? "";
+    if (action === "submit" && !(returnItemSelections[order.id] ?? []).length) {
+      setError(ar ? "اختر منتجًا واحدًا على الأقل وحدد الكمية المطلوب إرجاعها." : "Select at least one item and its return quantity.");
+      return;
+    }
+    if (action === "submit" && (returnItemSelections[order.id] ?? []).some(productId => {
+      const item = order.items.find(line => line.productId === productId);
+      const quantity = returnItemQuantities[order.id]?.[productId] ?? item?.quantity ?? 0;
+      return !item || !Number.isSafeInteger(quantity) || quantity < 1 || quantity > item.quantity;
+    })) {
+      setError(ar ? "تحقق من كميات المنتجات المحددة للإرجاع." : "Check the quantities selected for return.");
+      return;
+    }
     if (action === "submit" && details.trim().length < 10) {
       setError(ar ? "اشرح سبب الإرجاع أو الاستبدال بعشرة أحرف على الأقل." : "Explain the return or exchange reason in at least 10 characters.");
       return;
@@ -241,7 +256,7 @@ export default function MemberStoreOrdersPage() {
         method: action === "received" || action === "close" ? "PATCH" : "POST",
         credentials: "include", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(action === "submit"
-          ? { resolution: returnResolutions[order.id] ?? "return", reason: returnReasons[order.id] ?? "other", details }
+          ? { resolution: returnResolutions[order.id] ?? "return", reason: returnReasons[order.id] ?? "other", details, items: order.items.filter(item => (returnItemSelections[order.id] ?? []).includes(item.productId)).map(item => ({ productId: item.productId, quantity: returnItemQuantities[order.id]?.[item.productId] ?? item.quantity })) }
           : action === "respond" ? { decision: "approved", note: details }
           : action === "received" ? { restock: returnRestock[order.id] === true } : {})
       });
@@ -356,6 +371,7 @@ export default function MemberStoreOrdersPage() {
               <strong>{ar ? "طلب الإرجاع أو الاستبدال" : "Return or exchange request"} · {order.returnStatus}</strong>
               <p className="mt-2">{ar ? "النوع:" : "Requested resolution:"} {order.returnResolution === "replacement" ? (ar ? "استبدال" : "Replacement") : (ar ? "إرجاع" : "Return")}</p>
               <p className="mt-1">{order.returnDetails}</p>
+              {order.returnItems?.length ? <ul className="mt-2 list-disc space-y-1 pl-5">{order.returnItems.map(item => <li key={item.productId}>{item.title} × {item.quantity}</li>)}</ul> : null}
               {order.returnMerchantResponse && <p className="mt-2 border-t border-[#e8d9b6] pt-2">{ar ? "رد المتجر:" : "Store response:"} {order.returnMerchantResponse}</p>}
               {isMerchantView && order.returnStatus === "submitted" && <div className="mt-3 space-y-2">
                 <textarea rows={2} maxLength={2000} value={returnResponses[order.id] ?? ""} onChange={e => setReturnResponses(v => ({ ...v, [order.id]: e.target.value }))} placeholder={ar ? "اكتب رد المتجر..." : "Write the store response..."} className="w-full rounded-lg border border-[#e5dfd1] bg-white p-3" />
@@ -370,7 +386,7 @@ export default function MemberStoreOrdersPage() {
                 </div>
               </div>}
               {isMerchantView && order.returnStatus === "approved" && order.returnResolution === "return" && <div className="mt-3 space-y-2">
-                <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={returnRestock[order.id] === true} onChange={e => setReturnRestock(v => ({ ...v, [order.id]: e.target.checked }))} className="mt-1" /><span>{ar ? "إعادة المنتجات المستلمة إلى المخزون إذا كانت صالحة للبيع" : "Restock the returned items if they are fit for resale"}</span></label>
+                <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={returnRestock[order.id] === true} disabled={!order.returnItems?.length} onChange={e => setReturnRestock(v => ({ ...v, [order.id]: e.target.checked }))} className="mt-1" /><span>{order.returnItems?.length ? (ar ? "إعادة المنتجات المستلمة إلى المخزون إذا كانت صالحة للبيع" : "Restock the returned items if they are fit for resale") : (ar ? "لا تتوفر تفاصيل الأصناف في هذا الطلب القديم؛ إعادة المخزون التلقائية غير متاحة." : "This legacy request has no item-level snapshot; automatic restocking is unavailable.")}</span></label>
                 <button disabled={returnBusy === order.id} onClick={() => void returnAction(order, "received")} className="rounded-lg border border-[#14233b] px-4 py-2 font-semibold">{ar ? "تأكيد استلام المنتج المُعاد" : "Confirm returned item received"}</button>
               </div>}
               {isMerchantView && order.returnStatus === "approved" && order.returnResolution === "replacement" && <p className="mt-3 text-xs text-slate-600">{ar ? "تمت الموافقة على الاستبدال. تنفيذ شحن البديل سيُفعّل بعد استكمال تكامل الشحن." : "Replacement approved. Dispatching the replacement will be enabled after shipping integration."}</p>}
@@ -398,6 +414,16 @@ export default function MemberStoreOrdersPage() {
             </section>}
             {!isMerchantView && !order.returnRequestId && ["shipped","completed"].includes(order.status) && <section className="mt-4 space-y-2 rounded-xl border border-[#e5dfd1] p-4">
               <strong>{ar ? "طلب إرجاع أو استبدال" : "Request a return or exchange"}</strong>
+              <div className="space-y-2 rounded-lg border border-[#e5dfd1] p-3">
+                <strong className="text-sm">{ar ? "اختر المنتجات والكميات المطلوب إرجاعها" : "Choose items and quantities to return"}</strong>
+                {order.items.map(item => {
+                  const selected = (returnItemSelections[order.id] ?? []).includes(item.productId);
+                  return <div key={item.productId} className="flex flex-wrap items-center justify-between gap-2 border-t border-[#eee7da] pt-2">
+                    <label className="flex min-w-0 flex-1 items-center gap-2 text-sm"><input type="checkbox" checked={selected} onChange={e => setReturnItemSelections(current => ({ ...current, [order.id]: e.target.checked ? [...(current[order.id] ?? []), item.productId] : (current[order.id] ?? []).filter(id => id !== item.productId) }))} /><span>{item.title} × {item.quantity}</span></label>
+                    {selected && <input aria-label={ar ? "الكمية المطلوب إرجاعها" : "Return quantity"} type="number" min={1} max={item.quantity} value={returnItemQuantities[order.id]?.[item.productId] ?? item.quantity} onChange={e => setReturnItemQuantities(current => ({ ...current, [order.id]: { ...(current[order.id] ?? {}), [item.productId]: Number(e.target.value) } }))} className="w-20 rounded-lg border border-[#e5dfd1] bg-white p-2" />}
+                  </div>;
+                })}
+              </div>
               <select value={returnResolutions[order.id] ?? "return"} onChange={e => setReturnResolutions(v => ({...v,[order.id]:e.target.value}))} className="w-full rounded-lg border border-[#e5dfd1] bg-white p-3">
                 <option value="return">{ar ? "إرجاع المنتج" : "Return item"}</option><option value="replacement">{ar ? "استبدال المنتج" : "Replace item"}</option>
               </select>
