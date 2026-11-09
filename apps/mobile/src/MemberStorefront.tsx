@@ -21,6 +21,7 @@ type DirectoryStore = {
 export default function MemberStorefront({ rtl }: { rtl: boolean }) {
   const [slug, setSlug] = useState("");
   const [directoryQuery, setDirectoryQuery] = useState("");
+  const [directoryCountry, setDirectoryCountry] = useState("");
   const [directoryStores, setDirectoryStores] = useState<DirectoryStore[]>([]);
   const [directoryBusy, setDirectoryBusy] = useState(false);
   const [store, setStore] = useState<StoreData | null>(null);
@@ -41,8 +42,17 @@ export default function MemberStorefront({ rtl }: { rtl: boolean }) {
     setMessage("");
     try {
       const query = directoryQuery.trim();
+      const country = directoryCountry.trim().toUpperCase();
+      if (country && !/^[A-Z]{2}$/.test(country)) {
+        setMessage(label("اكتب رمز الدولة من حرفين، مثل TR أو US.", "Enter a two-letter country code, such as TR or US."));
+        return;
+      }
+      const params = new URLSearchParams();
+      if (query) params.set("q", query);
+      if (country) params.set("country", country);
+      const suffix = params.toString();
       const response = await fetch(
-        `${API_BASE_URL}/api/public/stores${query ? `?q=${encodeURIComponent(query)}` : ""}`,
+        `${API_BASE_URL}/api/public/stores${suffix ? `?${suffix}` : ""}`,
         { headers: { Accept: "application/json" } },
       );
       const data = await response.json();
@@ -150,9 +160,11 @@ export default function MemberStorefront({ rtl }: { rtl: boolean }) {
     <Text style={{ color: "#14283F", fontSize: 19, fontWeight: "700", textAlign: rtl ? "right" : "left" }}>{label("تصفح متاجر الأعضاء", "Browse member stores")}</Text>
     <Text style={{ color: "#64748B", textAlign: rtl ? "right" : "left" }}>{label("أدخل رمز المتجر لعرض المنتجات وإرسال طلب للمتجر.", "Enter a store slug to browse products and send a request to the merchant.")}</Text>
     <TextInput value={directoryQuery} onChangeText={setDirectoryQuery} placeholder={label("ابحث عن متجر أو شركة", "Search stores or businesses")} style={{ borderWidth: 1, borderColor: "#E5DFD1", borderRadius: 9, padding: 12, color: "#14283F", textAlign: rtl ? "right" : "left" }} />
+    <TextInput value={directoryCountry} onChangeText={setDirectoryCountry} autoCapitalize="characters" maxLength={2} placeholder={label("رمز الدولة (اختياري: TR)", "Country code (optional: TR)")} style={{ borderWidth: 1, borderColor: "#E5DFD1", borderRadius: 9, padding: 12, color: "#14283F", textAlign: rtl ? "right" : "left" }} />
     <Pressable onPress={() => void searchPublicStores()} disabled={directoryBusy} style={{ borderWidth: 1, borderColor: "#B89545", borderRadius: 9, padding: 11, alignItems: "center" }}>
       {directoryBusy ? <ActivityIndicator color="#14283F" /> : <Text style={{ color: "#14283F", fontWeight: "700" }}>{label("بحث في المتاجر", "Search stores")}</Text>}
     </Pressable>
+    {directoryStores.length === 0 && !directoryBusy ? <Text style={{ color: "#64748B", textAlign: rtl ? "right" : "left" }}>{label("ابحث عن متجر أو اترك البحث فارغاً لعرض المتاجر المتاحة.", "Search for a store or leave the search empty to browse available stores.")}</Text> : null}
     {directoryStores.map(item => <Pressable key={item.id} onPress={() => { setSlug(item.slug); setMessage(""); void loadStoreBySlug(item.slug); }} style={{ padding: 11, borderRadius: 9, backgroundColor: "#F8F6F1", gap: 3 }}>
       <Text style={{ color: "#14283F", fontWeight: "700", textAlign: rtl ? "right" : "left" }}>{item.name}</Text>
       {!!item.businessName && <Text style={{ color: "#64748B", textAlign: rtl ? "right" : "left" }}>{item.businessName}</Text>}
