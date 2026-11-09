@@ -998,3 +998,10 @@ This checkpoint supersedes the earlier mobile notes above where they describe fe
 - API tests and API build passed on the prior revision (192 tests). The tuple-spread issue in the mobile status-label helper was corrected, and both WASLA CI and API quality checks passed on commit c5534f712042e096b688254ea897fee6b4775a9c.
 - A subsequent storefront-switching fix clears the previous store's products, buyer requests, quantities, and note when loading another store; CI for that final UI cleanup is queued.
 - No payment is collected, no inventory is reserved, and no deployment or paid build was triggered for this checkpoint.
+
+## Public member-store discovery API — 2026-11-09
+
+- Added `GET /api/public/stores` for a public directory of active member stores, with optional text search (`q`) and two-letter country filter (`country`).
+- The directory returns a maximum of 50 active stores, their public business description/site, country, and count of active products. It does not return supplier identities, sourcing references, supplier costs, or procurement links.
+- Added API tests for active-store filtering, bounded results, public-field privacy, country validation, and GET-only behavior.
+- GitHub Actions validation for this checkpoint is pending; do not treat the directory as production-verified until both API quality and main CI pass.
