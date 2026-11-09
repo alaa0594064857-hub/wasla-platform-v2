@@ -5,6 +5,8 @@ This workspace is the first native mobile foundation for WASLA, built with Expo 
 ## Current foundation
 
 - Expo SDK 58 / React Native 0.88 / React 19.3.
+- EAS build profiles for development, internal preview, and production in `eas.json`.
+- Expo SecureStore config plugin registered for native builds.
 - Android application ID: `com.wasla.app`.
 - iOS bundle identifier: `com.wasla.app`.
 - Bilingual Arabic/English starter screen with an RTL/LTR language switch.
@@ -26,6 +28,21 @@ pnpm --filter @wasla/mobile start
 For a different API environment, copy `.env.example` to `.env` and set `EXPO_PUBLIC_WASLA_API_URL`.
 
 Use a compatible Expo Go version or an EAS development build for device testing. SDK 58 requires Node.js 22.13 or newer.
+
+## EAS build profiles
+
+Run these commands from the repository root after installing dependencies and authenticating with an Expo account:
+
+```bash
+npx eas-cli@latest build:configure --platform all
+npx eas-cli@latest build --profile development --platform android
+npx eas-cli@latest build --profile preview --platform android
+npx eas-cli@latest build --profile production --platform all
+```
+
+The development profile creates an internal development-client APK. Preview creates an internal Android APK and an iOS device build. Production creates an Android App Bundle and an iOS device build for store submission. EAS may ask to create/link an Expo project and configure signing credentials; review those prompts before accepting. No EAS build has been triggered by this repository change.
+
+For iOS device builds and App Store submission, an eligible Apple Developer account and signing setup are required. Android store release requires the appropriate Play Console account and signing configuration.
 
 ## API and authentication boundary
 
