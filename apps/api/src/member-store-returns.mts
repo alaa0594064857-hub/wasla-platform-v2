@@ -172,10 +172,10 @@ export async function handlePlatformMemberStoreReturnEscalations(req: IncomingMe
   SET status=$2,support_note=$3,handled_by=$4,handled_at=NOW(),updated_at=NOW()
   WHERE id=$1 AND status IN ('open','acknowledged')
   RETURNING id,status,support_note AS "supportNote",handled_at AS "handledAt"`,
-  [id,status,note,access.user.id]);
+  [id,status,note,access.userId]);
  if(!result.rowCount){send(res,404,{success:false,error:"Open escalation not found"});return;}
  await db.query(`INSERT INTO audit_logs(actor_user_id,action,resource_type,resource_id,metadata)
   VALUES($1,$2,'member_store_return_escalation',$3,$4::jsonb)`,
-  [access.user.id,"order_return.escalation."+status,id,JSON.stringify({status})]);
+  [access.userId,"order_return.escalation."+status,id,JSON.stringify({status})]);
  send(res,200,{success:true,escalation:result.rows[0]});
 }
