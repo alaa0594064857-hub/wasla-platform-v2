@@ -9,12 +9,12 @@ if (!databaseUrl) throw new Error("DATABASE_URL is required for integration test
 
 const pool = new Pool({ connectionString: databaseUrl, max: 2 });
 
-describe("WASLA database role permission scope integrity", () => {
-  afterAll(async () => {
-    await pool.end();
-    await closeDatabaseConnection();
-  });
+afterAll(async () => {
+  await pool.end();
+  await closeDatabaseConnection();
+});
 
+describe("WASLA database role permission scope integrity", () => {
   it("allows a role and permission with the same scope", async () => {
     const roleId = randomUUID();
     const permissionId = randomUUID();
