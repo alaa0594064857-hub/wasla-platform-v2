@@ -168,7 +168,7 @@ export default function App() {
     setResetBusy(true);
     setAuthError("");
     try {
-      const webBase = (process.env.EXPO_PUBLIC_WASLA_WEB_URL || "https://wasla-web-4a64.onrender.com").replace(/\\/+$/, "");
+      const webBase = (process.env.EXPO_PUBLIC_WASLA_WEB_URL || "https://wasla-web-4a64.onrender.com").replace(/\/+$/, "");
       const result = await authClient.requestPasswordReset({
         email: email.trim(),
         redirectTo: `${webBase}/reset-password`,
