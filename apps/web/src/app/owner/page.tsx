@@ -140,6 +140,9 @@ export default function PlatformOwnerPage() {
     { id: "trade-commissions", label: ar ? "سجل العمولات" : "Trade commissions", icon: "＄", href: "/owner/trade/commission-ledger" },
     { id: "trade-invoices", label: ar ? "فواتير العمولات" : "Commission invoices", icon: "▤", href: "/owner/trade/commission-invoices" }
   ];
+  if (access.permissions.includes("platform.reports.manage")) {
+    nav.push({ id: "return-escalations", label: ar ? "تصعيدات الإرجاع والدعم" : "Return support escalations", icon: "⚑", href: "/owner/support/return-escalations" });
+  }
 
   const roomDefs = [
     { id: "stores", icon: "▣", ar: "المتاجر المشتركة", en: "Member stores", count: overview?.totals.stores, available: true },
