@@ -89,6 +89,18 @@ export async function reviewStoreOrder(
 
 
 /** Creates a buyer's request for a member store; merchant review is required before fulfilment. */
+/** Cancels a buyer's own pending member-store request. */
+export async function cancelStoreOrder(
+  slug: string,
+  orderId: string,
+): Promise<Pick<MemberStoreOrder, "id" | "orderNumber" | "buyerUserId" | "status" | "updatedAt">> {
+  const result = await orderRequest<{
+    order: Pick<MemberStoreOrder, "id" | "orderNumber" | "buyerUserId" | "status" | "updatedAt">
+  }>(slug, "PATCH", orderId, { status: "cancelled" });
+  if (!result.order) throw new WaslaApiError("INVALID_SERVER_RESPONSE");
+  return result.order;
+}
+
 export async function createStoreOrder(
   slug: string,
   items: Array<{ productId: string; quantity: number }>,
