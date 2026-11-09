@@ -1024,3 +1024,11 @@ This checkpoint supersedes the earlier mobile notes above where they describe fe
 - Final-head verification completed successfully on commit `f83fcb070901fed3447108240bff1dd3bbd1abed`: WASLA CI run `42609797066` and API Quality run `42609796915` both succeeded, including API tests/build, mobile TypeScript checks, and Expo public app-config validation.
 - Render Web and API auto-deploy attempts for the latest main commit failed with the workspace `pipeline_minutes_exhausted` limit. This is a hosted build-capacity block; the successful GitHub checks do not mean the latest code is live on Render.
 - No paid build minutes, automatic purchases, or service-plan changes were enabled.
+
+
+## Order delivery and verified reviews — integration candidate (2026-11-09)
+
+- A clean integration candidate is being prepared from the latest `main`, preserving newer currency-precision, account and profile work.
+- The candidate adds merchant shipment details and buyer-only delivery confirmation for member-store orders, with server-side lifecycle checks and transactional notifications.
+- It adds verified-purchase reviews, edit history, moderation, buyer reports/appeals, and moderated seller responses.
+- This candidate remains branch-only until GitHub API-quality and full CI checks pass. It is not merged to `main` or deployed; payment capture, carrier webhooks, refunds and proof-of-delivery remain out of scope.
