@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { ActivityIndicator, Image, Pressable, Text, TextInput, View } from "react-native";
 import { API_BASE_URL, WaslaApiError } from "./api";
-import { createStoreOrder } from "./store-orders";
+import { cancelStoreOrder, createStoreOrder, getStoreOrders, type MemberStoreOrder } from "./store-orders";
 import { authClient } from "./auth-client";
 
 type Product = {
@@ -22,6 +22,8 @@ export default function MemberStorefront({ rtl }: { rtl: boolean }) {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [myOrders, setMyOrders] = useState<MemberStoreOrder[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
   const { data: session } = authClient.useSession();
   const label = (ar: string, en: string) => rtl ? ar : en;
 
@@ -45,6 +47,45 @@ export default function MemberStorefront({ rtl }: { rtl: boolean }) {
     } finally { setBusy(false); }
   }
 
+  async function loadMyOrders() {
+    if (!store || !session?.user || ordersLoading) return;
+    setOrdersLoading(true);
+    setMessage("");
+    try {
+      const orders = await getStoreOrders(store.slug);
+      setMyOrders(orders.filter(order => order.buyerUserId === session.user.id));
+    } catch {
+      setMessage(label("تعذر تحميل طلباتك حالياً.", "Could not load your requests right now."));
+    } finally {
+      setOrdersLoading(false);
+    }
+  }
+
+  async function cancelMyOrder(order: MemberStoreOrder) {
+    if (!store || busy || order.status !== "pending_merchant_review") return;
+    setBusy(true);
+    setMessage("");
+    try {
+      await cancelStoreOrder(store.slug, order.id);
+      await loadMyOrders();
+      setMessage(label("تم إلغاء الطلب.", "Your request was cancelled."));
+    } catch {
+      setMessage(label("تعذر إلغاء الطلب. ربما تمت مراجعته بالفعل.", "Could not cancel the request. It may already have been reviewed."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function orderStatus(status: MemberStoreOrder["status"]) {
+    const labels = {
+      pending_merchant_review: ["بانتظار مراجعة المتجر", "Awaiting merchant review"],
+      accepted: ["مقبول من المتجر", "Accepted by the store"],
+      rejected: ["لم يقبله المتجر", "Declined by the store"],
+      cancelled: ["ملغي", "Cancelled"],
+    } as const;
+    return label(...labels[status]);
+  }
+
   async function requestProduct(product: Product) {
     if (!session?.user) {
       setMessage(label("سجّل الدخول أولاً لإرسال طلب.", "Please sign in before sending a request."));
@@ -64,6 +105,7 @@ export default function MemberStorefront({ rtl }: { rtl: boolean }) {
         `Request ${order.orderNumber} was sent for merchant review. No payment was collected.`,
       ));
       setNote("");
+      await loadMyOrders();
     } catch (error) {
       setMessage(error instanceof WaslaApiError && error.status === 401
         ? label("انتهت الجلسة. سجّل الدخول مجدداً.", "Your session expired. Please sign in again.")
@@ -79,6 +121,20 @@ export default function MemberStorefront({ rtl }: { rtl: boolean }) {
       {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={{ color: "#FFFFFF", fontWeight: "700" }}>{label("عرض المتجر", "Load store")}</Text>}
     </Pressable>
     {store ? <Text style={{ color: "#B89545", fontSize: 17, fontWeight: "700", textAlign: rtl ? "right" : "left" }}>{store.name}</Text> : null}
+    {store && session?.user ? <View style={{ gap: 8, borderTopWidth: 1, borderTopColor: "#EEE8DC", paddingTop: 12 }}>
+      <Pressable onPress={() => void loadMyOrders()} disabled={ordersLoading || busy} style={{ borderWidth: 1, borderColor: "#B89545", borderRadius: 8, padding: 10, alignItems: "center" }}>
+        {ordersLoading ? <ActivityIndicator color="#14283F" /> : <Text style={{ color: "#14283F", fontWeight: "700" }}>{label("طلباتي من هذا المتجر", "My requests from this store")}</Text>}
+      </Pressable>
+      {myOrders.map(order => <View key={order.id} style={{ padding: 10, borderRadius: 8, backgroundColor: "#F8F6F1", gap: 5 }}>
+        <Text style={{ color: "#14283F", fontWeight: "700", textAlign: rtl ? "right" : "left" }}>{order.orderNumber}</Text>
+        <Text style={{ color: "#64748B", textAlign: rtl ? "right" : "left" }}>{orderStatus(order.status)}</Text>
+        <Text style={{ color: "#9B792F", textAlign: rtl ? "right" : "left" }}>{order.subtotal} {order.currency}</Text>
+        {order.status === "pending_merchant_review" ? <Pressable disabled={busy} onPress={() => void cancelMyOrder(order)} style={{ alignSelf: rtl ? "flex-end" : "flex-start", paddingVertical: 7, paddingHorizontal: 12, borderRadius: 7, borderWidth: 1, borderColor: "#B45309" }}>
+          <Text style={{ color: "#92400E", fontWeight: "700" }}>{label("إلغاء الطلب", "Cancel request")}</Text>
+        </Pressable> : null}
+      </View>)}
+      {myOrders.length === 0 && !ordersLoading ? <Text style={{ color: "#64748B", textAlign: rtl ? "right" : "left" }}>{label("لا توجد طلبات سابقة من هذا المتجر.", "No previous requests from this store.")}</Text> : null}
+    </View> : null}
     {products.map(product => <View key={product.id} style={{ borderTopWidth: 1, borderTopColor: "#EEE8DC", paddingTop: 12, gap: 7 }}>
       {product.imageUrl ? <Image source={{ uri: product.imageUrl }} style={{ width: "100%", height: 150, borderRadius: 9 }} resizeMode="cover" /> : null}
       <Text style={{ color: "#14283F", fontWeight: "700", textAlign: rtl ? "right" : "left" }}>{product.title}</Text>
