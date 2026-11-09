@@ -1,6 +1,6 @@
 # WASLA V2 — Master Plan Implementation Status
 
-Last reviewed: 2026-11-08
+Last reviewed: 2026-11-09
 Repository: `alaa0594064857-hub/wasla-platform-v2` (`main`)
 
 This is an evidence-based implementation tracker, not a claim that the platform is commercially launch-ready. A feature is marked **Implemented** only where code exists and/or its production deployment or database state was verified. A live deployment does not by itself prove a complete end-to-end user journey.
@@ -54,7 +54,7 @@ This is an evidence-based implementation tracker, not a claim that the platform 
 | Notifications | Partial foundation; member-store request events added | Authenticated inbox/read-state workflow exists. PR #20 adds transactional in-app notifications for authorized active store/account order managers when a buyer submits a member-store request, and for the buyer when the merchant accepts or rejects it. External push/email delivery, additional event coverage and hosted unread/read verification remain. |
 | Ratings and reviews | Not implemented | No production module verified. |
 | Complaints and disputes | Not implemented | No production module verified. |
-| Mobile applications | Partial foundation — Expo Android/iOS workspace and public official-store catalogue API client committed; not usable/launch-ready | `apps/mobile` now contains Expo SDK 58 / React Native 0.88 app identity for Android/iOS, bilingual Arabic/English starter UI, configurable API base URL and typed destination-specific public official-store catalogue client. The starter screen can request the public catalogue by two-letter country code. Better Auth Expo v1.7.18 is now configured on API and mobile, with `wasla://` trusted origin, Expo SecureStore, email/password sign-in and session-aware sign-out UI. Better Auth core and Drizzle adapter are aligned at v1.7.18 to include the published Expo security fix. Still outstanding: dependency installation and typecheck, hosted API deployment, end-to-end sign-in and session persistence verification, typed authenticated profile API methods, profile UI, navigation and full screens for shops/business/trade/orders/messages/notifications, push notifications, EAS build profiles, icons/splash/privacy/store metadata, physical-device testing and store review. No hosted mobile build or device verification has occurred. |
+| Mobile applications | Partial foundation — Expo Android/iOS workspace, catalogue, profile, and business/store foundations committed; not launch-ready | `apps/mobile` contains Expo SDK 58 / React Native 0.88, bilingual Arabic/English starter UI, configurable API base URL, destination-specific public catalogue client, Better Auth Expo v1.7.18 with SecureStore, and a bilingual profile screen with authenticated GET/PATCH client. Added authenticated business-account and member-store API clients for existing `/api/accounts` and `/api/stores` contracts, plus a bilingual business/store management screen for listing/creating accounts and stores. GitHub Actions passed the mobile/API quality run for the business/store API-client commit; later UI integration checks are pending at this review. Still outstanding: hosted API deployment, end-to-end sign-in/session persistence and account/store flows, product management, trade/orders/messages/notifications screens, push notifications, EAS build profiles, icons/splash/privacy/store metadata, physical-device testing and store review. No hosted mobile build or device verification has occurred. |
 | Internationalization completeness | Partial | Arabic/English and RTL/LTR exist in several areas; every route, email, validation and workflow needs a localization audit. |
 | Automated tests and release quality gates | Core CI passing; hosted acceptance incomplete | Main CI and API quality checks passed for the subscription lifecycle PR before merge. Continue current-main CI verification and complete authenticated browser journeys, cross-account authorization, accessibility, localization, and deployment checks. |
 | Domain and brand finalization | Deferred | No domain purchase yet; continue using current Render URLs while development proceeds. |
@@ -879,3 +879,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - The mobile workspace is source-code foundation only. No dependency installation, TypeScript check, Android/iOS build, device test, authenticated session flow or store submission has been completed.
 - Next mobile sequence: validate dependency graph and typecheck; implement supported secure Better Auth Expo session storage; add authenticated endpoint clients and navigation; then implement screens and push notifications before EAS builds and physical-device QA.
 - Current Render deployment remains blocked by workspace build-pipeline minutes. Do not repeatedly trigger hosted builds or enable paid minute purchases without the owner's approval.
+
+
+## Mobile foundation checkpoint — 2026-11-09 (continued)
+
+- GitHub Actions completed successfully for the authenticated mobile business-account/store API client commit `9d63bf70e9300bd0daccad0a347958b338472c9b`.
+- Added `apps/mobile/src/BusinessHub.tsx`, a bilingual account/store management screen, and mounted it in the signed-in app flow.
+- The screen uses existing server contracts: account types company/supplier/manufacturer/trader/brand, and store creation tied to a selected business account. Server-side authentication and permission checks remain authoritative.
+- UI integration CI runs were still pending when this checkpoint was written. Do not treat the new screen as validated until those runs complete successfully.
+- No Render deployment, Expo build, physical-device test, or live authenticated end-to-end test was performed.
