@@ -415,6 +415,7 @@ export async function handleMemberStoreOrdersRequest(
          tracking_url = CASE WHEN $1 = 'shipped' THEN $9 ELSE tracking_url END,
          shipped_at = CASE WHEN $1 = 'shipped' THEN COALESCE(shipped_at, NOW()) ELSE shipped_at END,
          delivery_confirmed_at = CASE WHEN $1 = 'completed' THEN COALESCE(delivery_confirmed_at, NOW()) ELSE delivery_confirmed_at END,
+         inventory_committed_at = CASE WHEN $1 = 'accepted' THEN COALESCE(inventory_committed_at, NOW()) ELSE inventory_committed_at END,
          updated_at = NOW()
      FROM stores s, actor_context
      WHERE o.id = $3 AND o.store_id = s.id AND s.slug = $4 AND s.status = 'active'

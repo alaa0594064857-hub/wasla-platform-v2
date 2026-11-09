@@ -153,6 +153,7 @@ describe("member store order requests", () => {
     const stockCall = clientQuery.mock.calls[2];
     expect(String(stockCall[0])).toContain("UPDATE store_products");
     expect(String(stockCall[0])).toContain("stock_quantity >= $3");
+    expect(String(clientQuery.mock.calls[1][0])).toContain("inventory_committed_at = CASE WHEN $1 = 'accepted'");
     expect(stockCall[1]).toEqual(["33333333-3333-4333-8333-333333333333", "store-1", 2]);
     const notificationCall = clientQuery.mock.calls[4];
     expect(String(notificationCall[0])).toContain("INSERT INTO notifications");
