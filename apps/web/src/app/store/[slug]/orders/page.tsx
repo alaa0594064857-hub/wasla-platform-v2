@@ -74,6 +74,7 @@ export default function MemberStoreOrdersPage() {
   const [returnResolutions, setReturnResolutions] = useState<Record<string, string>>({});
   const [returnResponses, setReturnResponses] = useState<Record<string, string>>({});
   const [returnBusy, setReturnBusy] = useState("");
+  const [canManagePolicy, setCanManagePolicy] = useState(false);
 
   const copy = ar ? {
     title: "طلبات المتجر",
@@ -152,6 +153,13 @@ export default function MemberStoreOrdersPage() {
   }, [slug, copy.loadError]);
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    let active = true;
+    fetch(`/api/stores/${encodeURIComponent(slug)}/return-policy/manage`, { credentials: "include", cache: "no-store" })
+      .then(response => { if (active) setCanManagePolicy(response.ok); })
+      .catch(() => { if (active) setCanManagePolicy(false); });
+    return () => { active = false; };
+  }, [slug]);
 
   async function loadOrderEvents(orderId: string) {
     if (eventLoading === orderId) return;
@@ -281,6 +289,7 @@ export default function MemberStoreOrdersPage() {
     <div className="mx-auto max-w-5xl px-4 py-10">
       <Link href={`/store/${encodeURIComponent(slug)}`} className="text-sm font-semibold text-[#9b792f] underline">{copy.back}</Link>
       <h1 className="mt-5 text-3xl font-bold">{copy.title}</h1>
+      {canManagePolicy && <Link href={`/store/${encodeURIComponent(slug)}/return-policy`} className="mt-3 inline-block rounded-xl border border-[#b89545] bg-white px-4 py-2 text-sm font-semibold text-[#8a682b]">{ar ? "إدارة سياسة الإرجاع والاستبدال" : "Manage returns & exchanges policy"}</Link>}
       <p className="mt-2 leading-7 text-slate-600">{copy.intro}</p>
       <p className="mt-4 rounded-xl border border-[#d8bd79] bg-[#fff9eb] p-4 text-sm leading-7 text-[#765a2f]">{copy.noPayment}</p>
       {message && <p role="status" className="mt-4 rounded-xl bg-white p-3 text-sm">{message}</p>}
