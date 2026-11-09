@@ -100,7 +100,7 @@ export async function createStoreOrder(
   }
   const result = await orderRequest<{
     order: Pick<MemberStoreOrder, "id" | "orderNumber" | "status" | "currency" | "items" | "subtotal" | "createdAt">
-  }>(slug, "POST", undefined, { items, note });
+  }>(slug, "POST", undefined, { items, note }, idempotencyKey);
   if (!result.order) throw new WaslaApiError("INVALID_SERVER_RESPONSE");
   return result.order;
 }
