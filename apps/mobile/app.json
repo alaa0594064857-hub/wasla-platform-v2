@@ -13,6 +13,9 @@
     },
     "android": {
       "package": "com.wasla.app"
-    }
+    },
+    "plugins": [
+      "expo-secure-store"
+    ]
   }
 }
