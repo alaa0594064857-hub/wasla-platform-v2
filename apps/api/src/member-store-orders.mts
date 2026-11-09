@@ -16,7 +16,7 @@ function currencyFractionDigits(currency: string): number | null {
 }
 
 function decimalToMinorUnits(value: string, fractionDigits: number): bigint | null {
-  if (!/^\d{1,12}(?:\.\\d{1,6})?$/.test(value)) return null;
+  if (!/^\d{1,12}(?:\.\d{1,6})?$/.test(value)) return null;
   const [whole, fraction = ""] = value.split(".");
   if (fraction.length > fractionDigits) return null;
   return BigInt(whole) * (10n ** BigInt(fractionDigits)) +
