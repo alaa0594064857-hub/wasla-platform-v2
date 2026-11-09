@@ -24,6 +24,8 @@ type StoreOrder = {
   currency: string;
   items: OrderLine[];
   subtotal: string;
+  returnPolicySnapshot: Record<string, unknown> | null;
+  returnPolicyVersion: number | null;
   buyerNote: string | null;
   merchantNote: string | null;
   carrierName: string | null;
@@ -324,6 +326,19 @@ export default function MemberStoreOrdersPage() {
               </div>)}
             </div>
             <p className="mt-3 font-bold">{copy.subtotal}: {order.subtotal} {order.currency}</p>
+            <section className="mt-4 rounded-xl border border-[#e5dfd1] bg-[#faf8f3] p-4 text-sm">
+              <strong>{ar ? "سياسة الإرجاع وقت الطلب" : "Return policy at order time"}{order.returnPolicyVersion ? ` · v${order.returnPolicyVersion}` : ""}</strong>
+              {order.returnPolicySnapshot?.status === "not_provided" || !order.returnPolicySnapshot
+                ? <p className="mt-2 leading-6 text-slate-600">{ar ? "لم تكن هناك سياسة منشورة عند إنشاء هذا الطلب. تواصل مع البائع للاستفسار؛ ولا يعني ذلك تلقائيًا رفض الإرجاع أو إسقاط الحقوق القانونية." : "No policy was published when this order was created. Contact the seller; this does not automatically mean returns are refused or legal rights are waived."}</p>
+                : <>
+                  <p className="mt-2 text-slate-600">{order.returnPolicySnapshot.acceptsReturns ? (ar ? "الإرجاع مقبول حسب السياسة" : "Returns enabled by policy") : (ar ? "الإرجاع غير مفعّل حسب السياسة" : "Returns not enabled by policy")} · {order.returnPolicySnapshot.acceptsExchanges ? (ar ? "الاستبدال مقبول" : "Exchanges enabled") : (ar ? "الاستبدال غير مفعّل" : "Exchanges not enabled")} · {ar ? "المهلة:" : "Window:"} {String(order.returnPolicySnapshot.requestWindowDays ?? "—")} {ar ? "يومًا" : "days"}</p>
+                  {typeof order.returnPolicySnapshot[ar ? "itemConditionsAr" : "itemConditionsEn"] === "string" && <p className="mt-2 whitespace-pre-wrap">{String(order.returnPolicySnapshot[ar ? "itemConditionsAr" : "itemConditionsEn"])}</p>}
+                  {typeof order.returnPolicySnapshot[ar ? "exclusionsAr" : "exclusionsEn"] === "string" && <p className="mt-2 whitespace-pre-wrap">{ar ? "الاستثناءات: " : "Exclusions: "}{String(order.returnPolicySnapshot[ar ? "exclusionsAr" : "exclusionsEn"])}</p>}
+                  {typeof order.returnPolicySnapshot[ar ? "buyerInstructionsAr" : "buyerInstructionsEn"] === "string" && <p className="mt-2 whitespace-pre-wrap">{String(order.returnPolicySnapshot[ar ? "buyerInstructionsAr" : "buyerInstructionsEn"])}</p>}
+                  {typeof order.returnPolicySnapshot[ar ? "contactInstructionsAr" : "contactInstructionsEn"] === "string" && <p className="mt-2 whitespace-pre-wrap">{ar ? "التواصل: " : "Contact: "}{String(order.returnPolicySnapshot[ar ? "contactInstructionsAr" : "contactInstructionsEn"])}</p>}
+                </>}
+              <p className="mt-3 border-t border-[#e5dfd1] pt-2 text-xs leading-6 text-slate-500">{ar ? "تظل الحقوق الإلزامية للمستهلك بموجب القانون محفوظة. طلب الإرجاع لا يعني استردادًا ماليًا تلقائيًا." : "Mandatory consumer rights under applicable law remain unaffected. A return request does not issue an automatic refund."}</p>
+            </section>
             {order.carrierName && <div className="mt-4 rounded-xl border border-[#e5dfd1] bg-[#f7f4ec] p-4 text-sm">
               <strong>{copy.tracking}</strong>
               <p className="mt-2">{copy.carrier}: {order.carrierName} · {copy.trackingNumber}: <b dir="ltr">{order.trackingNumber}</b></p>
