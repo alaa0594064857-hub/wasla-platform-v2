@@ -1115,3 +1115,9 @@ This checkpoint supersedes the earlier mobile notes above where they describe fe
 - Buyer return/exchange requests are checked against that order-time snapshot. The request window is measured from buyer delivery confirmation, or shipment time when delivery has not been confirmed, with order creation as a legacy fallback.
 - Buyers can create a support escalation record for legal-rights claims, merchant nonresponse or a related dispute. Platform support can acknowledge or close the review record; this is not a legal determination or a refund decision.
 - Integration draft PR #55 is branch-only pending exact-head API quality and full CI. No payment, refund, return-carrier booking, replacement dispatch, merge to `main` or Render deployment is enabled.
+
+
+## Order lifecycle database integration verification — candidate (2026-11-09)
+
+- Added a real-PostgreSQL integration check that runs the member-order, verified-review and return-policy schema bootstraps twice, then verifies the expected tables, order-status constraint, active-return index, policy snapshot columns and append-only triggers.
+- This validates schema initialization and restart idempotency in CI; it does not replace two-account hosted acceptance tests or prove carrier delivery, payment, refund or production deployment behavior.

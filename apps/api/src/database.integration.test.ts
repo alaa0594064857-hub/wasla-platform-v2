@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Pool } from "pg";
-import { closeDatabaseConnection } from "./database.js";
+import { closeDatabaseConnection, ensureMemberStoreOrderTables, ensureVerifiedReviewTables } from "./database.js";
+import { ensureMemberStoreReturnPolicyTables } from "./member-store-return-policy-schema.mjs";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL is required for integration tests");
@@ -83,5 +84,87 @@ describe("WASLA database role permission scope integrity", () => {
     expect(grants.has("store_manager:store.product.create")).toBe(true);
     expect(grants.has("store_employee:store.product.read")).toBe(true);
     expect(grants.has("store_employee:store.product.create")).toBe(false);
+  });
+});
+
+
+describe("WASLA member-store order lifecycle schema", () => {
+  beforeAll(async () => {
+    await ensureMemberStoreOrderTables();
+    await ensureMemberStoreReturnPolicyTables();
+    await ensureVerifiedReviewTables();
+    // Startup bootstraps must remain safe when repeated after a restart.
+    await ensureMemberStoreOrderTables();
+    await ensureMemberStoreReturnPolicyTables();
+    await ensureVerifiedReviewTables();
+  });
+
+  it("creates the event, review and return-policy schema idempotently", async () => {
+    const tables = await pool.query(
+      `SELECT
+        to_regclass('public.member_store_order_events') IS NOT NULL AS events,
+        to_regclass('public.member_store_shipments') IS NOT NULL AS shipments,
+        to_regclass('public.member_store_delivery_evidence') IS NOT NULL AS delivery_evidence,
+        to_regclass('public.verified_product_reviews') IS NOT NULL AS verified_reviews,
+        to_regclass('public.member_store_return_requests') IS NOT NULL AS return_requests,
+        to_regclass('public.member_store_return_policy_versions') IS NOT NULL AS return_policy_versions,
+        to_regclass('public.member_store_return_escalations') IS NOT NULL AS return_escalations`,
+    );
+    expect(tables.rows[0]).toMatchObject({
+      events: true,
+      shipments: true,
+      delivery_evidence: true,
+      verified_reviews: true,
+      return_requests: true,
+      return_policy_versions: true,
+      return_escalations: true,
+    });
+
+    const triggers = await pool.query(
+      `SELECT c.relname AS table_name, t.tgname AS trigger_name
+       FROM pg_trigger t
+       JOIN pg_class c ON c.oid=t.tgrelid
+       WHERE NOT t.tgisinternal
+         AND (c.relname,t.tgname) IN (
+           ('member_store_orders','member_store_orders_capture_events'),
+           ('member_store_order_events','member_store_order_events_immutable'),
+           ('member_store_delivery_evidence','member_store_delivery_evidence_immutable')
+         )`,
+    );
+    const triggerNames = new Set(triggers.rows.map((row) => `${row.table_name}:${row.trigger_name}`));
+    expect(triggerNames.has("member_store_orders:member_store_orders_capture_events")).toBe(true);
+    expect(triggerNames.has("member_store_order_events:member_store_order_events_immutable")).toBe(true);
+    expect(triggerNames.has("member_store_delivery_evidence:member_store_delivery_evidence_immutable")).toBe(true);
+    expect(triggers.rowCount).toBe(3);
+
+    const indexes = await pool.query(
+      `SELECT indexname FROM pg_indexes
+       WHERE schemaname='public'
+         AND tablename='member_store_return_requests'
+         AND indexname='member_store_return_requests_one_active_idx'`,
+    );
+    expect(indexes.rowCount).toBe(1);
+
+    const statusConstraint = await pool.query(
+      `SELECT pg_get_constraintdef(oid) AS definition
+       FROM pg_constraint
+       WHERE conrelid='public.member_store_orders'::regclass
+         AND conname='member_store_orders_status_check'`,
+    );
+    expect(statusConstraint.rowCount).toBe(1);
+    expect(statusConstraint.rows[0].definition).toContain("'shipped'");
+    expect(statusConstraint.rows[0].definition).toContain("'completed'");
+
+    const policyColumns = await pool.query(
+      `SELECT table_name,column_name FROM information_schema.columns
+       WHERE table_schema='public'
+         AND ((table_name='stores' AND column_name IN ('return_policy','return_policy_version'))
+           OR (table_name='member_store_orders' AND column_name IN ('return_policy_snapshot','return_policy_version')))`,
+    );
+    const columns = new Set(policyColumns.rows.map((row) => `${row.table_name}:${row.column_name}`));
+    expect(columns.has("stores:return_policy")).toBe(true);
+    expect(columns.has("stores:return_policy_version")).toBe(true);
+    expect(columns.has("member_store_orders:return_policy_snapshot")).toBe(true);
+    expect(columns.has("member_store_orders:return_policy_version")).toBe(true);
   });
 });
