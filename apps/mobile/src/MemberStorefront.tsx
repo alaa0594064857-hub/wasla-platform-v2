@@ -30,7 +30,7 @@ export default function MemberStorefront({ rtl }: { rtl: boolean }) {
   async function loadStore() {
     const value = slug.trim().toLowerCase();
     if (!value || busy) return;
-    setBusy(true); setMessage(""); setStore(null); setProducts([]);
+    setBusy(true); setMessage(""); setStore(null); setProducts([]); setMyOrders([]); setQuantities({}); setNote("");
     try {
       const response = await fetch(`${API_BASE_URL}/api/public/stores/${encodeURIComponent(value)}`, {
         headers: { Accept: "application/json" },
