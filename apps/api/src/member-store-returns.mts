@@ -58,7 +58,7 @@ export async function handleMemberStoreReturn(req: IncomingMessage, res: ServerR
    const snapshot=order.returnPolicySnapshot;
    if(snapshot && typeof snapshot==="object" && !Array.isArray(snapshot) && snapshot.status!=="not_provided"){
     const enabled=resolution==="return"?snapshot.acceptsReturns===true:snapshot.acceptsExchanges===true;
-    if(!enabled){await client.query("ROLLBACK");send(res,409,{success:false,error:"This action is not enabled by the return policy saved with this order"});return;}
+    if(!enabled && reason!=="legal_rights_claim"){await client.query("ROLLBACK");send(res,409,{success:false,error:"This action is not enabled by the return policy saved with this order"});return;}
     const windowDays=Number(snapshot.requestWindowDays);
     const windowStart=new Date(order.deliveryConfirmedAt ?? order.orderShippedAt ?? order.orderCreatedAt).getTime();
     const withinWindow=Number.isInteger(windowDays)&&windowDays>=1&&windowDays<=365&&Date.now()<=windowStart+windowDays*86400000;
