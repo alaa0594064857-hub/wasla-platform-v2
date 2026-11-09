@@ -158,7 +158,7 @@ export default function MemberStorefront({ rtl }: { rtl: boolean }) {
 
   return <View style={{ marginTop: 20, padding: 16, borderRadius: 16, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#E5DFD1", gap: 10 }}>
     <Text style={{ color: "#14283F", fontSize: 19, fontWeight: "700", textAlign: rtl ? "right" : "left" }}>{label("تصفح متاجر الأعضاء", "Browse member stores")}</Text>
-    <Text style={{ color: "#64748B", textAlign: rtl ? "right" : "left" }}>{label("أدخل رمز المتجر لعرض المنتجات وإرسال طلب للمتجر.", "Enter a store slug to browse products and send a request to the merchant.")}</Text>
+    <Text style={{ color: "#64748B", textAlign: rtl ? "right" : "left" }}>{label("ابحث عن متجر أو شركة، ثم افتح المتجر لعرض المنتجات وإرسال طلب.", "Search for a store or business, then open it to browse products and send a request.")}</Text>
     <TextInput value={directoryQuery} onChangeText={setDirectoryQuery} placeholder={label("ابحث عن متجر أو شركة", "Search stores or businesses")} style={{ borderWidth: 1, borderColor: "#E5DFD1", borderRadius: 9, padding: 12, color: "#14283F", textAlign: rtl ? "right" : "left" }} />
     <TextInput value={directoryCountry} onChangeText={setDirectoryCountry} autoCapitalize="characters" maxLength={2} placeholder={label("رمز الدولة (اختياري: TR)", "Country code (optional: TR)")} style={{ borderWidth: 1, borderColor: "#E5DFD1", borderRadius: 9, padding: 12, color: "#14283F", textAlign: rtl ? "right" : "left" }} />
     <Pressable onPress={() => void searchPublicStores()} disabled={directoryBusy} style={{ borderWidth: 1, borderColor: "#B89545", borderRadius: 9, padding: 11, alignItems: "center" }}>
@@ -168,6 +168,7 @@ export default function MemberStorefront({ rtl }: { rtl: boolean }) {
     {directoryStores.map(item => <Pressable key={item.id} onPress={() => { setSlug(item.slug); setMessage(""); void loadStoreBySlug(item.slug); }} style={{ padding: 11, borderRadius: 9, backgroundColor: "#F8F6F1", gap: 3 }}>
       <Text style={{ color: "#14283F", fontWeight: "700", textAlign: rtl ? "right" : "left" }}>{item.name}</Text>
       {!!item.businessName && <Text style={{ color: "#64748B", textAlign: rtl ? "right" : "left" }}>{item.businessName}</Text>}
+      {!!item.businessDescription && <Text style={{ color: "#64748B", textAlign: rtl ? "right" : "left" }} numberOfLines={2}>{item.businessDescription}</Text>}
       <Text style={{ color: "#9B792F", textAlign: rtl ? "right" : "left" }}>{item.activeProductCount} {label("منتج نشط", "active products")}{item.countryCode ? ` · ${item.countryCode}` : ""}</Text>
     </Pressable>)}
     <TextInput value={slug} onChangeText={setSlug} autoCapitalize="none" placeholder={label("رمز المتجر", "Store slug")} style={{ borderWidth: 1, borderColor: "#E5DFD1", borderRadius: 9, padding: 12, color: "#14283F", textAlign: rtl ? "right" : "left" }} />
