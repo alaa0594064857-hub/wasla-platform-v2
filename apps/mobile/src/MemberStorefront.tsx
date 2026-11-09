@@ -83,7 +83,8 @@ export default function MemberStorefront({ rtl }: { rtl: boolean }) {
       rejected: ["لم يقبله المتجر", "Declined by the store"],
       cancelled: ["ملغي", "Cancelled"],
     } as const;
-    return label(...labels[status]);
+    const pair = labels[status];
+    return label(pair[0], pair[1]);
   }
 
   async function requestProduct(product: Product) {
