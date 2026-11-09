@@ -165,6 +165,52 @@ describe("member store order requests", () => {
     expect(String(clientQuery.mock.calls[5][0])).toContain("INSERT INTO notifications");
     expect(clientQuery.mock.calls[6][0]).toBe("COMMIT");
   });
+  it("allows an authorized merchant to cancel an accepted order and restores stock for the buyer", async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValueOnce({
+      user: { id: "88888888-8888-4888-8888-888888888888" },
+    } as never);
+    clientQuery
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{
+        status: "accepted", storeId: "store-1", inventoryCommittedAt: new Date(),
+        items: [{ productId: "33333333-3333-4333-8333-333333333333", quantity: 2 }],
+      }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{
+        id: "22222222-2222-4222-8222-222222222222", orderNumber: "WS-MERCHANT-CANCEL",
+        buyerUserId: "11111111-1111-4111-8111-111111111111", status: "cancelled",
+      }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "33333333-3333-4333-8333-333333333333" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: null, rows: [] });
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/stores/demo/orders/22222222-2222-4222-8222-222222222222`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "cancelled", note: "Supplier could not fulfil the order" }),
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ success: true, order: { status: "cancelled" } });
+    const updateCall = clientQuery.mock.calls[2];
+    expect(String(updateCall[0])).toContain("am.user_id = $5");
+    expect(String(updateCall[0])).toContain("p.permission_key = ANY($6::text[])");
+    expect(updateCall[1]).toEqual([
+      "cancelled", "Supplier could not fulfil the order",
+      "22222222-2222-4222-8222-222222222222", "demo",
+      "88888888-8888-4888-8888-888888888888", ["store.order.manage", "account.order.manage"],
+      null, null, null, "88888888-8888-4888-8888-888888888888",
+    ]);
+    const restoreCall = clientQuery.mock.calls[3];
+    expect(String(restoreCall[0])).toContain("stock_quantity = stock_quantity + $3");
+    expect(restoreCall[1]).toEqual(["33333333-3333-4333-8333-333333333333", "store-1", 2]);
+    const buyerNotification = clientQuery.mock.calls[5];
+    expect(String(buyerNotification[0])).toContain("The merchant cancelled your order");
+    expect(buyerNotification[1]).toEqual([
+      "11111111-1111-4111-8111-111111111111", "demo", "WS-MERCHANT-CANCEL",
+      "22222222-2222-4222-8222-222222222222",
+    ]);
+    expect(clientQuery.mock.calls[6][0]).toBe("COMMIT");
+  });
 it("notifies the buyer when a merchant accepts a pending request", async () => {
     clientQuery
       .mockResolvedValueOnce({ rowCount: null, rows: [] })
