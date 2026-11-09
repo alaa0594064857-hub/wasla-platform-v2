@@ -30,7 +30,7 @@ async function readBody(req: IncomingMessage): Promise<Record<string, unknown> |
   let raw = "", size = 0;
   for await (const chunk of req) {
     size += Buffer.byteLength(chunk);
-    if (size > 12000) throw new Error("too_large");
+    if (size > 16000) throw new Error("too_large");
     raw += chunk.toString();
   }
   const value: unknown = JSON.parse(raw);
@@ -211,8 +211,8 @@ export async function handleMemberStoreReturnPolicy(
       const row = draft.rows[0];
       await client.query(
         `UPDATE member_store_return_policy_versions SET publication_status='withdrawn'
-         WHERE store_id=$1 AND publication_status='published'`,
-        [store.id],
+         WHERE store_id=$1 AND id<>$2 AND publication_status IN ('published','draft')`,
+        [store.id, row.id],
       );
       await client.query(
         `UPDATE member_store_return_policy_versions
