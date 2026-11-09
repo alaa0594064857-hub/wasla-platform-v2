@@ -31,7 +31,7 @@ async function readBody(request: IncomingMessage): Promise<Record<string, unknow
 export function currencyFractionDigits(currency: unknown): number | null {
   if (typeof currency !== "string" || !/^[A-Z]{3}$/.test(currency)) return null;
   try {
-    return new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions().maximumFractionDigits;
+    return new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions().maximumFractionDigits ?? null;
   } catch {
     return null;
   }
