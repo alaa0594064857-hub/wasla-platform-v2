@@ -46,6 +46,18 @@ const copy = {
     email: "البريد الإلكتروني",
     password: "كلمة المرور",
     signIn: "تسجيل الدخول",
+    createAccount: "إنشاء حساب جديد",
+    haveAccount: "لديك حساب؟ تسجيل الدخول",
+    fullName: "الاسم الكامل",
+    accountType: "نوع الحساب",
+    buyer: "مشتري",
+    company: "شركة",
+    supplier: "مورد",
+    manufacturer: "مصنع",
+    trader: "تاجر",
+    brand: "علامة تجارية",
+    signUpSuccess: "تم إنشاء الحساب. تحقق من بريدك الإلكتروني لتفعيل الحساب.",
+    signUpError: "تعذر إنشاء الحساب. تحقق من البيانات أو أن البريد مستخدم مسبقاً.",
     signOut: "تسجيل الخروج",
     signedIn: "تم تسجيل الدخول",
     authError: "تعذر تسجيل الدخول. تحقق من البريد وكلمة المرور.",
@@ -85,6 +97,18 @@ const copy = {
     email: "Email address",
     password: "Password",
     signIn: "Sign in",
+    createAccount: "Create account",
+    haveAccount: "Already have an account? Sign in",
+    fullName: "Full name",
+    accountType: "Account type",
+    buyer: "Buyer",
+    company: "Company",
+    supplier: "Supplier",
+    manufacturer: "Manufacturer",
+    trader: "Trader",
+    brand: "Brand",
+    signUpSuccess: "Account created. Check your email to verify it.",
+    signUpError: "Could not create the account. Check the details or whether the email is already registered.",
     signOut: "Sign out",
     signedIn: "You are signed in",
     authError: "Sign-in failed. Check your email and password.",
@@ -118,6 +142,9 @@ export default function App() {
   const [catalogueError, setCatalogueError] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
+  const [registrationName, setRegistrationName] = useState("");
+  const [registrationType, setRegistrationType] = useState<"buyer" | "company" | "supplier" | "manufacturer" | "trader" | "brand">("buyer");
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState("");
   const [profile, setProfile] = useState<WaslaProfile | null>(null);
@@ -128,6 +155,32 @@ export default function App() {
   const [bio, setBio] = useState("");
   const [website, setWebsite] = useState("");
   const { data: session, isPending: sessionLoading } = authClient.useSession();
+
+  async function handleSignUp() {
+    if (!email.trim() || !password || !registrationName.trim() || authBusy) return;
+    setAuthBusy(true);
+    setAuthError("");
+    try {
+      const input = {
+        email: email.trim(),
+        password,
+        name: registrationName.trim(),
+        registrationType,
+        preferredLocale: language,
+      } as Parameters<typeof authClient.signUp.email>[0];
+      const result = await authClient.signUp.email(input);
+      if (result.error) setAuthError(t.signUpError);
+      else {
+        setPassword("");
+        setAuthError(t.signUpSuccess);
+        setAuthMode("signin");
+      }
+    } catch {
+      setAuthError(t.signUpError);
+    } finally {
+      setAuthBusy(false);
+    }
+  }
 
   async function handleSignIn() {
     if (!email.trim() || !password || authBusy) return;
@@ -277,13 +330,27 @@ export default function App() {
             </>
           ) : (
             <>
-              <Text style={[styles.catalogueTitle, rtl && styles.textRight]}>{t.signIn}</Text>
+              <Text style={[styles.catalogueTitle, rtl && styles.textRight]}>{authMode === "signin" ? t.signIn : t.createAccount}</Text>
+              {authMode === "signup" ? <>
+                <TextInput value={registrationName} onChangeText={setRegistrationName} placeholder={t.fullName} style={[styles.countryInput, rtl && styles.textRight]} />
+                <Text style={[styles.noteText, rtl && styles.textRight]}>{t.accountType}</Text>
+                <View style={[styles.roleChoices, rtl && styles.rowRtl]}>
+                  {(["buyer", "company", "supplier", "manufacturer", "trader", "brand"] as const).map(type => (
+                    <Pressable key={type} onPress={() => setRegistrationType(type)} style={[styles.roleChoice, registrationType === type && styles.roleChoiceActive]}>
+                      <Text style={[styles.roleChoiceText, registrationType === type && styles.roleChoiceTextActive]}>{t[type]}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </> : null}
               <TextInput value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" placeholder={t.email} style={[styles.countryInput, rtl && styles.textRight]} />
               <TextInput value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" placeholder={t.password} style={[styles.countryInput, rtl && styles.textRight]} />
-              <Pressable accessibilityRole="button" onPress={() => void handleSignIn()} disabled={authBusy || sessionLoading} style={styles.catalogueButton}>
-                {authBusy || sessionLoading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>{t.signIn}</Text>}
+              <Pressable accessibilityRole="button" onPress={() => void (authMode === "signin" ? handleSignIn() : handleSignUp())} disabled={authBusy || sessionLoading} style={styles.catalogueButton}>
+                {authBusy || sessionLoading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>{authMode === "signin" ? t.signIn : t.createAccount}</Text>}
               </Pressable>
-              {!!authError && <Text style={styles.errorText}>{authError}</Text>}
+              <Pressable accessibilityRole="button" onPress={() => { setAuthMode(authMode === "signin" ? "signup" : "signin"); setAuthError(""); }}>
+                <Text style={[styles.noteText, rtl && styles.textRight]}>{authMode === "signin" ? t.createAccount : t.haveAccount}</Text>
+              </Pressable>
+              {!!authError && <Text style={authError === t.signUpSuccess ? styles.successText : styles.errorText}>{authError}</Text>}
             </>
           )}
         </View>
@@ -347,6 +414,11 @@ const styles = StyleSheet.create({
   multilineInput: { minHeight: 92, textAlignVertical: "top" },
   successText: { color: "#18794E", fontSize: 13 },
   countryInput: { borderWidth: 1, borderColor: "#D8D1C2", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 12, color: "#14283F" },
+  roleChoices: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  roleChoice: { borderWidth: 1, borderColor: "#D8D1C2", borderRadius: 18, paddingHorizontal: 12, paddingVertical: 8 },
+  roleChoiceActive: { backgroundColor: "#14283F", borderColor: "#14283F" },
+  roleChoiceText: { color: "#14283F", fontSize: 12, fontWeight: "700" },
+  roleChoiceTextActive: { color: "#FFFFFF" },
   catalogueButton: { backgroundColor: "#14283F", padding: 14, borderRadius: 11, alignItems: "center" },
   productCard: { borderTopWidth: 1, borderTopColor: "#ECE6D9", paddingTop: 12, gap: 5 },
   productTitle: { color: "#14283F", fontSize: 15, fontWeight: "800" },
