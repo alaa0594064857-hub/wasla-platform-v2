@@ -203,7 +203,7 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F7F4EC" />
+      <StatusBar barStyle="dark-content" />
       <ScrollView contentContainerStyle={styles.page}>
         <View style={[styles.header, rtl && styles.rowRtl]}>
           <View style={[styles.brand, rtl && styles.rowRtl]}>
