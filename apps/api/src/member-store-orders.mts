@@ -100,8 +100,11 @@ export async function handleMemberStoreOrdersRequest(
       `SELECT o.id, o.order_number AS "orderNumber", o.store_id AS "storeId",
               o.buyer_user_id AS "buyerUserId", o.status, o.currency, o.items,
               o.subtotal::text AS subtotal, o.buyer_note AS "buyerNote",
-              CASE WHEN o.buyer_user_id = $2 THEN NULL ELSE o.merchant_note END AS "merchantNote", o.created_at AS "createdAt",
-              o.updated_at AS "updatedAt"
+              CASE WHEN o.buyer_user_id = $2 THEN NULL ELSE o.merchant_note END AS "merchantNote",
+              o.carrier_name AS "carrierName", o.tracking_number AS "trackingNumber",
+              o.tracking_url AS "trackingUrl", o.shipped_at AS "shippedAt",
+              o.delivery_confirmed_at AS "deliveryConfirmedAt",
+              o.created_at AS "createdAt", o.updated_at AS "updatedAt"
        FROM member_store_orders o
        INNER JOIN stores s ON s.id = o.store_id
        WHERE s.slug = $1 AND s.status = 'active'
@@ -304,11 +307,32 @@ export async function handleMemberStoreOrdersRequest(
     respond(response, 400, { success: false, error: "Invalid request body" });
     return;
   }
-  if (!isObject(body) || !["accepted", "rejected", "cancelled"].includes(String(body.status))) {
+  if (!isObject(body) || !["accepted", "rejected", "cancelled", "shipped", "completed"].includes(String(body.status))) {
     respond(response, 400, { success: false, error: "Invalid order status" });
     return;
   }
   const note = typeof body.note === "string" ? body.note.trim() : "";
+  const carrierName = typeof body.carrierName === "string" ? body.carrierName.trim() : "";
+  const trackingNumber = typeof body.trackingNumber === "string" ? body.trackingNumber.trim() : "";
+  const trackingUrl = typeof body.trackingUrl === "string" ? body.trackingUrl.trim() : "";
+  let parsedTrackingUrl: URL | undefined;
+  if (body.status === "shipped") {
+    try { parsedTrackingUrl = new URL(trackingUrl); } catch { /* validated below */ }
+  }
+  if (body.status === "shipped" &&
+      (carrierName.length < 2 || carrierName.length > 100 ||
+       trackingNumber.length < 3 || trackingNumber.length > 120 ||
+       !parsedTrackingUrl || parsedTrackingUrl.protocol !== "https:" ||
+       !parsedTrackingUrl.hostname || parsedTrackingUrl.username || parsedTrackingUrl.password ||
+       trackingUrl.length > 1000)) {
+    respond(response, 400, { success: false, error: "Shipping requires a carrier, tracking number, and secure tracking URL" });
+    return;
+  }
+  if (body.status !== "shipped" &&
+      (body.carrierName !== undefined || body.trackingNumber !== undefined || body.trackingUrl !== undefined)) {
+    respond(response, 400, { success: false, error: "Shipping details are accepted only when marking an order as shipped" });
+    return;
+  }
   if (note.length > 2000) {
     respond(response, 400, { success: false, error: "Order note is too long" });
     return;
@@ -318,15 +342,28 @@ export async function handleMemberStoreOrdersRequest(
     await client.query("BEGIN");
     const result = await client.query(
     `UPDATE member_store_orders o
-     SET status = $1, merchant_note = CASE WHEN $1 = 'cancelled' THEN merchant_note ELSE COALESCE(NULLIF($2, ''), merchant_note) END, updated_at = NOW()
+     SET status = $1,
+         merchant_note = CASE WHEN $1 IN ('cancelled', 'completed') THEN merchant_note ELSE COALESCE(NULLIF($2, ''), merchant_note) END,
+         carrier_name = CASE WHEN $1 = 'shipped' THEN $7 ELSE carrier_name END,
+         tracking_number = CASE WHEN $1 = 'shipped' THEN $8 ELSE tracking_number END,
+         tracking_url = CASE WHEN $1 = 'shipped' THEN $9 ELSE tracking_url END,
+         shipped_at = CASE WHEN $1 = 'shipped' THEN COALESCE(shipped_at, NOW()) ELSE shipped_at END,
+         delivery_confirmed_at = CASE WHEN $1 = 'completed' THEN COALESCE(delivery_confirmed_at, NOW()) ELSE delivery_confirmed_at END,
+         updated_at = NOW()
      FROM stores s
      WHERE o.id = $3 AND o.store_id = s.id AND s.slug = $4 AND s.status = 'active'
        AND (
          ($1 = 'cancelled' AND o.buyer_user_id = $5 AND o.status = 'pending_merchant_review') OR
-         ($1 IN ('accepted', 'rejected') AND o.status = 'pending_merchant_review' AND ${merchantPermission(5, 6)} )
+         ($1 IN ('accepted', 'rejected') AND o.status = 'pending_merchant_review' AND ${merchantPermission(5, 6)}) OR
+         ($1 = 'shipped' AND o.status = 'accepted' AND ${merchantPermission(5, 6)}) OR
+         ($1 = 'completed' AND o.buyer_user_id = $5 AND o.status = 'shipped')
        )
-     RETURNING o.id, o.order_number AS "orderNumber", o.buyer_user_id AS "buyerUserId", o.status, o.updated_at AS "updatedAt"`,
-    [body.status, note, orderId, slug, session.user.id, ["store.order.manage", "account.order.manage"]],
+     RETURNING o.id, o.order_number AS "orderNumber", o.buyer_user_id AS "buyerUserId",
+               o.status, o.carrier_name AS "carrierName", o.tracking_number AS "trackingNumber",
+               o.tracking_url AS "trackingUrl", o.shipped_at AS "shippedAt",
+               o.delivery_confirmed_at AS "deliveryConfirmedAt", o.updated_at AS "updatedAt"`,
+    [body.status, note, orderId, slug, session.user.id, ["store.order.manage", "account.order.manage"],
+      carrierName || null, trackingNumber || null, trackingUrl || null],
     );
   if (result.rowCount !== 1) {
     await client.query("ROLLBACK");
@@ -338,19 +375,23 @@ export async function handleMemberStoreOrdersRequest(
      VALUES ($1, 'member_store.order_status_changed', 'member_store_order', $2, $3::jsonb)`,
     [session.user.id, orderId, JSON.stringify({ status: body.status, note: note || null })],
   );
-  if (body.status !== "cancelled") {
+  if (body.status === "accepted" || body.status === "rejected" || body.status === "shipped") {
     await client.query(
       `INSERT INTO notifications
          (user_id, type, title_ar, title_en, body_ar, body_en, action_url, resource_id, metadata)
        VALUES ($1, 'member_store_order',
-         CASE WHEN $2 = 'accepted' THEN 'تم قبول طلبك' ELSE 'تم رفض طلبك' END,
-         CASE WHEN $2 = 'accepted' THEN 'Your order request was accepted' ELSE 'Your order request was declined' END,
-         CASE WHEN $2 = 'accepted' THEN 'وافق التاجر على طلبك.' ELSE 'لم يتمكن التاجر من قبول طلبك.' END,
-         CASE WHEN $2 = 'accepted' THEN 'The merchant accepted your request.' ELSE 'The merchant could not accept your request.' END,
+         CASE WHEN $2 = 'accepted' THEN 'تم قبول طلبك'
+              WHEN $2 = 'shipped' THEN 'تم شحن طلبك' ELSE 'تم رفض طلبك' END,
+         CASE WHEN $2 = 'accepted' THEN 'Your order request was accepted'
+              WHEN $2 = 'shipped' THEN 'Your order has shipped' ELSE 'Your order request was declined' END,
+         CASE WHEN $2 = 'accepted' THEN 'وافق التاجر على طلبك.'
+              WHEN $2 = 'shipped' THEN 'تم إرسال طلبك مع معلومات التتبع.' ELSE 'لم يتمكن التاجر من قبول طلبك.' END,
+         CASE WHEN $2 = 'accepted' THEN 'The merchant accepted your request.'
+              WHEN $2 = 'shipped' THEN 'The merchant shipped your order and added tracking details.' ELSE 'The merchant could not accept your request.' END,
          '/store/' || $3 || '/orders', $4, jsonb_build_object('orderNumber', $5, 'status', $2))`,
       [result.rows[0].buyerUserId, body.status, slug, orderId, result.rows[0].orderNumber],
     );
-  } else {
+  } else if (body.status === "cancelled") {
     await client.query(
       `INSERT INTO notifications
          (user_id, type, title_ar, title_en, body_ar, body_en, action_url, resource_id, metadata)
@@ -359,6 +400,38 @@ export async function handleMemberStoreOrdersRequest(
               'تم إلغاء الطلب رقم ' || $5, 'Order request ' || $5 || ' was cancelled',
               '/store/' || $1 || '/orders', $2,
               jsonb_build_object('orderNumber', $5, 'status', 'cancelled')
+       FROM (
+         SELECT am.user_id
+         FROM account_members am
+         JOIN stores s ON s.account_id = am.account_id
+         JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
+         JOIN role_permissions rp ON rp.role_id = r.id AND rp.scope_type = r.scope_type
+         JOIN permissions p ON p.id = rp.permission_id AND p.scope_type = rp.scope_type
+         WHERE s.slug = $1 AND s.status = 'active' AND am.status = 'active'
+           AND p.permission_key = ANY($3::text[])
+         UNION
+         SELECT sm.user_id
+         FROM store_members sm
+         JOIN stores s ON s.id = sm.store_id
+         JOIN roles r ON r.id = sm.role_id AND r.scope_type = sm.role_scope
+         JOIN role_permissions rp ON rp.role_id = r.id AND rp.scope_type = r.scope_type
+         JOIN permissions p ON p.id = rp.permission_id AND p.scope_type = rp.scope_type
+         WHERE s.slug = $1 AND s.status = 'active' AND sm.status = 'active'
+           AND p.permission_key = ANY($3::text[])
+       ) recipients
+       WHERE recipients.user_id <> $4`,
+      [slug, orderId, ["store.order.read", "store.order.manage", "account.order.read", "account.order.manage"],
+        session.user.id, result.rows[0].orderNumber],
+    );
+  } else if (body.status === "completed") {
+    await client.query(
+      `INSERT INTO notifications
+         (user_id, type, title_ar, title_en, body_ar, body_en, action_url, resource_id, metadata)
+       SELECT DISTINCT recipients.user_id, 'member_store_order',
+              'أكد العميل استلام الطلب', 'Buyer confirmed delivery',
+              'أكد العميل استلام الطلب رقم ' || $5, 'The buyer confirmed delivery for order ' || $5,
+              '/store/' || $1 || '/orders', $2,
+              jsonb_build_object('orderNumber', $5, 'status', 'completed')
        FROM (
          SELECT am.user_id
          FROM account_members am

@@ -97,6 +97,7 @@ describe("member store order requests", () => {
     expect(clientQuery.mock.calls[1][1]).toEqual([
       "cancelled", "", "22222222-2222-4222-8222-222222222222", "demo",
       "11111111-1111-4111-8111-111111111111", ["store.order.manage", "account.order.manage"],
+      null, null, null,
     ]);
   });
 
@@ -228,6 +229,126 @@ describe("member store order requests", () => {
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({ success: false, error: "Order total or currency precision is invalid" });
     expect(clientQuery).toHaveBeenCalledTimes(4);
+  });
+
+  it("allows an authorized merchant to ship an accepted order with secure tracking details", async () => {
+    clientQuery
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{
+        id: "22222222-2222-4222-8222-222222222222", orderNumber: "WS-SHIP",
+        buyerUserId: "77777777-7777-4777-8777-777777777777", status: "shipped",
+      }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: null, rows: [] });
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/stores/demo/orders/22222222-2222-4222-8222-222222222222`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        status: "shipped", carrierName: "DHL", trackingNumber: "TRACK-123",
+        trackingUrl: "https://tracking.example.test/TRACK-123",
+      }),
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ success: true, order: { status: "shipped" } });
+    const sql = String(clientQuery.mock.calls[1][0]);
+    expect(sql).toContain("o.status = 'accepted'");
+    expect(sql).toContain("o.status = 'shipped'");
+    expect(sql).toContain("o.tracking_url AS");
+    expect(clientQuery.mock.calls[1][1]).toEqual([
+      "shipped", "", "22222222-2222-4222-8222-222222222222", "demo",
+      "11111111-1111-4111-8111-111111111111", ["store.order.manage", "account.order.manage"],
+      "DHL", "TRACK-123", "https://tracking.example.test/TRACK-123",
+    ]);
+    expect(String(clientQuery.mock.calls[3][0])).toContain("Your order has shipped");
+  });
+
+  it("allows only the buyer to confirm delivery after shipment", async () => {
+    clientQuery
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{
+        id: "22222222-2222-4222-8222-222222222222", orderNumber: "WS-DELIVERED",
+        buyerUserId: "11111111-1111-4111-8111-111111111111", status: "completed",
+      }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: null, rows: [] });
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/stores/demo/orders/22222222-2222-4222-8222-222222222222`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "completed" }),
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ success: true, order: { status: "completed" } });
+    const sql = String(clientQuery.mock.calls[1][0]);
+    expect(sql).toContain("o.buyer_user_id = $5 AND o.status = 'shipped'");
+    expect(sql).toContain("delivery_confirmed_at");
+    expect(String(clientQuery.mock.calls[3][0])).toContain("Buyer confirmed delivery");
+  });
+
+  it("does not allow a buyer to mark an order as shipped", async () => {
+    clientQuery
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+      .mockResolvedValueOnce({ rowCount: null, rows: [] });
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/stores/demo/orders/22222222-2222-4222-8222-222222222222`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        status: "shipped", carrierName: "DHL", trackingNumber: "TRACK-123",
+        trackingUrl: "https://tracking.example.test/TRACK-123",
+      }),
+    });
+    expect(response.status).toBe(404);
+    const sql = String(clientQuery.mock.calls[1][0]);
+    expect(sql).toContain("o.status = 'accepted'");
+    expect(sql).toContain("p.permission_key = ANY(6::text[])");
+    expect(clientQuery.mock.calls[1][1][5]).toEqual(["store.order.manage", "account.order.manage"]);
+    expect(clientQuery).toHaveBeenCalledWith("ROLLBACK");
+    expect(clientQuery).not.toHaveBeenCalledWith(expect.stringContaining("INSERT INTO notifications"), expect.anything());
+  });
+
+  it("does not allow a merchant to confirm delivery on behalf of the buyer", async () => {
+    clientQuery
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+      .mockResolvedValueOnce({ rowCount: null, rows: [] });
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/stores/demo/orders/22222222-2222-4222-8222-222222222222`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "completed" }),
+    });
+    expect(response.status).toBe(404);
+    const sql = String(clientQuery.mock.calls[1][0]);
+    expect(sql).toContain("o.buyer_user_id = $5 AND o.status = 'shipped'");
+    expect(clientQuery).toHaveBeenCalledWith("ROLLBACK");
+    expect(clientQuery).not.toHaveBeenCalledWith(expect.stringContaining("INSERT INTO notifications"), expect.anything());
+  });
+
+  it("rejects insecure or incomplete shipment tracking before opening a transaction", async () => {
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/stores/demo/orders/22222222-2222-4222-8222-222222222222`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "shipped", carrierName: "DHL", trackingNumber: "TRACK-123", trackingUrl: "http://tracking.example.test" }),
+    });
+    expect(response.status).toBe(400);
+    expect(connect).not.toHaveBeenCalled();
+  });
+
+  it("rejects malformed HTTPS tracking URLs before opening a transaction", async () => {
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/stores/demo/orders/22222222-2222-4222-8222-222222222222`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "shipped", carrierName: "DHL", trackingNumber: "TRACK-123", trackingUrl: "https://" }),
+    });
+    expect(response.status).toBe(400);
+    expect(connect).not.toHaveBeenCalled();
   });
 
   it("lists only buyer-owned orders or orders the merchant may read", async () => {
