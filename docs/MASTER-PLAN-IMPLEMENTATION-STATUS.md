@@ -916,3 +916,12 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Registration submits the required `registrationType` and selected `preferredLocale` to Better Auth, then displays a check-your-email confirmation. Existing sign-in remains available.
 - Updated the mobile README with the required production email/auth environment configuration and verification testing requirements.
 - GitHub Actions runs for the mobile registration change are still in progress at container initialization; this change is not marked as CI-verified yet. Physical-device registration, email delivery, deep-link verification, and session tests remain outstanding.
+
+
+## Mobile password recovery checkpoint — 2026-11-09
+
+- Added a bilingual "Forgot password?" action to the mobile sign-in screen. It requests a reset email through Better Auth and uses the existing web app reset page as the completion destination.
+- Added `EXPO_PUBLIC_WASLA_WEB_URL` to the mobile environment example, alongside the API URL setting.
+- Confirmed the web app already contains `/forgot-password` and `/reset-password` pages; password entry and token completion remain on the existing web flow rather than pretending native deep-link completion is implemented.
+- CI for the registration checkpoint: API quality checks passed. Mobile workflow passed on the prior pre-registration checkpoint; latest registration/password-reset mobile workflow is still queued/in progress and must pass before marking these latest mobile changes verified.
+- Actual email delivery, hosted deployment, and end-to-end reset link test remain pending.
