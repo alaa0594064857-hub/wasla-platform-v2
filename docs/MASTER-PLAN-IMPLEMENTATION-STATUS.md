@@ -1005,3 +1005,6 @@ This checkpoint supersedes the earlier mobile notes above where they describe fe
 - The directory returns a maximum of 50 active stores, their public business description/site, country, and count of active products. It does not return supplier identities, sourcing references, supplier costs, or procurement links.
 - Added API tests for active-store filtering, bounded results, public-field privacy, country validation, and GET-only behavior.
 - GitHub Actions validation for this checkpoint is pending; do not treat the directory as production-verified until both API quality and main CI pass.
+
+- Mobile buyer storefront now includes a bilingual searchable directory for active member stores. Buyers can search by store/business name, see active product counts and country, then open a selected store without manually knowing its slug. The directory UI uses only the public directory response; request/order flow remains unchanged.
+- The API directory checkpoint and the mobile directory UI both require the latest GitHub CI/API quality runs to pass before being considered verified.
