@@ -5,6 +5,9 @@ import { authClient } from "./src/auth-client";
 import { getMyProfile, updateMyProfile, type WaslaProfile } from "./src/profile";
 import BusinessHub from "./src/BusinessHub";
 import MemberStorefront from "./src/MemberStorefront";
+import MessagesCenter from "./src/MessagesCenter";
+import NotificationsCenter from "./src/NotificationsCenter";
+import TradeCenter from "./src/TradeCenter";
 import {
   Pressable,
   SafeAreaView,
@@ -349,6 +352,9 @@ export default function App() {
               {!!profileMessage && <Text style={profileMessage === t.profileSaved ? styles.successText : styles.errorText}>{profileMessage}</Text>}
               <MemberStorefront rtl={rtl} />
               <BusinessHub rtl={rtl} />
+              <TradeCenter rtl={rtl} />
+              <MessagesCenter rtl={rtl} />
+              <NotificationsCenter rtl={rtl} />
               <Pressable accessibilityRole="button" onPress={() => void authClient.signOut()} style={styles.catalogueButton}>
                 <Text style={styles.primaryButtonText}>{t.signOut}</Text>
               </Pressable>
