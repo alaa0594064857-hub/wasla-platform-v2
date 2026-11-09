@@ -32,9 +32,11 @@ export type MemberStoreOrder = {
 
 async function orderRequest<T>(
   slug: string,
-  method: "GET" | "PATCH",
+  method: "GET" | "POST" | "PATCH",
   orderId?: string,
-  body?: { status: "accepted" | "rejected" | "cancelled"; note?: string },
+  body?:
+    | { items: Array<{ productId: string; quantity: number }>; note?: string }
+    | { status: "accepted" | "rejected" | "cancelled"; note?: string },
 ): Promise<T> {
   const cookie = await authClient.getCookie();
   if (!cookie) throw new WaslaApiError("AUTHENTICATION_REQUIRED", 401);
@@ -79,6 +81,24 @@ export async function reviewStoreOrder(
   const result = await orderRequest<{ order: Pick<MemberStoreOrder, "id" | "orderNumber" | "buyerUserId" | "status" | "updatedAt"> }>(
     slug, "PATCH", orderId, { status, note },
   );
+  if (!result.order) throw new WaslaApiError("INVALID_SERVER_RESPONSE");
+  return result.order;
+}
+
+
+/** Creates a buyer's request for a member store; merchant review is required before fulfilment. */
+export async function createStoreOrder(
+  slug: string,
+  items: Array<{ productId: string; quantity: number }>,
+  note?: string,
+  idempotencyKey?: string,
+): Promise<Pick<MemberStoreOrder, "id" | "orderNumber" | "status" | "currency" | "items" | "subtotal" | "createdAt">> {
+  if (!slug.trim() || items.length < 1 || items.length > 50) {
+    throw new WaslaApiError("INVALID_ORDER");
+  }
+  const result = await orderRequest<{
+    order: Pick<MemberStoreOrder, "id" | "orderNumber" | "status" | "currency" | "items" | "subtotal" | "createdAt">
+  }>(slug, "POST", undefined, { items, note });
   if (!result.order) throw new WaslaApiError("INVALID_SERVER_RESPONSE");
   return result.order;
 }
