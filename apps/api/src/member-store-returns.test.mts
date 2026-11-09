@@ -34,6 +34,21 @@ describe("member store returns and exchanges",()=>{
   const base=await start();const r=await fetch(base+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({resolution:"replacement",reason:"wrong_item",details:"The delivered item is a different model."})});
   expect(r.status).toBe(409);expect(String(clientQuery.mock.calls[3][0])).toBe("ROLLBACK");
  });
+ it("blocks a return disabled by the order-time policy snapshot",async()=>{
+  clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]}).mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"completed",buyerId:buyer,storeId:store,orderCreatedAt:new Date(),returnPolicySnapshot:{status:"published",acceptsReturns:false,acceptsExchanges:true,requestWindowDays:30}}]}).mockResolvedValueOnce({rowCount:null,rows:[]});
+  const base=await start();const r=await fetch(base+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({resolution:"return",reason:"other",details:"I would like to return this item."})});
+  expect(r.status).toBe(409);expect(String(clientQuery.mock.calls[2][0])).toBe("ROLLBACK");
+ });
+ it("blocks expired requests but allows a legal-rights claim to be reviewed",async()=>{
+  const oldDate=new Date(Date.now()-40*86400000);
+  clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]}).mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"completed",buyerId:buyer,storeId:store,orderCreatedAt:oldDate,returnPolicySnapshot:{status:"published",acceptsReturns:true,acceptsExchanges:false,requestWindowDays:30}}]}).mockResolvedValueOnce({rowCount:null,rows:[]});
+  const base=await start();const expired=await fetch(base+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({resolution:"return",reason:"other",details:"I would like to return this item."})});
+  expect(expired.status).toBe(409);
+  clientQuery.mockReset();
+  clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]}).mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"completed",buyerId:buyer,storeId:store,orderCreatedAt:oldDate,returnPolicySnapshot:{status:"published",acceptsReturns:true,acceptsExchanges:false,requestWindowDays:30}}]}).mockResolvedValueOnce({rowCount:0,rows:[]}).mockResolvedValueOnce({rowCount:1,rows:[{id:requestId,status:"submitted",requestedResolution:"return"}]}).mockResolvedValueOnce({rowCount:null,rows:[]}).mockResolvedValueOnce({rowCount:null,rows:[]});
+  const claim=await fetch(base+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({resolution:"return",reason:"legal_rights_claim",details:"I believe mandatory consumer rights apply to this order."})});
+  expect(claim.status).toBe(201);
+ });
  it("rejects invalid reason or resolution before opening a database transaction",async()=>{
   const base=await start();const r=await fetch(base+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({resolution:"cash_refund",reason:"other",details:"The item is not what I expected."})});
   expect(r.status).toBe(400);expect(connect).not.toHaveBeenCalled();
