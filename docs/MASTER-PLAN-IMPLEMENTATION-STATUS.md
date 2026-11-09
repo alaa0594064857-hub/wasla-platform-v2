@@ -957,3 +957,12 @@ This checkpoint supersedes the earlier mobile notes above where they describe fe
 - GitHub Actions verification for commit `83a7c63e985d415e014b4759a889fc483d28969f`: **WASLA API quality checks — success**; **WASLA CI — success**. This confirms automated tests/build/type checks only; it does not replace real device, live email, payment, or production deployment tests.
 - Reviewed public member catalog projections and official-store customer order responses: public catalog selects only customer-facing product/store fields and does not select supplier names, supplier costs, or source-offer references; customer order list/create responses do not return supplier identity or supplier cost fields. Internal supplier sourcing data remains in protected server/database workflows.
 - Outstanding: external image storage and native image picker; push delivery; live email verification/reset test; Android/iOS EAS builds and physical-device tests; payment/shipping integrations and end-to-end production verification.
+
+
+## Notification action safety checkpoint — 2026-11-09
+
+- Added regression tests for notification action URLs: external HTTPS URLs, protocol-relative URLs, JavaScript URLs, and backslash-based host confusion are rejected before database insertion; a valid internal application path is accepted.
+- The notification regression suite passed in CI (10 tests in the suite at the time of the run).
+- Corrected TypeScript-only test typing issues discovered by the first CI attempt. Latest verified commit: `95c2179354070f28f29a1a750041931534464300`.
+- GitHub Actions: **WASLA API quality checks — success** (run `42601289203`); **WASLA CI — success** (run `42601289246`).
+- These checks verify repository tests, type checks, and builds. They do not yet constitute live email/push delivery, mobile device, payment, shipping, or production end-to-end verification.
