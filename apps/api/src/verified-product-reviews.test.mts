@@ -88,6 +88,8 @@ describe("verified product reviews", () => {
     expect(eligibilitySql).toContain("o.status = 'completed'");
     expect(eligibilitySql).toContain("o.buyer_user_id = $2");
     expect(eligibilitySql).toContain("o.items @> jsonb_build_array");
+    expect(eligibilitySql).toContain("NOT EXISTS");
+    expect(eligibilitySql).toContain("d.status IN ('open', 'merchant_responded')");
     expect(clientQuery.mock.calls[1][1]).toEqual([productId, "11111111-1111-4111-8111-111111111111"]);
     expect(String(clientQuery.mock.calls[2][0])).toContain("ON CONFLICT (order_id, product_id) DO NOTHING");
     expect(clientQuery.mock.calls[2][1]).toEqual([
@@ -110,6 +112,24 @@ describe("verified product reviews", () => {
     });
     expect(response.status).toBe(403);
     expect(await response.json()).toMatchObject({ success: false });
+    expect(clientQuery).toHaveBeenCalledWith("ROLLBACK");
+    expect(clientQuery).not.toHaveBeenCalledWith(expect.stringContaining("INSERT INTO verified_product_reviews"), expect.anything());
+  });
+
+  it("blocks review submission when the completed order has an unresolved delivery or item dispute", async () => {
+    clientQuery
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+      .mockResolvedValueOnce({ rowCount: null, rows: [] });
+    const base = await startServer();
+    const response = await fetch(endpoint(base), {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rating: 5, body: "The review is valid length but dispute is open." }),
+    });
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ success: false });
+    const eligibilitySql = String(clientQuery.mock.calls[1][0]);
+    expect(eligibilitySql).toContain("d.status IN ('open', 'merchant_responded')");
     expect(clientQuery).toHaveBeenCalledWith("ROLLBACK");
     expect(clientQuery).not.toHaveBeenCalledWith(expect.stringContaining("INSERT INTO verified_product_reviews"), expect.anything());
   });
