@@ -1008,3 +1008,6 @@ This checkpoint supersedes the earlier mobile notes above where they describe fe
 
 - Mobile buyer storefront now includes a bilingual searchable directory for active member stores. Buyers can search by store/business name, see active product counts and country, then open a selected store without manually knowing its slug. The directory UI uses only the public directory response; request/order flow remains unchanged.
 - The API directory checkpoint and the mobile directory UI both require the latest GitHub CI/API quality runs to pass before being considered verified.
+
+- Improved the mobile member-store directory with an optional two-letter country filter (for example, TR) and a clear empty-state hint. The UI validates the country code before calling the already-tested public directory endpoint.
+- CI and API quality checks are pending for this small mobile UX update.
