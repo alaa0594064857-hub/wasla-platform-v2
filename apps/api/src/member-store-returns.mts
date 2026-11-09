@@ -46,9 +46,9 @@ export async function handleMemberStoreReturn(req: IncomingMessage, res: ServerR
  const db=getDatabasePool(), client=await db.connect();
  try{
   await client.query("BEGIN");
-  const found=await client.query("SELECT o.id,o.status AS \"orderStatus\",o.buyer_user_id AS \"buyerId\",o.created_at AS \"orderCreatedAt\",o.shipped_at AS \"orderShippedAt\",o.delivery_confirmed_at AS \"deliveryConfirmedAt\",o.return_policy_snapshot AS \"returnPolicySnapshot\",o.return_policy_version AS \"returnPolicyVersion\",s.id AS \"storeId\" FROM member_store_orders o JOIN stores s ON s.id=o.store_id WHERE o.id=$1 AND s.slug=$2 AND s.status='active' FOR UPDATE OF o",[orderId,slug]);
+  const found=await client.query("SELECT o.id,o.status AS \"orderStatus\",o.buyer_user_id AS \"buyerId\",o.created_at AS \"orderCreatedAt\",o.shipped_at AS \"orderShippedAt\",o.delivery_confirmed_at AS \"deliveryConfirmedAt\",o.return_policy_snapshot AS \"returnPolicySnapshot\",o.return_policy_version AS \"returnPolicyVersion\",o.items,o.inventory_committed_at AS \"inventoryCommittedAt\",s.id AS \"storeId\" FROM member_store_orders o JOIN stores s ON s.id=o.store_id WHERE o.id=$1 AND s.slug=$2 AND s.status='active' FOR UPDATE OF o",[orderId,slug]);
   if(!found.rowCount){await client.query("ROLLBACK");send(res,404,{success:false,error:"Order not found"});return;}
-  const order=found.rows[0]; let result;
+  const order=found.rows[0]; let result; let restockedItems:Array<{productId:string;quantity:number}>=[];
   if(action==="submit"){
    const reason=typeof input.reason==="string"?input.reason.trim():"", details=typeof input.details==="string"?input.details.trim():"";
    const resolution=input.resolution;
@@ -81,14 +81,28 @@ export async function handleMemberStoreReturn(req: IncomingMessage, res: ServerR
     const member=await client.query("SELECT 1 WHERE "+merchantSql,[request.storeId,session.user.id,["store.order.manage","account.order.manage"]]);
     if(!member.rowCount){await client.query("ROLLBACK");send(res,403,{success:false,error:"Store order management permission required"});return;}
     if(request.status!=="approved"||request.requestedResolution!=="return"){await client.query("ROLLBACK");send(res,409,{success:false,error:"Only an approved physical return can be marked received; replacement fulfillment is not enabled yet"});return;}
-    result=await client.query("UPDATE member_store_return_requests SET status='item_received',item_received_at=NOW(),updated_at=NOW() WHERE id=$1 RETURNING id,status,item_received_at AS \"itemReceivedAt\"",[request.id]);
+    if(input.restock!==undefined&&typeof input.restock!=="boolean"){await client.query("ROLLBACK");send(res,400,{success:false,error:"Restock selection must be true or false"});return;}
+    const restock=input.restock===true;
+    restockedItems=[];
+    if(restock){
+     if(!order.inventoryCommittedAt){await client.query("ROLLBACK");send(res,409,{success:false,error:"This legacy order has no recorded inventory commitment and cannot be restocked automatically"});return;}
+     if(!Array.isArray(order.items)||order.items.length===0){await client.query("ROLLBACK");send(res,409,{success:false,error:"Order items are unavailable for inventory restoration"});return;}
+     const inventoryLines=[...order.items].sort((left,right)=>String(left?.productId??"").localeCompare(String(right?.productId??"")));
+     for(const item of inventoryLines){
+      if(!item||typeof item!=="object"||typeof item.productId!=="string"||!uuid.test(item.productId)||!Number.isSafeInteger(item.quantity)||item.quantity<1){await client.query("ROLLBACK");send(res,409,{success:false,error:"Order contains invalid inventory details"});return;}
+      const restored=await client.query("UPDATE store_products SET stock_quantity=stock_quantity+$3,updated_at=NOW() WHERE id=$1 AND store_id=$2 AND stock_quantity<=2147483647-$3 RETURNING id",[item.productId,order.storeId,item.quantity]);
+      if(restored.rowCount!==1){await client.query("ROLLBACK");send(res,409,{success:false,error:"Could not restock a returned item. Contact platform support."});return;}
+      restockedItems.push({productId:item.productId,quantity:item.quantity});
+     }
+    }
+    result=await client.query("UPDATE member_store_return_requests SET status='item_received',item_received_at=NOW(),restocked_at=CASE WHEN $2 THEN NOW() ELSE NULL END,updated_at=NOW() WHERE id=$1 RETURNING id,status,item_received_at AS \"itemReceivedAt\",restocked_at AS \"restockedAt\"",[request.id,restock]);
    }else{
     if(request.buyerId!==session.user.id){await client.query("ROLLBACK");send(res,403,{success:false,error:"Only the buyer can close this request"});return;}
     if(!["rejected","item_received"].includes(request.status)){await client.query("ROLLBACK");send(res,409,{success:false,error:"Only a rejected request or a return confirmed received can be closed"});return;}
     result=await client.query("UPDATE member_store_return_requests SET status='closed',closed_at=NOW(),updated_at=NOW() WHERE id=$1 RETURNING id,status,closed_at AS \"closedAt\"",[request.id]);
    }
   }
-  await client.query("INSERT INTO audit_logs(actor_user_id,action,resource_type,resource_id,metadata) VALUES($1,$2,'member_store_return_request',$3,$4::jsonb)",[session.user.id,"order_return."+action,result.rows[0].id,JSON.stringify({orderId,storeId:order.storeId})]);
+  await client.query("INSERT INTO audit_logs(actor_user_id,action,resource_type,resource_id,metadata) VALUES($1,$2,'member_store_return_request',$3,$4::jsonb)",[session.user.id,"order_return."+action,result.rows[0].id,JSON.stringify({orderId,storeId:order.storeId,...(action==="received"?{restocked:input.restock===true,restockedItems:input.restock===true?restockedItems:[]}:{})})]);
   await client.query("COMMIT"); send(res,action==="submit"?201:200,{success:true,returnRequest:result.rows[0]});
  }catch(e){await client.query("ROLLBACK");throw e;}finally{client.release();}
 }

@@ -782,11 +782,13 @@ export async function ensureMemberStoreOrderTables(): Promise<void> {
         merchant_user_id uuid REFERENCES users(id) ON DELETE RESTRICT,
         merchant_responded_at timestamptz,
         item_received_at timestamptz,
+        restocked_at timestamptz,
         closed_at timestamptz,
         created_at timestamptz NOT NULL DEFAULT NOW(),
         updated_at timestamptz NOT NULL DEFAULT NOW()
       )
     `);
+    await client.query(`ALTER TABLE member_store_return_requests ADD COLUMN IF NOT EXISTS restocked_at timestamptz`);
     await client.query(`
       CREATE INDEX IF NOT EXISTS member_store_return_requests_order_created_idx
       ON member_store_return_requests(order_id,created_at DESC)
