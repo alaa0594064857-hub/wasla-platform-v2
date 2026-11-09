@@ -1020,4 +1020,7 @@ This checkpoint supersedes the earlier mobile notes above where they describe fe
 - Member-store order totals are now calculated with integer minor units (BigInt), not floating-point multiplication and unconditional two-decimal rounding.
 - The currency's ISO fraction digits are determined through `Intl.NumberFormat`: e.g. USD=2, JPY=0, KWD=3.
 - Orders reject unsupported currencies and prices with excess fractional digits; persisted subtotal and audit metadata use the correct currency precision.
-- Added API tests for USD, JPY, KWD totals and invalid JPY fractional precision. GitHub CI/API quality checks are pending for this change.
+- Added API tests for USD, JPY, KWD totals and invalid JPY fractional precision.
+- Final-head verification completed successfully on commit `f83fcb070901fed3447108240bff1dd3bbd1abed`: WASLA CI run `42609797066` and API Quality run `42609796915` both succeeded, including API tests/build, mobile TypeScript checks, and Expo public app-config validation.
+- Render Web and API auto-deploy attempts for the latest main commit failed with the workspace `pipeline_minutes_exhausted` limit. This is a hosted build-capacity block; the successful GitHub checks do not mean the latest code is live on Render.
+- No paid build minutes, automatic purchases, or service-plan changes were enabled.
