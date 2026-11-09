@@ -142,10 +142,14 @@ export async function handleProfileRequest(request: IncomingMessage, response: S
     respond(response, 200, { success: true, message: "Profile updated" });
   } catch (error) {
     console.error("WASLA profile API error:", error);
-    const message = error instanceof Error && error.message === "Request body too large"
+    const isTooLarge = error instanceof Error && error.message === "Request body too large";
+    const isInvalidJson = error instanceof SyntaxError;
+    const message = isTooLarge
       ? "Profile image is too large. Choose an image under 3 MB."
-      : "Could not process profile request";
-    respond(response, error instanceof Error && error.message === "Request body too large" ? 413 : 500, {
+      : isInvalidJson
+        ? "Invalid JSON body"
+        : "Could not process profile request";
+    respond(response, isTooLarge ? 413 : isInvalidJson ? 400 : 500, {
       success: false,
       error: message,
     });
