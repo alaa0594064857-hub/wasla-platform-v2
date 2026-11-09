@@ -104,6 +104,7 @@ describe("owner supplier confirmation review", () => {
     expect(String(client.query.mock.calls[1][0])).toContain('o.customer_user_id AS "customerUserId"');
     expect(String(client.query.mock.calls[2][0])).toContain("quote_valid_until > NOW()");
     expect(String(client.query.mock.calls[3][0])).toContain("supplier_confirmation_status = 'pending'");
+    expect(String(client.query.mock.calls[3][0])).not.toMatch(/payment_status\s*=|supplier_purchase_status\s*=/i);
     expect(client.query.mock.calls[3][1]).toEqual([orderId, "accepted", "supplier_confirmed"]);
     expect(client.query.mock.calls[4][1][1]).toBe("owner-1");
     expect(JSON.parse(client.query.mock.calls[4][1][3])).toMatchObject({
