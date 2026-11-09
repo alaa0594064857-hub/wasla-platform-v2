@@ -14,7 +14,7 @@ This workspace is the first native mobile foundation for WASLA, built with Expo 
 - Authenticated profile API methods for reading and updating the signed-in user's profile, using the Better Auth Expo cookie from secure storage.
 - Better Auth Expo integration v1.7.18 on the API and mobile client, using Expo SecureStore for native session/cookie persistence. Version 1.7.18 is above the published 1.7.16 security fix threshold.
 - Bilingual email/password sign-in and registration UI for buyer, company, supplier, manufacturer, trader, and brand account types. Registration asks the API to send its configured verification email; the app displays a check-your-email confirmation.
-- Configurable API base URL via `EXPO_PUBLIC_WASLA_API_URL`; the current hosted API URL is the default.
+- Configurable API and web URLs via `EXPO_PUBLIC_WASLA_API_URL` and `EXPO_PUBLIC_WASLA_WEB_URL`; the latter points password-reset requests to the existing web reset page.
 
 ## Run locally
 
@@ -25,7 +25,7 @@ pnpm install
 pnpm --filter @wasla/mobile start
 ```
 
-For a different API environment, copy `.env.example` to `.env` and set `EXPO_PUBLIC_WASLA_API_URL`.
+For a different environment, copy `.env.example` to `.env` and set both `EXPO_PUBLIC_WASLA_API_URL` and `EXPO_PUBLIC_WASLA_WEB_URL`.
 
 Use a compatible Expo Go version or an EAS development build for device testing. SDK 58 requires Node.js 22.13 or newer.
 
@@ -46,7 +46,7 @@ For iOS device builds and App Store submission, an eligible Apple Developer acco
 
 ## API and authentication boundary
 
-The mobile API client calls the public official-store catalogue using the selected two-letter destination country. The API now enables Better Auth Expo v1.7.18, trusts the `wasla://` deep-link origin, and the mobile client uses the matching v1.7.18 Expo client plugin with `expo-secure-store`. The Better Auth core and Drizzle adapter were aligned to v1.7.18 as well. The starter UI supports email/password sign-in, account registration with the API's required registration type, a verification-email confirmation message, and session-aware sign-out. This integration is source-code only until dependencies are installed and the API is successfully deployed; verify sign-in, email-verification behavior, session persistence and sign-out on physical devices before production use.
+The mobile API client calls the public official-store catalogue using the selected two-letter destination country. The API now enables Better Auth Expo v1.7.18, trusts the `wasla://` deep-link origin, and the mobile client uses the matching v1.7.18 Expo client plugin with `expo-secure-store`. The Better Auth core and Drizzle adapter were aligned to v1.7.18 as well. The starter UI supports email/password sign-in, account registration with the API's required registration type, a verification-email confirmation message, a password-reset email request routed to the existing web `/reset-password` page, and session-aware sign-out. The web app already implements both `/forgot-password` and `/reset-password`; the mobile app currently initiates the email request while password completion is handled on the web page. This integration is source-code only until dependencies are installed and the API is successfully deployed; verify sign-in, email-verification behavior, session persistence and sign-out on physical devices before production use.
 
 ## Required before calling this a usable app
 
