@@ -75,7 +75,7 @@ export async function handleMemberStoreOrdersRequest(
       `SELECT o.id, o.order_number AS "orderNumber", o.store_id AS "storeId",
               o.buyer_user_id AS "buyerUserId", o.status, o.currency, o.items,
               o.subtotal::text AS subtotal, o.buyer_note AS "buyerNote",
-              o.merchant_note AS "merchantNote", o.created_at AS "createdAt",
+              CASE WHEN o.buyer_user_id = $2 THEN NULL ELSE o.merchant_note END AS "merchantNote", o.created_at AS "createdAt",
               o.updated_at AS "updatedAt"
        FROM member_store_orders o
        INNER JOIN stores s ON s.id = o.store_id
