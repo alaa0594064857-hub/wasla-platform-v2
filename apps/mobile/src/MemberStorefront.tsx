@@ -100,12 +100,12 @@ export default function MemberStorefront({ rtl }: { rtl: boolean }) {
     try {
       const key = `wasla-${Date.now()}-${Math.random().toString(36).slice(2, 14)}`;
       const order = await createStoreOrder(store.slug, [{ productId: product.id, quantity }], note.trim() || undefined, key);
+      setNote("");
+      await loadMyOrders();
       setMessage(label(
         `تم إرسال الطلب ${order.orderNumber} إلى المتجر للمراجعة. لم يتم تحصيل أي مبلغ.`,
         `Request ${order.orderNumber} was sent for merchant review. No payment was collected.`,
       ));
-      setNote("");
-      await loadMyOrders();
     } catch (error) {
       setMessage(error instanceof WaslaApiError && error.status === 401
         ? label("انتهت الجلسة. سجّل الدخول مجدداً.", "Your session expired. Please sign in again.")
