@@ -43,6 +43,16 @@ jobs:
         run: pnpm install --no-frozen-lockfile
       - name: Run API tests
         run: pnpm --filter @wasla/api test
+      - name: Apply database migrations
+        run: pnpm db:migrate
+      - name: Seed authorization roles and permissions
+        run: |
+          pnpm --filter @wasla/api db:seed
+          pnpm --filter @wasla/api db:seed
+      - name: Run database integration tests
+        run: pnpm --filter @wasla/api test:integration
+      - name: Typecheck API
+        run: pnpm --filter @wasla/api typecheck
       - name: Build API
         run: pnpm --filter @wasla/api build
 
