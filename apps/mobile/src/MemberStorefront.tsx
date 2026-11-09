@@ -13,9 +13,16 @@ type Product = {
   imageUrl?: string | null;
 };
 type StoreData = { id: string; name: string; slug: string };
+type DirectoryStore = {
+  id: string; name: string; slug: string; businessName?: string | null;
+  countryCode?: string | null; businessDescription?: string | null; activeProductCount: number;
+};
 
 export default function MemberStorefront({ rtl }: { rtl: boolean }) {
   const [slug, setSlug] = useState("");
+  const [directoryQuery, setDirectoryQuery] = useState("");
+  const [directoryStores, setDirectoryStores] = useState<DirectoryStore[]>([]);
+  const [directoryBusy, setDirectoryBusy] = useState(false);
   const [store, setStore] = useState<StoreData | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [quantities, setQuantities] = useState<Record<string, string>>({});
@@ -27,8 +34,31 @@ export default function MemberStorefront({ rtl }: { rtl: boolean }) {
   const { data: session } = authClient.useSession();
   const label = (ar: string, en: string) => rtl ? ar : en;
 
-  async function loadStore() {
-    const value = slug.trim().toLowerCase();
+
+  async function searchPublicStores() {
+    if (directoryBusy) return;
+    setDirectoryBusy(true);
+    setMessage("");
+    try {
+      const query = directoryQuery.trim();
+      const response = await fetch(
+        `${API_BASE_URL}/api/public/stores${query ? `?q=${encodeURIComponent(query)}` : ""}`,
+        { headers: { Accept: "application/json" } },
+      );
+      const data = await response.json();
+      if (!response.ok || !data.success || !Array.isArray(data.stores)) {
+        throw new WaslaApiError("STORE_DIRECTORY_UNAVAILABLE", response.status);
+      }
+      setDirectoryStores(data.stores);
+    } catch {
+      setMessage(label("تعذر تحميل دليل المتاجر حالياً.", "Could not load the store directory right now."));
+    } finally {
+      setDirectoryBusy(false);
+    }
+  }
+
+  async function loadStoreBySlug(rawSlug: string) {
+    const value = rawSlug.trim().toLowerCase();
     if (!value || busy) return;
     setBusy(true); setMessage(""); setStore(null); setProducts([]); setMyOrders([]); setQuantities({}); setNote("");
     try {
@@ -46,6 +76,8 @@ export default function MemberStorefront({ rtl }: { rtl: boolean }) {
       setMessage(label("تعذر تحميل المتجر. تحقق من رابط/رمز المتجر.", "Could not load this store. Check its store slug."));
     } finally { setBusy(false); }
   }
+
+  async function loadStore() { await loadStoreBySlug(slug); }
 
   async function loadMyOrders() {
     if (!store || !session?.user || ordersLoading) return;
@@ -117,6 +149,15 @@ export default function MemberStorefront({ rtl }: { rtl: boolean }) {
   return <View style={{ marginTop: 20, padding: 16, borderRadius: 16, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#E5DFD1", gap: 10 }}>
     <Text style={{ color: "#14283F", fontSize: 19, fontWeight: "700", textAlign: rtl ? "right" : "left" }}>{label("تصفح متاجر الأعضاء", "Browse member stores")}</Text>
     <Text style={{ color: "#64748B", textAlign: rtl ? "right" : "left" }}>{label("أدخل رمز المتجر لعرض المنتجات وإرسال طلب للمتجر.", "Enter a store slug to browse products and send a request to the merchant.")}</Text>
+    <TextInput value={directoryQuery} onChangeText={setDirectoryQuery} placeholder={label("ابحث عن متجر أو شركة", "Search stores or businesses")} style={{ borderWidth: 1, borderColor: "#E5DFD1", borderRadius: 9, padding: 12, color: "#14283F", textAlign: rtl ? "right" : "left" }} />
+    <Pressable onPress={() => void searchPublicStores()} disabled={directoryBusy} style={{ borderWidth: 1, borderColor: "#B89545", borderRadius: 9, padding: 11, alignItems: "center" }}>
+      {directoryBusy ? <ActivityIndicator color="#14283F" /> : <Text style={{ color: "#14283F", fontWeight: "700" }}>{label("بحث في المتاجر", "Search stores")}</Text>}
+    </Pressable>
+    {directoryStores.map(item => <Pressable key={item.id} onPress={() => { setSlug(item.slug); setMessage(""); void loadStoreBySlug(item.slug); }} style={{ padding: 11, borderRadius: 9, backgroundColor: "#F8F6F1", gap: 3 }}>
+      <Text style={{ color: "#14283F", fontWeight: "700", textAlign: rtl ? "right" : "left" }}>{item.name}</Text>
+      {!!item.businessName && <Text style={{ color: "#64748B", textAlign: rtl ? "right" : "left" }}>{item.businessName}</Text>}
+      <Text style={{ color: "#9B792F", textAlign: rtl ? "right" : "left" }}>{item.activeProductCount} {label("منتج نشط", "active products")}{item.countryCode ? ` · ${item.countryCode}` : ""}</Text>
+    </Pressable>)}
     <TextInput value={slug} onChangeText={setSlug} autoCapitalize="none" placeholder={label("رمز المتجر", "Store slug")} style={{ borderWidth: 1, borderColor: "#E5DFD1", borderRadius: 9, padding: 12, color: "#14283F", textAlign: rtl ? "right" : "left" }} />
     <Pressable onPress={() => void loadStore()} disabled={busy} style={{ backgroundColor: "#14283F", borderRadius: 9, padding: 13, alignItems: "center" }}>
       {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={{ color: "#FFFFFF", fontWeight: "700" }}>{label("عرض المتجر", "Load store")}</Text>}
