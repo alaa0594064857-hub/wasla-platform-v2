@@ -745,6 +745,30 @@ async function handleRequest(
     }
     return;
   }
+  const memberStoreReturnEscalationMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/orders\/([0-9a-f-]{36})\/return\/escalation$/i);
+  if (memberStoreReturnEscalationMatch) {
+    try {
+      const { handleMemberStoreReturnEscalation } = await import("./member-store-returns.mjs");
+      await handleMemberStoreReturnEscalation(request, response, decodeURIComponent(memberStoreReturnEscalationMatch[1]), memberStoreReturnEscalationMatch[2]);
+    } catch (error) {
+      console.error("WASLA return escalation error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Return escalation service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+  const platformReturnEscalationsMatch = requestUrl.pathname.match(/^\/api\/platform\/store-return-escalations(?:\/([0-9a-f-]{36}))?$/i);
+  if (platformReturnEscalationsMatch) {
+    try {
+      const { handlePlatformMemberStoreReturnEscalations } = await import("./member-store-returns.mjs");
+      await handlePlatformMemberStoreReturnEscalations(request, response, platformReturnEscalationsMatch[1]);
+    } catch (error) {
+      console.error("WASLA platform return escalations error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Return escalation queue error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
   const platformMemberStoreReturnsMatch = requestUrl.pathname.match(/^\/api\/platform\/store-returns(?:\/([0-9a-f-]{36}))?$/i);
   if (platformMemberStoreReturnsMatch) {
     try {
