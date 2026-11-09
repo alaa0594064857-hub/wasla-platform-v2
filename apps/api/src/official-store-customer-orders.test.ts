@@ -98,10 +98,14 @@ describe("official store customer supplier-confirmation requests", () => {
       }),
     });
     expect(response.status).toBe(201);
-    expect(await response.json()).toMatchObject({
+    const customerResponse = await response.json();
+    expect(customerResponse).toMatchObject({
       success: true,
       request: { orderStatus: "awaiting_supplier", paymentStatus: "not_enabled" },
     });
+    expect(JSON.stringify(customerResponse)).not.toMatch(
+      /supplierName|supplier_name|sourcePlatform|source_platform|supplierCost|supplierUnitCost|supplierShippingCost|supplierOrderUrl|supplierTrackingUrl|sourceOfferId/i,
+    );
     expect(client.query.mock.calls[0][0]).toBe("BEGIN");
     const orderSql = String(client.query.mock.calls[1][0]);
     expect(orderSql).toContain("official_store_price_approvals");
