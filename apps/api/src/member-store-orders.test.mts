@@ -202,7 +202,7 @@ describe("member store order requests", () => {
     const baseUrl = await startServer();
     const response = await fetch(`${baseUrl}/api/stores/demo/orders`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Idempotency-Key": "currency-test-001" },
       body: JSON.stringify({ items: [{ productId: "55555555-5555-4555-8555-555555555555", quantity }] }),
     });
 
