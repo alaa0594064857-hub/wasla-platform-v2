@@ -15,6 +15,7 @@ vi.mock("./database.js", () => ({
 }));
 
 let handleNotificationsRequest: (request: IncomingMessage, response: ServerResponse) => Promise<void>;
+let createNotification: (client: never, input: { userId: string; type: "message_received"; titleAr: string; titleEn: string; actionUrl: string }) => Promise<void>;
 let server: Server | undefined;
 
 async function startServer(): Promise<string> {
@@ -31,7 +32,7 @@ async function startServer(): Promise<string> {
 }
 
 beforeEach(async () => {
-  ({ handleNotificationsRequest } = await import("./notifications.mjs"));
+  ({ handleNotificationsRequest, createNotification } = await import("./notifications.mjs"));
   mocks.getSession.mockResolvedValue({ user: { id: "notification-owner" } });
 });
 
@@ -43,6 +44,36 @@ afterEach(async () => {
   }
   server = undefined;
   vi.resetAllMocks();
+});
+
+describe("notification creation safeguards", () => {
+  it.each(["https://attacker.example/path", "//attacker.example/path", "javascript:alert(1)", "/\\\\attacker.example/path"])(
+    "rejects non-internal action URL %s before inserting",
+    async (actionUrl) => {
+      const client = { query: vi.fn() } as never;
+      await expect(createNotification(client, {
+        userId: "notification-owner",
+        type: "message_received",
+        titleAr: "رسالة",
+        titleEn: "Message",
+        actionUrl,
+      })).rejects.toThrow("Notification action must be an internal path");
+      expect((client as { query: ReturnType<typeof vi.fn> }).query).not.toHaveBeenCalled();
+    },
+  );
+
+  it("stores a valid internal action path with parameterized values", async () => {
+    const client = { query: vi.fn().mockResolvedValue({ rows: [] }) } as never;
+    await createNotification(client, {
+      userId: "notification-owner",
+      type: "message_received",
+      titleAr: "رسالة",
+      titleEn: "Message",
+      actionUrl: "/messages/conversation-1",
+    });
+    expect((client as { query: ReturnType<typeof vi.fn> }).query).toHaveBeenCalledOnce();
+    expect((client as { query: ReturnType<typeof vi.fn> }).query.mock.calls[0][1]).toContain("/messages/conversation-1");
+  });
 });
 
 describe("private in-app notifications", () => {
