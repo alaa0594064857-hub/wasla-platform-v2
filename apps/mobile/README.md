@@ -1,37 +1,51 @@
 # WASLA Mobile App
 
-This workspace is the first native mobile foundation for WASLA, built with Expo and React Native for Android and iOS.
+WASLA's native Android/iOS application is built with Expo SDK 58 and React Native 0.88. The app is bilingual (Arabic/English), supports RTL/LTR presentation, and uses the shared WASLA API.
 
-## Current foundation
+## Implemented mobile foundations
 
-- Expo SDK 58 / React Native 0.88 / React 19.3.
-- EAS build profiles for development, internal preview, and production in `eas.json`.
-- Expo SecureStore config plugin registered for native builds.
-- Android application ID: `com.wasla.app`.
-- iOS bundle identifier: `com.wasla.app`.
-- Bilingual Arabic/English starter screen with an RTL/LTR language switch.
-- Typed API client for the public, destination-specific official-store catalogue.
-- Authenticated profile API methods for reading and updating the signed-in user's profile, using the Better Auth Expo cookie from secure storage.
-- Better Auth Expo integration v1.7.18 on the API and mobile client, using Expo SecureStore for native session/cookie persistence. Version 1.7.18 is above the published 1.7.16 security fix threshold.
-- Bilingual email/password sign-in and registration UI for buyer, company, supplier, manufacturer, trader, and brand account types. Registration asks the API to send its configured verification email; the app displays a check-your-email confirmation.
-- Configurable API and web URLs via `EXPO_PUBLIC_WASLA_API_URL` and `EXPO_PUBLIC_WASLA_WEB_URL`; the latter points password-reset requests to the existing web reset page.
+- Expo SDK 58, React Native 0.88, React 19.3; Node.js >=22.13.
+- EAS development, preview and production build profiles in `eas.json`; SecureStore plugin configured.
+- Android application ID and iOS bundle identifier: `com.wasla.app`.
+- Email/password sign-in, registration for buyer/company/supplier/manufacturer/trader/brand, sign-out, and password-reset email request.
+- Authenticated profile read/update client and bilingual profile editor (display name, HTTPS avatar reference, bio and website).
+- Business account and member-store creation.
+- Member product creation and status changes.
+- Member-store public catalogue view and buyer order-request flow.
+- Merchant order inbox with accept/reject actions.
+- Private conversations, recipient search and message sending.
+- Notifications list and mark-read actions.
+- Trade opportunity creation and listing for buyer requests and supplier offers.
+- Typed API clients for the above services, using the Better Auth Expo cookie.
+- Official-store destination catalogue API client.
 
-## Run locally
+## Important integration boundaries
+
+- Registration and password reset depend on correctly configured production email delivery. Set `BETTER_AUTH_SECRET`, `RESEND_API_KEY`, a verified `RESEND_FROM_EMAIL`, and the correct public auth URL/trusted origins. A UI confirmation does not prove that an email was delivered.
+- Password-reset completion currently hands off to the existing web `/reset-password` page.
+- Profile and product images currently use HTTPS image references; native image picking/upload is not implemented.
+- Push-token registration and native push delivery are not implemented.
+- Order requests do not collect payment or reserve stock. Merchant approval is required. Do not represent an order request as a paid or confirmed fulfilment.
+- Member-store checkout is distinct from the private sourcing workflow for the official WASLA Store.
+- The mobile app must never expose internal supplier identities, supplier URLs, sourcing notes, supplier purchase references or internal costs to customers.
+- The official-store sourcing foundations are not a live Alibaba connector, arbitrary-site crawler or autonomous supplier purchasing system.
+
+## Local development
 
 From the repository root:
 
 ```bash
 pnpm install
+pnpm --filter @wasla/mobile typecheck
+pnpm --filter @wasla/mobile exec expo config --type public
 pnpm --filter @wasla/mobile start
 ```
 
-For a different environment, copy `.env.example` to `.env` and set both `EXPO_PUBLIC_WASLA_API_URL` and `EXPO_PUBLIC_WASLA_WEB_URL`.
+Copy `.env.example` to `.env` when using non-default environments and set `EXPO_PUBLIC_WASLA_API_URL` and `EXPO_PUBLIC_WASLA_WEB_URL`.
 
-Use a compatible Expo Go version or an EAS development build for device testing. SDK 58 requires Node.js 22.13 or newer.
+## EAS builds
 
-## EAS build profiles
-
-Run these commands from the repository root after installing dependencies and authenticating with an Expo account:
+Authenticate with an Expo account, then run from the repository root:
 
 ```bash
 npx eas-cli@latest build:configure --platform all
@@ -40,24 +54,19 @@ npx eas-cli@latest build --profile preview --platform android
 npx eas-cli@latest build --profile production --platform all
 ```
 
-The development profile creates an internal development-client APK. Preview creates an internal Android APK and an iOS device build. Production creates an Android App Bundle and an iOS device build for store submission. EAS may ask to create/link an Expo project and configure signing credentials; review those prompts before accepting. No EAS build has been triggered by this repository change.
+EAS may ask to create/link an Expo project and configure signing credentials. Review prompts before accepting. No EAS build has been triggered yet. Android production release requires Play Console and signing setup; iOS device builds and App Store submission require an eligible Apple Developer account and signing setup.
 
-For iOS device builds and App Store submission, an eligible Apple Developer account and signing setup are required. Android store release requires the appropriate Play Console account and signing configuration.
+## Release gates — not yet verified
 
-## API and authentication boundary
+1. Install and launch an Android build on a physical device; test iOS separately when Apple signing/device access is available.
+2. Verify registration, email verification delivery, sign-in, session persistence, sign-out and password reset against the deployed API.
+3. Test two separate accounts end-to-end: business/store creation, public browsing, buyer order request, merchant accept/reject, private messages, notifications and trade opportunities.
+4. Verify authorization and cross-account isolation for every private API route.
+5. Test Arabic RTL, English LTR, small screens, accessibility, loading/error/empty states and unreliable network conditions.
+6. Implement native image picking/upload and push-notification consent/token delivery.
+7. Add production app icon, splash artwork, privacy disclosures, store screenshots and store metadata.
+8. Re-run the full CI suite and verify successful hosted API/web deployments before public release.
 
-The mobile API client calls the public official-store catalogue using the selected two-letter destination country. The API now enables Better Auth Expo v1.7.18, trusts the `wasla://` deep-link origin, and the mobile client uses the matching v1.7.18 Expo client plugin with `expo-secure-store`. The Better Auth core and Drizzle adapter were aligned to v1.7.18 as well. The starter UI supports email/password sign-in, account registration with the API's required registration type, a verification-email confirmation message, a password-reset email request routed to the existing web `/reset-password` page, and session-aware sign-out. The web app already implements both `/forgot-password` and `/reset-password`; the mobile app currently initiates the email request while password completion is handled on the web page. This integration is source-code only until dependencies are installed and the API is successfully deployed; verify sign-in, email-verification behavior, session persistence and sign-out on physical devices before production use.
+## Cost and deployment boundary
 
-## Required before calling this a usable app
-
-1. Validate Better Auth Expo integration, registration, email-verification delivery/deep-link handling, session persistence and sign-out on Android/iOS. Ensure production API has `BETTER_AUTH_SECRET`, `RESEND_API_KEY`, and a verified `RESEND_FROM_EMAIL`; configure `BETTER_AUTH_URL` and trusted origins for the final domain.
-2. Add the profile screen and typed authenticated API methods for member shops, business accounts, trade opportunities, messages, notifications and orders.
-3. Implement navigation and complete loading, empty, error and offline states for each screen.
-4. Add push-notification registration and server-side device-token management with user consent.
-5. Verify authorization boundaries, Arabic RTL layout, accessibility and device sizes.
-6. Configure EAS development/preview/production builds, app icons, splash screens, privacy disclosures and store metadata.
-7. Test on physical Android and iOS devices before any store submission.
-
-## Safety and release boundary
-
-This is a starter app with one public API integration, not a completed or store-ready mobile application. The main web/API deployment is currently blocked by Render build-pipeline minutes. Do not trigger repeated hosted builds or enable paid automatic minute purchases without the platform owner's approval. Payment collection and autonomous supplier transactions remain disabled until their separate legal, provider and operational prerequisites are met.
+No EAS build has been started by this work. Render deployments have previously been blocked by exhausted build-pipeline minutes. Do not repeatedly trigger hosted builds or enable paid automatic minute purchases without the platform owner's explicit approval. Payment collection, supplier purchasing and autonomous transactions remain disabled pending separate legal, provider and operational approval.
