@@ -55,7 +55,14 @@ describe("official store customer supplier-confirmation requests", () => {
     expect(customerQuery).not.toContain("supplier_unit_cost");
     expect(customerQuery).not.toContain("supplier_order_url");
     expect(customerQuery).not.toContain("supplier_tracking_url");
-    expect(JSON.stringify(customerPayload)).not.toMatch(/supplierName|supplier_name|sourcePlatform|source_platform|supplierCost|supplierOrderUrl|supplierTrackingUrl/i);
+    expect(customerQuery).not.toContain("payment_provider_reference");
+    expect(customerQuery).not.toContain("supplier_purchase_reference");
+    expect(customerQuery).not.toContain("supplier_purchase_status");
+    expect(customerQuery).not.toContain("supplier_order_url");
+    expect(customerQuery).not.toContain("supplier_tracking_url");
+    expect(JSON.stringify(customerPayload)).not.toMatch(
+      /supplierName|supplier_name|sourcePlatform|source_platform|supplierCost|supplierOrderUrl|supplierTrackingUrl|paymentProviderReference|supplierPurchaseReference|supplierPurchaseStatus/i,
+    );
   });
 
   it("rejects a request without explicit customer confirmation", async () => {
