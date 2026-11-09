@@ -3,8 +3,8 @@ import { currencyFractionDigits, validAmount, validCurrency } from "./official-s
 
 describe("official store final quote validation", () => {
   it("accepts only finite positive amounts within the supported range", () => {
-    expect(validAmount(1)).toBe(true);
-    expect(validAmount(100000000)).toBe(true);
+    expect(validAmount(1, "USD")).toBe(true);
+    expect(validAmount(100000000, "USD")).toBe(true);
     expect(validAmount(25.55, "USD")).toBe(true);
     expect(validAmount(25.555, "USD")).toBe(false);
     expect(validAmount(100, "JPY")).toBe(true);
@@ -12,10 +12,10 @@ describe("official store final quote validation", () => {
     expect(validAmount(1.234, "KWD")).toBe(true);
     expect(validAmount(1.2345, "KWD")).toBe(false);
     expect(validAmount(0, "USD")).toBe(false);
-    expect(validAmount(-1)).toBe(false);
-    expect(validAmount(Number.NaN)).toBe(false);
-    expect(validAmount(Number.POSITIVE_INFINITY)).toBe(false);
-    expect(validAmount("12.50")).toBe(false);
+    expect(validAmount(-1, "USD")).toBe(false);
+    expect(validAmount(Number.NaN, "USD")).toBe(false);
+    expect(validAmount(Number.POSITIVE_INFINITY, "USD")).toBe(false);
+    expect(validAmount("12.50", "USD")).toBe(false);
   });
 
   it("accepts only uppercase three-letter currency codes", () => {
