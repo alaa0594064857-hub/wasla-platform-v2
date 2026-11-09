@@ -69,6 +69,18 @@ describe("member store return policy API", () => {
     expect(connect).not.toHaveBeenCalled();
   });
 
+  it("requires buyer authentication before accepting a support escalation", async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValueOnce(null as never);
+    const base = await start();
+    const response = await fetch(base + "/api/stores/demo/orders/22222222-2222-4222-8222-222222222222/return/escalation", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: "legal_rights_claim", details: "Please review this legal rights concern." }),
+    });
+    expect(response.status).toBe(401);
+    expect(connect).not.toHaveBeenCalled();
+  });
+
   it("rejects an invalid request window before opening a database transaction", async () => {
     const base = await start();
     const response = await fetch(base + publicPath + "/manage", {
