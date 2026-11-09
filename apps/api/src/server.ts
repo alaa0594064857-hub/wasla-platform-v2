@@ -56,6 +56,18 @@ async function handleRequest(
     return;
   }
 
+  if (requestUrl.pathname === "/api/public/stores") {
+    try {
+      const { handlePublicStoresDirectoryRequest } = await import("./public-catalog.mjs");
+      await handlePublicStoresDirectoryRequest(request, response);
+    } catch (error) {
+      console.error("WASLA public stores directory route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Public stores directory service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const publicStoreMatch = requestUrl.pathname.match(/^\/api\/public\/stores\/([^/]+)$/);
   const publicProductMatch = requestUrl.pathname.match(/^\/api\/public\/products\/([0-9a-f-]{36})$/i);
   if (publicStoreMatch || publicProductMatch) {
