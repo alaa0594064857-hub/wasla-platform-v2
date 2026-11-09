@@ -77,6 +77,8 @@ export default function MemberStoreOrdersPage() {
   const [returnResponses, setReturnResponses] = useState<Record<string, string>>({});
   const [returnBusy, setReturnBusy] = useState("");
   const [canManagePolicy, setCanManagePolicy] = useState(false);
+  const [escalationDetails, setEscalationDetails] = useState<Record<string, string>>({});
+  const [escalationReasons, setEscalationReasons] = useState<Record<string, string>>({});
 
   const copy = ar ? {
     title: "طلبات المتجر",
@@ -367,6 +369,26 @@ export default function MemberStoreOrdersPage() {
               </div>}
               {isMerchantView && order.returnStatus === "approved" && order.returnResolution === "return" && <button disabled={returnBusy === order.id} onClick={() => void returnAction(order, "received")} className="mt-3 rounded-lg border border-[#14233b] px-4 py-2 font-semibold">{ar ? "تأكيد استلام المنتج المُعاد" : "Confirm returned item received"}</button>}
               {isMerchantView && order.returnStatus === "approved" && order.returnResolution === "replacement" && <p className="mt-3 text-xs text-slate-600">{ar ? "تمت الموافقة على الاستبدال. تنفيذ شحن البديل سيُفعّل بعد استكمال تكامل الشحن." : "Replacement approved. Dispatching the replacement will be enabled after shipping integration."}</p>}
+              {!isMerchantView && <div className="mt-3 space-y-2 border-t border-[#e8d9b6] pt-3">
+                <strong>{ar ? "التواصل مع دعم وصلة" : "Contact WASLA support"}</strong>
+                <p className="text-xs leading-6 text-slate-600">{ar ? "يمكنك تصعيد الطلب للمراجعة والدعم. هذا لا يمثل حكمًا قانونيًا ولا ينشئ استردادًا ماليًا تلقائيًا." : "You can escalate this request for support review. This is not a legal determination and does not trigger an automatic refund."}</p>
+                <select value={escalationReasons[order.id] ?? (order.returnReason === "legal_rights_claim" ? "legal_rights_claim" : "merchant_nonresponse")} onChange={e => setEscalationReasons(v => ({...v,[order.id]:e.target.value}))} className="w-full rounded-lg border border-[#e5dfd1] bg-white p-3">
+                  <option value="legal_rights_claim">{ar ? "مراجعة حقوق قانونية" : "Legal rights review"}</option>
+                  <option value="merchant_nonresponse">{ar ? "عدم رد المتجر" : "Merchant has not responded"}</option>
+                  <option value="dispute">{ar ? "نزاع آخر" : "Other dispute"}</option>
+                </select>
+                <textarea rows={2} maxLength={3000} value={escalationDetails[order.id] ?? ""} onChange={e => setEscalationDetails(v => ({...v,[order.id]:e.target.value}))} placeholder={ar ? "اشرح سبب طلب الدعم..." : "Explain why you need support..."} className="w-full rounded-lg border border-[#e5dfd1] bg-white p-3" />
+                <button disabled={returnBusy === order.id || (escalationDetails[order.id] ?? "").trim().length < 10} onClick={async () => {
+                  setReturnBusy(order.id); setError("");
+                  try {
+                    const response = await fetch(`/api/stores/${encodeURIComponent(slug)}/orders/${order.id}/return/escalation`, { method:"POST", credentials:"include", headers:{"Content-Type":"application/json"}, body:JSON.stringify({reason:escalationReasons[order.id] ?? (order.returnReason === "legal_rights_claim" ? "legal_rights_claim" : "merchant_nonresponse"),details:escalationDetails[order.id]}) });
+                    const data = await response.json(); if(!response.ok || !data.success) throw new Error(data.error || "escalation");
+                    setEscalationDetails(v => ({...v,[order.id]:""}));
+                    setError(ar ? "تم إرسال طلبك إلى دعم وصلة للمراجعة." : "Your request was sent to WASLA support for review.");
+                  } catch(e) { setError(e instanceof Error ? e.message : (ar ? "تعذر إرسال طلب الدعم." : "Could not send support request.")); }
+                  finally { setReturnBusy(""); }
+                }} className="rounded-lg border border-[#b89545] px-4 py-2 font-semibold text-[#8a682b] disabled:opacity-50">{ar ? "تصعيد إلى دعم وصلة" : "Escalate to WASLA support"}</button>
+              </div>}
               {!isMerchantView && ["rejected","item_received"].includes(order.returnStatus ?? "") && <button disabled={returnBusy === order.id} onClick={() => void returnAction(order, "close")} className="mt-3 rounded-lg border border-[#14233b] px-4 py-2 font-semibold">{ar ? "إغلاق طلب الإرجاع" : "Close return request"}</button>}
             </section>}
             {!isMerchantView && !order.returnRequestId && ["shipped","completed"].includes(order.status) && <section className="mt-4 space-y-2 rounded-xl border border-[#e5dfd1] p-4">
