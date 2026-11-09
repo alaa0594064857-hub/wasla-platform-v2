@@ -102,3 +102,80 @@ export async function handlePlatformMemberStoreReturns(req:IncomingMessage,res:S
  if(!uuid.test(id)||req.method!=="PATCH"){send(res,req.method!=="PATCH"?405:400,{success:false,error:"Invalid return request"});return;}
  send(res,409,{success:false,error:"Moderator overrides are intentionally disabled; resolve the request through the buyer and merchant workflow."});
 }
+
+
+/** Buyer-to-support escalation. This records a review request only; it never decides legal entitlement or issues refunds. */
+export async function handleMemberStoreReturnEscalation(req: IncomingMessage, res: ServerResponse, slug: string, orderId: string) {
+ if (!uuid.test(orderId)) { send(res,400,{success:false,error:"Invalid order id"}); return; }
+ if (req.method !== "POST") { send(res,405,{success:false,error:"Method not allowed"}); return; }
+ const session=await auth.api.getSession({headers:fromNodeHeaders(req.headers)});
+ if (!session) { send(res,401,{success:false,error:"Authentication required"}); return; }
+ let input:Record<string,unknown>|null;
+ try { input=await body(req); } catch { send(res,400,{success:false,error:"Invalid request body"}); return; }
+ if (!input) { send(res,400,{success:false,error:"Invalid request body"}); return; }
+ const reason=String(input.reason ?? "");
+ const details=typeof input.details==="string"?input.details.trim():"";
+ if (!["legal_rights_claim","merchant_nonresponse","dispute"].includes(reason)||details.length<10||details.length>3000) {
+  send(res,400,{success:false,error:"Choose a valid escalation reason and provide 10–3000 characters"}); return;
+ }
+ const client=await getDatabasePool().connect();
+ try {
+  await client.query("BEGIN");
+  const order=await client.query(`SELECT o.id,o.buyer_user_id AS "buyerId",s.id AS "storeId"
+   FROM member_store_orders o JOIN stores s ON s.id=o.store_id
+   WHERE o.id=$1 AND s.slug=$2 AND s.status='active' FOR UPDATE OF o`,[orderId,slug]);
+  if(!order.rowCount){await client.query("ROLLBACK");send(res,404,{success:false,error:"Order not found"});return;}
+  if(order.rows[0].buyerId!==session.user.id){await client.query("ROLLBACK");send(res,403,{success:false,error:"Only the buyer can escalate this order"});return;}
+  const request=await client.query(`SELECT id,reason,status FROM member_store_return_requests
+   WHERE order_id=$1 AND buyer_user_id=$2 ORDER BY created_at DESC LIMIT 1 FOR UPDATE`,[orderId,session.user.id]);
+  if(!request.rowCount){await client.query("ROLLBACK");send(res,409,{success:false,error:"Submit a return or exchange request before escalating"});return;}
+  if(reason==="legal_rights_claim" && request.rows[0].reason!=="legal_rights_claim"){
+   await client.query("ROLLBACK");send(res,409,{success:false,error:"A legal-rights escalation must be linked to a legal-rights claim"});return;
+  }
+  const inserted=await client.query(`INSERT INTO member_store_return_escalations
+   (return_request_id,order_id,store_id,buyer_user_id,reason,details)
+   VALUES($1,$2,$3,$4,$5,$6)
+   ON CONFLICT(return_request_id) DO NOTHING
+   RETURNING id,status,reason,created_at AS "createdAt"`,
+   [request.rows[0].id,orderId,order.rows[0].storeId,session.user.id,reason,details]);
+  if(!inserted.rowCount){await client.query("ROLLBACK");send(res,409,{success:false,error:"This request has already been escalated"});return;}
+  await client.query(`INSERT INTO audit_logs(actor_user_id,action,resource_type,resource_id,metadata)
+   VALUES($1,'order_return.escalated','member_store_return_escalation',$2,$3::jsonb)`,
+   [session.user.id,inserted.rows[0].id,JSON.stringify({orderId,returnRequestId:request.rows[0].id,reason})]);
+  await client.query("COMMIT");send(res,201,{success:true,escalation:inserted.rows[0],notice:"Support review requested. This is not a legal determination or an automatic refund."});
+ } catch(e) { await client.query("ROLLBACK"); throw e; } finally { client.release(); }
+}
+
+/** Platform support queue. Staff can acknowledge or close the review record, not decide consumer-law entitlement. */
+export async function handlePlatformMemberStoreReturnEscalations(req: IncomingMessage,res: ServerResponse,id?:string) {
+ const access=await authorizePlatformPermission(req,res,"platform.reports.manage"); if(!access)return;
+ const db=getDatabasePool();
+ if(!id) {
+  if(req.method!=="GET"){send(res,405,{success:false,error:"Method not allowed"});return;}
+  const rows=await db.query(`SELECT e.id,e.return_request_id AS "returnRequestId",e.order_id AS "orderId",
+   o.order_number AS "orderNumber",e.store_id AS "storeId",s.name AS "storeName",
+   e.buyer_user_id AS "buyerUserId",e.reason,e.details,e.status,e.support_note AS "supportNote",
+   e.created_at AS "createdAt",e.handled_at AS "handledAt"
+   FROM member_store_return_escalations e
+   JOIN member_store_orders o ON o.id=e.order_id JOIN stores s ON s.id=e.store_id
+   WHERE e.status IN ('open','acknowledged') ORDER BY e.created_at ASC LIMIT 100`);
+  send(res,200,{success:true,escalations:rows.rows});return;
+ }
+ if(!uuid.test(id)||req.method!=="PATCH"){send(res,req.method!=="PATCH"?405:400,{success:false,error:"Invalid escalation"});return;}
+ let input:Record<string,unknown>|null;
+ try{input=await body(req);}catch{send(res,400,{success:false,error:"Invalid request body"});return;}
+ if(!input){send(res,400,{success:false,error:"Invalid request body"});return;}
+ const status=String(input.status??"");
+ const note=typeof input.note==="string"?input.note.trim():"";
+ if(!["acknowledged","closed"].includes(status)||note.length<5||note.length>2000){send(res,400,{success:false,error:"Choose acknowledged or closed and provide a 5–2000 character support note"});return;}
+ const result=await db.query(`UPDATE member_store_return_escalations
+  SET status=$2,support_note=$3,handled_by=$4,handled_at=NOW(),updated_at=NOW()
+  WHERE id=$1 AND status IN ('open','acknowledged')
+  RETURNING id,status,support_note AS "supportNote",handled_at AS "handledAt"`,
+  [id,status,note,access.user.id]);
+ if(!result.rowCount){send(res,404,{success:false,error:"Open escalation not found"});return;}
+ await db.query(`INSERT INTO audit_logs(actor_user_id,action,resource_type,resource_id,metadata)
+  VALUES($1,$2,'member_store_return_escalation',$3,$4::jsonb)`,
+  [access.user.id,"order_return.escalation."+status,id,JSON.stringify({status})]);
+ send(res,200,{success:true,escalation:result.rows[0]});
+}
