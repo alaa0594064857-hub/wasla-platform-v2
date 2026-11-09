@@ -987,3 +987,13 @@ This checkpoint supersedes the earlier mobile notes above where they describe fe
 - Relevant commits: `5dcbd27a3eb9948ed06bada2cce4f503616faabd` (customer privacy tests), `b69d5383839d706e867f9f566db8f8e774e3bde4` and `72a9b43d9f6fc91a769d8606fc012ed538736ee1` (currency precision implementation/tests), `bfaf9b30d810eaa5951a8c92f6e9c0b6f9be049b` (test call-site correction).
 - Final-head CI/API Quality checks are queued or running; verify the latest head before treating this checkpoint as passed.
 - No payment integration, procurement, shipment booking, Render deployment, paid spend or EAS build was enabled.
+
+
+## Mobile buyer member-store order management — 2026-11-09
+
+- Added a typed buyer cancellation client for pending member-store order requests. The API only permits cancellation by the original buyer while the request remains pending.
+- The mobile member-store storefront now lets signed-in buyers load their own requests for the selected store, view bilingual status and subtotal, and cancel a pending request.
+- The storefront filters the shared store-order response by the authenticated buyer ID before displaying buyer requests.
+- Submission confirmation is preserved after refreshing the request list.
+- API tests and API build passed on the prior revision (192 tests); the mobile typecheck identified a tuple-spread issue in the new status-label helper, which was corrected in the latest commit. CI for the correction is queued; do not mark this mobile checkpoint fully verified until it passes.
+- No payment is collected, no inventory is reserved, and no deployment or paid build was triggered for this checkpoint.
