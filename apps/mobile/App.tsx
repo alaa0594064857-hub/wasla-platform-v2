@@ -3,6 +3,7 @@ import { getOfficialStoreProducts, WaslaApiError } from "./src/api";
 import type { OfficialStoreProduct } from "./src/api";
 import { authClient } from "./src/auth-client";
 import { getMyProfile, updateMyProfile, type WaslaProfile } from "./src/profile";
+import BusinessHub from "./src/BusinessHub";
 import {
   Pressable,
   SafeAreaView,
@@ -247,6 +248,7 @@ export default function App() {
           {session?.user ? (
             <>
               <Text style={[styles.catalogueTitle, rtl && styles.textRight]}>{t.signedIn}: {session.user.name}</Text>
+              <BusinessHub rtl={rtl} />
               <Pressable accessibilityRole="button" onPress={() => void authClient.signOut()} style={styles.catalogueButton}>
                 <Text style={styles.primaryButtonText}>{t.signOut}</Text>
               </Pressable>
