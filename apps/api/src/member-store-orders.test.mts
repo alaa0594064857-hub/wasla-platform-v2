@@ -154,7 +154,11 @@ describe("member store order requests", () => {
     });
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ success: true, order: { status: "accepted" } });
-    const notificationCall = clientQuery.mock.calls[3];
+    const stockCall = clientQuery.mock.calls[2];
+    expect(String(stockCall[0])).toContain("UPDATE store_products");
+    expect(String(stockCall[0])).toContain("stock_quantity >= $3");
+    expect(stockCall[1]).toEqual(["33333333-3333-4333-8333-333333333333", "store-1", 2]);
+    const notificationCall = clientQuery.mock.calls[4];
     expect(String(notificationCall[0])).toContain("INSERT INTO notifications");
     expect(String(notificationCall[0])).toContain("Your order request was accepted");
     expect(notificationCall[1]).toEqual(["77777777-7777-4777-8777-777777777777", "accepted", "demo", "22222222-2222-4222-8222-222222222222", "WS-ACCEPT"]);
