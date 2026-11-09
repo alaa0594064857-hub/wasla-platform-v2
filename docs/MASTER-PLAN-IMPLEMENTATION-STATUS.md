@@ -966,3 +966,16 @@ This checkpoint supersedes the earlier mobile notes above where they describe fe
 - Corrected TypeScript-only test typing issues discovered by the first CI attempt. Latest verified commit: `95c2179354070f28f29a1a750041931534464300`.
 - GitHub Actions: **WASLA API quality checks — success** (run `42601289203`); **WASLA CI — success** (run `42601289246`).
 - These checks verify repository tests, type checks, and builds. They do not yet constitute live email/push delivery, mobile device, payment, shipping, or production end-to-end verification.
+
+
+## Official-store payment, procurement and fulfilment boundary review — 2026-11-09
+
+- Reviewed `official-store-customer-orders.mts`, `official-store-order-review.mts`, `official-store-final-quotes.mts`, `official-store-pricing.mts`, `official-store-orders.mts`, and their handler-level regression suites.
+- Confirmed the current sequence is an inquiry and approval workflow only: customer request → owner evidence-backed supplier reconfirmation → owner issues a time-limited final quote → customer accepts/rejects. Acceptance records a decision and notification only.
+- Confirmed no payment provider checkout/session, signed payment webhook, payment capture/refund action, supplier purchase API/action, shipment booking, carrier integration, or customer tracking update workflow is implemented. The owner order desk is explicitly read-only; payment and supplier-purchase states remain disabled/not placed.
+- Customer request history returns customer-facing product, quote and status fields only; supplier identity, source platform, source URLs, internal costs and supplier tracking/purchase references remain excluded from customer responses. Supplier operations remain owner-only.
+- Important launch boundary: do not advertise the official store as paid checkout, completed fulfilment, or live shipment tracking. Before commercial launch, implement and test a compliant payment provider/webhook flow, idempotent supplier procurement after verified payment, shipment/tracking events and customer-safe status updates, plus cancellation/returns/refunds/disputes and jurisdiction-specific disclosures.
+- Found and fixed a monetary precision validation gap in final quote issuance: amounts must now be representable in two decimal minor units; values such as 25.555 are rejected rather than silently rounded by database numeric storage. Added regression coverage for 25.55 acceptance and 25.555 rejection.
+- Commits: `35f73243666363e2232741218e1f8136b76fe42e` (API validation fix), `4dfec4bfb8ef98583c2790ccee18f475791d2dec` (precision regression test).
+- WASLA CI passed on both commits (runs `42603218312` and `42603225014`). API Quality was still running/queued at the time of this note (runs `42603218521` and `42603224633`); do not mark the final quote precision change fully verified until the latest API Quality run completes successfully.
+- No Render deployment, paid service change, payment provider, supplier purchase, shipping integration or EAS build was initiated.
