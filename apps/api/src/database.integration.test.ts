@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Pool } from "pg";
-import { closeDatabaseConnection, ensureMemberStoreOrderTables, ensureVerifiedReviewTables } from "./database.js";
+import { closeDatabaseConnection, ensureMemberStoreOrderTables, ensureStoreProductsTable, ensureVerifiedReviewTables } from "./database.js";
 import { ensureMemberStoreReturnPolicyTables } from "./member-store-return-policy-schema.mjs";
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -90,6 +90,7 @@ describe("WASLA database role permission scope integrity", () => {
 
 describe("WASLA member-store order lifecycle schema", () => {
   beforeAll(async () => {
+    await ensureStoreProductsTable();
     await ensureMemberStoreOrderTables();
     await ensureMemberStoreReturnPolicyTables();
     await ensureVerifiedReviewTables();
