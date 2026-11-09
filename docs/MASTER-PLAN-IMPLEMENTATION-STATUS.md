@@ -947,3 +947,13 @@ This checkpoint supersedes the earlier mobile notes above where they describe fe
 - No image-picker or push-notifications Expo package is currently present in `apps/mobile/package.json`; no app icon/splash asset files are present in the mobile workspace.
 - Safe implementation requires selecting/configuring an object-storage provider and private credentials before signed uploads can be implemented. Push delivery requires an Expo project/EAS project identity, device-token table/API, consent flow, and delivery/error handling. Do not invent credentials or expose storage secrets in the mobile bundle.
 - Next implementation gate: confirm storage provider/credentials and Expo project ownership/configuration; then implement signed upload and push registration as separate tested server/mobile changes. No provider, account, spend or build has been created by this review.
+
+
+## API profile regression and privacy checkpoint — 2026-11-09
+
+- Added `apps/api/src/profile.test.mts` with coverage for authentication, per-user profile scoping, malformed JSON, avatar URL validation, and authenticated profile updates.
+- Added the profile regression suite to the API test command in `apps/api/package.json`.
+- Malformed JSON sent to `PATCH /api/profile` now returns HTTP 400 with a safe validation message rather than HTTP 500.
+- GitHub Actions verification for commit `83a7c63e985d415e014b4759a889fc483d28969f`: **WASLA API quality checks — success**; **WASLA CI — success**. This confirms automated tests/build/type checks only; it does not replace real device, live email, payment, or production deployment tests.
+- Reviewed public member catalog projections and official-store customer order responses: public catalog selects only customer-facing product/store fields and does not select supplier names, supplier costs, or source-offer references; customer order list/create responses do not return supplier identity or supplier cost fields. Internal supplier sourcing data remains in protected server/database workflows.
+- Outstanding: external image storage and native image picker; push delivery; live email verification/reset test; Android/iOS EAS builds and physical-device tests; payment/shipping integrations and end-to-end production verification.
