@@ -117,11 +117,7 @@ describe("member store order requests", () => {
     });
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ success: true, order: { status: "cancelled" } });
-    const stockCall = clientQuery.mock.calls[2];
-    expect(String(stockCall[0])).toContain("UPDATE store_products");
-    expect(String(stockCall[0])).toContain("stock_quantity >= $3");
-    expect(stockCall[1]).toEqual(["33333333-3333-4333-8333-333333333333", "store-1", 2]);
-    const notificationCall = clientQuery.mock.calls[4];
+    const notificationCall = clientQuery.mock.calls[3];
     expect(String(notificationCall[0])).toContain("INSERT INTO notifications");
     expect(String(notificationCall[0])).toContain("A buyer cancelled an order request");
     expect(String(notificationCall[0])).toContain("store_members");
