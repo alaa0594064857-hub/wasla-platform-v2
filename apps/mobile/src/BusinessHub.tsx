@@ -2,12 +2,15 @@ import React, { useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { createBusinessAccount, getMyBusinessAccounts, getMyStores, createMyStore, type BusinessAccount, type MemberStore, type BusinessAccountType } from "./business";
 import { createStoreProduct, getStoreProducts, updateStoreProductStatus, type MemberStoreProduct, type StoreProductStatus } from "./store-products";
+import { getStoreOrders, reviewStoreOrder, type MemberStoreOrder } from "./store-orders";
 
 type Props = { rtl: boolean };
 export default function BusinessHub({ rtl }: Props) {
   const [accounts, setAccounts] = useState<BusinessAccount[]>([]);
   const [stores, setStores] = useState<MemberStore[]>([]);
   const [products, setProducts] = useState<MemberStoreProduct[]>([]);
+  const [orders, setOrders] = useState<MemberStoreOrder[]>([]);
+  const [merchantNote, setMerchantNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [kind, setKind] = useState<BusinessAccountType>("company");
@@ -76,6 +79,24 @@ export default function BusinessHub({ rtl }: Props) {
     } catch { setMessage(label("تعذر حفظ المنتج. تأكد من صلاحيات المتجر.", "Could not save product. Check store permissions.")); }
     finally { setBusy(false); }
   };
+  const loadOrders = async () => {
+    if (busy || !storeSlug) return;
+    setBusy(true); setMessage("");
+    try { setOrders(await getStoreOrders(storeSlug)); }
+    catch { setMessage(label("تعذر تحميل الطلبات. قد لا تملك صلاحية عرضها.", "Could not load orders. You may not have permission to view them.")); }
+    finally { setBusy(false); }
+  };
+  const decideOrder = async (order: MemberStoreOrder, status: "accepted" | "rejected") => {
+    if (busy || !storeSlug || order.status !== "pending_merchant_review") return;
+    setBusy(true); setMessage("");
+    try {
+      const updated = await reviewStoreOrder(storeSlug, order.id, status, merchantNote.trim());
+      setOrders(v => v.map(item => item.id === updated.id ? { ...item, status: updated.status, updatedAt: updated.updatedAt, merchantNote: merchantNote.trim() || item.merchantNote } : item));
+      setMerchantNote("");
+      setMessage(status === "accepted" ? label("تم قبول الطلب وإشعار العميل.", "Order accepted and buyer notified.") : label("تم رفض الطلب وإشعار العميل.", "Order rejected and buyer notified."));
+    } catch { setMessage(label("تعذر تحديث الطلب. ربما تمت مراجعته مسبقاً.", "Could not update order. It may already have been reviewed.")); }
+    finally { setBusy(false); }
+  };
   const changeStatus = async (item: MemberStoreProduct) => {
     if (busy || !storeSlug) return;
     const next: StoreProductStatus = item.status === "active" ? "draft" : "active";
@@ -105,7 +126,7 @@ export default function BusinessHub({ rtl }: Props) {
     <TextInput value={storeName} onChangeText={setStoreName} placeholder={label("اسم المتجر", "Store name")} style={[s.input, rtl && s.right]} />
     <Pressable style={s.primary} onPress={() => void addStore()} disabled={busy || !accountId}><Text style={s.white}>{label("إنشاء متجر", "Create store")}</Text></Pressable>
     {stores.map(v => <Pressable key={v.id} onPress={() => { setStoreSlug(v.slug); setProducts([]); }} style={[s.item, storeSlug === v.slug && s.active]}><Text style={s.dark}>{v.name}</Text><Text style={s.note}>{v.slug} · {v.status}</Text></Pressable>)}
-    <Text style={[s.subheading, rtl && s.right]}>{label("منتجات المتجر المحدد", "Selected store products")}</Text>
+    <Text style={[s.subheading, rtl && s.right]}>{label("طلبات المتجر المحدد", "Selected store orders")}</Text>\n    <Pressable style={s.outline} onPress={() => void loadOrders()} disabled={busy || !storeSlug}><Text style={s.dark}>{label("تحميل الطلبات", "Load orders")}</Text></Pressable>\n    <TextInput value={merchantNote} onChangeText={setMerchantNote} multiline maxLength={2000} placeholder={label("ملاحظة للعميل عند المراجعة (اختياري)", "Optional note to buyer")} style={[s.input, s.multi, rtl && s.right]} />\n    {orders.length === 0 ? <Text style={s.note}>{label("لا توجد طلبات محملة.", "No orders loaded.")}</Text> : orders.map(order => <View key={order.id} style={s.item}><Text style={s.dark}>{order.orderNumber} · {order.status}</Text><Text style={s.note}>{order.subtotal} {order.currency} · {new Date(order.createdAt).toLocaleDateString()}</Text>{order.items.map(line => <Text key={line.productId} style={s.note}>{line.title} × {line.quantity} — {line.unitPrice} {line.currency}</Text>)}{!!order.buyerNote && <Text style={s.note}>{label("ملاحظة العميل: ", "Buyer note: ")}{order.buyerNote}</Text>}{order.status === "pending_merchant_review" ? <View style={s.types}><Pressable style={s.primary} onPress={() => void decideOrder(order, "accepted")} disabled={busy}><Text style={s.white}>{label("قبول الطلب", "Accept order")}</Text></Pressable><Pressable style={s.outline} onPress={() => void decideOrder(order, "rejected")} disabled={busy}><Text style={s.dark}>{label("رفض الطلب", "Reject order")}</Text></Pressable></View> : null}</View>)}\n    <Text style={[s.subheading, rtl && s.right]}>{label("منتجات المتجر المحدد", "Selected store products")}</Text>
     <Pressable style={s.outline} onPress={() => void loadProducts()} disabled={busy || !storeSlug}><Text style={s.dark}>{label("تحميل المنتجات", "Load products")}</Text></Pressable>
     <TextInput value={productTitle} onChangeText={setProductTitle} placeholder={label("اسم المنتج", "Product title")} style={[s.input, rtl && s.right]} />
     <TextInput value={productDescription} onChangeText={setProductDescription} multiline maxLength={5000} placeholder={label("وصف المنتج", "Product description")} style={[s.input, s.multi, rtl && s.right]} />
