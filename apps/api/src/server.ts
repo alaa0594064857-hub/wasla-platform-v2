@@ -716,6 +716,22 @@ async function handleRequest(
     return;
   }
 
+  const memberStoreReturnPolicyMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/return-policy(?:\/(manage|publish|unpublish))?$/i);
+  if (memberStoreReturnPolicyMatch) {
+    try {
+      const { handleMemberStoreReturnPolicy } = await import("./member-store-return-policy.mjs");
+      const suffix = memberStoreReturnPolicyMatch[2];
+      const mode = suffix ? "manage" : "public";
+      const action = suffix === "publish" ? "publish" : suffix === "unpublish" ? "unpublish" : suffix === "manage" ? (request.method === "PUT" ? "save" : "read") : "read";
+      await handleMemberStoreReturnPolicy(request, response, decodeURIComponent(memberStoreReturnPolicyMatch[1]), mode, action);
+    } catch (error) {
+      console.error("WASLA member store return policy error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Return policy service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const memberStoreReturnMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/orders\/([0-9a-f-]{36})\/return(?:\/(response|received|close))?$/i);
   if (memberStoreReturnMatch) {
     try {
@@ -725,6 +741,30 @@ async function handleRequest(
     } catch (error) {
       console.error("WASLA member store return error:", error);
       if (!response.headersSent) sendJson(response, 500, { success: false, error: "Return request service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+  const memberStoreReturnEscalationMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/orders\/([0-9a-f-]{36})\/return\/escalation$/i);
+  if (memberStoreReturnEscalationMatch) {
+    try {
+      const { handleMemberStoreReturnEscalation } = await import("./member-store-returns.mjs");
+      await handleMemberStoreReturnEscalation(request, response, decodeURIComponent(memberStoreReturnEscalationMatch[1]), memberStoreReturnEscalationMatch[2]);
+    } catch (error) {
+      console.error("WASLA return escalation error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Return escalation service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+  const platformReturnEscalationsMatch = requestUrl.pathname.match(/^\/api\/platform\/store-return-escalations(?:\/([0-9a-f-]{36}))?$/i);
+  if (platformReturnEscalationsMatch) {
+    try {
+      const { handlePlatformMemberStoreReturnEscalations } = await import("./member-store-returns.mjs");
+      await handlePlatformMemberStoreReturnEscalations(request, response, platformReturnEscalationsMatch[1]);
+    } catch (error) {
+      console.error("WASLA platform return escalations error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Return escalation queue error" });
       else response.destroy(error instanceof Error ? error : undefined);
     }
     return;
@@ -970,6 +1010,8 @@ if (process.env.NODE_ENV !== "test") {
       await ensurePersonalThemesTable();
       await ensureStoreProductsTable();
       await ensureMemberStoreOrderTables();
+      const { ensureMemberStoreReturnPolicyTables } = await import("./member-store-return-policy-schema.mjs");
+      await ensureMemberStoreReturnPolicyTables();
       await ensureNetworkTables();
       const { ensureMessagesTables } = await import("./messages.mjs");
       await ensureMessagesTables();
