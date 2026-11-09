@@ -925,3 +925,15 @@ Do not describe the platform as commercially launch-ready based only on successf
 - Confirmed the web app already contains `/forgot-password` and `/reset-password` pages; password entry and token completion remain on the existing web flow rather than pretending native deep-link completion is implemented.
 - CI for the registration checkpoint: API quality checks passed. Mobile workflow passed on the prior pre-registration checkpoint; latest registration/password-reset mobile workflow is still queued/in progress and must pass before marking these latest mobile changes verified.
 - Actual email delivery, hosted deployment, and end-to-end reset link test remain pending.
+
+
+## Mobile consolidated feature checkpoint — 2026-11-09
+
+This checkpoint supersedes the earlier mobile notes above where they describe features as not yet implemented. Those earlier entries are retained as historical progress records.
+
+- Current mobile source includes bilingual authentication/registration/password-reset request, profile editing, business-account and member-store management, member product management, buyer storefront/order requests, merchant order review, private messaging, notifications, and trade-opportunity screens.
+- Current integration commit observed in GitHub Actions: `ad8eb006a03f919b60a02cb34d8efe49bccb1162`; WASLA CI run `42599440993` completed successfully. API quality run `42599440981` was previously reported successful; verify fresh workflow state before release.
+- Refreshed `apps/mobile/README.md` to describe the implemented source features and the remaining release gates.
+- Still not verified: EAS Android/iOS build, physical-device launch, real email delivery and verification, live two-account end-to-end flows, push notifications, native image picker/upload, payment/checkout, and production store submission.
+- Member-store order requests still do not collect payment or reserve stock. Official-store sourcing remains separate and must keep supplier identities, supplier URLs, sourcing notes and internal costs private from customers.
+- Render deployments remain blocked by exhausted build-pipeline minutes. No paid minutes or EAS build were triggered.
