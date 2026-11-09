@@ -192,6 +192,7 @@ describe("member store order requests", () => {
     expect(await response.json()).toEqual({ success: true, orders: [] });
     const sql = String(query.mock.calls[0][0]);
     expect(sql).toContain("o.buyer_user_id = $2");
+    expect(sql).toContain('CASE WHEN o.buyer_user_id = $2 THEN NULL ELSE o.merchant_note END AS "merchantNote"');
     expect(query.mock.calls[0][1]).toEqual([
       "demo", "11111111-1111-4111-8111-111111111111",
       ["store.order.read", "account.order.read"],
