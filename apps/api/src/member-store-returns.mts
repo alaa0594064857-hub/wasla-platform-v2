@@ -39,14 +39,14 @@ export async function handleMemberStoreReturn(req: IncomingMessage, res: ServerR
  if(action==="submit"){
   const reason=typeof input.reason==="string"?input.reason.trim():"";
   const details=typeof input.details==="string"?input.details.trim():"";
-  if(!["return","replacement"].includes(String(input.resolution))||!["damaged_or_defective","not_as_described","wrong_item","missing_items","other"].includes(reason)||details.length<10||details.length>3000){
+  if(!["return","replacement"].includes(String(input.resolution))||!["damaged_or_defective","not_as_described","wrong_item","missing_items","other","legal_rights_claim"].includes(reason)||details.length<10||details.length>3000){
    send(res,400,{success:false,error:"Choose a valid resolution and reason, and provide 10–3000 characters"});return;
   }
  }
  const db=getDatabasePool(), client=await db.connect();
  try{
   await client.query("BEGIN");
-  const found=await client.query("SELECT o.id,o.status AS \"orderStatus\",o.buyer_user_id AS \"buyerId\",s.id AS \"storeId\" FROM member_store_orders o JOIN stores s ON s.id=o.store_id WHERE o.id=$1 AND s.slug=$2 AND s.status='active' FOR UPDATE OF o",[orderId,slug]);
+  const found=await client.query("SELECT o.id,o.status AS \"orderStatus\",o.buyer_user_id AS \"buyerId\",o.created_at AS \"orderCreatedAt\",o.return_policy_snapshot AS \"returnPolicySnapshot\",o.return_policy_version AS \"returnPolicyVersion\",s.id AS \"storeId\" FROM member_store_orders o JOIN stores s ON s.id=o.store_id WHERE o.id=$1 AND s.slug=$2 AND s.status='active' FOR UPDATE OF o",[orderId,slug]);
   if(!found.rowCount){await client.query("ROLLBACK");send(res,404,{success:false,error:"Order not found"});return;}
   const order=found.rows[0]; let result;
   if(action==="submit"){
@@ -54,7 +54,16 @@ export async function handleMemberStoreReturn(req: IncomingMessage, res: ServerR
    const resolution=input.resolution;
    if(order.buyerId!==session.user.id){await client.query("ROLLBACK");send(res,403,{success:false,error:"Only the buyer can request a return or exchange"});return;}
    if(!["shipped","completed"].includes(order.orderStatus)){await client.query("ROLLBACK");send(res,409,{success:false,error:"Returns and exchanges are available after shipment"});return;}
-   if(!["return","replacement"].includes(String(resolution))||!["damaged_or_defective","not_as_described","wrong_item","missing_items","other"].includes(reason)||details.length<10||details.length>3000){await client.query("ROLLBACK");send(res,400,{success:false,error:"Choose a valid resolution and reason, and provide 10–3000 characters"});return;}
+   if(!["return","replacement"].includes(String(resolution))||!["damaged_or_defective","not_as_described","wrong_item","missing_items","other","legal_rights_claim"].includes(reason)||details.length<10||details.length>3000){await client.query("ROLLBACK");send(res,400,{success:false,error:"Choose a valid resolution and reason, and provide 10–3000 characters"});return;}
+   const snapshot=order.returnPolicySnapshot;
+   if(snapshot && typeof snapshot==="object" && !Array.isArray(snapshot) && snapshot.status!=="not_provided"){
+    const enabled=resolution==="return"?snapshot.acceptsReturns===true:snapshot.acceptsExchanges===true;
+    if(!enabled){await client.query("ROLLBACK");send(res,409,{success:false,error:"This action is not enabled by the return policy saved with this order"});return;}
+    const windowDays=Number(snapshot.requestWindowDays);
+    const createdAt=new Date(order.orderCreatedAt).getTime();
+    const withinWindow=Number.isInteger(windowDays)&&windowDays>=1&&windowDays<=365&&Date.now()<=createdAt+windowDays*86400000;
+    if(!withinWindow && reason!=="legal_rights_claim"){await client.query("ROLLBACK");send(res,409,{success:false,error:"The store-configured request window has passed. If you believe mandatory legal rights apply, submit a legal-rights claim for review."});return;}
+   }
    const prior=await client.query("SELECT id,status FROM member_store_return_requests WHERE order_id=$1 AND status NOT IN ('closed','rejected') LIMIT 1",[orderId]);
    if(prior.rowCount){await client.query("ROLLBACK");send(res,409,{success:false,error:"An active return or exchange request already exists"});return;}
    result=await client.query("INSERT INTO member_store_return_requests(order_id,store_id,buyer_user_id,requested_resolution,reason,details) VALUES($1,$2,$3,$4,$5,$6) RETURNING id,status,requested_resolution AS \"requestedResolution\",created_at AS \"createdAt\"",[orderId,order.storeId,session.user.id,resolution,reason,details]);
