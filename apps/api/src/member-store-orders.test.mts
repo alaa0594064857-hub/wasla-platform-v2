@@ -165,7 +165,33 @@ describe("member store order requests", () => {
     expect(String(clientQuery.mock.calls[5][0])).toContain("INSERT INTO notifications");
     expect(clientQuery.mock.calls[6][0]).toBe("COMMIT");
   });
-  it("allows an authorized merchant to cancel an accepted order and restores stock for the buyer", async () => {
+    it("does not add stock when cancelling a legacy accepted order without a commitment marker", async () => {
+    clientQuery
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{
+        status: "accepted", storeId: "store-1", inventoryCommittedAt: null,
+        items: [{ productId: "33333333-3333-4333-8333-333333333333", quantity: 2 }],
+      }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{
+        id: "22222222-2222-4222-8222-222222222222", orderNumber: "WS-LEGACY",
+        buyerUserId: "11111111-1111-4111-8111-111111111111", status: "cancelled",
+      }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: null, rows: [] });
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/stores/demo/orders/22222222-2222-4222-8222-222222222222`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "cancelled" }),
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ success: true, order: { status: "cancelled" } });
+    expect(String(clientQuery.mock.calls[1][0])).toContain("inventory_committed_at AS \"inventoryCommittedAt\"");
+    expect(clientQuery.mock.calls.some(call => String(call[0]).includes("UPDATE store_products"))).toBe(false);
+    expect(clientQuery.mock.calls[3][1][2]).not.toContain("inventoryReleased");
+  });
+it("allows an authorized merchant to cancel an accepted order and restores stock for the buyer", async () => {
     vi.mocked(auth.api.getSession).mockResolvedValueOnce({
       user: { id: "88888888-8888-4888-8888-888888888888" },
     } as never);
