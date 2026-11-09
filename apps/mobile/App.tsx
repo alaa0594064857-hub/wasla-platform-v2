@@ -4,6 +4,7 @@ import type { OfficialStoreProduct } from "./src/api";
 import { authClient } from "./src/auth-client";
 import { getMyProfile, updateMyProfile, type WaslaProfile } from "./src/profile";
 import BusinessHub from "./src/BusinessHub";
+import MemberStorefront from "./src/MemberStorefront";
 import {
   Pressable,
   SafeAreaView,
@@ -268,6 +269,7 @@ export default function App() {
                 </Pressable>
               )}
               {!!profileMessage && <Text style={profileMessage === t.profileSaved ? styles.successText : styles.errorText}>{profileMessage}</Text>}
+              <MemberStorefront rtl={rtl} />
               <BusinessHub rtl={rtl} />
               <Pressable accessibilityRole="button" onPress={() => void authClient.signOut()} style={styles.catalogueButton}>
                 <Text style={styles.primaryButtonText}>{t.signOut}</Text>
