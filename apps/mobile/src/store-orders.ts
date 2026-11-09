@@ -37,6 +37,7 @@ async function orderRequest<T>(
   body?:
     | { items: Array<{ productId: string; quantity: number }>; note?: string }
     | { status: "accepted" | "rejected" | "cancelled"; note?: string },
+  idempotencyKey?: string,
 ): Promise<T> {
   const cookie = await authClient.getCookie();
   if (!cookie) throw new WaslaApiError("AUTHENTICATION_REQUIRED", 401);
@@ -48,6 +49,7 @@ async function orderRequest<T>(
       headers: {
         Accept: "application/json",
         Cookie: cookie,
+        ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
         ...(body ? { "Content-Type": "application/json" } : {}),
       },
       ...(body ? { body: JSON.stringify(body) } : {}),
