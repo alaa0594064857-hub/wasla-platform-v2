@@ -61,6 +61,9 @@ const copy = {
     signOut: "تسجيل الخروج",
     signedIn: "تم تسجيل الدخول",
     authError: "تعذر تسجيل الدخول. تحقق من البريد وكلمة المرور.",
+    forgotPassword: "نسيت كلمة المرور؟",
+    resetEmailSent: "إذا كان البريد مسجلاً، فسيصلك رابط آمن لاستعادة كلمة المرور.",
+    resetEmailError: "تعذر إرسال رابط الاستعادة. حاول مرة أخرى.",
     profile: "الملف الشخصي",
     loadProfile: "تحميل الملف الشخصي",
     displayName: "الاسم",
@@ -112,6 +115,9 @@ const copy = {
     signOut: "Sign out",
     signedIn: "You are signed in",
     authError: "Sign-in failed. Check your email and password.",
+    forgotPassword: "Forgot password?",
+    resetEmailSent: "If the email is registered, a secure password reset link will be sent.",
+    resetEmailError: "Could not send the reset link. Please try again.",
     profile: "My profile",
     loadProfile: "Load profile",
     displayName: "Display name",
@@ -147,6 +153,7 @@ export default function App() {
   const [registrationType, setRegistrationType] = useState<"buyer" | "company" | "supplier" | "manufacturer" | "trader" | "brand">("buyer");
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState("");
+  const [resetBusy, setResetBusy] = useState(false);
   const [profile, setProfile] = useState<WaslaProfile | null>(null);
   const [profileBusy, setProfileBusy] = useState(false);
   const [profileMessage, setProfileMessage] = useState("");
@@ -155,6 +162,24 @@ export default function App() {
   const [bio, setBio] = useState("");
   const [website, setWebsite] = useState("");
   const { data: session, isPending: sessionLoading } = authClient.useSession();
+
+  async function handlePasswordReset() {
+    if (!email.trim() || resetBusy || authBusy) return;
+    setResetBusy(true);
+    setAuthError("");
+    try {
+      const webBase = (process.env.EXPO_PUBLIC_WASLA_WEB_URL || "https://wasla-web-4a64.onrender.com").replace(/\\/+$/, "");
+      const result = await authClient.requestPasswordReset({
+        email: email.trim(),
+        redirectTo: `${webBase}/reset-password`,
+      });
+      setAuthError(result.error ? t.resetEmailError : t.resetEmailSent);
+    } catch {
+      setAuthError(t.resetEmailError);
+    } finally {
+      setResetBusy(false);
+    }
+  }
 
   async function handleSignUp() {
     if (!email.trim() || !password || !registrationName.trim() || authBusy) return;
@@ -347,10 +372,13 @@ export default function App() {
               <Pressable accessibilityRole="button" onPress={() => void (authMode === "signin" ? handleSignIn() : handleSignUp())} disabled={authBusy || sessionLoading} style={styles.catalogueButton}>
                 {authBusy || sessionLoading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>{authMode === "signin" ? t.signIn : t.createAccount}</Text>}
               </Pressable>
+              {authMode === "signin" ? <Pressable accessibilityRole="button" onPress={() => void handlePasswordReset()} disabled={resetBusy || !email.trim()}>
+                <Text style={[styles.noteText, rtl && styles.textRight]}>{resetBusy ? (rtl ? "جارٍ إرسال الرابط..." : "Sending reset link...") : t.forgotPassword}</Text>
+              </Pressable> : null}
               <Pressable accessibilityRole="button" onPress={() => { setAuthMode(authMode === "signin" ? "signup" : "signin"); setAuthError(""); }}>
                 <Text style={[styles.noteText, rtl && styles.textRight]}>{authMode === "signin" ? t.createAccount : t.haveAccount}</Text>
               </Pressable>
-              {!!authError && <Text style={authError === t.signUpSuccess ? styles.successText : styles.errorText}>{authError}</Text>}
+              {!!authError && <Text style={[authError === t.signUpSuccess || authError === t.resetEmailSent ? styles.successText : styles.errorText]}>{authError}</Text>}
             </>
           )}
         </View>
