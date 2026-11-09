@@ -970,6 +970,8 @@ if (process.env.NODE_ENV !== "test") {
       await ensurePersonalThemesTable();
       await ensureStoreProductsTable();
       await ensureMemberStoreOrderTables();
+      const { ensureMemberStoreReturnPolicyTables } = await import("./member-store-return-policy-schema.mjs");
+      await ensureMemberStoreReturnPolicyTables();
       await ensureNetworkTables();
       const { ensureMessagesTables } = await import("./messages.mjs");
       await ensureMessagesTables();
