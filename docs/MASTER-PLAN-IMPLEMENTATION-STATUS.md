@@ -995,5 +995,6 @@ This checkpoint supersedes the earlier mobile notes above where they describe fe
 - The mobile member-store storefront now lets signed-in buyers load their own requests for the selected store, view bilingual status and subtotal, and cancel a pending request.
 - The storefront filters the shared store-order response by the authenticated buyer ID before displaying buyer requests.
 - Submission confirmation is preserved after refreshing the request list.
-- API tests and API build passed on the prior revision (192 tests); the mobile typecheck identified a tuple-spread issue in the new status-label helper, which was corrected in the latest commit. CI for the correction is queued; do not mark this mobile checkpoint fully verified until it passes.
+- API tests and API build passed on the prior revision (192 tests). The tuple-spread issue in the mobile status-label helper was corrected, and both WASLA CI and API quality checks passed on commit c5534f712042e096b688254ea897fee6b4775a9c.
+- A subsequent storefront-switching fix clears the previous store's products, buyer requests, quantities, and note when loading another store; CI for that final UI cleanup is queued.
 - No payment is collected, no inventory is reserved, and no deployment or paid build was triggered for this checkpoint.
