@@ -790,6 +790,12 @@ export async function ensureMemberStoreOrderTables(): Promise<void> {
       CREATE INDEX IF NOT EXISTS member_store_return_requests_order_created_idx
       ON member_store_return_requests(order_id,created_at DESC)
     `);
+    await client.query(`ALTER TABLE member_store_return_requests DROP CONSTRAINT IF EXISTS member_store_return_requests_reason_check`);
+    await client.query(`
+      ALTER TABLE member_store_return_requests
+      ADD CONSTRAINT member_store_return_requests_reason_check
+      CHECK (reason IN ('damaged_or_defective','not_as_described','wrong_item','missing_items','other','legal_rights_claim'))
+    `);
     await client.query(`
       CREATE UNIQUE INDEX IF NOT EXISTS member_store_return_requests_one_active_idx
       ON member_store_return_requests(order_id)
