@@ -193,7 +193,7 @@ describe("member store order requests", () => {
     expect(await response.json()).toMatchObject({ success: true, order: { status: "cancelled" } });
     const updateCall = clientQuery.mock.calls[2];
     expect(String(updateCall[0])).toContain("am.user_id = 5");
-    expect(String(updateCall[0])).toContain("p.permission_key = ANY($6::text[])");
+    expect(String(updateCall[0])).toContain("p.permission_key = ANY(6::text[])");
     expect(updateCall[1]).toEqual([
       "cancelled", "Supplier could not fulfil the order",
       "22222222-2222-4222-8222-222222222222", "demo",
