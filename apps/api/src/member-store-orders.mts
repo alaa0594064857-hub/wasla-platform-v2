@@ -261,7 +261,7 @@ export async function handleMemberStoreOrdersRequest(
                    items, subtotal::text AS subtotal, created_at AS "createdAt"`,
         [orderNumber, store.rows[0].id, session.user.id, snapshots[0].currency,
           JSON.stringify(snapshots), subtotal.toFixed(2), note || null, idempotencyKey ?? null,
-          store.rows[0].returnPolicy ? JSON.stringify(store.rows[0].returnPolicy) : null,
+          JSON.stringify(store.rows[0].returnPolicy && typeof store.rows[0].returnPolicy === "object" ? store.rows[0].returnPolicy : { status: "not_provided" }),
           Number(store.rows[0].returnPolicyVersion) > 0 ? store.rows[0].returnPolicyVersion : null,
           session.user.id],
       );
