@@ -248,15 +248,7 @@ export default function App() {
           {session?.user ? (
             <>
               <Text style={[styles.catalogueTitle, rtl && styles.textRight]}>{t.signedIn}: {session.user.name}</Text>
-              <BusinessHub rtl={rtl} />
-              <Pressable accessibilityRole="button" onPress={() => void authClient.signOut()} style={styles.catalogueButton}>
-                <Text style={styles.primaryButtonText}>{t.signOut}</Text>
-              </Pressable>
-            </>
-          ) : (
-            <>
               <Text style={[styles.catalogueTitle, rtl && styles.textRight]}>{t.profile}</Text>
-              <Text style={[styles.noteText, rtl && styles.textRight]}>{t.profileHint}</Text>
               {profileBusy && !profile ? <ActivityIndicator color="#14283F" /> : null}
               {profile ? (
                 <>
@@ -276,6 +268,10 @@ export default function App() {
                 </Pressable>
               )}
               {!!profileMessage && <Text style={profileMessage === t.profileSaved ? styles.successText : styles.errorText}>{profileMessage}</Text>}
+              <BusinessHub rtl={rtl} />
+              <Pressable accessibilityRole="button" onPress={() => void authClient.signOut()} style={styles.catalogueButton}>
+                <Text style={styles.primaryButtonText}>{t.signOut}</Text>
+              </Pressable>
             </>
           ) : (
             <>
