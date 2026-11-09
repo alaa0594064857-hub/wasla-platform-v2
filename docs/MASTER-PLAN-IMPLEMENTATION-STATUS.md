@@ -888,3 +888,13 @@ Do not describe the platform as commercially launch-ready based only on successf
 - The screen uses existing server contracts: account types company/supplier/manufacturer/trader/brand, and store creation tied to a selected business account. Server-side authentication and permission checks remain authoritative.
 - UI integration CI runs were still pending when this checkpoint was written. Do not treat the new screen as validated until those runs complete successfully.
 - No Render deployment, Expo build, physical-device test, or live authenticated end-to-end test was performed.
+
+
+## Mobile member commerce checkpoint — 2026-11-09
+
+- The profile/business hub UI repair and member product-management UI/API integration passed both GitHub Actions workflows on commit `23d16893e1656773f792fad4e1f946d5653f9696` (runs `42543361925` and `42543361958`).
+- The mobile member product screen supports listing products, creating drafts, and activating/deactivating products through the existing authenticated store-product routes. Product creation validates price, currency, and stock; server-side permissions remain authoritative.
+- Added `apps/mobile/src/store-orders.ts` for the existing authenticated member-store order GET/PATCH routes.
+- Extended the bilingual BusinessHub screen with order loading and merchant accept/reject actions. The server sends the buyer a notification when the merchant reviews an order; the mobile client does not bypass the server's order-state or permission checks.
+- GitHub Actions for the order client and UI integration are running on commit `de23f2984c76f2c82245ef7557245f3d4d7f5924`; do not mark this checkpoint validated until both workflows finish successfully.
+- This is source-code integration only. No live account/order E2E, physical-device test, Expo Android/iOS build, Render deployment, or store submission has been performed. Render remains blocked by the workspace build-pipeline minute limit; do not enable paid usage without owner approval.
