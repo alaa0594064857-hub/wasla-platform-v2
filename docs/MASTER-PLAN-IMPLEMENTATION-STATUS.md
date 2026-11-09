@@ -937,3 +937,13 @@ This checkpoint supersedes the earlier mobile notes above where they describe fe
 - Still not verified: EAS Android/iOS build, physical-device launch, real email delivery and verification, live two-account end-to-end flows, push notifications, native image picker/upload, payment/checkout, and production store submission.
 - Member-store order requests still do not collect payment or reserve stock. Official-store sourcing remains separate and must keep supplier identities, supplier URLs, sourcing notes and internal costs private from customers.
 - Render deployments remain blocked by exhausted build-pipeline minutes. No paid minutes or EAS build were triggered.
+
+
+## Mobile media and push readiness review — 2026-11-09
+
+- Repository tree review found no dedicated object-storage adapter, signed-upload endpoint, media service, Expo push-token registration endpoint, or native push-delivery integration.
+- The existing profile API accepts an HTTPS avatar URL or a base64 image data URI and stores the reference in the `profiles.avatar_reference` column. This is a compatibility fallback, not a scalable media-storage architecture; do not expand base64/database image storage as the long-term upload solution.
+- The current notification API is an in-app notification inbox (list/read/read-all). It does not register devices or deliver operating-system push notifications.
+- No image-picker or push-notifications Expo package is currently present in `apps/mobile/package.json`; no app icon/splash asset files are present in the mobile workspace.
+- Safe implementation requires selecting/configuring an object-storage provider and private credentials before signed uploads can be implemented. Push delivery requires an Expo project/EAS project identity, device-token table/API, consent flow, and delivery/error handling. Do not invent credentials or expose storage secrets in the mobile bundle.
+- Next implementation gate: confirm storage provider/credentials and Expo project ownership/configuration; then implement signed upload and push registration as separate tested server/mobile changes. No provider, account, spend or build has been created by this review.
