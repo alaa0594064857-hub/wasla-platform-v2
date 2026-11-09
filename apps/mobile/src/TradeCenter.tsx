@@ -1,0 +1,28 @@
+import React,{useEffect,useState} from "react";
+import {ActivityIndicator,Pressable,Text,TextInput,View} from "react-native";
+import {getMyBusinessAccounts,type BusinessAccount} from "./business";
+import {createTradeOpportunity,getTradeOpportunities,type TradeOpportunity} from "./communications";
+export default function TradeCenter({rtl}:{rtl:boolean}){
+ const [accounts,setAccounts]=useState<BusinessAccount[]>([]),[items,setItems]=useState<TradeOpportunity[]>([]);
+ const [accountId,setAccountId]=useState(""),[kind,setKind]=useState<"buyer_request"|"supplier_offer">("buyer_request");
+ const [title,setTitle]=useState(""),[description,setDescription]=useState(""),[category,setCategory]=useState(""),[quantity,setQuantity]=useState(""),[destination,setDestination]=useState(""),[origin,setOrigin]=useState(""),[currency,setCurrency]=useState("USD"),[price,setPrice]=useState("");
+ const [busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
+ const label=(a:string,b:string)=>rtl?a:b;
+ async function load(){setBusy(true);try{const [a,o]=await Promise.all([getMyBusinessAccounts(),getTradeOpportunities()]);setAccounts(a);setItems(o);if(!accountId&&a[0])setAccountId(a[0].id);setError("");}catch{setError(label("تعذر تحميل الفرص أو حسابات الأعمال. تحقق من صلاحيات الحساب.","Could not load opportunities or business accounts. Check account permissions."));}finally{setBusy(false);}}
+ useEffect(()=>{void load();},[]);
+ async function submit(){if(!accountId||title.trim().length<3||description.trim().length<10||!category.trim()){setError(label("أكمل الحساب والعنوان والفئة والوصف (10 أحرف على الأقل).","Choose an account and enter a title, category and description (10+ characters)."));return;}setBusy(true);setError("");setMessage("");try{await createTradeOpportunity({accountId,opportunityType:kind,title:title.trim(),description:description.trim(),productCategory:category.trim(),quantity:quantity?Number(quantity):undefined,quantityUnit:"units",targetCountry:origin.toUpperCase(),destinationCountry:destination.toUpperCase(),currency:currency.toUpperCase(),targetUnitPrice:price?Number(price):undefined});setTitle("");setDescription("");setCategory("");setQuantity("");setPrice("");setMessage(label("أُرسلت الفرصة للمراجعة الخاصة. لن تدخل المطابقة قبل اعتمادها.","Submitted for private review. It will not be matched until approved."));await load();}catch{setError(label("تعذر إرسال الفرصة. تحقق من صلاحية إنشاء الفرص لحساب الأعمال.","Could not submit. Check this account's trade-creation permission."));}finally{setBusy(false);}}
+ const field=(value:string,change:(v:string)=>void,placeholder:string,numeric=false)=><TextInput value={value} onChangeText={change} placeholder={placeholder} keyboardType={numeric?"numeric":"default"} style={{borderWidth:1,borderColor:"#D8D1C2",borderRadius:9,padding:10,color:"#14283F"}}/>;
+ return <View style={{gap:9,borderTopWidth:1,borderColor:"#ECE6D9",paddingTop:14}}>
+ <Text style={{fontSize:18,fontWeight:"900",color:"#14283F",textAlign:rtl?"right":"left"}}>{label("الفرص التجارية","Trade opportunities")}</Text>
+ {accounts.length?<View style={{flexDirection:rtl?"row-reverse":"row",flexWrap:"wrap",gap:6}}>{accounts.map(a=><Pressable key={a.id} onPress={()=>setAccountId(a.id)} style={{padding:9,borderRadius:9,backgroundColor:accountId===a.id?"#14283F":"#EEE9DD"}}><Text style={{color:accountId===a.id?"white":"#14283F"}}>{a.display_name}</Text></Pressable>)}</View>:<Text style={{color:"#626A72"}}>{label("أنشئ حساب أعمال أولاً من قسم الأعمال.","Create a business account first in Business Hub.")}</Text>}
+ <View style={{flexDirection:rtl?"row-reverse":"row",gap:7}}>{(["buyer_request","supplier_offer"] as const).map(k=><Pressable key={k} onPress={()=>setKind(k)} style={{flex:1,padding:10,borderRadius:9,backgroundColor:kind===k?"#14283F":"#EEE9DD"}}><Text style={{color:kind===k?"white":"#14283F",textAlign:"center"}}>{k==="buyer_request"?label("طلب شراء","Buyer request"):label("عرض مورد","Supplier offer")}</Text></Pressable>)}</View>
+ {field(title,setTitle,label("عنوان الفرصة","Opportunity title"))}{field(category,setCategory,label("فئة المنتج","Product category"))}{field(description,setDescription,label("الوصف والمواصفات (10 أحرف على الأقل)","Description/specifications (10+ chars)"))}
+ {field(quantity,setQuantity,label("الكمية","Quantity"),true)}{field(origin,setOrigin,label("بلد المنشأ (TR)","Origin country (TR)"))}{field(destination,setDestination,label("بلد التسليم (US)","Destination country (US)"))}
+ <View style={{flexDirection:rtl?"row-reverse":"row",gap:7}}>{field(currency,setCurrency,"USD")}{field(price,setPrice,label("السعر المستهدف","Target price"),true)}</View>
+ <Pressable onPress={()=>void submit()} disabled={busy||!accounts.length} style={{backgroundColor:"#14283F",padding:13,borderRadius:10,alignItems:"center"}}><Text style={{color:"white",fontWeight:"800"}}>{label("إرسال للمراجعة","Submit for review")}</Text></Pressable>
+ {message?<Text style={{color:"#18794E"}}>{message}</Text>:null}{error?<Text style={{color:"#B42318"}}>{error}</Text>:null}
+ <Text style={{fontWeight:"800",color:"#14283F"}}>{label("فرصي السابقة","My opportunities")}</Text>
+ {items.map(o=><View key={o.id} style={{padding:10,borderRadius:9,backgroundColor:"#F7F4EC",gap:4}}><Text style={{fontWeight:"800",color:"#14283F"}}>{o.title}</Text><Text style={{color:"#626A72"}}>{o.opportunity_type==="buyer_request"?label("طلب شراء","Buyer request"):label("عرض مورد","Supplier offer")} · {o.review_status}</Text><Text style={{color:"#626A72"}}>{o.product_category||""} · {o.quantity||"—"} {o.quantity_unit||""}</Text></View>)}
+ {busy?<ActivityIndicator color="#14283F"/>:null}
+ </View>;
+}
