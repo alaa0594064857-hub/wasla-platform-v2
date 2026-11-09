@@ -184,6 +184,53 @@ describe("member store order requests", () => {
     ]);
   });
 
+  it.each([
+    ["USD", "12.34", 3, "37.02"],
+    ["JPY", "120", 3, "360"],
+    ["KWD", "1.234", 3, "3.702"],
+  ])("calculates %s order totals using the currency's minor units", async (currency, price, quantity, expectedSubtotal) => {
+    clientQuery
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "33333333-3333-4333-8333-333333333333", accountId: "44444444-4444-4444-8444-444444444444" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "55555555-5555-4555-8555-555555555555", title: "Currency test", sku: null, price, currency, stockQuantity: 10 }] })
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "66666666-6666-4666-8666-666666666666", orderNumber: "WS-CURRENCY", status: "pending_merchant_review" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: null, rows: [] });
+
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/stores/demo/orders`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{ productId: "55555555-5555-4555-8555-555555555555", quantity }] }),
+    });
+
+    expect(response.status).toBe(201);
+    const insertValues = clientQuery.mock.calls[4][1] as unknown[];
+    expect(insertValues[3]).toBe(currency);
+    expect(insertValues[5]).toBe(expectedSubtotal);
+    expect(String(clientQuery.mock.calls[4][0])).toContain("subtotal");
+  });
+
+  it("rejects prices with more fractional digits than the currency allows", async () => {
+    clientQuery
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "33333333-3333-4333-8333-333333333333", accountId: "44444444-4444-4444-8444-444444444444" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "55555555-5555-4555-8555-555555555555", title: "JPY precision test", sku: null, price: "120.50", currency: "JPY", stockQuantity: 10 }] })
+      .mockResolvedValueOnce({ rowCount: null, rows: [] });
+
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/stores/demo/orders`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{ productId: "55555555-5555-4555-8555-555555555555", quantity: 1 }] }),
+    });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ success: false, error: "Order total or currency precision is invalid" });
+    expect(clientQuery).toHaveBeenCalledTimes(4);
+  });
+
   it("lists only buyer-owned orders or orders the merchant may read", async () => {
     query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
     const baseUrl = await startServer();
