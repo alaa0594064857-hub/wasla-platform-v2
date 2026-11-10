@@ -41,7 +41,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -79,3 +79,7 @@ jobs:
 
       - name: Build web application
         run: pnpm --filter @wasla/web build
+      - name: Typecheck mobile app
+        run: pnpm --filter @wasla/mobile typecheck
+      - name: Validate Expo native app config
+        run: pnpm --filter @wasla/mobile exec expo config --type public
