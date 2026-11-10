@@ -15,7 +15,13 @@
       "package": "com.wasla.app"
     },
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow WASLA to select a profile photo from your photo library."
+        }
+      ]
     ]
   }
 }
