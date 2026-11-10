@@ -90,7 +90,7 @@ async function readJsonBody(request: IncomingMessage): Promise<Record<string, un
   }
 }
 
-const EXPO_PUSH_TOKEN_PATTERN = /^(?:Expo|Exponent)PushToken\\[[A-Za-z0-9_-]{8,200}\\]$/;
+const EXPO_PUSH_TOKEN_PATTERN = /^(?:Expo|Exponent)PushToken\[[A-Za-z0-9_-]{8,200}\]$/;
 
 async function handlePushDeviceRequest(
   request: IncomingMessage,
@@ -140,7 +140,9 @@ export async function handleNotificationsRequest(request: IncomingMessage, respo
       return;
     }
     const db = getDatabasePool();
-    const path = new URL(request.url ?? "/api/notifications", "http://localhost").pathname;\n\n    if (path === "/api/notifications/devices") {\n      await handlePushDeviceRequest(request, response, session.user.id);\n      return;\n    }
+    const path = new URL(request.url ?? "/api/notifications", "http://localhost").pathname;
+
+    if (path === "/api/notifications/devices") {\n      await handlePushDeviceRequest(request, response, session.user.id);\n      return;\n    }
 
     if (request.method === "GET") {
       const [items, unread] = await Promise.all([
