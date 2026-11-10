@@ -1105,3 +1105,12 @@ The following integration history is superseded by the completed merge of PRs #5
 - PR #74 added header-based dimension parsing for PNG, JPEG and WebP, rejecting unreadable/truncated dimension headers, zero dimensions, either dimension above 4096 pixels, and images above 16 megapixels. PR checks and post-merge main workflows both passed; PR #74 merged as `1c9279490885362f45c0005560251c8f0ac1039e`.
 - This is bounded metadata/header validation only. It is not full image decoding, CRC/bitstream validation, malware scanning or image re-encoding. Do not treat it as proof that an uploaded file is fully decodable. A production media pipeline still needs a maintained decoder/re-encoder and upload lifecycle tests.
 - No object-storage provider, bucket, CDN, upload-intent/completion endpoint, credentials, production migration or paid service has been activated. Render deployment remains separate and has not been performed.
+
+
+## Profile media format regression coverage and main CI — 2026-11-10
+
+- PR #75 added regression tests for JPEG SOF and WebP VP8X dimension parsing through the profile-image validation path, and documented the scope and limitations of header-based validation. It merged to `main` as `35c27014b27a0fb38dfe20b8f5a212c50d633ad3`.
+- PR #75 checks passed: WASLA API quality run `42820051155` (API and web) and WASLA CI run `42820051273` (WASLA Quality Checks).
+- Post-merge main checks also completed successfully: WASLA CI run `42820385478` and WASLA API quality run `42820385559` (API and web).
+- The media implementation still performs bounded format/signature/dimension metadata checks, not complete decoding or safe re-encoding. A production-ready media pipeline still requires a maintained image decoder/re-encoder, a concrete storage adapter, authenticated upload lifecycle, cleanup and hosted/device verification.
+- No storage provider, bucket, CDN, credentials, paid service, Render deployment or EAS build was activated.
