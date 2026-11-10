@@ -488,6 +488,18 @@ async function handleRequest(
     return;
   }
 
+  if (requestUrl.pathname === "/api/platform/ai/tasks" || /^\\/api\\/platform\\/ai\\/tasks\\/[0-9a-f-]{36}(?:\\/(?:execute|cancel))?$/i.test(requestUrl.pathname)) {
+    try {
+      const { handlePlatformAiTeamTasksRequest } = await import("./platform-ai-team-tasks.mjs");
+      await handlePlatformAiTeamTasksRequest(request, response);
+    } catch (error) {
+      console.error("WASLA AI team tasks route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "AI team task service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/platform/ai/assistant") {
     try {
       const { handlePlatformAiAssistantRequest } = await import("./platform-ai-assistant.mjs");
