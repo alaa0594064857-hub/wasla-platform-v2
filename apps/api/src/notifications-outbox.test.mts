@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ query: vi.fn().mockResolvedValue({ rows: [] }) }));
 
+vi.mock("./auth.mjs", () => ({ auth: { api: { getSession: vi.fn() } } }));
+
 vi.mock("./database.js", () => ({
   getDatabasePool: () => ({ query: mocks.query }),
 }));
