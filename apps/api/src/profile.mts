@@ -1,3 +1,4 @@
+import { parseImageDataUrl } from "./media-storage.mjs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { fromNodeHeaders } from "better-auth/node";
 import { auth } from "./auth.mjs";
@@ -102,9 +103,9 @@ export async function handleProfileRequest(request: IncomingMessage, response: S
       return;
     }
     if (typeof avatarReference === "string") {
-      const isImageData = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(avatarReference);
+      const isImageData = parseImageDataUrl(avatarReference) !== null;
       const isHttpsUrl = /^https:\/\//i.test(avatarReference);
-      if ((!isImageData && !isHttpsUrl) || avatarReference.length > 5_000_000) {
+      if ((!isImageData && !isHttpsUrl) || avatarReference.length > 4_200_000) {
         respond(response, 400, { success: false, error: "Use a valid image file or HTTPS image URL" });
         return;
       }
