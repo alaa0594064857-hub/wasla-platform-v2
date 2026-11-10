@@ -77,6 +77,38 @@ describe("WASLA owner digital team task API", () => {
     expect(mocks.query.mock.calls.some(call => String(call[0]).includes("INSERT INTO platform_ai_team_tasks"))).toBe(false);
   });
 
+  it("blocks task creation when the owner has paused the manager", async () => {
+    mocks.query.mockImplementation(async (sql: string) => {
+      if (String(sql).includes("FROM platform_ai_manager_control WHERE")) {
+        return { rows: [{ enabled: false, pausedReason: "maintenance", updatedAt: new Date().toISOString() }] };
+      }
+      return { rows: [], rowCount: 0 };
+    });
+    const base = await startServer();
+    const response = await fetch(base + "/api/platform/ai/tasks", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ specialistKey: "translator", title: "Translate", inputText: "Hello" }),
+    });
+    expect(response.status).toBe(423);
+    expect(mocks.query.mock.calls.some(call => String(call[0]).includes("INSERT INTO platform_ai_team_tasks"))).toBe(false);
+  });
+
+  it("still allows the owner to cancel a queued task while the manager is paused", async () => {
+    mocks.query.mockImplementation(async (sql: string) => {
+      if (String(sql).includes("FROM platform_ai_manager_control WHERE")) {
+        return { rows: [{ enabled: false, pausedReason: "maintenance", updatedAt: new Date().toISOString() }] };
+      }
+      if (String(sql).includes("UPDATE platform_ai_team_tasks SET status = 'cancelled'")) {
+        return { rows: [{ id: "11111111-1111-4111-8111-111111111111" }] };
+      }
+      return { rows: [], rowCount: 0 };
+    });
+    const base = await startServer();
+    const response = await fetch(base + "/api/platform/ai/tasks/11111111-1111-4111-8111-111111111111/cancel", { method: "POST" });
+    expect(response.status).toBe(200);
+    expect((await response.json()).status).toBe("cancelled");
+  });
+
   it("creates a queued task without executing it and marks owner review as required", async () => {
     const base = await startServer();
     const response = await fetch(base + "/api/platform/ai/tasks", {
