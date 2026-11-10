@@ -8,7 +8,7 @@ WASLA's native Android/iOS application is built with Expo SDK 58 and React Nativ
 - EAS development, preview and production build profiles in `eas.json`; SecureStore plugin configured.
 - Android application ID and iOS bundle identifier: `com.wasla.app`.
 - Email/password sign-in, registration for buyer/company/supplier/manufacturer/trader/brand, sign-out, and password-reset email request.
-- Authenticated profile read/update client and bilingual profile editor (display name, HTTPS avatar reference, bio and website).
+- Authenticated profile read/update client and bilingual profile editor (display name, device photo selection or HTTPS avatar reference, bio and website).
 - Business account and member-store creation.
 - Member product creation and status changes.
 - Member-store public catalogue view and buyer order-request flow.
@@ -23,7 +23,7 @@ WASLA's native Android/iOS application is built with Expo SDK 58 and React Nativ
 
 - Registration and password reset depend on correctly configured production email delivery. Set `BETTER_AUTH_SECRET`, `RESEND_API_KEY`, a verified `RESEND_FROM_EMAIL`, and the correct public auth URL/trusted origins. A UI confirmation does not prove that an email was delivered.
 - Password-reset completion currently hands off to the existing web `/reset-password` page.
-- Profile and product images currently use HTTPS image references; native image picking/upload is not implemented.
+- Native profile-photo selection is implemented with Expo ImagePicker; the selected image is sent as a bounded data URL through the existing profile API. Product images still use HTTPS references. A dedicated object-storage media pipeline and upload lifecycle remain production hardening work.
 - Push-token registration and native push delivery are not implemented.
 - Order requests do not collect payment or reserve stock. Merchant approval is required. Do not represent an order request as a paid or confirmed fulfilment.
 - Member-store checkout is distinct from the private sourcing workflow for the official WASLA Store.
@@ -63,7 +63,7 @@ EAS may ask to create/link an Expo project and configure signing credentials. Re
 3. Test two separate accounts end-to-end: business/store creation, public browsing, buyer order request, merchant accept/reject, private messages, notifications and trade opportunities.
 4. Verify authorization and cross-account isolation for every private API route.
 5. Test Arabic RTL, English LTR, small screens, accessibility, loading/error/empty states and unreliable network conditions.
-6. Implement native image picking/upload and push-notification consent/token delivery.
+6. Implement push-notification consent/token delivery and a scalable object-storage media pipeline; validate native profile-photo selection on physical Android and iOS devices.
 7. Add production app icon, splash artwork, privacy disclosures, store screenshots and store metadata.
 8. Re-run the full CI suite and verify successful hosted API/web deployments before public release.
 
