@@ -151,7 +151,7 @@ async function handleRequest(
     return;
   }
 
-  if (/^\/api\/notifications(?:\/read-all|\/[0-9a-f-]{36}\/read)?$/i.test(requestUrl.pathname)) {
+  if (/^\/api\/notifications(?:\/devices|\/read-all|\/[0-9a-f-]{36}\/read)?$/i.test(requestUrl.pathname)) {
     try {
       const { handleNotificationsRequest } = await import("./notifications.mjs");
       await handleNotificationsRequest(request, response);

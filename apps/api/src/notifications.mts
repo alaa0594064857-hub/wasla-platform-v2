@@ -54,6 +54,17 @@ export async function ensureNotificationsTable(): Promise<void> {
     CHECK (type IN ('account_invitation', 'message_received', 'product_inquiry', 'friend_request', 'trade_deal', 'official_store_order', 'member_store_order'))`);
   await db.query(`CREATE INDEX IF NOT EXISTS notifications_user_created_idx ON notifications (user_id, created_at DESC)`);
   await db.query(`CREATE INDEX IF NOT EXISTS notifications_user_unread_idx ON notifications (user_id, created_at DESC) WHERE read_at IS NULL`);
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS notification_push_devices (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token varchar(255) NOT NULL UNIQUE,
+      platform varchar(16) NOT NULL CHECK (platform IN ('ios', 'android')),
+      created_at timestamptz NOT NULL DEFAULT NOW(),
+      updated_at timestamptz NOT NULL DEFAULT NOW()
+    )
+  `);
+  await db.query(`CREATE INDEX IF NOT EXISTS notification_push_devices_user_idx ON notification_push_devices (user_id)`);
 }
 
 export async function createNotification(client: PoolClient, input: NotificationInput): Promise<void> {
@@ -70,8 +81,69 @@ export async function createNotification(client: PoolClient, input: Notification
   );
 }
 
+
+async function readJsonBody(request: IncomingMessage): Promise<Record<string, unknown> | null> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of request) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    size += buffer.length;
+    if (size > 8192) return null;
+    chunks.push(buffer);
+  }
+  try {
+    const value: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    return value && typeof value === "object" && !Array.isArray(value)
+      ? value as Record<string, unknown>
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+const EXPO_PUSH_TOKEN_PATTERN = /^(?:Expo|Exponent)PushToken\[[A-Za-z0-9_-]{8,200}\]$/;
+
+async function handlePushDeviceRequest(
+  request: IncomingMessage,
+  response: ServerResponse,
+  userId: string,
+): Promise<void> {
+  if (request.method !== "POST" && request.method !== "DELETE") {
+    reply(response, 405, { success: false, error: "Method not allowed" });
+    return;
+  }
+  const body = await readJsonBody(request);
+  if (!body || typeof body.token !== "string" || !EXPO_PUSH_TOKEN_PATTERN.test(body.token)) {
+    reply(response, 400, { success: false, error: "A valid Expo push token is required" });
+    return;
+  }
+  if (request.method === "POST") {
+    if (body.platform !== "ios" && body.platform !== "android") {
+      reply(response, 400, { success: false, error: "Platform must be ios or android" });
+      return;
+    }
+    await getDatabasePool().query(
+      `INSERT INTO notification_push_devices (user_id, token, platform, updated_at)
+       VALUES ($1, $2, $3, NOW())
+       ON CONFLICT (token) DO UPDATE
+       SET user_id = EXCLUDED.user_id, platform = EXCLUDED.platform, updated_at = NOW()`,
+      [userId, body.token, body.platform],
+    );
+    reply(response, 200, { success: true, registered: true });
+    return;
+  }
+  const result = await getDatabasePool().query(
+    `DELETE FROM notification_push_devices WHERE token = $1 AND user_id = $2`,
+    [body.token, userId],
+  );
+  reply(response, 200, { success: true, removed: (result.rowCount ?? 0) > 0 });
+}
+
 export async function handleNotificationsRequest(request: IncomingMessage, response: ServerResponse): Promise<void> {
-  if (request.method !== "GET" && request.method !== "PATCH") {
+  const path = new URL(request.url ?? "/api/notifications", "http://localhost").pathname;
+  const isDevicePath = path === "/api/notifications/devices";
+  const allowedMethods = isDevicePath ? ["POST", "DELETE"] : ["GET", "PATCH"];
+  if (!allowedMethods.includes(request.method ?? "")) {
     reply(response, 405, { success: false, error: "Method not allowed" });
     return;
   }
@@ -82,7 +154,10 @@ export async function handleNotificationsRequest(request: IncomingMessage, respo
       return;
     }
     const db = getDatabasePool();
-    const path = new URL(request.url ?? "/api/notifications", "http://localhost").pathname;
+    if (isDevicePath) {
+      await handlePushDeviceRequest(request, response, session.user.id);
+      return;
+    }
 
     if (request.method === "GET") {
       const [items, unread] = await Promise.all([
