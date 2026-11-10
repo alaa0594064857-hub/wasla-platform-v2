@@ -6,7 +6,9 @@ import { useLocale } from "../../../components/locale-provider";
 
 type Message = { role: "user" | "assistant"; content: string };
 type AuditEntry = { id: string; model: string; prompt_preview: string; response_preview: string; createdAt: string };
-type Status = { configured: boolean; managerEnabled: boolean; pausedReason: string | null; model: string | null; provider?: string; engine?: string; readOnlyDataAccess?: boolean; auditTrail?: AuditEntry[]; capabilities: string[]; limitations: string[] };\ntype TeamTask = { id: string; specialistKey: string; title: string; status: string; resultText?: string | null; errorCode?: string | null; createdAt: string };\ntype TaskEvent = { actorType: string; actorKey: string | null; eventType: string; createdAt: string };
+type Status = { configured: boolean; managerEnabled: boolean; pausedReason: string | null; model: string | null; provider?: string; engine?: string; readOnlyDataAccess?: boolean; auditTrail?: AuditEntry[]; capabilities: string[]; limitations: string[] };
+type TeamTask = { id: string; specialistKey: string; title: string; status: string; resultText?: string | null; errorCode?: string | null; createdAt: string };
+type TaskEvent = { actorType: string; actorKey: string | null; eventType: string; createdAt: string };
 export default function OwnerAiAssistantPage() {
   const { locale } = useLocale();
   const ar = locale === "ar";
