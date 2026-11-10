@@ -1073,3 +1073,20 @@ The following integration history is superseded by the completed merge of PRs #5
 - PR #66 merged to `main` as `3e0924684e7bd1ab8fc32ca42b90d60842dcb4bf`. Post-merge main workflows started: API/CI run `42795940556` and WASLA Quality Checks run `42795940073`; verify their final conclusions before recording main as green.
 - Still not verified: physical Android/iOS photo-picker behavior, EAS development/production builds, hosted profile save/read, push-notification consent/token/delivery, and production object-storage uploads.
 - No EAS build, Render deployment, paid-minute purchase, or spend-limit change was triggered.
+
+
+## Mobile push registration and post-merge verification — 2026-11-10
+
+- PR #69 adds opt-in Expo push-token registration to the signed-in mobile app. Permission is requested only after the user explicitly selects the enable-notifications action; registration is sent to the authenticated API and the token is stored in device secure storage. Sign-out attempts to unregister the device token.
+- The API registration endpoint supports authenticated device registration and owner-scoped removal. This is device-token registration only: it does not send operating-system push notifications.
+- PR #69 was merged to `main` as `9f8177b1ddf4eec6a4fa48d622b17bd60ad0ad60`. Post-merge WASLA CI run `42800306493` (API and web jobs) and WASLA Quality Checks run `42800306051` both completed successfully.
+- Remaining push gates: configure the real EAS project ID in the app, configure eligible APNs/FCM credentials through Expo, build the app, and verify permission, registration, delivery and sign-out on physical Android/iOS devices. No credentials, EAS project, build or live push delivery were configured as part of PR #69.
+
+## Profile media storage architecture decision — 2026-11-10
+
+- The current `profiles.avatar_reference` compatibility path accepts bounded image data URLs and HTTPS URLs. Base64 image data in PostgreSQL is not the target architecture and must not be expanded as a long-term storage strategy.
+- Adopt a provider-neutral, S3-compatible object-storage integration as the target design. The API should issue short-lived, authenticated, user-scoped presigned upload requests; clients upload directly to object storage; the API verifies object ownership, content type, byte size and successful upload before saving a stable media reference. Public avatar delivery should use a controlled CDN/custom media URL, not expose bucket credentials or arbitrary object-store URLs.
+- Enforce an image allowlist (JPEG, PNG, WebP), strict byte and dimension limits, generated opaque object keys, per-user authorization, upload expiry, and server-side verification. Do not trust client-provided MIME type or object key. Prevent cross-user overwrite and path traversal.
+- Replace/delete flows must update the profile reference transactionally and clean up superseded objects only after the database update succeeds. Add orphan-upload cleanup with a bounded lifecycle policy; retain safe fallback behavior for existing avatar references during migration.
+- Provider selection, bucket/CDN creation, credentials, billing and production activation are deliberately deferred pending owner approval. No provider has been connected and no object-storage upload is implemented by this architecture note.
+- Required verification before release: API authorization and expiry tests, MIME/size/dimension validation, upload-completion verification, cross-account isolation, cleanup/idempotency, cache behavior, and hosted upload/read tests.
