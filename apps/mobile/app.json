@@ -21,7 +21,8 @@
         {
           "photosPermission": "Allow WASLA to select a profile photo from your photo library."
         }
-      ]
+      ],
+      "expo-notifications"
     ]
   }
 }

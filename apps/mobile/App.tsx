@@ -3,6 +3,7 @@ import * as ImagePicker from "expo-image-picker";
 import { getOfficialStoreProducts, WaslaApiError } from "./src/api";
 import type { OfficialStoreProduct } from "./src/api";
 import { authClient } from "./src/auth-client";
+import { disablePushNotifications, enablePushNotifications } from "./src/push-notifications";
 import { getMyProfile, updateMyProfile, type WaslaProfile } from "./src/profile";
 import BusinessHub from "./src/BusinessHub";
 import MemberStorefront from "./src/MemberStorefront";
@@ -81,7 +82,10 @@ const copy = {
     saveProfile: "حفظ التعديلات",
     profileSaved: "تم حفظ الملف الشخصي بنجاح.",
     profileError: "تعذر تحميل أو حفظ الملف الشخصي.",
-    profileHint: "بياناتك الشخصية لا تظهر إلا بعد تسجيل الدخول."
+    profileHint: "بياناتك الشخصية لا تظهر إلا بعد تسجيل الدخول.",
+    enableNotifications: "تفعيل إشعارات الهاتف",
+    notificationsEnabled: "تم تفعيل إشعارات الهاتف على هذا الجهاز.",
+    notificationsError: "تعذر تفعيل الإشعارات. تحقق من الأذونات وإعداد التطبيق."
   },
   en: {
     direction: "ltr" as const,
@@ -139,7 +143,10 @@ const copy = {
     saveProfile: "Save changes",
     profileSaved: "Your profile was saved.",
     profileError: "Could not load or save your profile.",
-    profileHint: "Your profile details are available after sign-in."
+    profileHint: "Your profile details are available after sign-in.",
+    enableNotifications: "Enable phone notifications",
+    notificationsEnabled: "Phone notifications are enabled on this device.",
+    notificationsError: "Could not enable notifications. Check permissions and app setup."
   }
 };
 
@@ -173,6 +180,9 @@ export default function App() {
   const [avatarReference, setAvatarReference] = useState("");
   const [bio, setBio] = useState("");
   const [website, setWebsite] = useState("");
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushToken, setPushToken] = useState("");
+  const [pushMessage, setPushMessage] = useState("");
   const { data: session, isPending: sessionLoading } = authClient.useSession();
 
   async function handlePasswordReset() {
@@ -309,6 +319,34 @@ export default function App() {
     if (!session?.user) { setProfile(null); setProfileMessage(""); }
   }, [session?.user?.id]);
 
+  async function handleEnablePushNotifications() {
+    if (pushBusy || pushToken) return;
+    setPushBusy(true);
+    setPushMessage("");
+    try {
+      const token = await enablePushNotifications();
+      setPushToken(token);
+      setPushMessage(t.notificationsEnabled);
+    } catch {
+      setPushMessage(t.notificationsError);
+    } finally {
+      setPushBusy(false);
+    }
+  }
+
+  async function handleSignOut() {
+    setPushBusy(true);
+    try {
+      if (pushToken) await disablePushNotifications(pushToken);
+    } catch {
+      // Sign-out must remain possible even if device-token cleanup is unavailable.
+    } finally {
+      setPushToken("");
+      await authClient.signOut();
+      setPushBusy(false);
+    }
+  }
+
   async function loadCatalogue() {
     setCatalogueLoading(true);
     setCatalogueError("");
@@ -395,12 +433,16 @@ export default function App() {
                 </Pressable>
               )}
               {!!profileMessage && <Text style={profileMessage === t.profileSaved ? styles.successText : styles.errorText}>{profileMessage}</Text>}
+              <Pressable accessibilityRole="button" onPress={() => void handleEnablePushNotifications()} disabled={pushBusy || !!pushToken} style={styles.catalogueButton}>
+                {pushBusy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>{pushToken ? t.notificationsEnabled : t.enableNotifications}</Text>}
+              </Pressable>
+              {!!pushMessage && <Text style={pushToken ? styles.successText : styles.errorText}>{pushMessage}</Text>}
               <MemberStorefront rtl={rtl} />
               <BusinessHub rtl={rtl} />
               <TradeCenter rtl={rtl} />
               <MessagesCenter rtl={rtl} />
               <NotificationsCenter rtl={rtl} />
-              <Pressable accessibilityRole="button" onPress={() => void authClient.signOut()} style={styles.catalogueButton}>
+              <Pressable accessibilityRole="button" onPress={() => void handleSignOut()} disabled={pushBusy} style={styles.catalogueButton}>
                 <Text style={styles.primaryButtonText}>{t.signOut}</Text>
               </Pressable>
             </>
