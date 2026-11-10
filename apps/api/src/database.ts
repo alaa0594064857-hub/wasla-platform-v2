@@ -584,7 +584,8 @@ export async function ensureMemberStoreOrderTables(): Promise<void> {
         ADD COLUMN IF NOT EXISTS tracking_number varchar(120),
         ADD COLUMN IF NOT EXISTS tracking_url text,
         ADD COLUMN IF NOT EXISTS shipped_at timestamptz,
-        ADD COLUMN IF NOT EXISTS delivery_confirmed_at timestamptz
+        ADD COLUMN IF NOT EXISTS delivery_confirmed_at timestamptz,
+        ADD COLUMN IF NOT EXISTS inventory_committed_at timestamptz
     `);
     await client.query(`ALTER TABLE member_store_orders DROP CONSTRAINT IF EXISTS member_store_orders_status_check`);
     await client.query(`

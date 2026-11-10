@@ -415,6 +415,7 @@ export async function handleMemberStoreOrdersRequest(
          tracking_url = CASE WHEN $1 = 'shipped' THEN $9 ELSE tracking_url END,
          shipped_at = CASE WHEN $1 = 'shipped' THEN COALESCE(shipped_at, NOW()) ELSE shipped_at END,
          delivery_confirmed_at = CASE WHEN $1 = 'completed' THEN COALESCE(delivery_confirmed_at, NOW()) ELSE delivery_confirmed_at END,
+         inventory_committed_at = CASE WHEN $1 = 'accepted' THEN COALESCE(inventory_committed_at, NOW()) ELSE inventory_committed_at END,
          updated_at = NOW()
      FROM stores s, actor_context
      WHERE o.id = $3 AND o.store_id = s.id AND s.slug = $4 AND s.status = 'active'
@@ -431,7 +432,8 @@ export async function handleMemberStoreOrdersRequest(
      RETURNING o.id, o.order_number AS "orderNumber", o.buyer_user_id AS "buyerUserId",
                o.status, o.carrier_name AS "carrierName", o.tracking_number AS "trackingNumber",
                o.tracking_url AS "trackingUrl", o.shipped_at AS "shippedAt",
-               o.delivery_confirmed_at AS "deliveryConfirmedAt", o.updated_at AS "updatedAt"`,
+               o.delivery_confirmed_at AS "deliveryConfirmedAt", o.updated_at AS "updatedAt",
+               o.items, o.store_id AS "storeId"`,
     [body.status, note, orderId, slug, session.user.id, ["store.order.manage", "account.order.manage"],
       carrierName || null, trackingNumber || null, trackingUrl || null, session.user.id],
     );
@@ -439,6 +441,40 @@ export async function handleMemberStoreOrdersRequest(
     await client.query("ROLLBACK");
     respond(response, 404, { success: false, error: "Order not found, access denied, or transition not allowed" });
     return;
+  }
+  if (body.status === "accepted") {
+    const orderItems = result.rows[0].items;
+    if (!Array.isArray(orderItems) || orderItems.length === 0) {
+      await client.query("ROLLBACK");
+      respond(response, 409, { success: false, error: "Order items are unavailable for stock commitment" });
+      return;
+    }
+    const inventoryLines = [...orderItems].sort((left, right) =>
+      String(left?.productId ?? "").localeCompare(String(right?.productId ?? "")),
+    );
+    for (const item of inventoryLines) {
+      if (!isObject(item) || typeof item.productId !== "string" || !uuidPattern.test(item.productId) ||
+          !Number.isSafeInteger(item.quantity) || (item.quantity as number) < 1) {
+        await client.query("ROLLBACK");
+        respond(response, 409, { success: false, error: "Order contains invalid inventory details" });
+        return;
+      }
+      const committed = await client.query(
+        `UPDATE store_products
+         SET stock_quantity = stock_quantity - $3, updated_at = NOW()
+         WHERE id = $1 AND store_id = $2 AND stock_quantity >= $3
+         RETURNING id`,
+        [item.productId, result.rows[0].storeId, item.quantity],
+      );
+      if (committed.rowCount !== 1) {
+        await client.query("ROLLBACK");
+        respond(response, 409, {
+          success: false,
+          error: "Insufficient stock to accept this order. Update inventory or contact the buyer.",
+        });
+        return;
+      }
+    }
   }
   await client.query(
     `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, metadata)

@@ -1121,3 +1121,17 @@ This checkpoint supersedes the earlier mobile notes above where they describe fe
 
 - Added a real-PostgreSQL integration check that runs the member-order, verified-review and return-policy schema bootstraps twice, then verifies the expected tables, order-status constraint, active-return index, policy snapshot columns and append-only triggers.
 - This validates schema initialization and restart idempotency in CI; it does not replace two-account hosted acceptance tests or prove carrier delivery, payment, refund or production deployment behavior.
+
+
+## Member-store inventory commitment on merchant acceptance — candidate (2026-11-10)
+
+- Stock is now decremented only when a merchant accepts a pending order, not when a buyer merely submits a request.
+- Each product decrement is atomic and scoped to the order's store; insufficient or missing stock aborts the entire order-status transaction, so earlier item decrements roll back as well.
+- Product rows are processed in deterministic product-ID order to reduce deadlock risk. Tests cover successful commitment and multi-item rollback on shortage.
+- This is stock commitment for a manually accepted order request; it does not represent payment capture, checkout, supplier procurement or refund restocking.
+
+
+## Inventory commitment marker — candidate (2026-11-10)
+
+- Adds `member_store_orders.inventory_committed_at` and sets it in the same transaction as merchant acceptance and stock decrement.
+- The marker distinguishes orders whose inventory was actually decremented by the new flow from legacy accepted orders, so later cancellation logic cannot accidentally add stock for orders that were never decremented.
