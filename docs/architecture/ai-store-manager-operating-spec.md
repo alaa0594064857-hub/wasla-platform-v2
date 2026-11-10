@@ -334,3 +334,17 @@ WASLA should use a connector-based sourcing network rather than depend on a sing
 - Maintain a fallback: if a connector is unavailable or production access is not approved, the product is not silently sourced through scraping. Use another authorized connector or mark the item unavailable.
 
 The multi-marketplace network is a target architecture. Individual connectors are not considered live until production credentials/permissions are approved, implemented, tested and monitored.
+
+
+## 10. Owner-approved operating profile — 2026-11-10
+
+The platform owner approved the initial operating profile for the official WASLA Store:
+
+- **Market scope:** global from the outset, subject to destination-level legal, payment, supplier and shipping eligibility checks.
+- **Product focus:** consumer electronics and accessories, home and household products, and other products supported by credible global demand evidence.
+- **Fulfilment:** hybrid. Prefer supplier-direct fulfilment (dropshipping) to preserve working capital at launch; consider selective inventory only after verified sales data, sample/quality checks, and an explicit owner-approved purchase decision.
+- **Operating budget:** minimum viable cost. Reuse the existing platform infrastructure, prefer approved free/low-cost data sources and a shared model/provider adapter, cache reusable translations and research, enforce usage limits, and do not enable paid fallback or paid integrations without owner approval.
+- **AI organization:** one central WASLA AI Manager coordinates specialist roles for market research, product intelligence, supplier sourcing, catalogue operations, sales/customer care, orders/logistics, translation, financial analysis, and quality/risk. These roles may share a model runtime; they are not separate paid subscriptions by default.
+- **Initial product discovery output:** prepare a ranked shortlist of 20 candidate products with source evidence, exact variants, supplier evidence, landed-cost inputs, destination eligibility, proposed customer price and margin assumptions. Unknown or unverified values must remain explicitly unknown; no fabricated demand, supplier, price, shipping, tax, or margin data.
+- **Autonomy boundary:** research, comparison, draft preparation and routine verified customer communications may be automated after implementation and owner policy approval. Supplier onboarding, first purchases, inventory commitments, publication of new listings, material price changes, payments, refunds and exceptions remain behind explicit approval gates.
+- **Current implementation truth:** the owner AI page and read-only advisory/product-draft foundation exist. The digital employee roles shown in the owner console are an approved responsibility map, not a claim that autonomous agents, global discovery connectors, supplier purchasing or carrier integrations are already deployed.
