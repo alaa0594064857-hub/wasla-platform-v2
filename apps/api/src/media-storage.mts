@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 
 export const MAX_PROFILE_IMAGE_BYTES = 3 * 1024 * 1024;
+export const MAX_IMAGE_DIMENSION = 4096;
+export const MAX_IMAGE_PIXELS = 16_000_000;
 export const SUPPORTED_MEDIA_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 export type SupportedMediaType = (typeof SUPPORTED_MEDIA_TYPES)[number];
 export type MediaPurpose = "avatar" | "store_logo" | "product_image";
@@ -27,6 +29,78 @@ export interface MediaStorageAdapter {
   deleteObject(objectKey: string): Promise<void>;
 }
 
+
+export interface ImageDimensions { width: number; height: number }
+
+function readJpegDimensions(bytes: Buffer): ImageDimensions | null {
+  let offset = 2;
+  while (offset + 4 <= bytes.length) {
+    if (bytes[offset] !== 0xff) return null;
+    while (offset < bytes.length && bytes[offset] === 0xff) offset++;
+    const marker = bytes[offset++];
+    if (marker === undefined || marker === 0xd9 || marker === 0xda) return null;
+    if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) continue;
+    if (offset + 2 > bytes.length) return null;
+    const segmentLength = bytes.readUInt16BE(offset);
+    if (segmentLength < 2 || offset + segmentLength > bytes.length) return null;
+    if ([0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf].includes(marker)) {
+      if (segmentLength < 7) return null;
+      return { height: bytes.readUInt16BE(offset + 3), width: bytes.readUInt16BE(offset + 5) };
+    }
+    offset += segmentLength;
+  }
+  return null;
+}
+
+function readWebpDimensions(bytes: Buffer): ImageDimensions | null {
+  if (bytes.length < 30) return null;
+  const chunk = bytes.toString("ascii", 12, 16);
+  if (chunk === "VP8X") {
+    return {
+      width: 1 + bytes.readUIntLE(24, 3),
+      height: 1 + bytes.readUIntLE(27, 3),
+    };
+  }
+  if (chunk === "VP8L" && bytes[20] === 0x2f) {
+    const b1 = bytes[21] ?? 0;
+    const b2 = bytes[22] ?? 0;
+    const b3 = bytes[23] ?? 0;
+    const b4 = bytes[24] ?? 0;
+    return {
+      width: 1 + (((b2 & 0x3f) << 8) | b1),
+      height: 1 + (((b4 & 0x0f) << 10) | (b3 << 2) | ((b2 & 0xc0) >> 6)),
+    };
+  }
+  if (chunk === "VP8 " && bytes.length >= 30 && bytes[23] === 0x9d && bytes[24] === 0x01 && bytes[25] === 0x2a) {
+    return { width: bytes.readUInt16LE(26) & 0x3fff, height: bytes.readUInt16LE(28) & 0x3fff };
+  }
+  return null;
+}
+
+export function readImageDimensions(contentType: SupportedMediaType, bytes: Buffer): ImageDimensions | null {
+  if (contentType === "image/png") {
+    if (bytes.length < 24 || bytes.toString("ascii", 12, 16) !== "IHDR") return null;
+    return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
+  }
+  if (contentType === "image/jpeg") {
+    if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) return null;
+    return readJpegDimensions(bytes);
+  }
+  if (bytes.length < 12 || bytes.toString("ascii", 0, 4) !== "RIFF" || bytes.toString("ascii", 8, 12) !== "WEBP") return null;
+  return readWebpDimensions(bytes);
+}
+
+function hasSafeDimensions(dimensions: ImageDimensions | null): boolean {
+  return Boolean(dimensions &&
+    Number.isSafeInteger(dimensions.width) &&
+    Number.isSafeInteger(dimensions.height) &&
+    dimensions.width > 0 &&
+    dimensions.height > 0 &&
+    dimensions.width <= MAX_IMAGE_DIMENSION &&
+    dimensions.height <= MAX_IMAGE_DIMENSION &&
+    dimensions.width * dimensions.height <= MAX_IMAGE_PIXELS);
+}
+
 const IMAGE_SIGNATURES: Record<SupportedMediaType, (bytes: Buffer) => boolean> = {
   "image/png": (bytes) =>
     bytes.length >= 8 &&
@@ -47,7 +121,8 @@ export function parseImageDataUrl(value: string): ParsedImageDataUrl | null {
     bytes.length === 0 ||
     bytes.length > MAX_PROFILE_IMAGE_BYTES ||
     bytes.toString("base64") !== encoded ||
-    !IMAGE_SIGNATURES[contentType](bytes)
+    !IMAGE_SIGNATURES[contentType](bytes) ||
+    !hasSafeDimensions(readImageDimensions(contentType, bytes))
   ) return null;
   return { contentType, bytes, byteLength: bytes.length };
 }
