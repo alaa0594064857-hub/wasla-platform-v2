@@ -65,6 +65,42 @@ export async function ensureNotificationsTable(): Promise<void> {
     )
   `);
   await db.query(`CREATE INDEX IF NOT EXISTS notification_push_devices_user_idx ON notification_push_devices (user_id)`);
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS notification_push_outbox (
+      notification_id uuid PRIMARY KEY REFERENCES notifications(id) ON DELETE CASCADE,
+      status varchar(16) NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending', 'processing', 'delivered', 'dead')),
+      attempts integer NOT NULL DEFAULT 0 CHECK (attempts >= 0),
+      available_at timestamptz NOT NULL DEFAULT NOW(),
+      claimed_at timestamptz,
+      delivered_at timestamptz,
+      last_error varchar(1000),
+      created_at timestamptz NOT NULL DEFAULT NOW(),
+      updated_at timestamptz NOT NULL DEFAULT NOW()
+    )
+  `);
+  await db.query(`CREATE INDEX IF NOT EXISTS notification_push_outbox_pending_idx
+    ON notification_push_outbox (available_at, created_at)
+    WHERE status = 'pending'`);
+  await db.query(`
+    CREATE OR REPLACE FUNCTION wasla_enqueue_notification_push()
+    RETURNS trigger
+    LANGUAGE plpgsql
+    AS $wasla$
+    BEGIN
+      INSERT INTO notification_push_outbox (notification_id)
+      VALUES (NEW.id)
+      ON CONFLICT (notification_id) DO NOTHING;
+      RETURN NEW;
+    END;
+    $wasla$
+  `);
+  await db.query(`DROP TRIGGER IF EXISTS notifications_enqueue_push ON notifications`);
+  await db.query(`
+    CREATE TRIGGER notifications_enqueue_push
+    AFTER INSERT ON notifications
+    FOR EACH ROW EXECUTE FUNCTION wasla_enqueue_notification_push()
+  `);
 }
 
 export async function createNotification(client: PoolClient, input: NotificationInput): Promise<void> {
