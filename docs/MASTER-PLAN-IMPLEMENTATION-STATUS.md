@@ -1,6 +1,6 @@
 # WASLA V2 — Master Plan Implementation Status
 
-Last reviewed: 2026-11-09
+Last reviewed: 2026-11-10
 Repository: `alaa0594064857-hub/wasla-platform-v2` (`main`)
 
 This is an evidence-based implementation tracker, not a claim that the platform is commercially launch-ready. A feature is marked **Implemented** only where code exists and/or its production deployment or database state was verified. A live deployment does not by itself prove a complete end-to-end user journey.
@@ -56,7 +56,7 @@ This is an evidence-based implementation tracker, not a claim that the platform 
 | Complaints and disputes | Implemented foundation; hosted verification pending | Member-store order complaint workflow, merchant responses and moderator decisions are merged in PR #52 and included in the order lifecycle work. This is an in-app case workflow, not chargeback handling, payment dispute resolution or refund processing. Hosted role-based buyer/merchant/admin acceptance and operational policy review remain. |
 | Mobile applications | Partial foundation — Expo Android/iOS workspace, catalogue, profile, business/store, member products, merchant order review, and buyer member-store request flow committed; CI passed, not launch-ready | `apps/mobile` contains Expo SDK 58 / React Native 0.88, bilingual Arabic/English starter UI, configurable API base URL, destination-specific public catalogue client, Better Auth Expo v1.7.18 with SecureStore, and a bilingual profile screen with authenticated GET/PATCH client. Added authenticated business-account and member-store API clients for existing `/api/accounts` and `/api/stores` contracts, plus a bilingual business/store management screen for listing/creating accounts and stores. GitHub Actions passed the mobile/API quality run for the business/store API-client commit; later UI integration checks are pending at this review. Still outstanding: hosted API deployment, end-to-end sign-in/session persistence and account/store flows, product management, trade/orders/messages/notifications screens, push notifications, EAS build profiles, icons/splash/privacy/store metadata, physical-device testing and store review. No hosted mobile build or device verification has occurred. |
 | Internationalization completeness | Partial | Arabic/English and RTL/LTR exist in several areas; every route, email, validation and workflow needs a localization audit. |
-| Automated tests and release quality gates | PR-head checks passed; final merge-commit CI unconfirmed | The individual PR heads in the #51–#61 integration chain passed their required API-quality/full-CI checks as recorded during integration. The final merge commit `4167fbefd5faf9d84b9230d0edb6a31d47572fdd` has no workflow runs or combined statuses recorded in the latest check; do not describe post-merge CI as passed. Run full current-main CI before release, then complete hosted authenticated buyer/merchant/admin journeys, cross-account isolation, accessibility, localization and production deployment checks. |
+| Automated tests and release quality gates | Current-main CI and API quality checks passed on 2026-11-10; hosted acceptance still pending | After PR #62 merged, GitHub Actions completed successfully on main commit `467fbcd128afe706644da2cc04b665ddd6f5f05c`: WASLA CI run `42731323561` and WASLA API quality checks run `42731323979`. These results verify the repository quality workflows on that commit, not hosted buyer/merchant/admin journeys, cross-account isolation, accessibility, complete localization, Render deployment or production readiness. |
 | Domain and brand finalization | Deferred | No domain purchase yet; continue using current Render URLs while development proceeds. |
 
 ## Latest operational checkpoint — 2026-11-08
@@ -1174,3 +1174,11 @@ This checkpoint supersedes the earlier mobile notes above where they describe fe
 - The PR-head checks passed during integration, but the final merge commit currently has no recorded workflow runs or combined statuses. Post-merge CI is therefore **unverified**, not passed.
 - Render deployment remains blocked by the previously observed pipeline-minute limit. No deployment, paid-minute purchase, spend-limit change or production database mutation was performed.
 - Release gate: verify full CI on current `main`; complete hosted buyer/merchant/admin journeys and authorization isolation; select and integrate a carrier only after provider/account details are approved; implement payment/refund provider workflows only after legal and provider prerequisites; then deploy and repeat hosted acceptance checks.
+
+
+## Latest verification checkpoint — 2026-11-10
+
+- PR #62 reconciled the order-lifecycle implementation status and is merged into `main`.
+- Current-main commit `467fbcd128afe706644da2cc04b665ddd6f5f05c` passed both post-merge GitHub Actions workflows: WASLA CI run `42731323561` and WASLA API quality checks run `42731323979`.
+- Passing repository CI does not establish hosted runtime or end-to-end production readiness. Render deployment remains pending while pipeline minutes are exhausted; do not purchase minutes or enable paid services without explicit approval.
+- Commercial launch blockers remain: hosted buyer/merchant/admin acceptance and account-isolation tests; real carrier integration and independently verified delivery; payment-provider eligibility and integration (including applicable refunds/reconciliation); complete web/mobile release checks; security, localization and legal/compliance review.
