@@ -54,6 +54,17 @@ export async function ensureNotificationsTable(): Promise<void> {
     CHECK (type IN ('account_invitation', 'message_received', 'product_inquiry', 'friend_request', 'trade_deal', 'official_store_order', 'member_store_order'))`);
   await db.query(`CREATE INDEX IF NOT EXISTS notifications_user_created_idx ON notifications (user_id, created_at DESC)`);
   await db.query(`CREATE INDEX IF NOT EXISTS notifications_user_unread_idx ON notifications (user_id, created_at DESC) WHERE read_at IS NULL`);
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS notification_push_devices (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token varchar(255) NOT NULL UNIQUE,
+      platform varchar(16) NOT NULL CHECK (platform IN ('ios', 'android')),
+      created_at timestamptz NOT NULL DEFAULT NOW(),
+      updated_at timestamptz NOT NULL DEFAULT NOW()
+    )
+  `);
+  await db.query(`CREATE INDEX IF NOT EXISTS notification_push_devices_user_idx ON notification_push_devices (user_id)`);
 }
 
 export async function createNotification(client: PoolClient, input: NotificationInput): Promise<void> {
@@ -129,7 +140,10 @@ async function handlePushDeviceRequest(
 }
 
 export async function handleNotificationsRequest(request: IncomingMessage, response: ServerResponse): Promise<void> {
-  if (request.method !== "GET" && request.method !== "PATCH" && request.method !== "POST" && request.method !== "DELETE") {
+  const path = new URL(request.url ?? "/api/notifications", "http://localhost").pathname;
+  const isDevicePath = path === "/api/notifications/devices";
+  const allowedMethods = isDevicePath ? ["POST", "DELETE"] : ["GET", "PATCH"];
+  if (!allowedMethods.includes(request.method ?? "")) {
     reply(response, 405, { success: false, error: "Method not allowed" });
     return;
   }
@@ -140,9 +154,7 @@ export async function handleNotificationsRequest(request: IncomingMessage, respo
       return;
     }
     const db = getDatabasePool();
-    const path = new URL(request.url ?? "/api/notifications", "http://localhost").pathname;
-
-    if (path === "/api/notifications/devices") {
+    if (isDevicePath) {
       await handlePushDeviceRequest(request, response, session.user.id);
       return;
     }
