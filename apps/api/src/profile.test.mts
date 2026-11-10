@@ -203,7 +203,7 @@ describe("profile API validation and ownership", () => {
       }),
     });
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ success: false, error: "Use a valid image file or HTTPS image URL" });
+    expect(await response.json()).toEqual({ success: false, error: "Use a valid, supported image file under the size and dimension limits" });
     expect(query).not.toHaveBeenCalled();
   });
 
@@ -221,7 +221,7 @@ describe("profile API validation and ownership", () => {
       }),
     });
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ success: false, error: "Use a valid image file or HTTPS image URL" });
+    expect(await response.json()).toEqual({ success: false, error: "Use a valid, supported image file under the size and dimension limits" });
     expect(query).not.toHaveBeenCalled();
   });
 
