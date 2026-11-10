@@ -163,7 +163,7 @@ export async function handlePlatformAiTeamTasksRequest(req: IncomingMessage, res
     }
 
     const control = await getPlatformAiManagerControl();
-    if (!control.enabled && (req.method === "POST")) {
+    if (!control.enabled && req.method === "POST" && action !== "cancel") {
       reply(res, 423, { success: false, code: "AI_MANAGER_PAUSED", error: "The WASLA AI Manager is paused by the owner." });
       return;
     }
@@ -274,7 +274,7 @@ export async function handlePlatformAiTeamTasksRequest(req: IncomingMessage, res
           reply(res, status === 429 ? 429 : 502, { success: false, code, error: status === 429 ? "Gemini free-tier quota reached. No paid fallback is enabled." : "The specialist could not complete this task." });
           return;
         }
-        const payload = await upstream.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> }> }> };
+        const payload = await upstream.json() as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
         const answer = (payload.candidates?.[0]?.content?.parts || []).map(part => typeof part.text === "string" ? part.text : "").join("\n").trim();
         if (!answer || answer.length > 12000) throw new Error("INVALID_PROVIDER_OUTPUT");
         const saved = await db.query(
