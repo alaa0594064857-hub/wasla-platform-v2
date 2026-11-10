@@ -1098,3 +1098,10 @@ The following integration history is superseded by the completed merge of PRs #5
 - PR #72 merged as `646715bc98b0993c938aafc354b602b7e93deea6`. Pre-merge WASLA CI run `42814817151` and API quality run `42814816924` passed; post-merge WASLA CI run `42815065539` and API quality run `42815065394` also completed successfully.
 - This is a secure foundation only. There is no concrete S3-compatible provider adapter, upload-intent/completion API, bucket, CDN, production credential, object-storage upload, migration of existing base64 avatars, or physical-device upload test. No paid provider was selected or activated.
 - Remaining work: choose a provider with owner approval; implement and test its signed-upload adapter and authenticated upload lifecycle; verify owner isolation, expiry, actual object metadata, dimensions and byte limits; add cleanup/orphan lifecycle; migrate existing avatar references safely; then run hosted and physical-device acceptance tests. Keep the existing profile path as a compatibility fallback until migration is verified.
+
+
+## Profile media validation follow-up — 2026-11-10
+
+- PR #74 added header-based dimension parsing for PNG, JPEG and WebP, rejecting unreadable/truncated dimension headers, zero dimensions, either dimension above 4096 pixels, and images above 16 megapixels. PR checks and post-merge main workflows both passed; PR #74 merged as `1c9279490885362f45c0005560251c8f0ac1039e`.
+- This is bounded metadata/header validation only. It is not full image decoding, CRC/bitstream validation, malware scanning or image re-encoding. Do not treat it as proof that an uploaded file is fully decodable. A production media pipeline still needs a maintained decoder/re-encoder and upload lifecycle tests.
+- No object-storage provider, bucket, CDN, upload-intent/completion endpoint, credentials, production migration or paid service has been activated. Render deployment remains separate and has not been performed.
