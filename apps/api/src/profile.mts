@@ -1,4 +1,4 @@
-import { parseImageDataUrl } from "./media-storage.mjs";
+import { normalizeImageDataUrl } from "./media-storage.mjs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { fromNodeHeaders } from "better-auth/node";
 import { auth } from "./auth.mjs";
@@ -102,12 +102,21 @@ export async function handleProfileRequest(request: IncomingMessage, response: S
       respond(response, 400, { success: false, error: "Invalid avatar" });
       return;
     }
+    let normalizedAvatarReference: string | null = avatarReference as string | null;
     if (typeof avatarReference === "string") {
-      const isImageData = parseImageDataUrl(avatarReference) !== null;
       const isHttpsUrl = /^https:\/\//i.test(avatarReference);
-      if ((!isImageData && !isHttpsUrl) || avatarReference.length > 4_200_000) {
-        respond(response, 400, { success: false, error: "Use a valid image file or HTTPS image URL" });
-        return;
+      if (isHttpsUrl) {
+        if (avatarReference.length > 2048) {
+          respond(response, 400, { success: false, error: "Use a valid image file or HTTPS image URL" });
+          return;
+        }
+      } else {
+        const normalized = await normalizeImageDataUrl(avatarReference);
+        if (!normalized) {
+          respond(response, 400, { success: false, error: "Use a valid, supported image file under the size and dimension limits" });
+          return;
+        }
+        normalizedAvatarReference = normalized;
       }
     }
     if (typeof rawLinks !== "object" || rawLinks === null || Array.isArray(rawLinks)) {
@@ -137,7 +146,7 @@ export async function handleProfileRequest(request: IncomingMessage, response: S
          website = EXCLUDED.website,
          social_links = EXCLUDED.social_links,
          updated_at = NOW()`,
-      [session.user.id, displayName.trim(), avatarReference || null, bio.trim(), website ?? null, JSON.stringify(socialLinks)],
+      [session.user.id, displayName.trim(), normalizedAvatarReference || null, bio.trim(), website ?? null, JSON.stringify(socialLinks)],
     );
 
     respond(response, 200, { success: true, message: "Profile updated" });

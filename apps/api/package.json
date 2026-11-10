@@ -21,7 +21,8 @@
     "@better-auth/drizzle-adapter": "1.7.18",
     "drizzle-orm": "0.45.4",
     "pg": "8.13.1",
-    "@better-auth/expo": "1.7.18"
+    "@better-auth/expo": "1.7.18",
+    "sharp": "0.35.5"
   },
   "devDependencies": {
     "@types/node": "22.10.2",

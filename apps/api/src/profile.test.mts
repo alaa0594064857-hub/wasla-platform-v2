@@ -3,7 +3,8 @@ import type { Server } from "node:http";
 import { createWaslaServer } from "./server.js";
 import { auth } from "./auth.mjs";
 import { getDatabasePool } from "./database.js";
-import { createMediaObjectKey, isVerifiedStoredImage, parseImageDataUrl, readImageDimensions } from "./media-storage.mjs";
+import { createMediaObjectKey, isVerifiedStoredImage, normalizeImageDataUrl, parseImageDataUrl, readImageDimensions } from "./media-storage.mjs";
+import sharp from "sharp";
 
 vi.mock("./auth.mjs", () => ({
   auth: { api: { getSession: vi.fn() } },
@@ -88,6 +89,30 @@ describe("provider-neutral media policy", () => {
     huge.writeUInt32BE(5000, 16);
     huge.writeUInt32BE(5000, 20);
     expect(parseImageDataUrl(`data:image/png;base64,${huge.toString("base64")}`)).toBeNull();
+  });
+
+  it("fully decodes uploads and stores a normalized metadata-free WebP", async () => {
+    const source = await sharp({
+      create: { width: 12, height: 8, channels: 3, background: { r: 180, g: 120, b: 60 } },
+    }).png().toBuffer();
+    const normalized = await normalizeImageDataUrl(`data:image/png;base64,${source.toString("base64")}`);
+    expect(normalized?.startsWith("data:image/webp;base64,")).toBe(true);
+    const normalizedBytes = Buffer.from(normalized!.split(",")[1]!, "base64");
+    const metadata = await sharp(normalizedBytes).metadata();
+    expect(metadata.format).toBe("webp");
+    expect(metadata.width).toBe(12);
+    expect(metadata.height).toBe(8);
+    expect(metadata.exif).toBeUndefined();
+    expect(metadata.icc).toBeUndefined();
+  });
+
+  it("rejects header-only image spoofs that cannot be fully decoded", async () => {
+    const fakePng = Buffer.alloc(24);
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(fakePng, 0);
+    fakePng.write("IHDR", 12, "ascii");
+    fakePng.writeUInt32BE(640, 16);
+    fakePng.writeUInt32BE(480, 20);
+    expect(await normalizeImageDataUrl(`data:image/png;base64,${fakePng.toString("base64")}`)).toBeNull();
   });
 
   it("rejects unsupported, malformed and non-canonical image data URLs", () => {
@@ -178,7 +203,7 @@ describe("profile API validation and ownership", () => {
       }),
     });
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ success: false, error: "Use a valid image file or HTTPS image URL" });
+    expect(await response.json()).toEqual({ success: false, error: "Use a valid, supported image file under the size and dimension limits" });
     expect(query).not.toHaveBeenCalled();
   });
 
@@ -196,7 +221,7 @@ describe("profile API validation and ownership", () => {
       }),
     });
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ success: false, error: "Use a valid image file or HTTPS image URL" });
+    expect(await response.json()).toEqual({ success: false, error: "Use a valid, supported image file under the size and dimension limits" });
     expect(query).not.toHaveBeenCalled();
   });
 
