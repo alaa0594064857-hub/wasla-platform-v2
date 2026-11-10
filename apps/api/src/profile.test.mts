@@ -58,6 +58,27 @@ describe("provider-neutral media policy", () => {
     expect(parseImageDataUrl("data:image/png;base64,/9j/4AAQ")).toBeNull();
   });
 
+  it("reads JPEG and WebP dimensions and applies the same pixel policy", () => {
+    const jpeg = Buffer.alloc(21);
+    jpeg.set([0xff, 0xd8, 0xff, 0xc0]);
+    jpeg.writeUInt16BE(17, 4);
+    jpeg[6] = 8;
+    jpeg.writeUInt16BE(720, 7);
+    jpeg.writeUInt16BE(1280, 9);
+    expect(parseImageDataUrl(`data:image/jpeg;base64,${jpeg.toString("base64")}`)?.contentType).toBe("image/jpeg");
+    expect(readImageDimensions("image/jpeg", jpeg)).toEqual({ width: 1280, height: 720 });
+
+    const webp = Buffer.alloc(30);
+    webp.write("RIFF", 0, "ascii");
+    webp.write("WEBP", 8, "ascii");
+    webp.write("VP8X", 12, "ascii");
+    webp.writeUInt32LE(10, 16);
+    webp.writeUIntLE(999, 24, 3);
+    webp.writeUIntLE(599, 27, 3);
+    expect(parseImageDataUrl(`data:image/webp;base64,${webp.toString("base64")}`)?.contentType).toBe("image/webp");
+    expect(readImageDimensions("image/webp", webp)).toEqual({ width: 1000, height: 600 });
+  });
+
   it("rejects truncated images and excessive pixel dimensions", () => {
     const truncated = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
     expect(readImageDimensions("image/png", truncated)).toBeNull();
