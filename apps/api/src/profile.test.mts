@@ -3,6 +3,7 @@ import type { Server } from "node:http";
 import { createWaslaServer } from "./server.js";
 import { auth } from "./auth.mjs";
 import { getDatabasePool } from "./database.js";
+import { createMediaObjectKey, isVerifiedStoredImage, parseImageDataUrl } from "./media-storage.mjs";
 
 vi.mock("./auth.mjs", () => ({
   auth: { api: { getSession: vi.fn() } },
@@ -41,6 +42,39 @@ afterEach(async () => {
   }
   server = undefined;
   vi.clearAllMocks();
+});
+
+describe("provider-neutral media policy", () => {
+  it("accepts PNG data only when bytes match the declared type", () => {
+    const parsed = parseImageDataUrl("data:image/png;base64,iVBORw0KGgo=");
+    expect(parsed?.contentType).toBe("image/png");
+    expect(parsed?.byteLength).toBe(8);
+    expect(parseImageDataUrl("data:image/png;base64,/9j/4AAQ")).toBeNull();
+  });
+
+  it("rejects unsupported, malformed and non-canonical image data URLs", () => {
+    expect(parseImageDataUrl("data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=")).toBeNull();
+    expect(parseImageDataUrl("data:image/png;base64,not-base64!")).toBeNull();
+    expect(parseImageDataUrl("data:image/png;base64,iVBORw0KGg")).toBeNull();
+  });
+
+  it("generates opaque owner-scoped keys and rejects invalid owners", () => {
+    const ownerId = "11111111-1111-4111-8111-111111111111";
+    const first = createMediaObjectKey(ownerId, "avatar", "image/webp");
+    const second = createMediaObjectKey(ownerId, "avatar", "image/webp");
+    expect(first.startsWith(`users/${ownerId}/avatar/`)).toBe(true);
+    expect(first.endsWith(".webp")).toBe(true);
+    expect(first).not.toBe(second);
+    expect(() => createMediaObjectKey("../other", "avatar", "image/png")).toThrow();
+  });
+
+  it("requires stored metadata to match the expected upload", () => {
+    const expected = { contentType: "image/png" as const, byteLength: 8 };
+    expect(isVerifiedStoredImage(expected, { contentType: "image/png", contentLength: 8 })).toBe(true);
+    expect(isVerifiedStoredImage(expected, { contentType: "image/jpeg", contentLength: 8 })).toBe(false);
+    expect(isVerifiedStoredImage(expected, { contentType: "image/png", contentLength: 9 })).toBe(false);
+    expect(isVerifiedStoredImage(expected, null)).toBe(false);
+  });
 });
 
 describe("profile API validation and ownership", () => {
