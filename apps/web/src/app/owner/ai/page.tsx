@@ -49,6 +49,33 @@ export default function OwnerAiAssistantPage() {
     return () => { active = false; };
   }, [ar]);
 
+  function specialistLabel(key: string) {
+    const labels: Record<string, { ar: string; en: string }> = {
+      market_researcher: { ar: "باحث الأسواق", en: "Market researcher" },
+      product_analyst: { ar: "خبير المنتجات", en: "Product analyst" },
+      supplier_researcher: { ar: "باحث الموردين", en: "Supplier researcher" },
+      catalogue_manager: { ar: "مدير الكتالوج", en: "Catalogue manager" },
+      sales_support: { ar: "المبيعات وخدمة العملاء", en: "Sales support" },
+      logistics_analyst: { ar: "الطلبات والشحن", en: "Orders & logistics" },
+      translator: { ar: "الترجمة", en: "Translator" },
+      financial_analyst: { ar: "المحلل المالي", en: "Financial analyst" },
+      quality_risk_reviewer: { ar: "الجودة والمخاطر", en: "Quality & risk reviewer" },
+    };
+    return ar ? labels[key]?.ar || key : labels[key]?.en || key;
+  }
+
+  function taskStatusLabel(value: string) {
+    const labels: Record<string, { ar: string; en: string }> = {
+      queued: { ar: "في الانتظار", en: "Queued" },
+      running: { ar: "قيد التنفيذ", en: "Running" },
+      needs_owner_review: { ar: "بانتظار مراجعتك", en: "Needs your review" },
+      completed: { ar: "مكتملة", en: "Completed" },
+      failed: { ar: "فشلت", en: "Failed" },
+      cancelled: { ar: "ملغاة", en: "Cancelled" },
+    };
+    return ar ? labels[value]?.ar || value : labels[value]?.en || value;
+  }
+
   async function refreshTeamTasks() {
     const response = await fetch("/api/platform/ai/tasks?limit=30", { credentials: "include", cache: "no-store" });
     const data = await response.json();
@@ -261,8 +288,8 @@ export default function OwnerAiAssistantPage() {
         <div className="flex items-center justify-between gap-2"><h3 className="font-semibold">{ar ? "المهام الأخيرة" : "Recent tasks"}</h3><button type="button" onClick={() => void refreshTeamTasks().catch(e => setTaskError(e.message))} className="text-xs font-semibold text-amber-800 underline">{ar ? "تحديث" : "Refresh"}</button></div>
         {!teamTasks.length ? <p className="rounded-lg bg-slate-50 p-4 text-sm text-slate-500">{ar ? "لا توجد مهام بعد. أنشئ أول مهمة للفريق." : "No tasks yet. Assign the team's first task."}</p> : teamTasks.map(task => <article key={task.id} className="space-y-2 rounded-xl border border-slate-200 p-4">
           <div className="flex flex-wrap items-start justify-between gap-2">
-            <div><h4 className="font-semibold">{task.title}</h4><p className="mt-1 text-xs text-slate-500">{task.specialistKey.replaceAll("_", " ")} · {new Date(task.createdAt).toLocaleString(locale)}</p></div>
-            <span className="rounded-full border border-slate-200 px-2 py-1 text-xs">{task.status === "needs_owner_review" ? (ar ? "بانتظار مراجعتك" : "Needs your review") : task.status}</span>
+            <div><h4 className="font-semibold">{task.title}</h4><p className="mt-1 text-xs text-slate-500">{specialistLabel(task.specialistKey)} · {new Date(task.createdAt).toLocaleString(locale)}</p></div>
+            <span className="rounded-full border border-slate-200 px-2 py-1 text-xs">{taskStatusLabel(task.status)}</span>
           </div>
           {task.resultText ? <div className="whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-sm leading-6">{task.resultText}</div> : null}
           {task.errorCode ? <p className="text-xs text-rose-700">{ar ? "رمز الخطأ: " : "Error: "}{task.errorCode}</p> : null}
