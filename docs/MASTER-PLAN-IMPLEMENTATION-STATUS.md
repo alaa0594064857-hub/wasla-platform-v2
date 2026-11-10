@@ -1106,3 +1106,12 @@ This checkpoint supersedes the earlier mobile notes above where they describe fe
 - All four PRs remain open drafts and unmerged. Their dependency order is #46 → #47 → #48 → #49. Mergeability is not merge authorization; no PR was merged.
 - Remaining verification before release: run full repository CI against the final stacked chain, perform hosted buyer/merchant/admin end-to-end tests, review carrier-specific integration and delivery proof, implement merchant-configurable return policies and replacement fulfillment, and complete payment/refund and legal/provider prerequisites.
 - No Render deployment, paid build-minute purchase, domain purchase, or production database mutation was performed.
+
+
+## Member-store return policies and support escalation — integration candidate (2026-11-09)
+
+- Adds versioned store return policies with draft, publish and unpublish lifecycle; public reads expose only the currently published policy.
+- New orders retain the policy snapshot/version that applied when the order was created, so later policy edits do not silently rewrite earlier order terms.
+- Buyer return/exchange requests are checked against that order-time snapshot. The request window is measured from buyer delivery confirmation, or shipment time when delivery has not been confirmed, with order creation as a legacy fallback.
+- Buyers can create a support escalation record for legal-rights claims, merchant nonresponse or a related dispute. Platform support can acknowledge or close the review record; this is not a legal determination or a refund decision.
+- Integration draft PR #55 is branch-only pending exact-head API quality and full CI. No payment, refund, return-carrier booking, replacement dispatch, merge to `main` or Render deployment is enabled.
