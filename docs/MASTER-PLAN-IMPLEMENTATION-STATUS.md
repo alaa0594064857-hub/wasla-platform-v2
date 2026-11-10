@@ -1114,3 +1114,12 @@ The following integration history is superseded by the completed merge of PRs #5
 - Post-merge main checks also completed successfully: WASLA CI run `42820385478` and WASLA API quality run `42820385559` (API and web).
 - The media implementation still performs bounded format/signature/dimension metadata checks, not complete decoding or safe re-encoding. A production-ready media pipeline still requires a maintained image decoder/re-encoder, a concrete storage adapter, authenticated upload lifecycle, cleanup and hosted/device verification.
 - No storage provider, bucket, CDN, credentials, paid service, Render deployment or EAS build was activated.
+
+## Profile image decoding and normalization — 2026-11-10
+
+- PR #77 adds full image decoding and safe normalization to the profile-image pipeline using `sharp` 0.35.5. The API decodes the submitted image with strict error handling and pixel limits, checks that the decoded format matches the declared MIME type, rejects multi-page images, applies EXIF orientation, resizes within 4096 × 4096 without upscaling, strips metadata, and re-encodes the result as WebP (quality 82).
+- The normalized output must be non-empty and no larger than 3 MiB. Regression tests generate valid image data and verify WebP normalization/metadata stripping and rejection of header-only fake image content.
+- PR #77 merged to `main` as `f339bbabebf0741959218f8e7f9925838b01176c`. Pre-merge API tests/build, database migration and integration checks, web build/typecheck, mobile typecheck, and Expo config validation passed.
+- Post-merge main verification completed successfully: WASLA API quality run `42828145561` (API and web jobs) and WASLA Quality Checks run `42828145534`. Both workflows completed with success, including API tests, migrations, database integration tests, API/web builds and typechecks, mobile typecheck and Expo configuration validation.
+- This closes the full-decode/re-encode validation gap, but does not implement scalable media storage. The current compatibility path still stores bounded image data in the profile database reference. A concrete object-storage provider, signed upload-intent/completion API, bucket/CDN, credential setup, migration of existing avatars, orphan cleanup, hosted upload/read verification and physical-device tests remain outstanding.
+- No Render deployment, paid service, storage provider/bucket, EAS build or device test was initiated.
