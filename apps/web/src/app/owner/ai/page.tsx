@@ -82,7 +82,7 @@ export default function OwnerAiAssistantPage() {
   }
   return <main dir={ar ? "rtl" : "ltr"} lang={locale} className="mx-auto min-h-screen w-full max-w-5xl space-y-6 px-6 py-8 text-slate-900">
     <header className="flex flex-wrap items-center justify-between gap-3">
-      <div><Link href="/owner" className="text-sm text-slate-500 hover:underline">← {ar ? "مركز المالك" : "Owner center"}</Link><p className="mt-3 text-xs font-semibold tracking-[.2em] text-amber-700">WASLA AI OPERATIONS</p><h1 className="mt-1 text-3xl font-bold">{ar ? "مدير WASLA الذكي" : "WASLA AI Manager"}</h1><p className="mt-2 max-w-2xl text-sm text-slate-600">{ar ? "مساعد تشغيلي للمالك لتحليل فرص المنتجات والموردين والتسعير والمخاطر." : "An owner-facing operations copilot for product opportunities, suppliers, pricing, and risk."}</p></div>
+      <div><Link href="/owner" className="text-sm text-slate-500 hover:underline">← {ar ? "مركز المالك" : "Owner center"}</Link><p className="mt-3 text-xs font-semibold tracking-[.2em] text-amber-700">WASLA AI OPERATIONS</p><h1 className="mt-1 text-3xl font-bold">{ar ? "مدير WASLA الذكي" : "WASLA AI Manager"}</h1><p className="mt-2 max-w-2xl text-sm text-slate-600">{ar ? "المدير المركزي لمتجر WASLA الرسمي وفريق الموظفين الرقميين: أبحاث السوق والمنتجات والموردين والمبيعات والشحن." : "The central manager for the official WASLA Store and its digital team: market research, products, suppliers, sales, and fulfilment."}</p></div>
       <div className="flex flex-wrap items-center gap-2"><span className="rounded-full border border-slate-200 px-3 py-1 text-xs">{status?.configured ? (ar ? "Gemini متصل" : "Gemini connected") : (ar ? "بانتظار مفتاح Gemini المجاني" : "Waiting for Gemini free-tier key")}</span><span className={"rounded-full border px-3 py-1 text-xs " + (status?.managerEnabled ? "border-emerald-200 text-emerald-800" : "border-amber-300 text-amber-800")}>{status?.managerEnabled ? (ar ? "المدير نشط" : "Manager active") : (ar ? "المدير متوقف" : "Manager paused")}</span><button type="button" onClick={() => void toggleManager()} disabled={!status || controlBusy} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold disabled:opacity-50">{controlBusy ? "…" : status?.managerEnabled ? (ar ? "إيقاف المدير" : "Pause manager") : (ar ? "استئناف المدير" : "Resume manager")}</button></div>
     </header>
     {error ? <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{error}</div> : null}
@@ -112,6 +112,45 @@ export default function OwnerAiAssistantPage() {
         [ar ? "مراجعة التسعير" : "Pricing review", ar ? "فهم التكلفة الواصلة والافتراضات." : "Understand landed cost and assumptions."],
         [ar ? "جودة الكتالوج" : "Catalogue quality", ar ? "كشف المواصفات غير المؤكدة والنسخ المختلفة." : "Spot unverified specs and variant mismatches."]
       ].map(([title, description]) => <article key={title} className="rounded-xl border border-slate-200 bg-white p-4"><h2 className="font-semibold">{title}</h2><p className="mt-1 text-xs leading-5 text-slate-500">{description}</p></article>)}
+    </section>
+    <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold tracking-[.16em] text-amber-700">WASLA DIGITAL TEAM</p>
+          <h2 className="mt-1 text-xl font-bold">{ar ? "فريق الموظفين الرقميين" : "Digital employee team"}</h2>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">{ar ? "مدير واحد ينسق فرقاً متخصصة. هذه لوحة توزيع المسؤوليات المعتمدة؛ الموظفون المعروضون تخصصات مخططة وليست وكلاء مستقلين مفعّلين بعد." : "One manager coordinates specialist roles. This is the approved responsibility map; these are planned roles, not independently deployed agents yet."}</p>
+        </div>
+        <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-900">{ar ? "التفعيل المرحلي" : "Phased activation"}</span>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {[
+          ["◉", ar ? "باحث الأسواق" : "Market researcher", ar ? "يرصد الطلب والاتجاهات من مصادر مسموح بها." : "Finds demand signals and trends from approved sources."],
+          ["◇", ar ? "خبير المنتجات" : "Product intelligence", ar ? "يفهم المواصفات والمتغيرات ويكشف التكرار والنواقص." : "Normalizes specifications, variants, duplicates, and missing facts."],
+          ["⌂", ar ? "باحث الموردين" : "Supplier sourcing", ar ? "يقارن الموردين والعروض والتغطية وموثوقية الأدلة." : "Compares suppliers, offers, destination coverage, and evidence."],
+          ["▣", ar ? "مدير الكتالوج" : "Catalogue manager", ar ? "يجهز مسودات المنتجات والصور المصرح بها والترجمة." : "Prepares product drafts, authorized media, and localization."],
+          ["✧", ar ? "المبيعات والعملاء" : "Sales & customer care", ar ? "يقدم توصيات دقيقة ويتابع استفسارات العملاء." : "Makes grounded recommendations and handles customer questions."],
+          ["⇄", ar ? "مدير الطلبات والشحن" : "Orders & logistics", ar ? "ينسق الطلبات والتجهيز والتتبع والاستثناءات." : "Coordinates orders, fulfilment, tracking, and exceptions."],
+          ["文", ar ? "مدير الترجمة" : "Translation specialist", ar ? "يحافظ على معنى المحتوى التجاري بالعربية والإنجليزية." : "Preserves commercial meaning in Arabic and English."],
+          ["＄", ar ? "المحلل المالي" : "Financial analyst", ar ? "يحسب التكلفة الواصلة والهامش والرسوم المعروفة." : "Calculates landed cost, margin, and known fees."],
+          ["✓", ar ? "الجودة والمخاطر" : "Quality & risk", ar ? "يراجع الأدلة والسلامة والامتثال ومخاطر الموردين." : "Reviews evidence, safety, compliance, and supplier risk."]
+        ].map(([icon, title, description]) => <article key={title} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xl text-amber-700">{icon}</span>
+            <span className="rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-slate-500">{ar ? "مخطط" : "Planned"}</span>
+          </div>
+          <h3 className="mt-2 text-sm font-bold">{title}</h3>
+          <p className="mt-1 text-xs leading-5 text-slate-600">{description}</p>
+        </article>)}
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-xl bg-slate-900 p-4 text-white"><p className="text-xs text-slate-300">{ar ? "نطاق السوق" : "Market scope"}</p><p className="mt-1 font-semibold">{ar ? "عالمي" : "Global"}</p></div>
+        <div className="rounded-xl bg-slate-900 p-4 text-white"><p className="text-xs text-slate-300">{ar ? "نموذج التوريد" : "Fulfilment model"}</p><p className="mt-1 font-semibold">{ar ? "دروبشيبينغ + مخزون انتقائي" : "Dropshipping + selective stock"}</p></div>
+        <div className="rounded-xl bg-slate-900 p-4 text-white"><p className="text-xs text-slate-300">{ar ? "سياسة التشغيل" : "Operating budget"}</p><p className="mt-1 font-semibold">{ar ? "أقل تكلفة ممكنة" : "Minimum viable cost"}</p></div>
+      </div>
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs leading-6 text-amber-950">
+        <strong>{ar ? "بوابة موافقة المالك: " : "Owner approval gate: "}</strong>
+        {ar ? "شراء المخزون، اعتماد مورد جديد، نشر منتج، تغيير جوهري في السعر، الدفع، الاسترداد، أو أي التزام مالي لا ينفذه الذكاء الاصطناعي دون موافقة مخولة. لا توجد حالياً عمليات شراء أو شحن مستقلة مفعلة." : "Inventory purchases, new supplier approval, product publication, material price changes, payments, refunds, and financial commitments require authorized approval. Autonomous purchasing or shipping is not currently enabled."}
+      </div>
     </section>
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
       <div className="border-b bg-slate-50 px-6 py-4"><h2 className="font-semibold">{ar ? "محادثة مدير العمليات" : "Operations conversation"}</h2><p className="text-xs text-slate-500">{status?.model || (ar ? "بانتظار إعداد Gemini" : "Awaiting Gemini free-tier setup")}</p></div>
