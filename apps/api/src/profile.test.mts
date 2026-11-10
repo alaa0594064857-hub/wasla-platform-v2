@@ -3,7 +3,7 @@ import type { Server } from "node:http";
 import { createWaslaServer } from "./server.js";
 import { auth } from "./auth.mjs";
 import { getDatabasePool } from "./database.js";
-import { createMediaObjectKey, isVerifiedStoredImage, parseImageDataUrl } from "./media-storage.mjs";
+import { createMediaObjectKey, isVerifiedStoredImage, parseImageDataUrl, readImageDimensions } from "./media-storage.mjs";
 
 vi.mock("./auth.mjs", () => ({
   auth: { api: { getSession: vi.fn() } },
@@ -45,11 +45,28 @@ afterEach(async () => {
 });
 
 describe("provider-neutral media policy", () => {
-  it("accepts PNG data only when bytes match the declared type", () => {
-    const parsed = parseImageDataUrl("data:image/png;base64,iVBORw0KGgo=");
+  it("accepts PNG data only when bytes and dimensions match the declared type", () => {
+    const png = Buffer.alloc(24);
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(png, 0);
+    png.write("IHDR", 12, "ascii");
+    png.writeUInt32BE(640, 16);
+    png.writeUInt32BE(480, 20);
+    const parsed = parseImageDataUrl(`data:image/png;base64,${png.toString("base64")}`);
     expect(parsed?.contentType).toBe("image/png");
-    expect(parsed?.byteLength).toBe(8);
+    expect(parsed?.byteLength).toBe(24);
+    expect(readImageDimensions("image/png", png)).toEqual({ width: 640, height: 480 });
     expect(parseImageDataUrl("data:image/png;base64,/9j/4AAQ")).toBeNull();
+  });
+
+  it("rejects truncated images and excessive pixel dimensions", () => {
+    const truncated = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    expect(readImageDimensions("image/png", truncated)).toBeNull();
+    const huge = Buffer.alloc(24);
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(huge, 0);
+    huge.write("IHDR", 12, "ascii");
+    huge.writeUInt32BE(5000, 16);
+    huge.writeUInt32BE(5000, 20);
+    expect(parseImageDataUrl(`data:image/png;base64,${huge.toString("base64")}`)).toBeNull();
   });
 
   it("rejects unsupported, malformed and non-canonical image data URLs", () => {
