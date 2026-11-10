@@ -1131,7 +1131,14 @@ This checkpoint supersedes the earlier mobile notes above where they describe fe
 - This is stock commitment for a manually accepted order request; it does not represent payment capture, checkout, supplier procurement or refund restocking.
 
 
-## Inventory commitment marker — candidate (2026-11-10)
+## Accepted-order cancellation and inventory restoration — candidate (2026-11-10)
 
-- Adds `member_store_orders.inventory_committed_at` and sets it in the same transaction as merchant acceptance and stock decrement.
-- The marker distinguishes orders whose inventory was actually decremented by the new flow from legacy accepted orders, so later cancellation logic cannot accidentally add stock for orders that were never decremented.
+- Buyers may cancel a merchant-accepted order before shipment; shipped orders remain non-cancellable through this action.
+- Cancellation locks the order and restores each accepted order item to that same store's inventory within the cancellation transaction.
+- If any product row is missing or the inventory value would overflow, the entire cancellation rolls back; inventory restoration is recorded in the order-status audit metadata.
+- Pending-order cancellation remains unchanged and does not add stock because no stock was committed at request time.
+
+
+## Inventory commitment marker — integration note (2026-11-10)
+
+- Accepted orders now carry `inventory_committed_at`, set atomically with stock decrement. Cancellation restores inventory only when this marker exists, protecting legacy accepted orders that predate stock commitment from receiving an incorrect stock increase.

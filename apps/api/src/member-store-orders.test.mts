@@ -79,6 +79,7 @@ describe("member store order requests", () => {
   it("allows a buyer to cancel only their own pending order request", async () => {
     clientQuery
       .mockResolvedValueOnce({ rowCount: null, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ status: "pending_merchant_review" }] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "22222222-2222-4222-8222-222222222222", orderNumber: "WS-TEST", status: "cancelled" }] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [] })
       .mockResolvedValueOnce({ rowCount: null, rows: [] });
@@ -90,11 +91,12 @@ describe("member store order requests", () => {
     });
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ success: true, order: { status: "cancelled" } });
-    const updateSql = String(clientQuery.mock.calls[1][0]);
+    const updateSql = String(clientQuery.mock.calls[2][0]);
+    expect(String(clientQuery.mock.calls[1][0])).toContain("SELECT o.status");
     expect(updateSql).toContain("o.buyer_user_id = $5");
-    expect(updateSql).toContain("o.status = 'pending_merchant_review'");
+    expect(updateSql).toContain("o.status IN ('pending_merchant_review', 'accepted')");
     expect(updateSql).toContain("p.permission_key = ANY(6::text[])");
-    expect(clientQuery.mock.calls[1][1]).toEqual([
+    expect(clientQuery.mock.calls[2][1]).toEqual([
       "cancelled", "", "22222222-2222-4222-8222-222222222222", "demo",
       "11111111-1111-4111-8111-111111111111", ["store.order.manage", "account.order.manage"],
       null, null, null, "11111111-1111-4111-8111-111111111111",
@@ -105,6 +107,7 @@ describe("member store order requests", () => {
   it("notifies active store/account order managers when a buyer cancels a pending request", async () => {
     clientQuery
       .mockResolvedValueOnce({ rowCount: null, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ status: "pending_merchant_review" }] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "22222222-2222-4222-8222-222222222222", orderNumber: "WS-CANCEL", buyerUserId: "11111111-1111-4111-8111-111111111111", status: "cancelled" }] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [] })
@@ -117,7 +120,7 @@ describe("member store order requests", () => {
     });
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ success: true, order: { status: "cancelled" } });
-    const notificationCall = clientQuery.mock.calls[3];
+    const notificationCall = clientQuery.mock.calls[4];
     expect(String(notificationCall[0])).toContain("INSERT INTO notifications");
     expect(String(notificationCall[0])).toContain("A buyer cancelled an order request");
     expect(String(notificationCall[0])).toContain("store_members");
@@ -130,7 +133,39 @@ describe("member store order requests", () => {
     ]);
   });
 
-  it("notifies the buyer when a merchant accepts a pending request", async () => {
+    it("restores stock atomically when a buyer cancels an accepted order before shipment", async () => {
+    clientQuery
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{
+        status: "accepted", storeId: "store-1", inventoryCommittedAt: new Date(),
+        items: [{ productId: "33333333-3333-4333-8333-333333333333", quantity: 2 }],
+      }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{
+        id: "22222222-2222-4222-8222-222222222222", orderNumber: "WS-RESTOCK",
+        buyerUserId: "11111111-1111-4111-8111-111111111111", status: "cancelled",
+      }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "33333333-3333-4333-8333-333333333333" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: null, rows: [] });
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/stores/demo/orders/22222222-2222-4222-8222-222222222222`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "cancelled" }),
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ success: true, order: { status: "cancelled" } });
+    const restoreCall = clientQuery.mock.calls[3];
+    expect(String(clientQuery.mock.calls[1][0])).toContain("inventory_committed_at AS \"inventoryCommittedAt\"");
+    expect(String(restoreCall[0])).toContain("stock_quantity = stock_quantity + $3");
+    expect(restoreCall[1]).toEqual(["33333333-3333-4333-8333-333333333333", "store-1", 2]);
+    expect(String(clientQuery.mock.calls[4][0])).toContain("INSERT INTO audit_logs");
+    expect(clientQuery.mock.calls[4][1][2]).toContain('"inventoryReleased":[{"productId":"33333333-3333-4333-8333-333333333333","quantity":2}]');
+    expect(String(clientQuery.mock.calls[5][0])).toContain("INSERT INTO notifications");
+    expect(clientQuery.mock.calls[6][0]).toBe("COMMIT");
+  });
+it("notifies the buyer when a merchant accepts a pending request", async () => {
     clientQuery
       .mockResolvedValueOnce({ rowCount: null, rows: [] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{

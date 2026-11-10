@@ -405,6 +405,21 @@ export async function handleMemberStoreOrdersRequest(
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    let acceptedCancellation: { items: unknown; storeId: string } | null = null;
+    if (body.status === "cancelled") {
+      const priorOrder = await client.query(
+        `SELECT o.status, o.items, o.store_id AS "storeId", o.inventory_committed_at AS "inventoryCommittedAt"
+         FROM member_store_orders o
+         INNER JOIN stores s ON s.id = o.store_id
+         WHERE o.id = $1 AND s.slug = $2 AND s.status = 'active'
+         FOR UPDATE OF o`,
+        [orderId, slug],
+      );
+      if (priorOrder.rowCount === 1 && priorOrder.rows[0].status === "accepted" && priorOrder.rows[0].inventoryCommittedAt) {
+        acceptedCancellation = { items: priorOrder.rows[0].items, storeId: priorOrder.rows[0].storeId };
+      }
+    }
+    let releasedInventory: Array<{ productId: string; quantity: number }> = [];
     const result = await client.query(
     `WITH actor_context AS MATERIALIZED (SELECT set_config('wasla.actor_user_id', $10, true))
      UPDATE member_store_orders o
@@ -420,7 +435,7 @@ export async function handleMemberStoreOrdersRequest(
      FROM stores s, actor_context
      WHERE o.id = $3 AND o.store_id = s.id AND s.slug = $4 AND s.status = 'active'
        AND (
-         ($1 = 'cancelled' AND o.buyer_user_id = $5 AND o.status = 'pending_merchant_review') OR
+         ($1 = 'cancelled' AND o.buyer_user_id = $5 AND o.status IN ('pending_merchant_review', 'accepted')) OR
          ($1 IN ('accepted', 'rejected') AND o.status = 'pending_merchant_review' AND ${merchantPermission(5, 6)}) OR
          ($1 = 'shipped' AND o.status = 'accepted' AND ${merchantPermission(5, 6)}) OR
          ($1 = 'completed' AND o.buyer_user_id = $5 AND o.status = 'shipped'
@@ -441,6 +456,40 @@ export async function handleMemberStoreOrdersRequest(
     await client.query("ROLLBACK");
     respond(response, 404, { success: false, error: "Order not found, access denied, or transition not allowed" });
     return;
+  }
+  if (body.status === "cancelled" && acceptedCancellation) {
+    if (!Array.isArray(acceptedCancellation.items) || acceptedCancellation.items.length === 0) {
+      await client.query("ROLLBACK");
+      respond(response, 409, { success: false, error: "Order items are unavailable for inventory restoration" });
+      return;
+    }
+    const inventoryLines = [...acceptedCancellation.items].sort((left, right) =>
+      String(left?.productId ?? "").localeCompare(String(right?.productId ?? "")),
+    );
+    for (const item of inventoryLines) {
+      if (!isObject(item) || typeof item.productId !== "string" || !uuidPattern.test(item.productId) ||
+          !Number.isSafeInteger(item.quantity) || (item.quantity as number) < 1) {
+        await client.query("ROLLBACK");
+        respond(response, 409, { success: false, error: "Order contains invalid inventory details" });
+        return;
+      }
+      const restored = await client.query(
+        `UPDATE store_products
+         SET stock_quantity = stock_quantity + $3, updated_at = NOW()
+         WHERE id = $1 AND store_id = $2 AND stock_quantity <= 2147483647 - $3
+         RETURNING id`,
+        [item.productId, acceptedCancellation.storeId, item.quantity],
+      );
+      if (restored.rowCount !== 1) {
+        await client.query("ROLLBACK");
+        respond(response, 409, {
+          success: false,
+          error: "Could not restore inventory for this order. Contact platform support.",
+        });
+        return;
+      }
+      releasedInventory.push({ productId: item.productId, quantity: item.quantity as number });
+    }
   }
   if (body.status === "accepted") {
     const orderItems = result.rows[0].items;
@@ -479,7 +528,11 @@ export async function handleMemberStoreOrdersRequest(
   await client.query(
     `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, metadata)
      VALUES ($1, 'member_store.order_status_changed', 'member_store_order', $2, $3::jsonb)`,
-    [session.user.id, orderId, JSON.stringify({ status: body.status, note: note || null })],
+    [session.user.id, orderId, JSON.stringify({
+      status: body.status,
+      note: note || null,
+      ...(releasedInventory.length ? { inventoryReleased: releasedInventory } : {}),
+    })],
   );
   if (body.status === "accepted" || body.status === "rejected" || body.status === "shipped") {
     await client.query(

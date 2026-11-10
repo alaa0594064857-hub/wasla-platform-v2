@@ -430,7 +430,7 @@ export default function MemberStoreOrdersPage() {
             {!isMerchantView && order.status === "shipped" && <div className="mt-4">
               <button disabled={busy === order.id} onClick={() => void updateOrder(order.id, "completed")} className="rounded-lg bg-[#14233b] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{copy.confirmDelivery}</button>
             </div>}
-            {!isMerchantView && order.status === "pending_merchant_review" && <div className="mt-4">
+            {!isMerchantView && ["pending_merchant_review", "accepted"].includes(order.status) && <div className="mt-4">
               <button disabled={busy === order.id} onClick={() => void updateOrder(order.id, "cancelled")} className="rounded-lg border border-red-700 px-4 py-2 text-sm font-semibold text-red-700 disabled:opacity-50">{copy.cancel}</button>
             </div>}
             {isMerchantView && order.status === "accepted" && <div className="mt-4 space-y-3 rounded-xl border border-[#e5dfd1] bg-[#faf8f3] p-4">
