@@ -142,7 +142,10 @@ export async function handleNotificationsRequest(request: IncomingMessage, respo
     const db = getDatabasePool();
     const path = new URL(request.url ?? "/api/notifications", "http://localhost").pathname;
 
-    if (path === "/api/notifications/devices") {\n      await handlePushDeviceRequest(request, response, session.user.id);\n      return;\n    }
+    if (path === "/api/notifications/devices") {
+      await handlePushDeviceRequest(request, response, session.user.id);
+      return;
+    }
 
     if (request.method === "GET") {
       const [items, unread] = await Promise.all([
