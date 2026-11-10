@@ -146,3 +146,68 @@ describe("private in-app notifications", () => {
   });
 
 });
+
+
+describe("authenticated push device registration", () => {
+  const token = "ExpoPushToken[abcdefgh12345678]";
+
+  it("registers an Expo token only for the signed-in user", async () => {
+    mocks.query.mockResolvedValueOnce({ rowCount: 1, rows: [] });
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/notifications/devices`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, platform: "android" }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ success: true, registered: true });
+    expect(mocks.query.mock.calls[0][1]).toEqual(["notification-owner", token, "android"]);
+    expect(String(mocks.query.mock.calls[0][0])).toContain("ON CONFLICT (token)");
+  });
+
+  it("removes a registered token only when it belongs to the signed-in user", async () => {
+    mocks.query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/notifications/devices`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ success: true, removed: false });
+    expect(mocks.query.mock.calls[0][1]).toEqual([token, "notification-owner"]);
+    expect(String(mocks.query.mock.calls[0][0])).toContain("WHERE token = $1 AND user_id = $2");
+  });
+
+  it("rejects malformed Expo tokens and unsupported platforms", async () => {
+    const baseUrl = await startServer();
+    const malformed = await fetch(`${baseUrl}/api/notifications/devices`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: "not-a-token", platform: "android" }),
+    });
+    expect(malformed.status).toBe(400);
+
+    const unsupportedPlatform = await fetch(`${baseUrl}/api/notifications/devices`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, platform: "web" }),
+    });
+    expect(unsupportedPlatform.status).toBe(400);
+    expect(mocks.query).not.toHaveBeenCalled();
+  });
+
+  it("requires authentication before accepting device tokens", async () => {
+    mocks.getSession.mockResolvedValueOnce(null);
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/notifications/devices`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, platform: "ios" }),
+    });
+    expect(response.status).toBe(401);
+    expect(mocks.query).not.toHaveBeenCalled();
+  });
+});
