@@ -1026,159 +1026,39 @@ This checkpoint supersedes the earlier mobile notes above where they describe fe
 - No paid build minutes, automatic purchases, or service-plan changes were enabled.
 
 
-## Order delivery and verified reviews — integration candidate (2026-11-09)
+## Member-store order lifecycle — integrated implementation (2026-11-10)
 
-- A clean integration candidate is being prepared from the latest `main`, preserving newer currency-precision, account and profile work.
-- The candidate adds merchant shipment details and buyer-only delivery confirmation for member-store orders, with server-side lifecycle checks and transactional notifications.
-- It adds verified-purchase reviews, edit history, moderation, buyer reports/appeals, and moderated seller responses.
-- This candidate remains branch-only until GitHub API-quality and full CI checks pass. It is not merged to `main` or deployed; payment capture, carrier webhooks, refunds and proof-of-delivery remain out of scope.
+The following integration history is superseded by the completed merge of PRs #51–#61 into `main`. The earlier draft/branch-only statements below are historical snapshots and must not be read as the current repository state.
 
+### Implemented code foundations now merged
 
-## Member-store order complaints and dispute resolution — 2026-11-08
+- Merchant shipment-detail entry and buyer-only receipt confirmation, with transactional notifications and server-side order-state checks.
+- Verified-purchase reviews, review edit history, buyer reports/appeals, seller responses and platform moderation controls.
+- Buyer order complaints, merchant responses, moderator decisions and append-only order event history.
+- Normalized shipment and delivery-evidence records, plus internal carrier-webhook signature verification and provider-neutral event normalization.
+- Buyer return/exchange requests, merchant approval/rejection, versioned store return-policy snapshots and support-escalation records.
+- PostgreSQL schema integration checks, idempotent bootstrap behavior and database constraints/triggers.
+- Inventory commitment when a merchant accepts an order; buyer or merchant cancellation before shipment with guarded inventory restoration.
+- Optional restocking after a physical return is received, and immutable product/quantity snapshots for partial returns.
 
-- Draft PR #47 (feat/member-store-order-disputes) adds a separate complaint workflow for member-store orders; it is stacked on PR #46 and does not change main.
-- Buyers can open one active complaint per accepted, shipped or completed order. The buyer's original reason/details remain separate from the merchant response.
-- Only an active store/account member with existing store.order.manage or account.order.manage permission can respond. The buyer can close a case only after a moderator resolves or dismisses it.
-- Platform moderators with platform.reports.manage receive an open-case queue and can resolve/dismiss with a required note. Decisions, buyer submissions, merchant responses and buyer closure are audit logged transactionally.
-- Added bilingual buyer/merchant complaint controls to the member-store orders page and a bilingual platform desk at /admin/order-disputes, linked from review dispute administration.
-- Database bootstrap creates the dispute table and indexes idempotently. No funds are held, no chargebacks or settlement are performed, and no payment/purchase is triggered.
-- API regression tests and API TypeScript build passed on the initial API implementation head 3947fc127cf1062dbe7c388d4af5f1cd5e914de2. The subsequent customer-facing UI and order-query integration commits require a fresh final-head full CI run before this item is considered verified.
-- No PR merge, Render deployment, build-minute purchase, or production migration was performed.
+### Verification and operational boundaries
 
-## Member-store append-only order events, shipments and delivery evidence — 2026-11-08
+- PRs #51–#61 are merged into `main` through commit `4167fbefd5faf9d84b9230d0edb6a31d47572fdd`.
+- PR #62 reconciled the implementation-status document. PR #63 recorded successful post-merge CI and was subsequently merged; current main commit at this checkpoint is `462468f32abbbbb1a3b6914a3dd6fa4cf1fed7c7`.
+- The two post-merge workflows on the PR #62 merge commit passed: WASLA CI run `42731323561` and WASLA API quality run `42731323979`.
+- PR #63's documentation-only checks also passed: WASLA CI run `42732967590` and WASLA API quality run `42732967874`.
+- Fresh workflows have started on current main commit `462468f32abbbbb1a3b6914a3dd6fa4cf1fed7c7`; their final results must be checked before stating that current-main CI is green.
+- These checks validate repository workflows, not hosted end-to-end user journeys or production operation.
+- No carrier-native provider adapter/account is connected. A normalized `delivered` event is not independently verified proof of delivery.
+- No payment capture, refund/reversal, chargeback integration, replacement dispatch or supplier procurement is enabled.
+- Hosted buyer/merchant/admin acceptance and cross-account authorization-isolation testing remain outstanding.
+- Render deployment remains blocked by the previously observed pipeline-minute limit. No paid-minute purchase, spend-limit change, production database mutation or deployment was performed.
 
-- Draft branch `feat/member-order-event-ledger`, stacked on PR #47, adds `member_store_order_events` with actor, event type, before/after state, source, reason code, idempotency key, safe metadata and timestamp.
-- A database trigger records order creation, every status transition, and manual shipment-detail changes inside the same database transaction as the order write. The application sets the authenticated actor in transaction-local database context; buyer and merchant actors are distinguished.
-- Event rows and delivery-evidence rows reject UPDATE and DELETE at the database layer. Existing orders receive one idempotent legacy snapshot event; their historical transitions are not fabricated.
-- Adds normalized `member_store_shipments` records. Merchant-entered shipment details create `merchant_self_report` evidence marked `informational`; this cannot count as independent delivery proof. Authenticated buyer receipt confirmation creates `customer_confirmation` evidence marked `verified`.
-- Adds an authenticated order-events API for the buyer or an authorized store member. The query and response serializer use an explicit allowlist of lifecycle fields only (event ID/type, before/after status, source, reason code and timestamp); raw event metadata is not selected from the database or serialized. Regression tests assert metadata, tracking numbers and tracking URLs are absent.
-- The bilingual member-store order page can load and display the per-order activity timeline without exposing internal event metadata. A small duplicate Arabic UI copy key was also corrected.
-- Review creation rejects completed orders with an unresolved member-store order dispute (`open` or `merchant_responded`); the check runs in the same locked eligibility query. Buyer receipt confirmation is also blocked while such a dispute is active, preventing a disputed order from being completed around the case workflow. Carrier integrations, signed webhooks, independent proof-of-delivery verification, staff adjudication and post-submission review suspension remain unimplemented.
-- API regression expectations were updated for the actor-context parameter. API Quality workflow run 42525700832 passed on final head c93a0ed8d08ad339d80f7aa14a839daf51553cc6. Full WASLA CI and actual database execution verification remain pending; this branch is not merged or deployed.
+### Release gate — required before commercial launch
 
-## Carrier webhook security foundation — 2026-11-09
+1. Complete authenticated hosted journeys for buyer, merchant and platform administrator, including negative cross-account access tests.
+2. Select an eligible carrier/provider, implement its native authenticated adapter, and verify shipment-to-order matching, idempotency and independently sourced delivery evidence.
+3. Confirm legal entity, operating jurisdiction, payment-provider eligibility, merchant/payment responsibilities, applicable consumer rights, tax/customs disclosures and refund obligations before implementing any payment or refund provider.
+4. Complete web and mobile end-to-end, device, accessibility, Arabic/English localization, security and privacy checks.
+5. Deploy only after explicit owner approval and available build capacity, then repeat hosted acceptance tests against the deployed commit.
 
-- Adds a small, independently tested WASLA internal webhook signature verifier: HMAC-SHA256 over timestamp plus the exact raw request body, constant-time comparison, minimum 32-byte secret, and a five-minute replay window by default.
-- This is an internal normalized ingress contract only. It is not claimed to match DHL, UPS, FedEx, Turkish carriers or any provider-native signature scheme; a selected carrier adapter must validate the provider's own signature and map its events before forwarding.
-- No public webhook route, carrier account, provider secret, carrier API polling, shipment status mutation or delivery-proof verification is enabled. Carrier selection and credentials remain a prerequisite.
-
-
-## Carrier event normalization contract — 2026-11-09
-
-- Adds a provider-neutral pure normalizer for a deliberately small set of shipment lifecycle events (`picked_up`, `in_transit`, `out_for_delivery`, `delivery_attempted`, `delivered`, exceptions and shipment creation). Unknown provider event codes are rejected rather than guessed.
-- Validates carrier identifier, provider event ID, tracking reference and canonical ISO timestamp; derives an idempotency key from carrier + provider event ID.
-- Even a normalized `delivered` event remains `verificationState: pending` and `proofOfDeliveryVerified: false`. Normalization is not authentication, shipment/order matching, delivery evidence or permission to complete an order.
-- The carrier-specific adapter must verify native signatures, match the exact tracking reference to the correct shipment, enforce replay/idempotency, preserve provider raw-event audit evidence safely, and apply a monotonic transition policy before any state change. No carrier is selected or connected.
-
-
-## Member-store returns and exchanges — 2026-11-09
-
-- Draft PR #49 adds an authenticated buyer request for return or replacement on shipped/completed member-store orders, with reason/details validation and one active request per order.
-- Authorized store/account order managers can approve or reject with a recorded response; after approval, the merchant can record receipt of the returned item; the buyer can close a rejected request or a received return.
-- The order page exposes the current request and bilingual buyer/merchant controls. Return requests are audited and stored separately from delivery complaints.
-- This is an operational workflow only. It does not initiate refunds, payment reversals, chargebacks, replacement shipment creation, carrier actions or supplier purchases. A replacement fulfillment step, explicit merchant return policy/window configuration, legal policy review and payment-provider integration remain outstanding.
-- No arbitrary statutory return window is hardcoded; eligibility is limited to shipped/completed orders pending approved store policy and applicable-law review.
-- PR #49 is stacked on PR #48 and remains a draft. Final-head CI and database execution tests are pending; do not treat this workflow as production-verified until checks pass.
-- No PR was merged, no Render deployment was triggered, and no paid service or payment setting was changed.
-
-
-### Verification update — 2026-11-09
-- API quality workflow run 42528463643 passed on commit 9431cc90b1b115a2ac508ab8e11cd2a9d0b71ec8: API tests and API build succeeded.
-- After that passing run, two additional safeguards were committed: return requests validate buyer input before opening a DB connection, and an approved replacement cannot be incorrectly marked as a returned item. The buyer-facing order UI now clearly marks replacement fulfillment as not yet enabled.
-- These two latest safeguards are on the current PR head and still require a fresh CI run; do not treat the latest head as fully verified yet.
-
-## Member-store return and exchange verification — 2026-11-09
-
-- Draft PR #49 remains stacked on PR #48 and is not merged or deployed.
-- The latest PR #49 head is `af25d068b36ee1bedd617a8b193186ef6b73de21`.
-- GitHub Actions API quality run `42528600356` completed successfully on that head: API tests and API build passed.
-- This API-only workflow does not replace the full repository CI. The full CI workflow also runs shared-package tests/typecheck, database migrations, authorization seeding, database integration tests, API typecheck, and the web production build. Those checks still need to run against the final PR head.
-- Remaining product work: merchant-configurable return policies with buyer-visible disclosure (no universal statutory deadline hardcoded), replacement shipment fulfillment, payment-provider refund/reversal integration, and end-to-end/database verification.
-- No merge, Render deployment, paid build-minute purchase, domain purchase, or production database mutation was performed.
-
-## PR chain readiness review — 2026-11-09 (updated)
-
-- PR #46 head `dd0e07d803b5e75c3514d20a15d49570b2657119`: mergeable; API quality workflow run `42531203484` passed, and full WASLA CI run `42531203469` passed. The full run covered shared-package tests/typecheck, API tests/typecheck/build, database migrations and constraints, authorization seeding, and the production web build.
-- PR #47 head `9a2954ce1da934a44067b00ef4b08b3602f76c91`: mergeable; API quality workflow run `42521913421` passed. Full repository CI has not been confirmed on this exact head.
-- PR #48 head `21b7e1fc8b2601f727464d95b9129e04ad348f6a`: mergeable; API quality workflow run `42527326786` passed. Full repository CI has not been confirmed on this exact head.
-- PR #49 head `32bd5b5b1bcdbf58fe2e53b9a2765b0e1e0e8237`: mergeable; API quality workflow run `42529654440` passed. Full repository CI has not been confirmed on this exact head.
-- PR #46's earlier merge conflict was resolved in its branch by restoring the bilingual link from review-dispute administration to order-dispute administration. The corrected head is the one covered by both successful workflows above.
-- All four PRs remain open drafts and unmerged. Their dependency order is #46 → #47 → #48 → #49. Mergeability is not merge authorization; no PR was merged.
-- Remaining verification before release: run full repository CI against the final stacked chain, perform hosted buyer/merchant/admin end-to-end tests, review carrier-specific integration and delivery proof, implement merchant-configurable return policies and replacement fulfillment, and complete payment/refund and legal/provider prerequisites.
-- No Render deployment, paid build-minute purchase, domain purchase, or production database mutation was performed.
-
-
-## Member-store return policies and support escalation — integration candidate (2026-11-09)
-
-- Adds versioned store return policies with draft, publish and unpublish lifecycle; public reads expose only the currently published policy.
-- New orders retain the policy snapshot/version that applied when the order was created, so later policy edits do not silently rewrite earlier order terms.
-- Buyer return/exchange requests are checked against that order-time snapshot. The request window is measured from buyer delivery confirmation, or shipment time when delivery has not been confirmed, with order creation as a legacy fallback.
-- Buyers can create a support escalation record for legal-rights claims, merchant nonresponse or a related dispute. Platform support can acknowledge or close the review record; this is not a legal determination or a refund decision.
-- Integration draft PR #55 is branch-only pending exact-head API quality and full CI. No payment, refund, return-carrier booking, replacement dispatch, merge to `main` or Render deployment is enabled.
-
-
-## Order lifecycle database integration verification — candidate (2026-11-09)
-
-- Added a real-PostgreSQL integration check that runs the member-order, verified-review and return-policy schema bootstraps twice, then verifies the expected tables, order-status constraint, active-return index, policy snapshot columns and append-only triggers.
-- This validates schema initialization and restart idempotency in CI; it does not replace two-account hosted acceptance tests or prove carrier delivery, payment, refund or production deployment behavior.
-
-
-## Member-store inventory commitment on merchant acceptance — candidate (2026-11-10)
-
-- Stock is now decremented only when a merchant accepts a pending order, not when a buyer merely submits a request.
-- Each product decrement is atomic and scoped to the order's store; insufficient or missing stock aborts the entire order-status transaction, so earlier item decrements roll back as well.
-- Product rows are processed in deterministic product-ID order to reduce deadlock risk. Tests cover successful commitment and multi-item rollback on shortage.
-- This is stock commitment for a manually accepted order request; it does not represent payment capture, checkout, supplier procurement or refund restocking.
-
-
-## Accepted-order cancellation and inventory restoration — candidate (2026-11-10)
-
-- Buyers may cancel a merchant-accepted order before shipment; shipped orders remain non-cancellable through this action.
-- Cancellation locks the order and restores each accepted order item to that same store's inventory within the cancellation transaction.
-- If any product row is missing or the inventory value would overflow, the entire cancellation rolls back; inventory restoration is recorded in the order-status audit metadata.
-- Pending-order cancellation remains unchanged and does not add stock because no stock was committed at request time.
-
-
-## Inventory commitment marker — integration note (2026-11-10)
-
-- Accepted orders now carry `inventory_committed_at`, set atomically with stock decrement. Cancellation restores inventory only when this marker exists, protecting legacy accepted orders that predate stock commitment from receiving an incorrect stock increase.
-
-
-## Merchant cancellation of accepted orders — candidate (2026-11-10)
-
-- Store/account order managers may cancel an accepted order before shipment, using the same locked transaction and inventory restoration marker as buyer cancellation.
-- The buyer receives a bilingual in-app notification when the merchant cancels; buyer cancellation continues to notify active store/account order managers.
-- Shipped orders remain outside this cancellation path; no payment reversal or refund is implied.
-
-
-## Return receipt and optional inventory restocking — candidate (2026-11-10)
-
-- Store managers can confirm receipt of an approved physical return and explicitly choose whether returned items are fit for resale and should be returned to stock.
-- Restocking is opt-in, store-scoped, quantity-checked, overflow-safe and part of the same transaction as marking the return received; a failure rolls back both.
-- The return request records `restocked_at`; audit metadata records the decision and exact product quantities. Legacy orders without an inventory commitment marker cannot be restocked automatically.
-- This does not issue refunds, replacement shipments or payment reversals.
-
-
-## Partial return item selection — candidate (2026-11-10)
-
-- Buyers select the exact products and quantities they are returning; the API validates each line against the original order snapshot and stores an immutable item/quantity snapshot on the return request.
-- Merchant restocking uses only the items and quantities recorded on that return request, not every item in the original order. This prevents stock from being added for goods the buyer did not return.
-- Legacy return requests without item-level snapshots cannot be automatically restocked.
-
-
-## Integration chain merged — 2026-11-10
-
-- PRs #51–#61 are all merged into `main`. Latest merge commit: `4167fbefd5faf9d84b9230d0edb6a31d47572fdd`.
-- The merged chain completes substantial member-store order lifecycle foundations: shipment details and buyer receipt confirmation; verified-purchase reviews/moderation; order complaints and merchant responses; append-only order event history and normalized shipment evidence; internal carrier webhook signature verification and event normalization; return/exchange requests and versioned merchant policy snapshots; return-support escalation; repeatable PostgreSQL schema integration checks; inventory commitment on merchant acceptance; buyer/merchant cancellation and guarded stock restoration; optional return restocking; and immutable item/quantity snapshots for partial returns.
-- Important boundaries: no carrier-native adapter or public provider webhook is connected; normalized `delivered` events are not proof of delivery; no payment capture, refunds/reversals, replacement dispatch or supplier procurement is enabled. Hosted multi-role end-to-end acceptance remains outstanding.
-- The PR-head checks passed during integration, but the final merge commit currently has no recorded workflow runs or combined statuses. Post-merge CI is therefore **unverified**, not passed.
-- Render deployment remains blocked by the previously observed pipeline-minute limit. No deployment, paid-minute purchase, spend-limit change or production database mutation was performed.
-- Release gate: verify full CI on current `main`; complete hosted buyer/merchant/admin journeys and authorization isolation; select and integrate a carrier only after provider/account details are approved; implement payment/refund provider workflows only after legal and provider prerequisites; then deploy and repeat hosted acceptance checks.
-
-
-## Latest verification checkpoint — 2026-11-10
-
-- PR #62 reconciled the order-lifecycle implementation status and is merged into `main`.
-- Current-main commit `467fbcd128afe706644da2cc04b665ddd6f5f05c` passed both post-merge GitHub Actions workflows: WASLA CI run `42731323561` and WASLA API quality checks run `42731323979`.
-- Passing repository CI does not establish hosted runtime or end-to-end production readiness. Render deployment remains pending while pipeline minutes are exhausted; do not purchase minutes or enable paid services without explicit approval.
-- Commercial launch blockers remain: hosted buyer/merchant/admin acceptance and account-isolation tests; real carrier integration and independently verified delivery; payment-provider eligibility and integration (including applicable refunds/reconciliation); complete web/mobile release checks; security, localization and legal/compliance review.
