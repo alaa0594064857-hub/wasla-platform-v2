@@ -70,6 +70,67 @@ describe("member store returns and exchanges",()=>{
   expect(await response.json()).toMatchObject({success:true,returnRequest:{id:requestId,status:"item_received"}});
   expect(String(clientQuery.mock.calls[2][0])).toContain('requested_resolution AS "requestedResolution"');
   expect(String(clientQuery.mock.calls[4][0])).toContain("status='item_received'");
+  expect(clientQuery.mock.calls.some(call=>String(call[0]).includes("UPDATE store_products"))).toBe(false);
+ });
+ it("restocks received returned items only when the merchant explicitly opts in",async()=>{
+  const merchant="55555555-5555-4555-8555-555555555555";
+  vi.mocked(auth.api.getSession).mockResolvedValueOnce({user:{id:merchant}} as never);
+  clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]})
+   .mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"completed",buyerId:buyer,storeId:store,inventoryCommittedAt:new Date(),items:[{productId:"33333333-3333-4333-8333-333333333333",quantity:2}]}]})
+   .mockResolvedValueOnce({rowCount:1,rows:[{id:requestId,status:"approved",buyerId:buyer,storeId:store,requestedResolution:"return"}]})
+   .mockResolvedValueOnce({rowCount:1,rows:[{}]})
+   .mockResolvedValueOnce({rowCount:1,rows:[{id:"33333333-3333-4333-8333-333333333333"}]})
+   .mockResolvedValueOnce({rowCount:1,rows:[{id:requestId,status:"item_received",restockedAt:new Date()}]})
+   .mockResolvedValueOnce({rowCount:1,rows:[]})
+   .mockResolvedValueOnce({rowCount:null,rows:[]});
+  const base=await start();
+  const response=await fetch(base+path+"/received",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({restock:true})});
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({success:true,returnRequest:{id:requestId,status:"item_received"}});
+  const restockCall=clientQuery.mock.calls[4];
+  expect(String(restockCall[0])).toContain("stock_quantity=stock_quantity+$3");
+  expect(restockCall[1]).toEqual(["33333333-3333-4333-8333-333333333333",store,2]);
+  expect(String(clientQuery.mock.calls[5][0])).toContain("restocked_at=CASE WHEN $2 THEN NOW()");
+  expect(clientQuery.mock.calls[5][1]).toEqual([requestId,true]);
+  expect(clientQuery.mock.calls[6][1][3]).toContain('"restocked":true');
+  expect(clientQuery.mock.calls[6][1][3]).toContain('"restockedItems":[{"productId":"33333333-3333-4333-8333-333333333333","quantity":2}]');
+ });
+ it("does not restock legacy orders without a recorded inventory commitment",async()=>{
+  const merchant="55555555-5555-4555-8555-555555555555";
+  vi.mocked(auth.api.getSession).mockResolvedValueOnce({user:{id:merchant}} as never);
+  clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]})
+   .mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"completed",buyerId:buyer,storeId:store,inventoryCommittedAt:null,items:[{productId:"33333333-3333-4333-8333-333333333333",quantity:2}]}]})
+   .mockResolvedValueOnce({rowCount:1,rows:[{id:requestId,status:"approved",buyerId:buyer,storeId:store,requestedResolution:"return"}]})
+   .mockResolvedValueOnce({rowCount:1,rows:[{}]})
+   .mockResolvedValueOnce({rowCount:null,rows:[]});
+  const base=await start();
+  const response=await fetch(base+path+"/received",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({restock:true})});
+  expect(response.status).toBe(409);
+  expect(await response.json()).toMatchObject({success:false,error:"This legacy order has no recorded inventory commitment and cannot be restocked automatically"});
+  expect(clientQuery.mock.calls.some(call=>String(call[0]).includes("UPDATE store_products"))).toBe(false);
+  expect(String(clientQuery.mock.calls[4][0])).toBe("ROLLBACK");
+ });
+ it("rolls back return receipt if any returned product cannot be restocked",async()=>{
+  const merchant="55555555-5555-4555-8555-555555555555";
+  vi.mocked(auth.api.getSession).mockResolvedValueOnce({user:{id:merchant}} as never);
+  clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]})
+   .mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"completed",buyerId:buyer,storeId:store,inventoryCommittedAt:new Date(),items:[
+    {productId:"33333333-3333-4333-8333-333333333333",quantity:2},
+    {productId:"44444444-4444-4444-8444-444444444444",quantity:1}
+   ]}]})
+   .mockResolvedValueOnce({rowCount:1,rows:[{id:requestId,status:"approved",buyerId:buyer,storeId:store,requestedResolution:"return"}]})
+   .mockResolvedValueOnce({rowCount:1,rows:[{}]})
+   .mockResolvedValueOnce({rowCount:1,rows:[{id:"33333333-3333-4333-8333-333333333333"}]})
+   .mockResolvedValueOnce({rowCount:0,rows:[]})
+   .mockResolvedValueOnce({rowCount:null,rows:[]});
+  const base=await start();
+  const response=await fetch(base+path+"/received",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({restock:true})});
+  expect(response.status).toBe(409);
+  expect(await response.json()).toMatchObject({success:false,error:"Could not restock a returned item. Contact platform support."});
+  expect(clientQuery.mock.calls[4][1]).toEqual(["33333333-3333-4333-8333-333333333333",store,2]);
+  expect(clientQuery.mock.calls[5][1]).toEqual(["44444444-4444-4444-8444-444444444444",store,1]);
+  expect(String(clientQuery.mock.calls[6][0])).toBe("ROLLBACK");
+  expect(clientQuery.mock.calls.some(call=>String(call[0]).includes("SET status='item_received'"))).toBe(false);
  });
  it("allows a legal-rights claim to be submitted for support review even when the store policy disables returns",async()=>{
   clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]})

@@ -75,6 +75,7 @@ export default function MemberStoreOrdersPage() {
   const [returnReasons, setReturnReasons] = useState<Record<string, string>>({});
   const [returnResolutions, setReturnResolutions] = useState<Record<string, string>>({});
   const [returnResponses, setReturnResponses] = useState<Record<string, string>>({});
+  const [returnRestock, setReturnRestock] = useState<Record<string, boolean>>({});
   const [returnBusy, setReturnBusy] = useState("");
   const [canManagePolicy, setCanManagePolicy] = useState(false);
   const [escalationDetails, setEscalationDetails] = useState<Record<string, string>>({});
@@ -241,7 +242,8 @@ export default function MemberStoreOrdersPage() {
         credentials: "include", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(action === "submit"
           ? { resolution: returnResolutions[order.id] ?? "return", reason: returnReasons[order.id] ?? "other", details }
-          : action === "respond" ? { decision: "approved", note: details } : {})
+          : action === "respond" ? { decision: "approved", note: details }
+          : action === "received" ? { restock: returnRestock[order.id] === true } : {})
       });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.error || "return");
@@ -367,7 +369,10 @@ export default function MemberStoreOrdersPage() {
                   }} className="rounded-lg border border-red-700 px-4 py-2 font-semibold text-red-700 disabled:opacity-50">{ar ? "رفض الطلب" : "Reject request"}</button>
                 </div>
               </div>}
-              {isMerchantView && order.returnStatus === "approved" && order.returnResolution === "return" && <button disabled={returnBusy === order.id} onClick={() => void returnAction(order, "received")} className="mt-3 rounded-lg border border-[#14233b] px-4 py-2 font-semibold">{ar ? "تأكيد استلام المنتج المُعاد" : "Confirm returned item received"}</button>}
+              {isMerchantView && order.returnStatus === "approved" && order.returnResolution === "return" && <div className="mt-3 space-y-2">
+                <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={returnRestock[order.id] === true} onChange={e => setReturnRestock(v => ({ ...v, [order.id]: e.target.checked }))} className="mt-1" /><span>{ar ? "إعادة المنتجات المستلمة إلى المخزون إذا كانت صالحة للبيع" : "Restock the returned items if they are fit for resale"}</span></label>
+                <button disabled={returnBusy === order.id} onClick={() => void returnAction(order, "received")} className="rounded-lg border border-[#14233b] px-4 py-2 font-semibold">{ar ? "تأكيد استلام المنتج المُعاد" : "Confirm returned item received"}</button>
+              </div>}
               {isMerchantView && order.returnStatus === "approved" && order.returnResolution === "replacement" && <p className="mt-3 text-xs text-slate-600">{ar ? "تمت الموافقة على الاستبدال. تنفيذ شحن البديل سيُفعّل بعد استكمال تكامل الشحن." : "Replacement approved. Dispatching the replacement will be enabled after shipping integration."}</p>}
               {!isMerchantView && <div className="mt-3 space-y-2 border-t border-[#e8d9b6] pt-3">
                 <strong>{ar ? "التواصل مع دعم وصلة" : "Contact WASLA support"}</strong>

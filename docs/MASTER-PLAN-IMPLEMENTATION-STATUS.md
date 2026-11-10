@@ -1149,3 +1149,11 @@ This checkpoint supersedes the earlier mobile notes above where they describe fe
 - Store/account order managers may cancel an accepted order before shipment, using the same locked transaction and inventory restoration marker as buyer cancellation.
 - The buyer receives a bilingual in-app notification when the merchant cancels; buyer cancellation continues to notify active store/account order managers.
 - Shipped orders remain outside this cancellation path; no payment reversal or refund is implied.
+
+
+## Return receipt and optional inventory restocking — candidate (2026-11-10)
+
+- Store managers can confirm receipt of an approved physical return and explicitly choose whether returned items are fit for resale and should be returned to stock.
+- Restocking is opt-in, store-scoped, quantity-checked, overflow-safe and part of the same transaction as marking the return received; a failure rolls back both.
+- The return request records `restocked_at`; audit metadata records the decision and exact product quantities. Legacy orders without an inventory commitment marker cannot be restocked automatically.
+- This does not issue refunds, replacement shipments or payment reversals.
