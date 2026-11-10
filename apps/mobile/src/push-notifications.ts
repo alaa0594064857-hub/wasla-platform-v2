@@ -1,8 +1,11 @@
 import { Platform } from "react-native";
 import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
+import * as SecureStore from "expo-secure-store";
 import { authClient } from "./auth-client";
 import { API_BASE_URL, WaslaApiError } from "./api";
+
+const PUSH_TOKEN_STORAGE_KEY = "wasla.push-device-token";
 
 function getProjectId(): string | undefined {
   return Constants.expoConfig?.extra?.eas?.projectId ??
@@ -49,9 +52,13 @@ export async function enablePushNotifications(): Promise<string> {
   }
   const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
   await requestWithSession(token, "POST");
+  await SecureStore.setItemAsync(PUSH_TOKEN_STORAGE_KEY, token);
   return token;
 }
 
-export async function disablePushNotifications(token: string): Promise<void> {
-  if (token) await requestWithSession(token, "DELETE");
+export async function disablePushNotifications(token?: string): Promise<void> {
+  const savedToken = token || await SecureStore.getItemAsync(PUSH_TOKEN_STORAGE_KEY);
+  if (!savedToken) return;
+  await requestWithSession(savedToken, "DELETE");
+  await SecureStore.deleteItemAsync(PUSH_TOKEN_STORAGE_KEY);
 }
