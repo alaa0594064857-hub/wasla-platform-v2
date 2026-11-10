@@ -110,6 +110,24 @@ describe("profile API validation and ownership", () => {
     expect(query).not.toHaveBeenCalled();
   });
 
+  it("rejects GIF avatar data URLs because profile uploads allow only PNG, JPEG and WebP", async () => {
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/profile`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        displayName: "Member",
+        avatarReference: "data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=",
+        bio: "",
+        website: "",
+        socialLinks: {},
+      }),
+    });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ success: false, error: "Use a valid image file or HTTPS image URL" });
+    expect(query).not.toHaveBeenCalled();
+  });
+
   it("stores profile changes against the authenticated user id", async () => {
     query.mockResolvedValueOnce({ rowCount: 1, rows: [] });
     const baseUrl = await startServer();
