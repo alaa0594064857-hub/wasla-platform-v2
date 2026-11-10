@@ -600,6 +600,34 @@ export async function ensureMemberStoreOrderTables(): Promise<void> {
       CREATE INDEX IF NOT EXISTS member_store_orders_buyer_created_idx
       ON member_store_orders (buyer_user_id, created_at DESC)
     `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS member_store_order_disputes (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        order_id uuid NOT NULL REFERENCES member_store_orders(id) ON DELETE RESTRICT,
+        store_id uuid NOT NULL REFERENCES stores(id) ON DELETE RESTRICT,
+        buyer_user_id uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+        reason varchar(40) NOT NULL CHECK (reason IN ('not_as_described','damaged_or_defective','missing_items','delivery_problem','seller_communication','other')),
+        details varchar(3000) NOT NULL CHECK (length(trim(details)) >= 10),
+        status varchar(24) NOT NULL DEFAULT 'open' CHECK (status IN ('open','merchant_responded','resolved','dismissed','closed')),
+        merchant_response varchar(3000),
+        merchant_user_id uuid REFERENCES users(id) ON DELETE RESTRICT,
+        merchant_responded_at timestamptz,
+        moderator_user_id uuid REFERENCES users(id) ON DELETE RESTRICT,
+        moderator_note varchar(1500),
+        resolved_at timestamptz,
+        closed_at timestamptz,
+        created_at timestamptz NOT NULL DEFAULT NOW(),
+        updated_at timestamptz NOT NULL DEFAULT NOW()
+      )
+    `);
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS member_store_order_disputes_one_open_per_order_idx
+      ON member_store_order_disputes (order_id) WHERE status IN ('open','merchant_responded')
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS member_store_order_disputes_status_created_idx
+      ON member_store_order_disputes (status, created_at ASC)
+    `);
   } finally {
     client.release();
   }

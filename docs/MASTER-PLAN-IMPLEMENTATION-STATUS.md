@@ -1032,3 +1032,15 @@ This checkpoint supersedes the earlier mobile notes above where they describe fe
 - The candidate adds merchant shipment details and buyer-only delivery confirmation for member-store orders, with server-side lifecycle checks and transactional notifications.
 - It adds verified-purchase reviews, edit history, moderation, buyer reports/appeals, and moderated seller responses.
 - This candidate remains branch-only until GitHub API-quality and full CI checks pass. It is not merged to `main` or deployed; payment capture, carrier webhooks, refunds and proof-of-delivery remain out of scope.
+
+
+## Member-store order complaints and dispute resolution — 2026-11-08
+
+- Draft PR #47 (feat/member-store-order-disputes) adds a separate complaint workflow for member-store orders; it is stacked on PR #46 and does not change main.
+- Buyers can open one active complaint per accepted, shipped or completed order. The buyer's original reason/details remain separate from the merchant response.
+- Only an active store/account member with existing store.order.manage or account.order.manage permission can respond. The buyer can close a case only after a moderator resolves or dismisses it.
+- Platform moderators with platform.reports.manage receive an open-case queue and can resolve/dismiss with a required note. Decisions, buyer submissions, merchant responses and buyer closure are audit logged transactionally.
+- Added bilingual buyer/merchant complaint controls to the member-store orders page and a bilingual platform desk at /admin/order-disputes, linked from review dispute administration.
+- Database bootstrap creates the dispute table and indexes idempotently. No funds are held, no chargebacks or settlement are performed, and no payment/purchase is triggered.
+- API regression tests and API TypeScript build passed on the initial API implementation head 3947fc127cf1062dbe7c388d4af5f1cd5e914de2. The subsequent customer-facing UI and order-query integration commits require a fresh final-head full CI run before this item is considered verified.
+- No PR merge, Render deployment, build-minute purchase, or production migration was performed.

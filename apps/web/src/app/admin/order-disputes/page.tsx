@@ -6,7 +6,7 @@ import { useLocale } from "@/components/locale-provider";
 import WorkspaceHeader from "@/components/workspace-header";
 
 type Complaint = {
-  id: string; orderId: string; orderNumber: string; storeId: string; storeName: string;
+  id: string; orderId: string; orderNumber: string; storeId: string; storeSlug: string;
   buyerUserId: string; reason: string; details: string; status: string;
   merchantResponse: string | null; moderatorNote: string | null; createdAt: string;
 };
@@ -77,7 +77,7 @@ export default function AdminOrderDisputesPage() {
             <h2 className="font-bold">{t.order}: {item.orderNumber}</h2>
             <span className="rounded-full bg-[#f4efe3] px-3 py-1 text-xs">{item.status}</span>
           </div>
-          <p className="mt-2 text-sm text-slate-600">{t.store}: {item.storeName} · {t.reason}: {item.reason} · {new Date(item.createdAt).toLocaleString(locale)}</p>
+          <p className="mt-2 text-sm text-slate-600">{t.store}: {item.storeSlug} · {t.reason}: {item.reason} · {new Date(item.createdAt).toLocaleString(locale)}</p>
           <div className="mt-4 rounded-xl bg-[#f7f4ed] p-4">
             <b>{t.buyer}</b><p className="mt-2 whitespace-pre-wrap leading-7">{item.details}</p>
           </div>

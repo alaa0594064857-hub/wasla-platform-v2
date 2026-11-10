@@ -104,9 +104,18 @@ export async function handleMemberStoreOrdersRequest(
               o.carrier_name AS "carrierName", o.tracking_number AS "trackingNumber",
               o.tracking_url AS "trackingUrl", o.shipped_at AS "shippedAt",
               o.delivery_confirmed_at AS "deliveryConfirmedAt",
+              d.id AS "disputeId", d.reason AS "disputeReason", d.details AS "disputeDetails",
+              d.status AS "disputeStatus", d.merchant_response AS "merchantResponse",
+              d.moderator_note AS "moderatorNote",
               o.created_at AS "createdAt", o.updated_at AS "updatedAt"
        FROM member_store_orders o
        INNER JOIN stores s ON s.id = o.store_id
+       LEFT JOIN LATERAL (
+         SELECT id, reason, details, status, merchant_response, moderator_note
+         FROM member_store_order_disputes d
+         WHERE d.order_id = o.id AND d.status <> 'closed'
+         ORDER BY d.created_at DESC LIMIT 1
+       ) d ON TRUE
        WHERE s.slug = $1 AND s.status = 'active'
          AND (o.buyer_user_id = $2 OR ${merchantPermission(2, 3)})
        ORDER BY o.created_at DESC LIMIT 100`,
