@@ -102,7 +102,7 @@ export async function handleProfileRequest(request: IncomingMessage, response: S
       return;
     }
     if (typeof avatarReference === "string") {
-      const isImageData = /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(avatarReference);
+      const isImageData = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(avatarReference);
       const isHttpsUrl = /^https:\/\//i.test(avatarReference);
       if ((!isImageData && !isHttpsUrl) || avatarReference.length > 5_000_000) {
         respond(response, 400, { success: false, error: "Use a valid image file or HTTPS image URL" });
