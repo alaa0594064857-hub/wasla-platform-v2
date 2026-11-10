@@ -178,7 +178,7 @@ export async function handlePlatformAiTeamTasksRequest(req: IncomingMessage, res
       const context = body?.inputContext && typeof body.inputContext === "object" && !Array.isArray(body.inputContext) ? body.inputContext as Record<string, unknown> : {};
       const contextJson = JSON.stringify(context);
       const idempotencyKey = body?.idempotencyKey === undefined ? null : safeText(body.idempotencyKey, 100);
-      if (!specialist || !(specialist in SPECIALISTS) || !title || !inputText || contextJson.length > MAX_CONTEXT || (body?.idempotencyKey !== undefined && !idempotencyKey)) {
+      if (!specialist || !Object.hasOwn(SPECIALISTS, specialist) || !title || !inputText || contextJson.length > MAX_CONTEXT || (body?.idempotencyKey !== undefined && !idempotencyKey)) {
         reply(res, 400, { success: false, error: "Provide a valid specialistKey, title, inputText and inputContext (maximum 8 KB)." }); return;
       }
       const result = await db.query(
