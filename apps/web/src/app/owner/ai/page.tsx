@@ -6,7 +6,7 @@ import { useLocale } from "../../../components/locale-provider";
 
 type Message = { role: "user" | "assistant"; content: string };
 type AuditEntry = { id: string; model: string; prompt_preview: string; response_preview: string; createdAt: string };
-type Status = { configured: boolean; managerEnabled: boolean; pausedReason: string | null; model: string | null; provider?: string; engine?: string; readOnlyDataAccess?: boolean; auditTrail?: AuditEntry[]; capabilities: string[]; limitations: string[] };
+type Status = { configured: boolean; managerEnabled: boolean; pausedReason: string | null; model: string | null; provider?: string; engine?: string; readOnlyDataAccess?: boolean; auditTrail?: AuditEntry[]; capabilities: string[]; limitations: string[] };\ntype TeamTask = { id: string; specialistKey: string; title: string; status: string; resultText?: string | null; errorCode?: string | null; createdAt: string };\ntype TaskEvent = { actorType: string; actorKey: string | null; eventType: string; createdAt: string };
 export default function OwnerAiAssistantPage() {
   const { locale } = useLocale();
   const ar = locale === "ar";
@@ -20,6 +20,15 @@ export default function OwnerAiAssistantPage() {
   const [controlBusy, setControlBusy] = useState(false);
   const [pauseReason, setPauseReason] = useState("Owner maintenance");
   const [createdDraft, setCreatedDraft] = useState<{ id: string; title_ar: string; title_en: string; status: string; price: string; currency: string; warnings: string[] } | null>(null);
+  const [teamTasks, setTeamTasks] = useState<TeamTask[]>([]);
+  const [taskTitle, setTaskTitle] = useState("");
+  const [taskInput, setTaskInput] = useState("");
+  const [taskSpecialist, setTaskSpecialist] = useState("product_analyst");
+  const [taskBusy, setTaskBusy] = useState(false);
+  const [taskBusyId, setTaskBusyId] = useState("");
+  const [taskError, setTaskError] = useState("");
+  const [taskEvents, setTaskEvents] = useState<Record<string, TaskEvent[]>>({});
+
 
   useEffect(() => {
     let active = true;
@@ -29,6 +38,71 @@ export default function OwnerAiAssistantPage() {
       .catch(() => { if (active) setError(ar ? "تعذر التحقق من حالة خدمة الذكاء الاصطناعي أو صلاحية الحساب." : "Could not verify AI service status or account access."); });
     return () => { active = false; };
   }, [ar]);
+  useEffect(() => {
+    let active = true;
+    fetch("/api/platform/ai/tasks?limit=30", { credentials: "include", cache: "no-store" })
+      .then(async response => { const data = await response.json(); if (!response.ok || !data.success) throw new Error(data.error || "tasks"); return data; })
+      .then(data => { if (active) setTeamTasks(Array.isArray(data.tasks) ? data.tasks : []); })
+      .catch(() => { if (active) setTaskError(ar ? "تعذر تحميل مهام الفريق." : "Could not load team tasks."); });
+    return () => { active = false; };
+  }, [ar]);
+
+  async function refreshTeamTasks() {
+    const response = await fetch("/api/platform/ai/tasks?limit=30", { credentials: "include", cache: "no-store" });
+    const data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.error || "Could not refresh tasks");
+    setTeamTasks(Array.isArray(data.tasks) ? data.tasks : []);
+  }
+
+  async function createTeamTask(event: FormEvent) {
+    event.preventDefault();
+    if (!taskTitle.trim() || !taskInput.trim() || taskBusy || !status?.managerEnabled || !status.configured) return;
+    setTaskBusy(true); setTaskError("");
+    try {
+      const response = await fetch("/api/platform/ai/tasks", {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ specialistKey: taskSpecialist, title: taskTitle.trim(), inputText: taskInput.trim() })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || "Task creation failed");
+      setTaskTitle(""); setTaskInput("");
+      await refreshTeamTasks();
+    } catch (e) { setTaskError(e instanceof Error ? e.message : (ar ? "تعذر إنشاء المهمة." : "Could not create task.")); }
+    finally { setTaskBusy(false); }
+  }
+
+  async function executeTeamTask(taskId: string) {
+    if (taskBusyId || !status?.managerEnabled) return;
+    setTaskBusyId(taskId); setTaskError("");
+    try {
+      const response = await fetch(`/api/platform/ai/tasks/${taskId}/execute`, { method: "POST", credentials: "include" });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || "Task execution failed");
+      await refreshTeamTasks();
+    } catch (e) { setTaskError(e instanceof Error ? e.message : (ar ? "تعذر تنفيذ المهمة." : "Could not execute task.")); }
+    finally { setTaskBusyId(""); }
+  }
+
+  async function cancelTeamTask(taskId: string) {
+    setTaskBusyId(taskId); setTaskError("");
+    try {
+      const response = await fetch(`/api/platform/ai/tasks/${taskId}/cancel`, { method: "POST", credentials: "include" });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || "Task cancellation failed");
+      await refreshTeamTasks();
+    } catch (e) { setTaskError(e instanceof Error ? e.message : (ar ? "تعذر إلغاء المهمة." : "Could not cancel task.")); }
+    finally { setTaskBusyId(""); }
+  }
+
+  async function loadTaskEvents(taskId: string) {
+    try {
+      const response = await fetch(`/api/platform/ai/tasks/${taskId}`, { credentials: "include", cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || "Task history unavailable");
+      setTaskEvents(current => ({ ...current, [taskId]: Array.isArray(data.events) ? data.events : [] }));
+    } catch (e) { setTaskError(e instanceof Error ? e.message : (ar ? "تعذر تحميل سجل المهمة." : "Could not load task history.")); }
+  }
+
   async function toggleManager() {
     if (!status || controlBusy) return;
     const enabled = !status.managerEnabled;
@@ -151,6 +225,54 @@ export default function OwnerAiAssistantPage() {
         <strong>{ar ? "بوابة موافقة المالك: " : "Owner approval gate: "}</strong>
         {ar ? "شراء المخزون، اعتماد مورد جديد، نشر منتج، تغيير جوهري في السعر، الدفع، الاسترداد، أو أي التزام مالي لا ينفذه الذكاء الاصطناعي دون موافقة مخولة. لا توجد حالياً عمليات شراء أو شحن مستقلة مفعلة." : "Inventory purchases, new supplier approval, product publication, material price changes, payments, refunds, and financial commitments require authorized approval. Autonomous purchasing or shipping is not currently enabled."}
       </div>
+    </section>
+    <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6">
+      <div>
+        <p className="text-xs font-bold tracking-[.16em] text-amber-700">TASK DESK</p>
+        <h2 className="mt-1 text-xl font-bold">{ar ? "مكتب مهام الموظفين الرقميين" : "Digital team task desk"}</h2>
+        <p className="mt-1 text-sm text-slate-600">{ar ? "أنشئ مهمة لموظف متخصص، ثم شغّلها عند الحاجة. كل نتيجة تحتاج مراجعتك؛ لا توجد إجراءات شراء أو نشر أو إرسال تلقائية." : "Assign a task to a specialist and run it when needed. Every result requires your review; no purchasing, publishing or sending actions are automated."}</p>
+      </div>
+      {taskError ? <p role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{taskError}</p> : null}
+      <form onSubmit={createTeamTask} className="grid gap-3 rounded-xl bg-slate-50 p-4">
+        <label className="text-sm font-semibold">{ar ? "الموظف المختص" : "Specialist"}
+          <select value={taskSpecialist} onChange={event => setTaskSpecialist(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-3 text-sm">
+            <option value="market_researcher">{ar ? "باحث الأسواق" : "Market researcher"}</option>
+            <option value="product_analyst">{ar ? "خبير المنتجات" : "Product analyst"}</option>
+            <option value="supplier_researcher">{ar ? "باحث الموردين" : "Supplier researcher"}</option>
+            <option value="catalogue_manager">{ar ? "مدير الكتالوج" : "Catalogue manager"}</option>
+            <option value="sales_support">{ar ? "المبيعات وخدمة العملاء" : "Sales support"}</option>
+            <option value="logistics_analyst">{ar ? "الطلبات والشحن" : "Orders & logistics"}</option>
+            <option value="translator">{ar ? "الترجمة" : "Translator"}</option>
+            <option value="financial_analyst">{ar ? "المحلل المالي" : "Financial analyst"}</option>
+            <option value="quality_risk_reviewer">{ar ? "الجودة والمخاطر" : "Quality & risk reviewer"}</option>
+          </select>
+        </label>
+        <label className="text-sm font-semibold">{ar ? "عنوان المهمة" : "Task title"}
+          <input value={taskTitle} onChange={event => setTaskTitle(event.target.value)} maxLength={180} required className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-3 text-sm" />
+        </label>
+        <label className="text-sm font-semibold">{ar ? "تفاصيل المهمة والمعلومات المتوفرة" : "Task instructions and available evidence"}
+          <textarea value={taskInput} onChange={event => setTaskInput(event.target.value)} maxLength={5000} rows={4} required className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-3 text-sm" />
+        </label>
+        <div><button type="submit" disabled={!status?.configured || !status.managerEnabled || taskBusy || !taskTitle.trim() || !taskInput.trim()} className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">{taskBusy ? (ar ? "جارٍ إنشاء المهمة..." : "Creating task...") : (ar ? "إضافة مهمة للفريق" : "Assign task")}</button></div>
+      </form>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-2"><h3 className="font-semibold">{ar ? "المهام الأخيرة" : "Recent tasks"}</h3><button type="button" onClick={() => void refreshTeamTasks().catch(e => setTaskError(e.message))} className="text-xs font-semibold text-amber-800 underline">{ar ? "تحديث" : "Refresh"}</button></div>
+        {!teamTasks.length ? <p className="rounded-lg bg-slate-50 p-4 text-sm text-slate-500">{ar ? "لا توجد مهام بعد. أنشئ أول مهمة للفريق." : "No tasks yet. Assign the team's first task."}</p> : teamTasks.map(task => <article key={task.id} className="space-y-2 rounded-xl border border-slate-200 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div><h4 className="font-semibold">{task.title}</h4><p className="mt-1 text-xs text-slate-500">{task.specialistKey.replaceAll("_", " ")} · {new Date(task.createdAt).toLocaleString(locale)}</p></div>
+            <span className="rounded-full border border-slate-200 px-2 py-1 text-xs">{task.status === "needs_owner_review" ? (ar ? "بانتظار مراجعتك" : "Needs your review") : task.status}</span>
+          </div>
+          {task.resultText ? <div className="whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-sm leading-6">{task.resultText}</div> : null}
+          {task.errorCode ? <p className="text-xs text-rose-700">{ar ? "رمز الخطأ: " : "Error: "}{task.errorCode}</p> : null}
+          <div className="flex flex-wrap gap-2">
+            {task.status === "queued" ? <button type="button" onClick={() => void executeTeamTask(task.id)} disabled={!status?.configured || !status.managerEnabled || Boolean(taskBusyId)} className="rounded-lg bg-amber-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">{taskBusyId === task.id ? (ar ? "جارٍ التنفيذ..." : "Running...") : (ar ? "تشغيل الموظف" : "Run specialist")}</button> : null}
+            {task.status === "queued" ? <button type="button" onClick={() => void cancelTeamTask(task.id)} disabled={Boolean(taskBusyId)} className="rounded-lg border border-slate-300 px-3 py-2 text-xs">{ar ? "إلغاء" : "Cancel"}</button> : null}
+            <button type="button" onClick={() => void loadTaskEvents(task.id)} className="rounded-lg border border-slate-300 px-3 py-2 text-xs">{ar ? "سجل المهمة" : "Task history"}</button>
+          </div>
+          {taskEvents[task.id]?.length ? <ol className="space-y-1 border-s-2 border-slate-200 ps-3 text-xs text-slate-500">{taskEvents[task.id].map((event, index) => <li key={index}>{event.eventType} · {event.actorType} · {new Date(event.createdAt).toLocaleString(locale)}</li>)}</ol> : null}
+        </article>)}
+      </div>
+      <p className="text-xs text-slate-500">{ar ? "تشغيل المهمة يستدعي نموذج Gemini المجاني الحالي فقط. إذا انتهت الحصة، تتوقف المهمة دون تحويل إلى خدمة مدفوعة. النتائج استشارية وتتطلب مراجعة المالك." : "Execution uses the existing Gemini free-tier configuration only. If quota is exhausted, the task stops without a paid fallback. Results are advisory and require owner review."}</p>
     </section>
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
       <div className="border-b bg-slate-50 px-6 py-4"><h2 className="font-semibold">{ar ? "محادثة مدير العمليات" : "Operations conversation"}</h2><p className="text-xs text-slate-500">{status?.model || (ar ? "بانتظار إعداد Gemini" : "Awaiting Gemini free-tier setup")}</p></div>
