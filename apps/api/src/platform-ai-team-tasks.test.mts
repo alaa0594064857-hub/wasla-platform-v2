@@ -71,7 +71,7 @@ describe("WASLA owner digital team task API", () => {
     const response = await fetch(base + "/api/platform/ai/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ specialistKey: "super_admin", title: "Run anything", inputText: "test" }),
+      body: JSON.stringify({ specialistKey: "toString", title: "Run anything", inputText: "test" }),
     });
     expect(response.status).toBe(400);
     expect(mocks.query.mock.calls.some(call => String(call[0]).includes("INSERT INTO platform_ai_team_tasks"))).toBe(false);
