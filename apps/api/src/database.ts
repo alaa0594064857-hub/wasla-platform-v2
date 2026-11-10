@@ -767,6 +767,35 @@ export async function ensureMemberStoreOrderTables(): Promise<void> {
       CREATE INDEX IF NOT EXISTS member_store_order_disputes_status_created_idx
       ON member_store_order_disputes (status, created_at ASC)
     `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS member_store_return_requests (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        order_id uuid NOT NULL REFERENCES member_store_orders(id) ON DELETE RESTRICT,
+        store_id uuid NOT NULL REFERENCES stores(id) ON DELETE RESTRICT,
+        buyer_user_id uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+        requested_resolution varchar(16) NOT NULL CHECK (requested_resolution IN ('return','replacement')),
+        reason varchar(40) NOT NULL CHECK (reason IN ('damaged_or_defective','not_as_described','wrong_item','missing_items','other')),
+        details varchar(3000) NOT NULL CHECK (length(trim(details)) >= 10),
+        status varchar(24) NOT NULL DEFAULT 'submitted' CHECK (status IN ('submitted','approved','rejected','item_received','closed')),
+        merchant_response varchar(2000),
+        merchant_user_id uuid REFERENCES users(id) ON DELETE RESTRICT,
+        merchant_responded_at timestamptz,
+        item_received_at timestamptz,
+        closed_at timestamptz,
+        created_at timestamptz NOT NULL DEFAULT NOW(),
+        updated_at timestamptz NOT NULL DEFAULT NOW()
+      )
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS member_store_return_requests_order_created_idx
+      ON member_store_return_requests(order_id,created_at DESC)
+    `);
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS member_store_return_requests_one_active_idx
+      ON member_store_return_requests(order_id)
+      WHERE status IN ('submitted','approved','item_received')
+    `);
+
   } finally {
     client.release();
   }

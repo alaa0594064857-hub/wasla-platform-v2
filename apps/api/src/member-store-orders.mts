@@ -147,6 +147,10 @@ export async function handleMemberStoreOrdersRequest(
               d.id AS "disputeId", d.reason AS "disputeReason", d.details AS "disputeDetails",
               d.status AS "disputeStatus", d.merchant_response AS "merchantResponse",
               d.moderator_note AS "moderatorNote",
+              rr.id AS "returnRequestId", rr.requested_resolution AS "returnResolution",
+              rr.reason AS "returnReason", rr.details AS "returnDetails",
+              rr.status AS "returnStatus", rr.merchant_response AS "returnMerchantResponse",
+              rr.created_at AS "returnCreatedAt", rr.item_received_at AS "returnItemReceivedAt",
               o.created_at AS "createdAt", o.updated_at AS "updatedAt"
        FROM member_store_orders o
        INNER JOIN stores s ON s.id = o.store_id
@@ -156,6 +160,12 @@ export async function handleMemberStoreOrdersRequest(
          WHERE d.order_id = o.id AND d.status <> 'closed'
          ORDER BY d.created_at DESC LIMIT 1
        ) d ON TRUE
+       LEFT JOIN LATERAL (
+         SELECT id, requested_resolution, reason, details, status, merchant_response, created_at, item_received_at
+         FROM member_store_return_requests r
+         WHERE r.order_id = o.id AND r.status <> 'closed'
+         ORDER BY r.created_at DESC LIMIT 1
+       ) rr ON TRUE
        WHERE s.slug = $1 AND s.status = 'active'
          AND (o.buyer_user_id = $2 OR ${merchantPermission(2, 3)})
        ORDER BY o.created_at DESC LIMIT 100`,

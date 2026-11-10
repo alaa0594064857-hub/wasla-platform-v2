@@ -90,6 +90,7 @@ describe("verified product reviews", () => {
     expect(eligibilitySql).toContain("o.items @> jsonb_build_array");
     expect(eligibilitySql).toContain("NOT EXISTS");
     expect(eligibilitySql).toContain("d.status IN ('open', 'merchant_responded')");
+    expect(eligibilitySql).toContain("member_store_return_requests");
     expect(clientQuery.mock.calls[1][1]).toEqual([productId, "11111111-1111-4111-8111-111111111111"]);
     expect(String(clientQuery.mock.calls[2][0])).toContain("ON CONFLICT (order_id, product_id) DO NOTHING");
     expect(clientQuery.mock.calls[2][1]).toEqual([

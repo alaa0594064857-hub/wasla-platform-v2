@@ -114,6 +114,12 @@ export async function handleVerifiedProductReviewsRequest(
            SELECT 1 FROM member_store_order_disputes d
            WHERE d.order_id = o.id AND d.status IN ('open', 'merchant_responded')
          )
+         AND NOT EXISTS (
+           SELECT 1 FROM member_store_return_requests rr
+           WHERE rr.order_id = o.id
+             AND (rr.status IN ('submitted', 'approved', 'item_received')
+               OR (rr.status = 'closed' AND rr.item_received_at IS NOT NULL))
+         )
        ORDER BY o.delivery_confirmed_at DESC NULLS LAST, o.updated_at DESC
        LIMIT 1
        FOR UPDATE OF o`,
