@@ -55,6 +55,16 @@ export async function handleMemberStoreReturn(req: IncomingMessage, res: ServerR
    if(order.buyerId!==session.user.id){await client.query("ROLLBACK");send(res,403,{success:false,error:"Only the buyer can request a return or exchange"});return;}
    if(!["shipped","completed"].includes(order.orderStatus)){await client.query("ROLLBACK");send(res,409,{success:false,error:"Returns and exchanges are available after shipment"});return;}
    if(!["return","replacement"].includes(String(resolution))||!["damaged_or_defective","not_as_described","wrong_item","missing_items","other","legal_rights_claim"].includes(reason)||details.length<10||details.length>3000){await client.query("ROLLBACK");send(res,400,{success:false,error:"Choose a valid resolution and reason, and provide 10–3000 characters"});return;}
+   if(!Array.isArray(order.items)||!Array.isArray(input.items)||input.items.length<1||input.items.length>50){await client.query("ROLLBACK");send(res,400,{success:false,error:"Select between 1 and 50 order items to return"});return;}
+   const requestedItems:Array<Record<string,unknown>>=[];
+   const seenProducts=new Set<string>();
+   for(const candidate of input.items){
+    if(!candidate||typeof candidate!=="object"||Array.isArray(candidate)||typeof candidate.productId!=="string"||!uuid.test(candidate.productId)||!Number.isSafeInteger(candidate.quantity)||candidate.quantity<1||seenProducts.has(candidate.productId)){await client.query("ROLLBACK");send(res,400,{success:false,error:"Each return item needs a unique valid product and quantity"});return;}
+    const orderedItem=order.items.find((item:any)=>item.productId===candidate.productId);
+    if(!orderedItem||candidate.quantity>orderedItem.quantity){await client.query("ROLLBACK");send(res,400,{success:false,error:"Return quantity cannot exceed the quantity in the order"});return;}
+    seenProducts.add(candidate.productId);
+    requestedItems.push({productId:orderedItem.productId,title:orderedItem.title,sku:orderedItem.sku??null,unitPrice:orderedItem.unitPrice,currency:orderedItem.currency,quantity:candidate.quantity});
+   }
    const snapshot=order.returnPolicySnapshot;
    if(snapshot && typeof snapshot==="object" && !Array.isArray(snapshot) && snapshot.status!=="not_provided"){
     const enabled=resolution==="return"?snapshot.acceptsReturns===true:snapshot.acceptsExchanges===true;
@@ -66,9 +76,9 @@ export async function handleMemberStoreReturn(req: IncomingMessage, res: ServerR
    }
    const prior=await client.query("SELECT id,status,item_received_at AS \"itemReceivedAt\" FROM member_store_return_requests WHERE order_id=$1 AND (status NOT IN ('closed','rejected') OR item_received_at IS NOT NULL) LIMIT 1",[orderId]);
    if(prior.rowCount){await client.query("ROLLBACK");send(res,409,{success:false,error:"An active return or exchange request already exists"});return;}
-   result=await client.query("INSERT INTO member_store_return_requests(order_id,store_id,buyer_user_id,requested_resolution,reason,details) VALUES($1,$2,$3,$4,$5,$6) RETURNING id,status,requested_resolution AS \"requestedResolution\",created_at AS \"createdAt\"",[orderId,order.storeId,session.user.id,resolution,reason,details]);
+   result=await client.query("INSERT INTO member_store_return_requests(order_id,store_id,buyer_user_id,requested_resolution,reason,details,items) VALUES($1,$2,$3,$4,$5,$6,$7::jsonb) RETURNING id,status,requested_resolution AS \"requestedResolution\",created_at AS \"createdAt\"",[orderId,order.storeId,session.user.id,resolution,reason,details,JSON.stringify(requestedItems)]);
   }else{
-   const selected=await client.query("SELECT id,status,buyer_user_id AS \"buyerId\",store_id AS \"storeId\",requested_resolution AS \"requestedResolution\" FROM member_store_return_requests WHERE order_id=$1 AND status NOT IN ('closed') ORDER BY created_at DESC LIMIT 1 FOR UPDATE",[orderId]);
+   const selected=await client.query("SELECT id,status,buyer_user_id AS \"buyerId\",store_id AS \"storeId\",requested_resolution AS \"requestedResolution\",items AS \"returnItems\" FROM member_store_return_requests WHERE order_id=$1 AND status NOT IN ('closed') ORDER BY created_at DESC LIMIT 1 FOR UPDATE",[orderId]);
    if(!selected.rowCount){await client.query("ROLLBACK");send(res,404,{success:false,error:"Active return request not found"});return;}
    const request=selected.rows[0];
    if(action==="respond"){
@@ -86,8 +96,8 @@ export async function handleMemberStoreReturn(req: IncomingMessage, res: ServerR
     restockedItems=[];
     if(restock){
      if(!order.inventoryCommittedAt){await client.query("ROLLBACK");send(res,409,{success:false,error:"This legacy order has no recorded inventory commitment and cannot be restocked automatically"});return;}
-     if(!Array.isArray(order.items)||order.items.length===0){await client.query("ROLLBACK");send(res,409,{success:false,error:"Order items are unavailable for inventory restoration"});return;}
-     const inventoryLines=[...order.items].sort((left,right)=>String(left?.productId??"").localeCompare(String(right?.productId??"")));
+     if(!Array.isArray(request.returnItems)||request.returnItems.length===0){await client.query("ROLLBACK");send(res,409,{success:false,error:"This return request has no recorded item quantities to restock"});return;}
+     const inventoryLines=[...request.returnItems].sort((left,right)=>String(left?.productId??"").localeCompare(String(right?.productId??"")));
      for(const item of inventoryLines){
       if(!item||typeof item!=="object"||typeof item.productId!=="string"||!uuid.test(item.productId)||!Number.isSafeInteger(item.quantity)||item.quantity<1){await client.query("ROLLBACK");send(res,409,{success:false,error:"Order contains invalid inventory details"});return;}
       const restored=await client.query("UPDATE store_products SET stock_quantity=stock_quantity+$3,updated_at=NOW() WHERE id=$1 AND store_id=$2 AND stock_quantity<=2147483647-$3 RETURNING id",[item.productId,order.storeId,item.quantity]);

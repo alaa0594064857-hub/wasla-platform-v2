@@ -9,7 +9,7 @@ vi.mock("./platform-security.mjs",()=>({authorizePlatformPermission:vi.fn()}));
 vi.mock("./database.js",()=>({getDatabasePool:vi.fn()}));
 let server:Server|undefined;
 const query=vi.fn(),clientQuery=vi.fn(),release=vi.fn(),connect=vi.fn();
-const buyer="11111111-1111-4111-8111-111111111111",order="22222222-2222-4222-8222-222222222222",store="33333333-3333-4333-8333-333333333333",requestId="44444444-4444-4444-8444-444444444444";
+const product="55555555-5555-4555-8555-555555555555",buyer="11111111-1111-4111-8111-111111111111",order="22222222-2222-4222-8222-222222222222",store="33333333-3333-4333-8333-333333333333",requestId="44444444-4444-4444-8444-444444444444";
 beforeEach(()=>{
  vi.mocked(auth.api.getSession).mockResolvedValue({user:{id:buyer}} as never);
  vi.mocked(authorizePlatformPermission).mockResolvedValue({userId:buyer,roleNames:["platform_admin"],permissions:["platform.reports.manage"]} as never);
@@ -23,30 +23,41 @@ const path="/api/stores/demo/orders/"+order+"/return";
 describe("member store returns and exchanges",()=>{
  it("requires authentication",async()=>{vi.mocked(auth.api.getSession).mockResolvedValueOnce(null as never);const base=await start();const r=await fetch(base+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({resolution:"return",reason:"other",details:"The product is not suitable for the intended use."})});expect(r.status).toBe(401);expect(connect).not.toHaveBeenCalled();});
  it("creates a buyer return request without initiating payment actions",async()=>{
-  clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]}).mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"completed",buyerId:buyer,storeId:store}]}).mockResolvedValueOnce({rowCount:0,rows:[]}).mockResolvedValueOnce({rowCount:1,rows:[{id:requestId,status:"submitted",requestedResolution:"return"}]}).mockResolvedValueOnce({rowCount:null,rows:[]}).mockResolvedValueOnce({rowCount:null,rows:[]});
-  const base=await start();const r=await fetch(base+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({resolution:"return",reason:"damaged_or_defective",details:"The item arrived with a broken outer casing."})});
+  clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]}).mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"completed",buyerId:buyer,storeId:store,items:[{productId:product,title:"Test item",sku:null,unitPrice:"10.00",currency:"USD",quantity:2}]}]}).mockResolvedValueOnce({rowCount:0,rows:[]}).mockResolvedValueOnce({rowCount:1,rows:[{id:requestId,status:"submitted",requestedResolution:"return",returnItems:[{productId:"33333333-3333-4333-8333-333333333333",quantity:1}]}]}).mockResolvedValueOnce({rowCount:null,rows:[]}).mockResolvedValueOnce({rowCount:null,rows:[]});
+  const base=await start();const r=await fetch(base+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({resolution:"return",reason:"damaged_or_defective",details:"The item arrived with a broken outer casing.",items:[{productId:product,quantity:1}]})});
   expect(r.status).toBe(201);expect(await r.json()).toMatchObject({success:true,returnRequest:{id:requestId,status:"submitted"}});
   expect(String(clientQuery.mock.calls[3][0])).toContain("INSERT INTO member_store_return_requests");
+  expect(clientQuery.mock.calls[3][1][6]).toContain('"quantity":1');
   expect(clientQuery.mock.calls.some(c=>String(c[0]).toLowerCase().includes("refund")||String(c[0]).toLowerCase().includes("payment"))).toBe(false);
  });
  it("prevents a second active request for the same order",async()=>{
-  clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]}).mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"shipped",buyerId:buyer,storeId:store}]}).mockResolvedValueOnce({rowCount:1,rows:[{id:requestId,status:"submitted"}]}).mockResolvedValueOnce({rowCount:null,rows:[]});
-  const base=await start();const r=await fetch(base+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({resolution:"replacement",reason:"wrong_item",details:"The delivered item is a different model."})});
+  clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]}).mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"shipped",buyerId:buyer,storeId:store,items:[{productId:product,title:"Test item",sku:null,unitPrice:"10.00",currency:"USD",quantity:2}]}]}).mockResolvedValueOnce({rowCount:1,rows:[{id:requestId,status:"submitted"}]}).mockResolvedValueOnce({rowCount:null,rows:[]});
+  const base=await start();const r=await fetch(base+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({resolution:"replacement",reason:"wrong_item",details:"The delivered item is a different model.",items:[{productId:product,quantity:1}]})});
   expect(r.status).toBe(409);expect(String(clientQuery.mock.calls[2][0])).toContain("item_received_at IS NOT NULL");expect(String(clientQuery.mock.calls[3][0])).toBe("ROLLBACK");
  });
+ it("rejects a return quantity greater than the ordered quantity",async()=>{
+  clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]})
+   .mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"completed",buyerId:buyer,storeId:store,items:[{productId:product,title:"Test item",sku:null,unitPrice:"10.00",currency:"USD",quantity:2}]}]})
+   .mockResolvedValueOnce({rowCount:null,rows:[]});
+  const base=await start();
+  const response=await fetch(base+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({resolution:"return",reason:"other",details:"I need to return this item.",items:[{productId:product,quantity:3}]})});
+  expect(response.status).toBe(400);
+  expect(await response.json()).toMatchObject({success:false,error:"Return quantity cannot exceed the quantity in the order"});
+  expect(String(clientQuery.mock.calls[2][0])).toBe("ROLLBACK");
+ });
  it("blocks a return disabled by the order-time policy snapshot",async()=>{
-  clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]}).mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"completed",buyerId:buyer,storeId:store,orderCreatedAt:new Date(),returnPolicySnapshot:{status:"published",acceptsReturns:false,acceptsExchanges:true,requestWindowDays:30}}]}).mockResolvedValueOnce({rowCount:null,rows:[]});
-  const base=await start();const r=await fetch(base+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({resolution:"return",reason:"other",details:"I would like to return this item."})});
+  clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]}).mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"completed",buyerId:buyer,storeId:store,items:[{productId:product,title:"Test item",sku:null,unitPrice:"10.00",currency:"USD",quantity:2}],orderCreatedAt:new Date(),returnPolicySnapshot:{status:"published",acceptsReturns:false,acceptsExchanges:true,requestWindowDays:30}}]}).mockResolvedValueOnce({rowCount:null,rows:[]});
+  const base=await start();const r=await fetch(base+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({resolution:"return",reason:"other",details:"I would like to return this item.",items:[{productId:product,quantity:1}]})});
   expect(r.status).toBe(409);expect(String(clientQuery.mock.calls[2][0])).toBe("ROLLBACK");
  });
  it("blocks expired requests but allows a legal-rights claim to be reviewed",async()=>{
   const oldDate=new Date(Date.now()-40*86400000);
-  clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]}).mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"completed",buyerId:buyer,storeId:store,orderCreatedAt:oldDate,returnPolicySnapshot:{status:"published",acceptsReturns:true,acceptsExchanges:false,requestWindowDays:30}}]}).mockResolvedValueOnce({rowCount:null,rows:[]});
-  const base=await start();const expired=await fetch(base+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({resolution:"return",reason:"other",details:"I would like to return this item."})});
+  clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]}).mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"completed",buyerId:buyer,storeId:store,items:[{productId:product,title:"Test item",sku:null,unitPrice:"10.00",currency:"USD",quantity:2}],orderCreatedAt:oldDate,returnPolicySnapshot:{status:"published",acceptsReturns:true,acceptsExchanges:false,requestWindowDays:30}}]}).mockResolvedValueOnce({rowCount:null,rows:[]});
+  const base=await start();const expired=await fetch(base+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({resolution:"return",reason:"other",details:"I would like to return this item.",items:[{productId:product,quantity:1}]})});
   expect(expired.status).toBe(409);
   clientQuery.mockReset();
-  clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]}).mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"completed",buyerId:buyer,storeId:store,orderCreatedAt:oldDate,returnPolicySnapshot:{status:"published",acceptsReturns:true,acceptsExchanges:false,requestWindowDays:30}}]}).mockResolvedValueOnce({rowCount:0,rows:[]}).mockResolvedValueOnce({rowCount:1,rows:[{id:requestId,status:"submitted",requestedResolution:"return"}]}).mockResolvedValueOnce({rowCount:null,rows:[]}).mockResolvedValueOnce({rowCount:null,rows:[]});
-  const claim=await fetch(base+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({resolution:"return",reason:"legal_rights_claim",details:"I believe mandatory consumer rights apply to this order."})});
+  clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]}).mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"completed",buyerId:buyer,storeId:store,items:[{productId:product,title:"Test item",sku:null,unitPrice:"10.00",currency:"USD",quantity:2}],orderCreatedAt:oldDate,returnPolicySnapshot:{status:"published",acceptsReturns:true,acceptsExchanges:false,requestWindowDays:30}}]}).mockResolvedValueOnce({rowCount:0,rows:[]}).mockResolvedValueOnce({rowCount:1,rows:[{id:requestId,status:"submitted",requestedResolution:"return",returnItems:[{productId:"33333333-3333-4333-8333-333333333333",quantity:2},{productId:"44444444-4444-4444-8444-444444444444",quantity:1}]}]}).mockResolvedValueOnce({rowCount:null,rows:[]}).mockResolvedValueOnce({rowCount:null,rows:[]});
+  const claim=await fetch(base+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({resolution:"return",reason:"legal_rights_claim",details:"I believe mandatory consumer rights apply to this order.",items:[{productId:product,quantity:1}]})});
   expect(claim.status).toBe(201);
  });
  it("rejects invalid reason or resolution before opening a database transaction",async()=>{
@@ -58,7 +69,7 @@ describe("member store returns and exchanges",()=>{
   const merchant="55555555-5555-4555-8555-555555555555";
   vi.mocked(auth.api.getSession).mockResolvedValueOnce({user:{id:merchant}} as never);
   clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]})
-   .mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"completed",buyerId:buyer,storeId:store}]})
+   .mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"completed",buyerId:buyer,storeId:store,items:[{productId:product,title:"Test item",sku:null,unitPrice:"10.00",currency:"USD",quantity:2}]}]})
    .mockResolvedValueOnce({rowCount:1,rows:[{id:requestId,status:"approved",buyerId:buyer,storeId:store,requestedResolution:"return"}]})
    .mockResolvedValueOnce({rowCount:1,rows:[{}]})
    .mockResolvedValueOnce({rowCount:1,rows:[{id:requestId,status:"item_received"}]})
@@ -76,8 +87,8 @@ describe("member store returns and exchanges",()=>{
   const merchant="55555555-5555-4555-8555-555555555555";
   vi.mocked(auth.api.getSession).mockResolvedValueOnce({user:{id:merchant}} as never);
   clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]})
-   .mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"completed",buyerId:buyer,storeId:store,inventoryCommittedAt:new Date(),items:[{productId:"33333333-3333-4333-8333-333333333333",quantity:2}]}]})
-   .mockResolvedValueOnce({rowCount:1,rows:[{id:requestId,status:"approved",buyerId:buyer,storeId:store,requestedResolution:"return"}]})
+   .mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"completed",buyerId:buyer,storeId:store,inventoryCommittedAt:new Date(),items:[{productId:"33333333-3333-4333-8333-333333333333",quantity:2},{productId:"44444444-4444-4444-8444-444444444444",quantity:1}]}]})
+   .mockResolvedValueOnce({rowCount:1,rows:[{id:requestId,status:"approved",buyerId:buyer,storeId:store,requestedResolution:"return",returnItems:[{productId:"33333333-3333-4333-8333-333333333333",quantity:1}]}]})
    .mockResolvedValueOnce({rowCount:1,rows:[{}]})
    .mockResolvedValueOnce({rowCount:1,rows:[{id:"33333333-3333-4333-8333-333333333333"}]})
    .mockResolvedValueOnce({rowCount:1,rows:[{id:requestId,status:"item_received",restockedAt:new Date()}]})
@@ -89,11 +100,11 @@ describe("member store returns and exchanges",()=>{
   expect(await response.json()).toMatchObject({success:true,returnRequest:{id:requestId,status:"item_received"}});
   const restockCall=clientQuery.mock.calls[4];
   expect(String(restockCall[0])).toContain("stock_quantity=stock_quantity+$3");
-  expect(restockCall[1]).toEqual(["33333333-3333-4333-8333-333333333333",store,2]);
+  expect(restockCall[1]).toEqual(["33333333-3333-4333-8333-333333333333",store,1]);
   expect(String(clientQuery.mock.calls[5][0])).toContain("restocked_at=CASE WHEN $2 THEN NOW()");
   expect(clientQuery.mock.calls[5][1]).toEqual([requestId,true]);
   expect(clientQuery.mock.calls[6][1][3]).toContain('"restocked":true');
-  expect(clientQuery.mock.calls[6][1][3]).toContain('"restockedItems":[{"productId":"33333333-3333-4333-8333-333333333333","quantity":2}]');
+  expect(clientQuery.mock.calls[6][1][3]).toContain('"restockedItems":[{"productId":"33333333-3333-4333-8333-333333333333","quantity":1}]');
  });
  it("does not restock legacy orders without a recorded inventory commitment",async()=>{
   const merchant="55555555-5555-4555-8555-555555555555";
@@ -118,7 +129,7 @@ describe("member store returns and exchanges",()=>{
     {productId:"33333333-3333-4333-8333-333333333333",quantity:2},
     {productId:"44444444-4444-4444-8444-444444444444",quantity:1}
    ]}]})
-   .mockResolvedValueOnce({rowCount:1,rows:[{id:requestId,status:"approved",buyerId:buyer,storeId:store,requestedResolution:"return"}]})
+   .mockResolvedValueOnce({rowCount:1,rows:[{id:requestId,status:"approved",buyerId:buyer,storeId:store,requestedResolution:"return",returnItems:[{productId:"33333333-3333-4333-8333-333333333333",quantity:2},{productId:"44444444-4444-4444-8444-444444444444",quantity:1}]}]})
    .mockResolvedValueOnce({rowCount:1,rows:[{}]})
    .mockResolvedValueOnce({rowCount:1,rows:[{id:"33333333-3333-4333-8333-333333333333"}]})
    .mockResolvedValueOnce({rowCount:0,rows:[]})
@@ -134,13 +145,13 @@ describe("member store returns and exchanges",()=>{
  });
  it("allows a legal-rights claim to be submitted for support review even when the store policy disables returns",async()=>{
   clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]})
-   .mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"completed",buyerId:buyer,storeId:store,orderCreatedAt:new Date(),returnPolicySnapshot:{status:"published",acceptsReturns:false,acceptsExchanges:false,requestWindowDays:14}}]})
+   .mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"completed",buyerId:buyer,storeId:store,items:[{productId:product,title:"Test item",sku:null,unitPrice:"10.00",currency:"USD",quantity:2}],orderCreatedAt:new Date(),returnPolicySnapshot:{status:"published",acceptsReturns:false,acceptsExchanges:false,requestWindowDays:14}}]})
    .mockResolvedValueOnce({rowCount:0,rows:[]})
    .mockResolvedValueOnce({rowCount:1,rows:[{id:requestId,status:"submitted",requestedResolution:"return"}]})
    .mockResolvedValueOnce({rowCount:null,rows:[]})
    .mockResolvedValueOnce({rowCount:null,rows:[]});
   const base=await start();
-  const response=await fetch(base+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({resolution:"return",reason:"legal_rights_claim",details:"I believe mandatory consumer rights apply to this order."})});
+  const response=await fetch(base+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({resolution:"return",reason:"legal_rights_claim",details:"I believe mandatory consumer rights apply to this order.",items:[{productId:product,quantity:1}]})});
   expect(response.status).toBe(201);
   expect(String(clientQuery.mock.calls[3][0])).toContain("INSERT INTO member_store_return_requests");
  });
