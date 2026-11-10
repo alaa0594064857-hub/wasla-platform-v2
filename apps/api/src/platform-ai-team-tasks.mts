@@ -163,7 +163,7 @@ export async function handlePlatformAiTeamTasksRequest(req: IncomingMessage, res
     }
 
     const control = await getPlatformAiManagerControl();
-    if (!control.enabled && (req.method === "POST")) {
+    if (!control.enabled && req.method === "POST" && action !== "cancel") {
       reply(res, 423, { success: false, code: "AI_MANAGER_PAUSED", error: "The WASLA AI Manager is paused by the owner." });
       return;
     }
