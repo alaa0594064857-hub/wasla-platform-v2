@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import * as ImagePicker from "expo-image-picker";
 import { getOfficialStoreProducts, WaslaApiError } from "./src/api";
 import type { OfficialStoreProduct } from "./src/api";
 import { authClient } from "./src/auth-client";
@@ -70,7 +71,11 @@ const copy = {
     profile: "الملف الشخصي",
     loadProfile: "تحميل الملف الشخصي",
     displayName: "الاسم",
-    avatar: "رابط الصورة الشخصية (HTTPS)",
+    avatar: "رابط الصورة (HTTPS) أو اختر من الهاتف",
+    chooseAvatar: "اختيار صورة من الهاتف",
+    removeAvatar: "إزالة الصورة",
+    imagePermission: "اسمح لوصلة بالوصول إلى الصور لاختيار صورة شخصية.",
+    imageInvalid: "اختر صورة JPG أو PNG أو WEBP بحجم مناسب.",
     bio: "نبذة عنك",
     website: "الموقع الإلكتروني",
     saveProfile: "حفظ التعديلات",
@@ -124,7 +129,11 @@ const copy = {
     profile: "My profile",
     loadProfile: "Load profile",
     displayName: "Display name",
-    avatar: "Profile image URL (HTTPS)",
+    avatar: "Profile image URL (HTTPS) or choose from device",
+    chooseAvatar: "Choose photo from device",
+    removeAvatar: "Remove photo",
+    imagePermission: "Allow WASLA to access your photos to choose a profile picture.",
+    imageInvalid: "Choose a JPG, PNG or WEBP image within the supported size limit.",
     bio: "About you",
     website: "Website",
     saveProfile: "Save changes",
@@ -244,6 +253,36 @@ export default function App() {
     }
   }
 
+  async function chooseProfilePhoto() {
+    if (profileBusy) return;
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        setProfileMessage(t.imagePermission);
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.75,
+        base64: true,
+      });
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      const mimeType = (asset.mimeType || "image/jpeg").toLowerCase();
+      const supportedTypes = ["image/jpeg", "image/png", "image/webp"];
+      if (!asset.base64 || !supportedTypes.includes(mimeType) || asset.base64.length > 4_000_000) {
+        setProfileMessage(t.imageInvalid);
+        return;
+      }
+      setAvatarReference(`data:${mimeType};base64,${asset.base64}`);
+      setProfileMessage("");
+    } catch {
+      setProfileMessage(t.imageInvalid);
+    }
+  }
+
   async function saveProfile() {
     if (profileBusy || !profile) return;
     setProfileBusy(true);
@@ -334,10 +373,16 @@ export default function App() {
               {profileBusy && !profile ? <ActivityIndicator color="#14283F" /> : null}
               {profile ? (
                 <>
-                  {avatarReference.startsWith("https://") ? <Image source={{ uri: avatarReference }} style={styles.avatarPreview} /> : null}
+                  {avatarReference.startsWith("https://") || avatarReference.startsWith("data:image/") ? <Image source={{ uri: avatarReference }} style={styles.avatarPreview} /> : null}
                   <Text style={[styles.noteText, rtl && styles.textRight]}>{profile.email}</Text>
                   <TextInput value={displayName} onChangeText={setDisplayName} placeholder={t.displayName} style={[styles.countryInput, rtl && styles.textRight]} />
-                  <TextInput value={avatarReference} onChangeText={setAvatarReference} autoCapitalize="none" keyboardType="url" placeholder={t.avatar} style={styles.countryInput} />
+                  <Pressable accessibilityRole="button" onPress={() => void chooseProfilePhoto()} disabled={profileBusy} style={styles.catalogueButton}>
+                    <Text style={styles.primaryButtonText}>{t.chooseAvatar}</Text>
+                  </Pressable>
+                  <TextInput value={avatarReference.startsWith("data:image/") ? "" : avatarReference} onChangeText={setAvatarReference} autoCapitalize="none" keyboardType="url" placeholder={t.avatar} style={styles.countryInput} />
+                  {avatarReference ? <Pressable accessibilityRole="button" onPress={() => setAvatarReference("")} disabled={profileBusy}>
+                    <Text style={[styles.noteText, rtl && styles.textRight]}>{t.removeAvatar}</Text>
+                  </Pressable> : null}
                   <TextInput value={bio} onChangeText={setBio} multiline maxLength={500} placeholder={t.bio} style={[styles.countryInput, styles.multilineInput, rtl && styles.textRight]} />
                   <TextInput value={website} onChangeText={setWebsite} autoCapitalize="none" keyboardType="url" placeholder={t.website} style={styles.countryInput} />
                   <Pressable accessibilityRole="button" onPress={() => void saveProfile()} disabled={profileBusy} style={styles.catalogueButton}>
