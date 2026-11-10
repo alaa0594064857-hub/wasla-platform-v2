@@ -24,7 +24,8 @@ WASLA's native Android/iOS application is built with Expo SDK 58 and React Nativ
 - Registration and password reset depend on correctly configured production email delivery. Set `BETTER_AUTH_SECRET`, `RESEND_API_KEY`, a verified `RESEND_FROM_EMAIL`, and the correct public auth URL/trusted origins. A UI confirmation does not prove that an email was delivered.
 - Password-reset completion currently hands off to the existing web `/reset-password` page.
 - Native profile-photo selection is implemented with Expo ImagePicker; the selected image is sent as a bounded data URL through the existing profile API. Product images still use HTTPS references. A dedicated object-storage media pipeline and upload lifecycle remain production hardening work.
-- Push-token registration and native push delivery are not implemented.
+- Authenticated push-device registration and removal are implemented through `/api/notifications/devices`. Outbound delivery to the Expo Push Service, delivery receipt/error handling, and end-to-end device verification are not implemented.
+- `app.json` currently has no linked EAS project ID, app icon, or splash artwork configured. An Expo account must link/create the EAS project before a native build; do not assume this repository is already linked.
 - Order requests do not collect payment or reserve stock. Merchant approval is required. Do not represent an order request as a paid or confirmed fulfilment.
 - Member-store checkout is distinct from the private sourcing workflow for the official WASLA Store.
 - The mobile app must never expose internal supplier identities, supplier URLs, sourcing notes, supplier purchase references or internal costs to customers.
@@ -58,14 +59,16 @@ EAS may ask to create/link an Expo project and configure signing credentials. Re
 
 ## Release gates — not yet verified
 
-1. Install and launch an Android build on a physical device; test iOS separately when Apple signing/device access is available.
-2. Verify registration, email verification delivery, sign-in, session persistence, sign-out and password reset against the deployed API.
-3. Test two separate accounts end-to-end: business/store creation, public browsing, buyer order request, merchant accept/reject, private messages, notifications and trade opportunities.
-4. Verify authorization and cross-account isolation for every private API route.
-5. Test Arabic RTL, English LTR, small screens, accessibility, loading/error/empty states and unreliable network conditions.
-6. Implement push-notification consent/token delivery and a scalable object-storage media pipeline; validate native profile-photo selection on physical Android and iOS devices.
-7. Add production app icon, splash artwork, privacy disclosures, store screenshots and store metadata.
-8. Re-run the full CI suite and verify successful hosted API/web deployments before public release.
+1. Link the app to its EAS project and add the resulting project ID to Expo app configuration.
+2. Add production app icon and splash artwork.
+3. Install and launch an Android build on a physical device; test iOS separately when Apple signing/device access is available.
+4. Verify registration, email verification delivery, sign-in, session persistence, sign-out and password reset against the deployed API.
+5. Test two separate accounts end-to-end: business/store creation, public browsing, buyer order request, merchant accept/reject, private messages, in-app notifications and trade opportunities.
+6. Implement outbound Expo push delivery, delivery receipts/error handling and consent lifecycle; verify on physical Android and iOS devices.
+7. Verify authorization and cross-account isolation for every private API route; test Arabic RTL, English LTR, small screens, accessibility, loading/error/empty states and unreliable network conditions.
+8. Complete a scalable object-storage media pipeline and validate profile-photo selection on physical devices.
+9. Complete privacy disclosures, store screenshots, store metadata and all platform policy requirements.
+10. Re-run the full CI suite and verify successful hosted API/web deployments before public release.
 
 ## Cost and deployment boundary
 
