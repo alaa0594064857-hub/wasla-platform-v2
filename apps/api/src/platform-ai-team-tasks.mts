@@ -185,16 +185,26 @@ export async function handlePlatformAiTeamTasksRequest(req: IncomingMessage, res
         `INSERT INTO platform_ai_team_tasks
           (owner_user_id, specialist_key, title, input_text, input_context, idempotency_key, input_characters)
          VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7)
-         ON CONFLICT (owner_user_id, idempotency_key) DO UPDATE
-           SET updated_at = platform_ai_team_tasks.updated_at
+         ON CONFLICT (owner_user_id, idempotency_key) DO NOTHING
          RETURNING id, specialist_key AS "specialistKey", title, status,
                    created_at AS "createdAt"`,
         [access.userId, specialist, title, inputText, contextJson, idempotencyKey, inputText.length],
       );
-      const task = result.rows[0];
+      let task = result.rows[0];
+      const created = Boolean(task);
+      if (!task && idempotencyKey) {
+        const existing = await db.query(
+          `SELECT id, specialist_key AS "specialistKey", title, status,
+                  created_at AS "createdAt"
+           FROM platform_ai_team_tasks
+           WHERE owner_user_id = $1 AND idempotency_key = $2`,
+          [access.userId, idempotencyKey],
+        );
+        task = existing.rows[0];
+      }
       if (!task) { reply(res, 500, { success: false, error: "Task could not be created" }); return; }
-      if (result.rowCount !== 0) await addEvent(task.id, access.userId, "owner", null, "task_created", { specialistKey: specialist });
-      reply(res, 201, { success: true, task, requiresOwnerReview: true });
+      if (created) await addEvent(task.id, access.userId, "owner", null, "task_created", { specialistKey: specialist });
+      reply(res, created ? 201 : 200, { success: true, task, reusedExistingTask: !created, requiresOwnerReview: true });
       return;
     }
 
