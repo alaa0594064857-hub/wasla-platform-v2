@@ -435,7 +435,10 @@ export async function handleMemberStoreOrdersRequest(
      FROM stores s, actor_context
      WHERE o.id = $3 AND o.store_id = s.id AND s.slug = $4 AND s.status = 'active'
        AND (
-         ($1 = 'cancelled' AND o.buyer_user_id = $5 AND o.status IN ('pending_merchant_review', 'accepted')) OR
+         ($1 = 'cancelled' AND (
+           (o.buyer_user_id = $5 AND o.status IN ('pending_merchant_review', 'accepted')) OR
+           (o.status = 'accepted' AND ${merchantPermission(5, 6)})
+         )) OR
          ($1 IN ('accepted', 'rejected') AND o.status = 'pending_merchant_review' AND ${merchantPermission(5, 6)}) OR
          ($1 = 'shipped' AND o.status = 'accepted' AND ${merchantPermission(5, 6)}) OR
          ($1 = 'completed' AND o.buyer_user_id = $5 AND o.status = 'shipped'
@@ -549,6 +552,16 @@ export async function handleMemberStoreOrdersRequest(
               WHEN $2 = 'shipped' THEN 'The merchant shipped your order and added tracking details.' ELSE 'The merchant could not accept your request.' END,
          '/store/' || $3 || '/orders', $4, jsonb_build_object('orderNumber', $5, 'status', $2))`,
       [result.rows[0].buyerUserId, body.status, slug, orderId, result.rows[0].orderNumber],
+    );
+  } else if (body.status === "cancelled" && result.rows[0].buyerUserId !== session.user.id) {
+    await client.query(
+      `INSERT INTO notifications
+         (user_id, type, title_ar, title_en, body_ar, body_en, action_url, resource_id, metadata)
+       VALUES ($1, 'member_store_order',
+         'ألغى المتجر طلبك', 'The merchant cancelled your order',
+         'ألغى المتجر الطلب رقم ' || $3, 'The merchant cancelled order ' || $3 || ' before shipment.',
+         '/store/' || $2 || '/orders', $4, jsonb_build_object('orderNumber', $3, 'status', 'cancelled'))`,
+      [result.rows[0].buyerUserId, slug, result.rows[0].orderNumber, orderId],
     );
   } else if (body.status === "cancelled") {
     await client.query(

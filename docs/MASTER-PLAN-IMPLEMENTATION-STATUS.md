@@ -1142,3 +1142,10 @@ This checkpoint supersedes the earlier mobile notes above where they describe fe
 ## Inventory commitment marker — integration note (2026-11-10)
 
 - Accepted orders now carry `inventory_committed_at`, set atomically with stock decrement. Cancellation restores inventory only when this marker exists, protecting legacy accepted orders that predate stock commitment from receiving an incorrect stock increase.
+
+
+## Merchant cancellation of accepted orders — candidate (2026-11-10)
+
+- Store/account order managers may cancel an accepted order before shipment, using the same locked transaction and inventory restoration marker as buyer cancellation.
+- The buyer receives a bilingual in-app notification when the merchant cancels; buyer cancellation continues to notify active store/account order managers.
+- Shipped orders remain outside this cancellation path; no payment reversal or refund is implied.
