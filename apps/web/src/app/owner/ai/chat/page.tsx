@@ -53,8 +53,11 @@ export default function WaslaAiChatPage() {
     event.preventDefault();
     const content = draft.trim();
     if (!content || busy || !status?.configured || !status.managerEnabled) return;
-    const next = [...messages, { role: "user" as const, content }].slice(-12);
-    setMessages(next);
+    const conversation = [...messages, { role: "user" as const, content }];
+    // Keep the latest 12 turns, but never send a model reply as Gemini's first message.
+    const bounded = conversation.slice(-12);
+    const next = bounded[0]?.role === "assistant" ? bounded.slice(1) : bounded;
+    setMessages(conversation);
     setDraft("");
     setBusy(true);
     setError("");
@@ -69,6 +72,9 @@ export default function WaslaAiChatPage() {
       if (!response.ok || !data.success) throw new Error(data.error || (ar ? "تعذر الحصول على الرد." : "The assistant could not respond."));
       setMessages(current => [...current, { role: "assistant", content: String(data.answer) }].slice(-12));
     } catch (err) {
+      // Remove the unanswered turn so the next attempt does not send two user messages in a row.
+      setMessages(current => current.length && current[current.length - 1].role === "user" && current[current.length - 1].content === content ? current.slice(0, -1) : current);
+      setDraft(content);
       setError(err instanceof Error ? err.message : (ar ? "حدث خطأ أثناء الاتصال بالمساعد." : "A connection error occurred."));
     } finally {
       setBusy(false);
