@@ -114,7 +114,7 @@ export async function handlePlatformAiTeamTasksRequest(req: IncomingMessage, res
   try {
     await ensureTaskTables();
     const url = new URL(req.url || "/", "http://localhost");
-    const match = url.pathname.match(/^\/api\/platform\/ai\/tasks(?:\/([0-9a-f-]{36})(?:\/(execute|cancel))?)?$/i);
+    const match = url.pathname.match(/^\\/api\\/platform\\/ai\\/tasks(?:\\/(dispatch|[0-9a-f-]{36})(?:\\/(execute|cancel))?)?$/i);
     if (!match) { reply(res, 404, { success: false, error: "Task route not found" }); return; }
     const routeToken = match[1];
     const taskId = routeToken && routeToken !== "dispatch" ? routeToken : undefined;
@@ -227,7 +227,8 @@ export async function handlePlatformAiTeamTasksRequest(req: IncomingMessage, res
             await addEvent(task.id, access.userId, "manager", null, "manager_assigned_task", { specialistKey: specialist, ownerGoal: goal.slice(0, 500) });
           }
         }
-        await addEvent(createdTasks[0] && String(createdTasks[0].id), access.userId, "manager", null, "manager_work_plan_created", { taskCount: createdTasks.length, summary: typeof plan.summary === "string" ? plan.summary.slice(0, 500) : "" });
+        if (!createdTasks.length) throw new Error("EMPTY_PLAN");
+        await addEvent(String(createdTasks[0].id), access.userId, "manager", null, "manager_work_plan_created", { taskCount: createdTasks.length, summary: typeof plan.summary === "string" ? plan.summary.slice(0, 500) : "" });
         reply(res, 201, { success: true, summary: typeof plan.summary === "string" ? plan.summary : "", tasks: createdTasks, requiresOwnerReview: true });
       } catch (error) {
         console.error("WASLA AI manager delegation error:", error);
