@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useLocale } from "../../../../components/locale-provider";
 
@@ -30,7 +30,7 @@ export default function AiHeadquartersPage(){
   return()=>{active=false};
  },[]);
  const stats=useMemo(()=>({total:tasks.length,waiting:tasks.filter(t=>t.status==="queued"||t.status==="running").length,review:tasks.filter(t=>t.status==="needs_owner_review").length,failed:tasks.filter(t=>t.status==="failed").length}),[tasks]);
- async function assignThroughManager(event:React.FormEvent<HTMLFormElement>){
+ async function assignThroughManager(event:FormEvent<HTMLFormElement>){
   event.preventDefault(); if(!goal.trim()||dispatching||!status?.configured||!status.managerEnabled)return;
   setDispatching(true);setError("");setDispatchMessage("");
   try{
