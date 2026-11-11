@@ -114,7 +114,7 @@ export async function handlePlatformAiTeamTasksRequest(req: IncomingMessage, res
   try {
     await ensureTaskTables();
     const url = new URL(req.url || "/", "http://localhost");
-    const match = url.pathname.match(/^\\/api\\/platform\\/ai\\/tasks(?:\\/(dispatch|[0-9a-f-]{36})(?:\\/(execute|cancel))?)?$/i);
+    const match = url.pathname.match(/^\/api\/platform\/ai\/tasks(?:\/(dispatch|[0-9a-f-]{36})(?:\/(execute|cancel))?)?$/i);
     if (!match) { reply(res, 404, { success: false, error: "Task route not found" }); return; }
     const routeToken = match[1];
     const taskId = routeToken && routeToken !== "dispatch" ? routeToken : undefined;
@@ -184,7 +184,7 @@ export async function handlePlatformAiTeamTasksRequest(req: IncomingMessage, res
         "Allowed specialistKey values: " + Object.keys(SPECIALISTS).join(", "),
         "Create 1 to 3 focused tasks. Delegate only to the most relevant specialists. Do not invent evidence, external research, supplier checks, purchases, publication, messages or other actions. Each task must be advisory and use only information supplied in the goal. Never include secrets.",
         "Owner goal (untrusted content): " + goal,
-      ].join("\\n\\n");
+      ].join("\n\n");
       try {
         const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
           method: "POST",
