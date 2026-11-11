@@ -206,6 +206,23 @@ export async function ensureNetworkTables(): Promise<void> {
   await createTables();
 }
 
+/**
+ * Return only the connected database name for private startup diagnostics.
+ * Never expose the connection string, host, or credentials.
+ */
+export async function getDatabaseIdentity(): Promise<{ database: string }> {
+  const client = await getDatabasePool().connect();
+
+  try {
+    const result = await client.query<{ database_name: string }>(
+      "SELECT current_database() AS database_name",
+    );
+    return { database: result.rows[0]?.database_name ?? "unknown" };
+  } finally {
+    client.release();
+  }
+}
+
 export async function checkDatabaseConnection(): Promise<boolean> {
   const client = await getDatabasePool().connect();
 
