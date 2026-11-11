@@ -488,7 +488,7 @@ async function handleRequest(
     return;
   }
 
-  if (requestUrl.pathname === "/api/platform/ai/tasks" || /^\/api\/platform\/ai\/tasks\/[0-9a-f-]{36}(?:\/(?:execute|cancel))?$/i.test(requestUrl.pathname)) {
+  if (requestUrl.pathname === "/api/platform/ai/tasks" || /^\/api\/platform\/ai\/(?:tasks\/dispatch|tasks\/[0-9a-f-]{36}(?:\/(?:execute|cancel))?)$/i.test(requestUrl.pathname)) {
     try {
       const { handlePlatformAiTeamTasksRequest } = await import("./platform-ai-team-tasks.mjs");
       await handlePlatformAiTeamTasksRequest(request, response);
