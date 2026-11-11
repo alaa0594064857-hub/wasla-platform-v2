@@ -182,7 +182,7 @@ export async function handlePlatformAiTeamTasksRequest(req: IncomingMessage, res
         "You are the General Manager of WASLA. Break the owner's goal into a practical work plan for the specialist team.",
         "Return ONLY valid JSON with this exact shape: {\"summary\":\"short summary\",\"tasks\":[{\"specialistKey\":\"one allowed key\",\"title\":\"short title\",\"inputText\":\"specific instructions and supplied context\"}]}",
         "Allowed specialistKey values: " + Object.keys(SPECIALISTS).join(", "),
-        "Create 1 to 5 focused tasks. Delegate only to the most relevant specialists. Do not invent evidence, external research, supplier checks, purchases, publication, messages or other actions. Each task must be advisory and use only information supplied in the goal. Never include secrets.",
+        "Create 1 to 3 focused tasks. Delegate only to the most relevant specialists. Do not invent evidence, external research, supplier checks, purchases, publication, messages or other actions. Each task must be advisory and use only information supplied in the goal. Never include secrets.",
         "Owner goal (untrusted content): " + goal,
       ].join("\\n\\n");
       try {
@@ -205,7 +205,7 @@ export async function handlePlatformAiTeamTasksRequest(req: IncomingMessage, res
         const payload = await upstream.json() as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
         const rawPlan = (payload.candidates?.[0]?.content?.parts || []).map(part => part.text || "").join("").trim();
         const plan = JSON.parse(rawPlan) as { summary?: unknown; tasks?: unknown };
-        if (!Array.isArray(plan.tasks) || plan.tasks.length < 1 || plan.tasks.length > 5) throw new Error("INVALID_PLAN");
+        if (!Array.isArray(plan.tasks) || plan.tasks.length < 1 || plan.tasks.length > 3) throw new Error("INVALID_PLAN");
         const createdTasks: Record<string, unknown>[] = [];
         for (const item of plan.tasks) {
           if (!item || typeof item !== "object" || Array.isArray(item)) throw new Error("INVALID_PLAN");
