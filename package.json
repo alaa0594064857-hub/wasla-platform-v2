@@ -16,7 +16,9 @@
     "clean": "turbo clean",
     "db:generate": "pnpm --filter @wasla/api db:generate",
     "db:migrate": "pnpm --filter @wasla/api db:migrate",
-    "db:check": "pnpm --filter @wasla/api db:check"
+    "db:check": "pnpm --filter @wasla/api db:check",
+    "cf:web:build": "cd apps/web && pnpm cf:build",
+    "cf:web:deploy": "cd apps/web && pnpm exec wrangler deploy"
   },
   "devDependencies": {
     "turbo": "2.3.3",
