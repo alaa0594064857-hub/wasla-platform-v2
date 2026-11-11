@@ -16,7 +16,7 @@ The release must provide a discoverable in-app deletion request and a public web
 - The user status enum already includes `deactivated`, but deactivation alone is not deletion or anonymization.
 - The schema includes cascading user references for authentication identities/sessions/accounts, profiles, memberships, notifications and push devices. Other modules create additional user-linked records.
 - The source search found restrictive user references in commercial workflows, including trade-deal creators, trade-opportunity creators, commission records, official-store event actors and return escalations. These references can block a hard delete and may be needed for an audit trail.
-- Account membership is how account ownership is represented. Removing a user without a verified ownership-transfer process can leave a business account without an active owner.
+- Account membership is how account ownership is represented. Removing a user without a verified ownership-transfer process can leave an account without an active owner.
 - Message conversations and product inquiries use participant/sender references with cascade behavior in the inspected modules. Deleting a user may therefore affect other participants' records, not just the requesting user's profile.
 - The settings page currently describes advanced security/privacy controls as future work. No public privacy policy page or complete account deletion flow was found in the inspected source paths.
 
@@ -46,6 +46,54 @@ The release must provide a discoverable in-app deletion request and a public web
    - Provide a permanent public web page describing how to request deletion, reachable without signing in.
    - Provide an in-app path from account/settings to submit the same request.
    - Keep the process bilingual (Arabic and English) and make the route discoverable in the Google Play Data safety / account deletion declarations.
+
+## Source-level foreign-key inventory (preliminary)
+
+Review date: 2026-11-11. This inventory records source-code definitions found by searching the repository for `REFERENCES users(id)`. It is a static source scan, not a live database catalog export. Several modules create tables at runtime, and migrations or deployed constraints may differ from the current source. Do not treat this list as exhaustive or use it to authorize deletion.
+
+### Cascading references observed
+
+| Source | User-linked column(s) | Declared action | Initial impact concern |
+|---|---|---|---|
+| `apps/api/src/notifications.mts` | `notifications.user_id` | CASCADE | Removes a user's notifications; confirm outbox/push references and retention needs. |
+| `apps/api/src/network.mts` | `network_friendships.requester_user_id`, `addressee_user_id` | CASCADE | Deletes relationship records involving the user. |
+| `apps/api/src/product-inquiries.mts` | `product_inquiries.sender_user_id`, `recipient_user_id`; `product_inquiry_replies.sender_user_id` | CASCADE | Can remove inquiry threads/replies relevant to another party; must preserve or anonymize shared correspondence deliberately. |
+| `apps/api/src/messages.mts` | `message_conversations.participant_low`, `participant_high` | CASCADE | Conversation deletion can affect the other participant; inspect message/read-receipt child tables before any action. |
+| `apps/api/src/official-store-pricing.mts` | pricing quote `created_by` | CASCADE | Likely transient quote data, but verify references and retention before classifying as disposable. |
+| `apps/api/src/official-store-data-sources.mts` | `official_store_data_sources.created_by` | CASCADE | Owner-created sourcing configuration may be operationally relevant. |
+| `apps/api/src/platform-ai-team-tasks.mts` | `platform_ai_team_tasks.owner_user_id` | CASCADE | Removes owner task history; assess audit and user-requested export/retention. |
+| `apps/api/src/platform-ai-assistant.mts` | `platform_ai_assistant_audit.owner_user_id` | CASCADE | AI audit prompts/outputs may contain personal or business information. |
+| `apps/api/src/official-store-opportunities.mts` | `official_store_product_opportunities.owner_user_id` | CASCADE | Owner-created opportunities may be shared/operational records. |
+| `apps/api/src/official-store-candidate-enrichment.mts` | `official_store_candidate_enrichments.owner_user_id` | CASCADE | Enrichment is tied to a candidate; inspect whether candidate data is shared or retained. |
+
+### Restrictive references observed
+
+| Source | User-linked column(s) | Declared action | Initial impact concern |
+|---|---|---|---|
+| `apps/api/src/official-store.mts` | `official_store_messages.sender_user_id`; `official_store_inquiries.customer_user_id` | RESTRICT | Human sender/customer history can block hard deletion and may need pseudonymization. |
+| `apps/api/src/trade.mts` and `apps/api/drizzle/0007_trade_deals.sql` | `trade_deals.created_by_user_id` | RESTRICT | Commercial deal/audit authorship; retain or pseudonymize under an approved policy. |
+| `apps/api/src/trade-opportunities.mts` | `trade_opportunities.created_by_user_id` | RESTRICT | Published buyer/supplier opportunity authorship. |
+| `apps/api/src/database.ts` | subscription `customer_user_id`, `billing_contact_user_id` | RESTRICT | Billing and subscription history; requires retention and billing-owner handling. |
+| `apps/api/src/trade-brokerage-commission-ledger.mts` | `trade_brokerage_commission_entries.created_by_user_id` | RESTRICT | Commission ledger authorship and financial audit trail. |
+| `apps/api/src/trade-brokerage-commission-invoices.mts` | `trade_brokerage_commission_invoices.created_by_user_id` | RESTRICT | Invoice authorship and financial records. |
+| `apps/api/src/member-store-return-policy-schema.mts` | return-policy `created_by` | RESTRICT | Published policy/version authorship; retain auditable history. |
+
+### Set-null references observed
+
+| Source | User-linked column(s) | Declared action | Initial impact concern |
+|---|---|---|---|
+| `apps/api/src/platform-ai-controls.mts` | `updated_by_user_id` | SET NULL | Preserves singleton control state while losing actor link; retain a minimized audit event if required. |
+| `apps/api/src/trade-brokerage-agreements.mts` | `buyer_accepted_by`, `supplier_accepted_by` | SET NULL | Agreement acceptance history must remain intelligible after actor anonymization. |
+| `apps/api/src/trade-brokerage-commission-ledger.mts` | commission event `actor_user_id` | SET NULL | Event history survives but actor attribution is lost. |
+| `apps/api/src/trade-brokerage-commission-invoices.mts` | invoice event `actor_user_id` | SET NULL | Invoice event history survives but actor attribution is lost. |
+
+### Required completion of the inventory
+
+- Search all source definitions and migrations for alternate quoting, schema-builder declarations, indirect references, and foreign keys not written as the exact string above.
+- Inspect every child table of the listed tables, including message bodies, read receipts, attachments, push outbox rows, media/object references, and audit/event records.
+- In a controlled read-only database session, query PostgreSQL catalogs (`pg_constraint`, `pg_class`, `pg_namespace`, `pg_attribute`) for every actual foreign key referencing the deployed `users` table. Include constraint name, source schema/table/column, referenced column, and `confdeltype`; do not run DELETE/UPDATE or modify production.
+- Compare the live catalog with this source inventory and all Drizzle migrations; record discrepancies and dynamically created tables.
+- Classify each table/column with an approved data owner, impact on other users, legal/operational retention basis, anonymization strategy, and verification query before implementing any deletion worker.
 
 ## Implementation gates before coding the destructive operation
 
