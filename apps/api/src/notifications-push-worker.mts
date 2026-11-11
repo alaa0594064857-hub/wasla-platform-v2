@@ -182,8 +182,7 @@ async function sendExpoMessages(
 
     const retryableFailure = rejected.find(({ ticket }) =>
       ticket.details?.error !== "DeviceNotRegistered"
-      && ticket.details?.error !== "MessageTooBig"
-      && ticket.details?.error !== "MessageRateExceeded",
+      && ticket.details?.error !== "MessageTooBig",
     );
     if (retryableFailure) {
       throw new PushDeliveryError(
@@ -193,7 +192,8 @@ async function sendExpoMessages(
     }
 
     const permanentFailure = rejected.find(({ ticket }) =>
-      ticket.details?.error !== "DeviceNotRegistered",
+      ticket.details?.error !== "DeviceNotRegistered"
+      && ticket.details?.error !== "MessageRateExceeded",
     );
     if (permanentFailure) {
       throw new PushDeliveryError(
