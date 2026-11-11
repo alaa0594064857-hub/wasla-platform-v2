@@ -87,6 +87,23 @@ Review date: 2026-11-11. This inventory records source-code definitions found by
 | `apps/api/src/trade-brokerage-commission-ledger.mts` | commission event `actor_user_id` | SET NULL | Event history survives but actor attribution is lost. |
 | `apps/api/src/trade-brokerage-commission-invoices.mts` | invoice event `actor_user_id` | SET NULL | Invoice event history survives but actor attribution is lost. |
 
+## Live Render PostgreSQL catalog snapshot
+
+Checked read-only on 2026-11-11 against the Render Postgres resource named `wasla-db` (Postgres 18, Ohio, resource ID `dpg-dbli8arbc2fs73ebmhe0-a`). The catalog query inspected validated foreign-key constraints whose referenced relation is exactly `public.users(id)`.
+
+- **49 foreign-key constraints** across **38 source tables** reference `public.users(id)`.
+- **22 CASCADE** constraints across 19 source tables.
+- **12 RESTRICT** constraints across 11 source tables.
+- **15 SET NULL** constraints across 14 source tables.
+- All 49 constraints were validated; none were marked `NOT VALID`.
+- No `NO ACTION` or `SET DEFAULT` references were returned for this target relation.
+
+This is a live catalog snapshot for the named Render database resource only. The Render API does not expose the API service's secret `DATABASE_URL` value, so this review cannot independently prove that the running API is connected to this exact database. Confirm the connection target through a safe, non-secret dashboard association or an approved application-side database identity check before treating this snapshot as the production database's definitive inventory. Do not reveal or copy the connection string.
+
+The catalog confirms that the source-level inventory above is incomplete. Examples of additional live constraints include `messages.sender_id`, `official_store_orders.customer_user_id`, `official_store_order_events.actor_user_id`, `official_store_activity_log.actor_user_id`, `trade_brokerage_agreements.created_by_user_id`, `trade_brokerage_agreement_events.actor_user_id`, `trade_deal_events.actor_user_id`, `audit_logs.actor_user_id`, and `platform_role_assignments.user_id` / `assigned_by`. The full constraint-level result was reviewed during this engineering check; this document records aggregate counts and representative discrepancies rather than exposing user data.
+
+No row data was selected. No DML, DDL, migrations, schema changes, or production data mutations were run.
+
 ### Required completion of the inventory
 
 - Search all source definitions and migrations for alternate quoting, schema-builder declarations, indirect references, and foreign keys not written as the exact string above.
