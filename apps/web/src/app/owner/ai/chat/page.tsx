@@ -70,7 +70,7 @@ export default function WaslaAiChatPage() {
       });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.error || (ar ? "تعذر الحصول على الرد." : "The assistant could not respond."));
-      setMessages(current => [...current, { role: "assistant", content: String(data.answer) }].slice(-12));
+      setMessages(current => [...current, { role: "assistant" as const, content: String(data.answer) }].slice(-12));
     } catch (err) {
       // Remove the unanswered turn so the next attempt does not send two user messages in a row.
       setMessages(current => current.length && current[current.length - 1].role === "user" && current[current.length - 1].content === content ? current.slice(0, -1) : current);
