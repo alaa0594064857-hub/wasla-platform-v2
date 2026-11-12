@@ -43,7 +43,8 @@ async function ensureWorkerTables() {
     idempotency_key varchar(100), result_text text, error_code varchar(80), provider_model varchar(120),
     input_characters integer, output_characters integer, duration_ms integer,
     created_at timestamptz NOT NULL DEFAULT NOW(), updated_at timestamptz NOT NULL DEFAULT NOW(),
-    started_at timestamptz, finished_at timestamptz, UNIQUE(owner_user_id,idempotency_key))`);
+    started_at timestamptz, finished_at timestamptz, next_attempt_at timestamptz, UNIQUE(owner_user_id,idempotency_key))`);
+  await db.query(`ALTER TABLE platform_ai_team_tasks ADD COLUMN IF NOT EXISTS next_attempt_at timestamptz`);
   await db.query(`CREATE TABLE IF NOT EXISTS platform_ai_team_task_events (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(), task_id uuid NOT NULL REFERENCES platform_ai_team_tasks(id) ON DELETE CASCADE,
     owner_user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE, actor_type varchar(20) NOT NULL,
@@ -103,6 +104,7 @@ async function processOne():Promise<boolean> {
   const db=getDatabasePool();
   const claim=await db.query(`WITH candidate AS (
     SELECT id FROM platform_ai_team_tasks WHERE status='queued' AND attempt_count<3
+      AND (next_attempt_at IS NULL OR next_attempt_at<=NOW())
     ORDER BY priority DESC,created_at ASC FOR UPDATE SKIP LOCKED LIMIT 1
   ) UPDATE platform_ai_team_tasks t SET status='running',attempt_count=attempt_count+1,
     started_at=NOW(),updated_at=NOW() FROM candidate c WHERE t.id=c.id
@@ -144,10 +146,23 @@ async function processOne():Promise<boolean> {
     if(!response.ok) {
       const status=response.status;
       await response.text().catch(()=> "");
-      await db.query(`UPDATE platform_ai_team_tasks SET status='failed',error_code=$2,updated_at=NOW(),
-        finished_at=NOW(),duration_ms=$3 WHERE id=$1 AND status='running'`,
-        [task.id,status===429?"PROVIDER_RATE_LIMIT":"PROVIDER_REQUEST_FAILED",Date.now()-started]);
-      await addEvent(task,"task_failed",{httpStatus:status});
+      if(status===429 && task.attempt_count<3) {
+        const retryHeader=response.headers.get("retry-after");
+        const retrySeconds=retryHeader
+          ? (Number.isFinite(Number(retryHeader)) ? Number(retryHeader) : Math.ceil((Date.parse(retryHeader)-Date.now())/1000))
+          : 21600;
+        const delaySeconds=Math.min(86400,Math.max(60,Number.isFinite(retrySeconds)?retrySeconds:21600));
+        await db.query(`UPDATE platform_ai_team_tasks SET status='queued',error_code='PROVIDER_RATE_LIMIT',
+          next_attempt_at=NOW()+($2::int * INTERVAL '1 second'),updated_at=NOW(),
+          finished_at=NULL,duration_ms=$3 WHERE id=$1 AND status='running'`,
+          [task.id,delaySeconds,Date.now()-started]);
+        await addEvent(task,"task_retry_scheduled",{code:"PROVIDER_RATE_LIMIT",retryAfterSeconds:delaySeconds,attempt:task.attempt_count});
+      } else {
+        await db.query(`UPDATE platform_ai_team_tasks SET status='failed',error_code=$2,updated_at=NOW(),
+          finished_at=NOW(),duration_ms=$3 WHERE id=$1 AND status='running'`,
+          [task.id,status===429?"PROVIDER_RATE_LIMIT":"PROVIDER_REQUEST_FAILED",Date.now()-started]);
+        await addEvent(task,"task_failed",{httpStatus:status});
+      }
       return true;
     }
     const payload=await response.json() as {
