@@ -100,6 +100,49 @@ export default function OwnerAiAssistantPage() {
     finally { setTaskBusy(false); }
   }
 
+  async function startDemandResearch() {
+    if (taskBusy || !status?.managerEnabled) return;
+    setTaskBusy(true); setTaskError("");
+    const inputText = [
+      "Research and rank WASLA's highest-priority product categories for the United States and Türkiye separately. This is a dated evidence-analysis task, not live web browsing. Use only the source evidence below; do not claim live search, exact SKU sales, supplier verification, current prices, stock, margins or guaranteed demand.",
+      "US evidence: Statista Consumer Insights survey Oct 2025-Sep 2026 lists clothing, shoes, food/beverages, cosmetics/body care, pet products, accessories and consumer electronics among common online purchase categories (public summary omits exact percentages): https://www.statista.com/forecasts/997093/most-popular-categories-for-online-purchases-in-the-us/ . Shopify's 2026 US ecommerce analysis identifies fashion and electronics as largest categories by revenue, with furniture and food material: https://www.shopify.com/blog/top-online-shopping-categories . Amazon Seller guide dated Sep 29 2026 gives Best Sellers/high-demand examples: shoes, surge protectors, acne patches, insulated tumblers, screen protectors, chargers, gaming headsets, under-cabinet lights, mini fridges, jeans and laptops: https://sell.amazon.com/blog/products-to-sell?lang=en-US .",
+      "Türkiye evidence: Ministry of Trade report published 12 May 2026 says 2025 retail ecommerce leaders by volume included clothing/shoes/accessories TRY 428.7bn, electronics TRY 304.34bn and food TRY 270.16bn: https://ticaret.gov.tr/duyurular/turkiyede-e-ticaretin-gorunumu-raporu-yayinlandi-12-05-2026 . Hepsiburada first-half 2026 report dated 16 Jul 2026 highlights searches for men's sports shoes, smartwatches, air conditioners, phones, tablets and Bluetooth headphones; espresso machines, cordless vacuums and robot vacuums among small appliances purchased; photo/camera demand +42%, auto accessories +34%, furniture +32%, hardware +31%, jewellery +30% year over year on its platform: https://kurumsal.hepsiburada.com/tr/basin-odasi/hepsiburada-türkiye%E2%80%99nin-dijital-sepetini-acikladi .",
+      "Starting investigation shortlist: mobile accessories/audio; men's sports shoes; smartwatches/wearables; small home appliances; photo/video creator accessories; beauty/personal care; auto accessories. Treat these as hypotheses to investigate, not approved products.",
+      "Deliver: (1) ranked top 5 categories for each market, (2) distinguish revenue vs search vs purchase vs growth signals, (3) exact product archetypes/variants to research, (4) return/compliance/shipping risks, (5) missing evidence and confidence, (6) next supplier-verification steps. Prioritize low-complexity, low-return, single-unit direct-ship candidates. No scraping, no copying Amazon content, no invented prices, supplier names, stock, delivery or margins. All output is advisory and owner-review-only."
+    ].join("\n\n");
+    try {
+      const response = await fetch("/api/platform/ai/tasks", {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          specialistKey: "market_researcher",
+          title: "Rank highest-demand product categories — US & Türkiye",
+          inputText,
+          inputContext: { researchDate: "2026-11-12", sourceEvidenceProvided: true, publicationAllowed: false },
+          idempotencyKey: "wasla-demand-priorities-2026-11-12-v1"
+        })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success || !data.task?.id) throw new Error(data.error || "Could not queue market research.");
+      await refreshTeamTasks();
+      if (status.configured) {
+        const run = await fetch(`/api/platform/ai/tasks/${data.task.id}/execute`, { method: "POST", credentials: "include" });
+        const runData = await run.json();
+        if (!run.ok || !runData.success) {
+          setTaskError(ar
+            ? "تم وضع مهمة أبحاث الطلب في قائمة المدير، لكن لم تكتمل. افحص إعداد Gemini أو الحصة ثم شغّل الموظف من قائمة المهام."
+            : "The demand research task is queued, but did not finish. Check Gemini configuration/quota, then run the specialist from the task list.");
+        }
+      } else {
+        setTaskError(ar
+          ? "تم تجهيز مهمة أبحاث أعلى المنتجات طلباً في قائمة المدير. التشغيل ينتظر إضافة GEMINI_API_KEY إلى خدمة API في Render."
+          : "The highest-demand research task is queued. Execution is waiting for GEMINI_API_KEY to be configured on the Render API service.");
+      }
+      await refreshTeamTasks();
+    } catch (e) {
+      setTaskError(e instanceof Error ? e.message : (ar ? "تعذر بدء أبحاث الطلب." : "Could not start demand research."));
+    } finally { setTaskBusy(false); }
+  }
+
   async function executeTeamTask(taskId: string) {
     if (taskBusyId || !status?.managerEnabled) return;
     setTaskBusyId(taskId); setTaskError("");
@@ -263,6 +306,17 @@ export default function OwnerAiAssistantPage() {
         <p className="mt-1 text-sm text-slate-600">{ar ? "أنشئ مهمة لموظف متخصص، ثم شغّلها عند الحاجة. كل نتيجة تحتاج مراجعتك؛ لا توجد إجراءات شراء أو نشر أو إرسال تلقائية." : "Assign a task to a specialist and run it when needed. Every result requires your review; no purchasing, publishing or sending actions are automated."}</p>
       </div>
       {taskError ? <p role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{taskError}</p> : null}
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h3 className="font-bold">{ar ? "مهمة مدير المتجر: أعلى المنتجات طلباً" : "Store manager task: highest-demand products"}</h3>
+            <p className="mt-1 text-sm leading-6 text-slate-700">{ar ? "جهزت أدلة سوق مؤرخة لأمريكا وتركيا. اضغط ليُنشئ المدير مهمة لباحث الأسواق ويشغّلها إن كان Gemini مضبوطاً. النتائج تبقى داخلية وتحتاج مراجعتك." : "A dated US and Türkiye evidence brief is ready. Start a market-research task; the manager will run it if Gemini is configured. Results stay private and require your review."}</p>
+            <Link href="https://github.com/alaa0594064857-hub/wasla-platform-v2/blob/main/docs/market-research/2026-11-demand-priorities.md" target="_blank" className="mt-2 inline-block text-xs font-semibold text-amber-900 underline">{ar ? "افتح تقرير الطلب ومصادره" : "Open demand brief and sources"}</Link>
+          </div>
+          <button type="button" onClick={() => void startDemandResearch()} disabled={!status?.managerEnabled || taskBusy} className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">{taskBusy ? (ar ? "جارٍ بدء المهمة..." : "Starting task...") : (ar ? "ابدأ أبحاث الطلب" : "Start demand research")}</button>
+        </div>
+        {!status?.configured ? <p className="mt-2 text-xs text-amber-900">{ar ? "يمكن حفظ المهمة الآن؛ تشغيل الذكاء الاصطناعي يحتاج مفتاح Gemini سرياً في Render." : "The task can be queued now; AI execution needs the Gemini secret in Render."}</p> : null}
+      </div>
       <form onSubmit={createTeamTask} className="grid gap-3 rounded-xl bg-slate-50 p-4">
         <label className="text-sm font-semibold">{ar ? "الموظف المختص" : "Specialist"}
           <select value={taskSpecialist} onChange={event => setTaskSpecialist(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-3 text-sm">
