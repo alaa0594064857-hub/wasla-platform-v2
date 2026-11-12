@@ -31,6 +31,36 @@ const WEEK_ONE_TASKS = [
     title: "Week 1 — Affiliate compliance and product publication gates",
     inputText: "Research official primary-source rules for Amazon Associates US and the strongest candidate affiliate programs found for US/Türkiye. Verify disclosure requirements, product content/image/price refresh rights, linking rules, marketplace separation, geographic eligibility and application requirements. Cite exact official policy URLs. Combine these findings with the product shortlist where possible, identify evidence gaps and risks, and state what must be true before any product can be published. Mark every unverified point unknown. Research only; do not approve or publish.",
   },
+  {
+    specialistKey: "market_researcher",
+    title: "Week 1 — US and Türkiye market opportunity scan",
+    inputText: "Research official and reputable public evidence for three evergreen ecommerce categories in the US and Türkiye. Compare market signals only where supported by sources; distinguish each market and avoid invented market size, demand or sales figures. Provide Arabic and English executive summaries, sources, gaps and a shortlist of questions for the product analyst.",
+  },
+  {
+    specialistKey: "catalogue_manager",
+    title: "Week 1 — Bilingual affiliate catalogue standards",
+    inputText: "Prepare a private Arabic-English catalogue content standard for the first affiliate products: required fields, factual copy structure, disclosure placement, image/data rights checks, freshness rules and publication checklist. Do not create product-specific claims or publish anything. Cite official affiliate policies where relevant.",
+  },
+  {
+    specialistKey: "sales_support",
+    title: "Week 1 — Affiliate customer journey and support drafts",
+    inputText: "Design a customer journey and prepare a small set of bilingual FAQ/reply drafts for an affiliate storefront. Explain that purchases occur on partner sites, define safe wording for availability, shipping, returns and support ownership, and never promise terms not confirmed by the partner. Cite official policies where relevant.",
+  },
+  {
+    specialistKey: "logistics_analyst",
+    title: "Week 1 — US and Türkiye fulfilment requirements",
+    inputText: "Research the fulfilment information a responsible affiliate storefront should display for US and Türkiye visitors. Use official marketplace/carrier or merchant policy sources. Separate what the affiliate storefront can state from what only the merchant can confirm. Do not promise delivery, calculate unsupported times or book shipping.",
+  },
+  {
+    specialistKey: "translator",
+    title: "Week 1 — Arabic-English commerce terminology guide",
+    inputText: "Create a concise bilingual glossary and translation style guide for affiliate ecommerce: product attributes, pricing, shipping, returns, warranties, disclosures, commissions and customer support. Preserve legal meaning and uncertainty. Flag phrases that should not be translated literally or that could create misleading promises.",
+  },
+  {
+    specialistKey: "financial_analyst",
+    title: "Week 1 — Affiliate unit economics framework",
+    inputText: "Build a transparent unit-economics framework for affiliate commerce in the US and Türkiye. Identify formulae and required inputs for commission, conversion, refunds/reversals, payment fees, currency conversion, taxes and operating costs. Use published program terms only when verified; do not invent rates, traffic, conversion or profit estimates. Provide a bilingual template with unknowns clearly marked.",
+  }
 ] as const;
 
 async function ensureWorkerTables() {
@@ -209,6 +239,26 @@ async function processOne():Promise<boolean> {
   return true;
 }
 
+/** Re-queue legacy 429 failures created before retry scheduling was deployed. */
+async function recoverLegacyRateLimitedTasks(): Promise<number> {
+  const db=getDatabasePool();
+  const recovered=await db.query(`UPDATE platform_ai_team_tasks
+    SET status='queued', error_code=NULL,
+        next_attempt_at=NOW()+INTERVAL '60 seconds',
+        finished_at=NULL, updated_at=NOW()
+    WHERE status='failed' AND error_code='PROVIDER_RATE_LIMIT'
+      AND attempt_count<3
+    RETURNING id,owner_user_id,specialist_key,attempt_count`);
+  for(const task of recovered.rows) {
+    await addEvent(task,"legacy_rate_limit_retry_scheduled",{
+      retryAfterSeconds:60,
+      attempt:task.attempt_count,
+      reason:"Recover a rate-limited task created before retry backoff was deployed."
+    });
+  }
+  return recovered.rows.length;
+}
+
 async function generateDailyReports() {
   const db=getDatabasePool();
   const owners=await db.query(`SELECT DISTINCT owner_user_id FROM platform_ai_team_tasks
@@ -235,11 +285,12 @@ export async function runScheduledAiTasks() {
   const control=await getPlatformAiManagerControl();
   if(!control.enabled) return { paused:true, processed:0, seeded:0 };
   const seeded=await seedWeekOneTasks();
+  const recovered=await recoverLegacyRateLimitedTasks();
   let processed=0;
   for(let i=0;i<5;i++) { if(!(await processOne())) break; processed++; }
   await generateDailyReports();
   console.info("WASLA scheduler finished",{seeded,processed});
-  return { paused:false, seeded, processed };
+  return { paused:false, seeded, recovered, processed };
 }
 
 async function main() {
