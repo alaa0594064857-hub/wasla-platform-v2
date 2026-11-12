@@ -19,6 +19,7 @@ if (process.env.NODE_ENV === "production" && !secret) {
 
 const trustedOrigins = [...new Set([
   "https://wasla-web-4a64.onrender.com",
+  "https://wasla.trade",
   "http://localhost:3000",
   "wasla://",
   ...(process.env.BETTER_AUTH_TRUSTED_ORIGINS ?? "").split(","),
