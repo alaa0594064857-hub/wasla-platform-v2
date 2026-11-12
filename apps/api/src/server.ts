@@ -301,7 +301,7 @@ async function handleRequest(
     return;
   }
 
-  const affiliateOutboundMatch = requestUrl.pathname.match(/^\\/api\\/affiliate\\/out\\/([0-9a-f-]{36})$/i);
+  const affiliateOutboundMatch = requestUrl.pathname.match(/^\/api\/affiliate\/out\/([0-9a-f-]{36})$/i);
   if (affiliateOutboundMatch) {
     try {
       const { handleAffiliateOutboundRequest } = await import("./affiliate-commerce.mjs");
