@@ -149,7 +149,7 @@ async function processOne():Promise<boolean> {
       return true;
     }
     const payload=await response.json() as {
-      candidates?:{content?:{parts?:{text?:string}[]}[],groundingMetadata?:{
+      candidates?:{content?:{parts?:{text?:string}[]};groundingMetadata?:{
         webSearchQueries?:string[];
         searchEntryPoint?:{renderedContent?:string};
         groundingChunks?:{web?:{uri?:string;title?:string}}[];
