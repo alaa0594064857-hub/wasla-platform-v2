@@ -140,7 +140,11 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,
-    sendResetPassword: async ({ user, url }) => {
+    sendResetPassword: async ({ user, token }) => {
+      const webBaseUrl = process.env.WASLA_WEB_URL ?? "https://wasla.trade";
+      const resetUrl = new URL("/reset-password", webBaseUrl);
+      resetUrl.searchParams.set("token", token);
+
       await sendWASLAEmail(
         user.email,
         "Reset your WASLA password",
@@ -148,7 +152,7 @@ export const auth = betterAuth({
           "A password reset was requested for your WASLA account.",
           "",
           "Use this link to choose a new password:",
-          url,
+          resetUrl.toString(),
           "",
           "If you did not request this, you can ignore this email.",
         ],
