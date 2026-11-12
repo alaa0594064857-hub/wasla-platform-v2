@@ -175,7 +175,29 @@ async function processOne():Promise<boolean> {
     });
     if(!response.ok) {
       const status=response.status;
-      await response.text().catch(()=> "");
+      const providerBody=await response.text().catch(()=> "");
+      let providerError: any=null;
+      try { providerError=JSON.parse(providerBody)?.error||null; } catch {}
+      const providerDetails=Array.isArray(providerError?.details)
+        ? providerError.details.slice(0,6).map((detail:any)=>({
+            type:typeof detail?.["@type"]==="string"?detail["@type"].slice(0,160):undefined,
+            reason:typeof detail?.reason==="string"?detail.reason.slice(0,160):undefined,
+            domain:typeof detail?.domain==="string"?detail.domain.slice(0,120):undefined,
+            metadata:detail?.metadata&&typeof detail.metadata==="object"?Object.fromEntries(
+              ["service","quota_metric","quota_limit","quota_location","retryDelay","consumer"]
+                .filter(key=>typeof detail.metadata[key]==="string")
+                .map(key=>[key,String(detail.metadata[key]).slice(0,240)])
+            ):undefined
+          }))
+        : [];
+      const diagnostic={
+        httpStatus:status,
+        providerStatus:typeof providerError?.status==="string"?providerError.status.slice(0,80):undefined,
+        providerMessage:typeof providerError?.message==="string"?providerError.message.slice(0,700):undefined,
+        retryAfterHeader:response.headers.get("retry-after")?.slice(0,120)||null,
+        providerDetails
+      };
+      console.error("WASLA Gemini provider rejection",JSON.stringify(diagnostic));
       if(status===429 && task.attempt_count<3) {
         const retryHeader=response.headers.get("retry-after");
         const retrySeconds=retryHeader
@@ -186,12 +208,12 @@ async function processOne():Promise<boolean> {
           next_attempt_at=NOW()+($2::int * INTERVAL '1 second'),updated_at=NOW(),
           finished_at=NULL,duration_ms=$3 WHERE id=$1 AND status='running'`,
           [task.id,delaySeconds,Date.now()-started]);
-        await addEvent(task,"task_retry_scheduled",{code:"PROVIDER_RATE_LIMIT",retryAfterSeconds:delaySeconds,attempt:task.attempt_count});
+        await addEvent(task,"task_retry_scheduled",{code:"PROVIDER_RATE_LIMIT",retryAfterSeconds:delaySeconds,attempt:task.attempt_count,...diagnostic});
       } else {
         await db.query(`UPDATE platform_ai_team_tasks SET status='failed',error_code=$2,updated_at=NOW(),
           finished_at=NOW(),duration_ms=$3 WHERE id=$1 AND status='running'`,
           [task.id,status===429?"PROVIDER_RATE_LIMIT":"PROVIDER_REQUEST_FAILED",Date.now()-started]);
-        await addEvent(task,"task_failed",{httpStatus:status});
+        await addEvent(task,"task_failed",diagnostic);
       }
       return true;
     }
