@@ -958,6 +958,31 @@ async function handleRequest(
     return;
   }
 
+  if (requestUrl.pathname === "/api/internal/ai/scheduler/run") {
+    if (request.method !== "POST") {
+      sendJson(response, 405, { success: false, error: "Method not allowed" });
+      return;
+    }
+    const configuredToken = process.env.WASLA_SCHEDULER_TOKEN;
+    const suppliedToken = request.headers.authorization?.startsWith("Bearer ")
+      ? request.headers.authorization.slice(7) : "";
+    if (!configuredToken || suppliedToken.length !== configuredToken.length ||
+        !suppliedToken || !((await import("node:crypto")).timingSafeEqual(
+          Buffer.from(suppliedToken), Buffer.from(configuredToken)))) {
+      sendJson(response, 401, { success: false, error: "Unauthorized" });
+      return;
+    }
+    try {
+      const { runScheduledAiTasks } = await import("./platform-ai-scheduler.mjs");
+      const result = await runScheduledAiTasks();
+      sendJson(response, 200, { success: true, ...result });
+    } catch (error) {
+      console.error("WASLA internal AI scheduler failed:", error);
+      sendJson(response, 500, { success: false, error: "Scheduler execution failed" });
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/health") {
     if (request.method !== "GET") {
       sendJson(response, 405, {
