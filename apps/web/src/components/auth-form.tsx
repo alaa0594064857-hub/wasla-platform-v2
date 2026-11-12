@@ -29,7 +29,9 @@ const labels = {
     loading: "جارٍ المعالجة...",
     loginError: "تعذر تسجيل الدخول. تحقق من بياناتك وحاول مجدداً.",
     registerError: "تعذر إنشاء الحساب. تحقق من البيانات وحاول مجدداً.",
-    verificationSent: "تم إنشاء طلب التسجيل. افحص بريدك الإلكتروني واضغط رابط التحقق لإكمال إنشاء الحساب.",
+    verificationSent: "إذا كان هذا البريد بحاجة إلى التحقق، فسنرسل إليه رابطاً. افحص الوارد والرسائل غير المرغوب فيها.",
+    verificationEmailError: "تعذر إرسال رسالة التحقق الآن. لم يكتمل التفعيل؛ يمكنك إعادة المحاولة.",
+    resendVerification: "إعادة إرسال رسالة التحقق",
     language: "English",
     passwordHint: "ثمانية أحرف على الأقل",
     accountType: "نوع العضوية",
@@ -59,7 +61,9 @@ const labels = {
     loading: "Please wait...",
     loginError: "Unable to sign in. Check your details and try again.",
     registerError: "Unable to create your account. Check your details and try again.",
-    verificationSent: "Your registration request was submitted. Check your email and open the verification link to complete your account.",
+    verificationSent: "If this email needs verification, a link will be sent. Check your inbox and spam folder.",
+    verificationEmailError: "We could not send the verification email right now. Activation is not complete; you can retry.",
+    resendVerification: "Resend verification email",
     language: "العربية",
     passwordHint: "At least 8 characters",
     accountType: "Membership type",
@@ -81,9 +85,30 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
   const [registrationType, setRegistrationType] = useState<RegistrationType>("buyer");
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [verificationEmail, setVerificationEmail] = useState("");
+  const [resendingVerification, setResendingVerification] = useState(false);
   const [loading, setLoading] = useState(false);
   const t = labels[locale];
   const isRegister = mode === "register";
+
+  async function handleResendVerification() {
+    if (!verificationEmail || resendingVerification) return;
+    setResendingVerification(true);
+    setError("");
+    setSuccessMessage("");
+    try {
+      const result = await authClient.sendVerificationEmail({ email: verificationEmail, callbackURL: "/" });
+      if (result.error) {
+        setError(t.verificationEmailError);
+        return;
+      }
+      setSuccessMessage(t.verificationSent);
+    } catch {
+      setError(t.verificationEmailError);
+    } finally {
+      setResendingVerification(false);
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -110,7 +135,18 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
           setError(t.registerError);
           return;
         }
-        setSuccessMessage(t.verificationSent);
+        const normalizedEmail = email.trim();
+        setVerificationEmail(normalizedEmail);
+        try {
+          const verificationResult = await authClient.sendVerificationEmail({ email: normalizedEmail, callbackURL: "/" });
+          if (verificationResult.error) {
+            setError(t.verificationEmailError);
+            return;
+          }
+          setSuccessMessage(t.verificationSent);
+        } catch {
+          setError(t.verificationEmailError);
+        }
         return;
       } else {
         const result = await authClient.signIn.email({
@@ -212,7 +248,12 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
                 type="email"
                 autoComplete="email"
                 value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  setVerificationEmail("");
+                  setError("");
+                  setSuccessMessage("");
+                }}
                 maxLength={320}
                 required
               />
@@ -243,6 +284,11 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
               <p className="auth-error" role="alert">
                 {error}
               </p>
+            )}
+            {error === t.verificationEmailError && verificationEmail && (
+              <button className="auth-language" type="button" onClick={() => void handleResendVerification()} disabled={resendingVerification || loading}>
+                {resendingVerification ? t.loading : t.resendVerification}
+              </button>
             )}
 
             {successMessage && (

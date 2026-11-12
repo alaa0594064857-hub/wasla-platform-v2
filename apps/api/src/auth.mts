@@ -161,7 +161,8 @@ export const auth = betterAuth({
   },
 
   emailVerification: {
-    sendOnSignUp: true,
+    // Send explicitly after sign-up through the awaited endpoint so provider failures reach the client.
+    sendOnSignUp: false,
     sendOnSignIn: true,
     autoSignInAfterVerification: true,
     expiresIn: 3600,
