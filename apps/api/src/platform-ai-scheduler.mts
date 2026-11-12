@@ -280,6 +280,10 @@ async function generateDailyReports() {
 }
 
 export async function runScheduledAiTasks() {
+  if(process.env.WASLA_AI_EXECUTION_PAUSED?.trim().toLowerCase()==="true") {
+    console.info("WASLA AI execution is paused by environment safeguard");
+    return { paused:true, processed:0, seeded:0, recovered:0 };
+  }
   if(!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required");
   await ensureWorkerTables();
   const control=await getPlatformAiManagerControl();
