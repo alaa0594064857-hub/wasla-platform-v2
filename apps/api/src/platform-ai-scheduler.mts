@@ -1,5 +1,7 @@
 import { getDatabasePool } from "./database.js";
 import { getPlatformAiManagerControl } from "./platform-ai-controls.mjs";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const roles: Record<string,string> = {
   market_researcher:"Research the live public web using Google Search grounding. Find current market evidence and cite source URLs and access date. Distinguish evidence from estimates.",
@@ -279,4 +281,9 @@ async function main() {
 
   throw lastError instanceof Error ? lastError : new Error("Scheduler API request failed after retries");
 }
-main().then(()=>process.exit(0)).catch(error=>{console.error("WASLA scheduler fatal error",error);process.exit(1);});
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().then(() => process.exit(0)).catch(error => {
+    console.error("WASLA scheduler fatal error", error);
+    process.exit(1);
+  });
+}
