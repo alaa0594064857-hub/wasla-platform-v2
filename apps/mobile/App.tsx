@@ -61,7 +61,9 @@ const copy = {
     manufacturer: "مصنع",
     trader: "تاجر",
     brand: "علامة تجارية",
-    signUpSuccess: "تم إنشاء الحساب. تحقق من بريدك الإلكتروني لتفعيل الحساب.",
+    signUpSuccess: "إذا كان البريد بحاجة إلى التحقق، فسنرسل إليه رسالة. افحص الوارد والرسائل غير المرغوب فيها.",
+    verificationEmailError: "تعذر إرسال رسالة التحقق الآن. لم يكتمل التفعيل؛ يمكنك إعادة المحاولة.",
+    resendVerification: "إعادة إرسال رسالة التحقق",
     signUpError: "تعذر إنشاء الحساب. تحقق من البيانات أو أن البريد مستخدم مسبقاً.",
     signOut: "تسجيل الخروج",
     signedIn: "تم تسجيل الدخول",
@@ -122,7 +124,9 @@ const copy = {
     manufacturer: "Manufacturer",
     trader: "Trader",
     brand: "Brand",
-    signUpSuccess: "Account created. Check your email to verify it.",
+    signUpSuccess: "If this email needs verification, a message will be sent. Check your inbox and spam folder.",
+    verificationEmailError: "We could not send the verification email right now. Activation is not complete; you can retry.",
+    resendVerification: "Resend verification email",
     signUpError: "Could not create the account. Check the details or whether the email is already registered.",
     signOut: "Sign out",
     signedIn: "You are signed in",
@@ -172,6 +176,7 @@ export default function App() {
   const [registrationType, setRegistrationType] = useState<"buyer" | "company" | "supplier" | "manufacturer" | "trader" | "brand">("buyer");
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState("");
+  const [verificationRetry, setVerificationRetry] = useState(false);
   const [resetBusy, setResetBusy] = useState(false);
   const [profile, setProfile] = useState<WaslaProfile | null>(null);
   const [profileBusy, setProfileBusy] = useState(false);
@@ -203,6 +208,27 @@ export default function App() {
     }
   }
 
+  async function handleResendVerification() {
+    if (!email.trim() || authBusy) return;
+    setAuthBusy(true);
+    setAuthError("");
+    try {
+      const result = await authClient.sendVerificationEmail({ email: email.trim(), callbackURL: "https://wasla.trade" });
+      if (result.error) {
+        setAuthError(t.verificationEmailError);
+        setVerificationRetry(true);
+      } else {
+        setAuthError(t.signUpSuccess);
+        setVerificationRetry(false);
+      }
+    } catch {
+      setAuthError(t.verificationEmailError);
+      setVerificationRetry(true);
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
   async function handleSignUp() {
     if (!email.trim() || !password || !registrationName.trim() || authBusy) return;
     setAuthBusy(true);
@@ -219,8 +245,20 @@ export default function App() {
       if (result.error) setAuthError(t.signUpError);
       else {
         setPassword("");
-        setAuthError(t.signUpSuccess);
         setAuthMode("signin");
+        try {
+          const verification = await authClient.sendVerificationEmail({ email: input.email, callbackURL: "https://wasla.trade" });
+          if (verification.error) {
+            setAuthError(t.verificationEmailError);
+            setVerificationRetry(true);
+          } else {
+            setAuthError(t.signUpSuccess);
+            setVerificationRetry(false);
+          }
+        } catch {
+          setAuthError(t.verificationEmailError);
+          setVerificationRetry(true);
+        }
       }
     } catch {
       setAuthError(t.signUpError);
@@ -460,7 +498,7 @@ export default function App() {
                   ))}
                 </View>
               </> : null}
-              <TextInput value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" placeholder={t.email} style={[styles.countryInput, rtl && styles.textRight]} />
+              <TextInput value={email} onChangeText={(value) => { setEmail(value); setVerificationRetry(false); }} autoCapitalize="none" keyboardType="email-address" autoComplete="email" placeholder={t.email} style={[styles.countryInput, rtl && styles.textRight]} />
               <TextInput value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" placeholder={t.password} style={[styles.countryInput, rtl && styles.textRight]} />
               <Pressable accessibilityRole="button" onPress={() => void (authMode === "signin" ? handleSignIn() : handleSignUp())} disabled={authBusy || sessionLoading} style={styles.catalogueButton}>
                 {authBusy || sessionLoading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>{authMode === "signin" ? t.signIn : t.createAccount}</Text>}
@@ -472,6 +510,7 @@ export default function App() {
                 <Text style={[styles.noteText, rtl && styles.textRight]}>{authMode === "signin" ? t.createAccount : t.haveAccount}</Text>
               </Pressable>
               {!!authError && <Text style={[authError === t.signUpSuccess || authError === t.resetEmailSent ? styles.successText : styles.errorText]}>{authError}</Text>}
+              {verificationRetry ? <Pressable accessibilityRole="button" onPress={() => void handleResendVerification()} disabled={authBusy || !email.trim()}><Text style={[styles.noteText, rtl && styles.textRight]}>{authBusy ? (rtl ? "جارٍ الإرسال..." : "Sending...") : t.resendVerification}</Text></Pressable> : null}
             </>
           )}
         </View>
