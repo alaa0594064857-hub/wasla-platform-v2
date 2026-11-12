@@ -234,13 +234,49 @@ async function main() {
   const apiUrl = process.env.WASLA_API_URL?.replace(/\/$/, "");
   const token = process.env.WASLA_SCHEDULER_TOKEN?.trim();
   if (!apiUrl || !token) throw new Error("Scheduler requires database access or secure API trigger configuration");
-  const response = await fetch(`${apiUrl}/api/internal/ai/scheduler/run`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    signal: AbortSignal.timeout(65000),
-  });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok || body.success !== true) throw new Error(`Scheduler API returned ${response.status}`);
-  console.info("WASLA scheduler trigger completed", { paused: body.paused === true, seeded: Number(body.seeded || 0), processed: Number(body.processed || 0) });
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    try {
+      const response = await fetch(`${apiUrl}/api/internal/ai/scheduler/run`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        signal: AbortSignal.timeout(15000),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (response.ok && body.success === true) {
+        console.info("WASLA scheduler trigger completed", {
+          paused: body.paused === true,
+          seeded: Number(body.seeded || 0),
+          processed: Number(body.processed || 0),
+          attempt,
+        });
+        return;
+      }
+
+      const retryable = [502, 503, 504].includes(response.status);
+      if (!retryable || attempt === 4) {
+        throw new Error(`Scheduler API returned ${response.status}`);
+      }
+      lastError = new Error(`Scheduler API returned ${response.status}`);
+    } catch (error) {
+      lastError = error;
+      if (attempt === 4) break;
+      if (error instanceof Error && error.message.startsWith("Scheduler API returned ")) {
+        const status = Number(error.message.match(/\\d+$/)?.[0]);
+        if (![502, 503, 504].includes(status)) throw error;
+      }
+    }
+
+    const delayMs = [2000, 5000, 10000][attempt - 1];
+    console.warn("WASLA scheduler API temporarily unavailable; retrying", {
+      attempt,
+      nextAttempt: attempt + 1,
+      delayMs,
+      error: lastError instanceof Error ? lastError.message : "Unknown request failure",
+    });
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Scheduler API request failed after retries");
 }
 main().then(()=>process.exit(0)).catch(error=>{console.error("WASLA scheduler fatal error",error);process.exit(1);});
