@@ -48,54 +48,82 @@ function safeText(value: unknown, max: number): string | null {
   return normalized && normalized.length <= max ? normalized : null;
 }
 
+let taskTablesReady: Promise<void> | undefined;
+
 async function ensureTaskTables(): Promise<void> {
-  const db = getDatabasePool();
-  await db.query(`
-    CREATE TABLE IF NOT EXISTS platform_ai_team_tasks (
-      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-      owner_user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      specialist_key varchar(40) NOT NULL CHECK (specialist_key IN (${Object.keys(SPECIALISTS).map(key => "'" + key + "'").join(", ")})),
-      title varchar(180) NOT NULL,
-      input_text text NOT NULL,
-      input_context jsonb NOT NULL DEFAULT '{}'::jsonb,
-      status varchar(32) NOT NULL DEFAULT 'queued'
-        CHECK (status IN ('queued','running','needs_owner_review','completed','failed','cancelled')),
-      priority smallint NOT NULL DEFAULT 0 CHECK (priority BETWEEN 0 AND 5),
-      attempt_count smallint NOT NULL DEFAULT 0 CHECK (attempt_count BETWEEN 0 AND 3),
-      idempotency_key varchar(100),
-      result_text text,
-      error_code varchar(80),
-      provider_model varchar(120),
-      input_characters integer,
-      output_characters integer,
-      duration_ms integer,
-      created_at timestamptz NOT NULL DEFAULT NOW(),
-      updated_at timestamptz NOT NULL DEFAULT NOW(),
-      started_at timestamptz,
-      finished_at timestamptz,
-      UNIQUE(owner_user_id, idempotency_key)
-    )
-  `);
-  await db.query(`
-    CREATE INDEX IF NOT EXISTS platform_ai_team_tasks_owner_created_idx
-    ON platform_ai_team_tasks(owner_user_id, created_at DESC)
-  `);
-  await db.query(`
-    CREATE TABLE IF NOT EXISTS platform_ai_team_task_events (
-      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-      task_id uuid NOT NULL REFERENCES platform_ai_team_tasks(id) ON DELETE CASCADE,
-      owner_user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      actor_type varchar(20) NOT NULL CHECK (actor_type IN ('owner','manager','specialist','system')),
-      actor_key varchar(40),
-      event_type varchar(40) NOT NULL,
-      metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
-      created_at timestamptz NOT NULL DEFAULT NOW()
-    )
-  `);
-  await db.query(`
-    CREATE INDEX IF NOT EXISTS platform_ai_team_task_events_task_created_idx
-    ON platform_ai_team_task_events(task_id, created_at ASC)
-  `);
+  if (!taskTablesReady) {
+    taskTablesReady = (async () => {
+      const client = await getDatabasePool().connect();
+      try {
+        await client.query("BEGIN");
+        // Serialize first-time schema creation across requests and API instances.
+        await client.query(
+          "SELECT pg_advisory_xact_lock(hashtext($1))",
+          ["wasla:platform-ai-team-tasks-schema"],
+        );
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS platform_ai_team_tasks (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            owner_user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            specialist_key varchar(40) NOT NULL CHECK (specialist_key IN (${Object.keys(SPECIALISTS).map(key => "'" + key + "'").join(", ")})),
+            title varchar(180) NOT NULL,
+            input_text text NOT NULL,
+            input_context jsonb NOT NULL DEFAULT '{}'::jsonb,
+            status varchar(32) NOT NULL DEFAULT 'queued'
+              CHECK (status IN ('queued','running','needs_owner_review','completed','failed','cancelled')),
+            priority smallint NOT NULL DEFAULT 0 CHECK (priority BETWEEN 0 AND 5),
+            attempt_count smallint NOT NULL DEFAULT 0 CHECK (attempt_count BETWEEN 0 AND 3),
+            idempotency_key varchar(100),
+            result_text text,
+            error_code varchar(80),
+            provider_model varchar(120),
+            input_characters integer,
+            output_characters integer,
+            duration_ms integer,
+            created_at timestamptz NOT NULL DEFAULT NOW(),
+            updated_at timestamptz NOT NULL DEFAULT NOW(),
+            started_at timestamptz,
+            finished_at timestamptz,
+            UNIQUE(owner_user_id, idempotency_key)
+          )
+        `);
+        await client.query(`
+          CREATE INDEX IF NOT EXISTS platform_ai_team_tasks_owner_created_idx
+          ON platform_ai_team_tasks(owner_user_id, created_at DESC)
+        `);
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS platform_ai_team_task_events (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            task_id uuid NOT NULL REFERENCES platform_ai_team_tasks(id) ON DELETE CASCADE,
+            owner_user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            actor_type varchar(20) NOT NULL CHECK (actor_type IN ('owner','manager','specialist','system')),
+            actor_key varchar(40),
+            event_type varchar(40) NOT NULL,
+            metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+            created_at timestamptz NOT NULL DEFAULT NOW()
+          )
+        `);
+        await client.query(`
+          CREATE INDEX IF NOT EXISTS platform_ai_team_task_events_task_created_idx
+          ON platform_ai_team_task_events(task_id, created_at ASC)
+        `);
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK").catch(() => undefined);
+        throw error;
+      } finally {
+        client.release();
+      }
+    })();
+  }
+
+  try {
+    await taskTablesReady;
+  } catch (error) {
+    // Allow a later request to retry after a transient database failure.
+    taskTablesReady = undefined;
+    throw error;
+  }
 }
 
 async function addEvent(taskId: string, ownerId: string, actorType: string, actorKey: string | null, eventType: string, metadata: Record<string, unknown> = {}): Promise<void> {
