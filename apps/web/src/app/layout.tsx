@@ -1,4 +1,3 @@
-
 import type { Metadata } from "next";
 import "./globals.css";
 import "../styles/design-system.css";
@@ -18,7 +17,7 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl">
       <head>
-        <meta name="impact-site-verification" value="2bf95771-6ee0-451a-a18a-d106513db226" />
+        <meta name="impact-site-verification" content="2bf95771-6ee0-451a-a18a-d106513db226" />
       </head>
       <body><LocaleProvider><WorldThemeProvider>{children}</WorldThemeProvider></LocaleProvider></body>
     </html>
