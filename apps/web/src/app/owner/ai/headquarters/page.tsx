@@ -21,7 +21,6 @@ export default function AiHeadquartersPage(){
  const {locale}=useLocale(); const ar=locale==="ar";
  const [tasks,setTasks]=useState<Task[]>([]); const [status,setStatus]=useState<{configured:boolean;managerEnabled:boolean}|null>(null);
  const [error,setError]=useState("");
- const [error,setError]=useState("");
  useEffect(()=>{let active=true;
   Promise.all([
    fetch("/api/platform/ai/tasks?limit=50",{credentials:"include",cache:"no-store"}).then(async r=>{const d=await r.json();if(!r.ok||!d.success)throw new Error(d.error||"tasks");return d.tasks as Task[]}),
