@@ -289,6 +289,31 @@ async function handleRequest(
     return;
   }
 
+  if (requestUrl.pathname === "/api/public/affiliate-items") {
+    try {
+      const { handleAffiliatePublicCatalogRequest } = await import("./affiliate-commerce.mjs");
+      await handleAffiliatePublicCatalogRequest(request, response);
+    } catch (error) {
+      console.error("WASLA public affiliate catalog route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Affiliate catalog service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const affiliateOutboundMatch = requestUrl.pathname.match(/^\/api\/affiliate\/out\/([0-9a-f-]{36})$/i);
+  if (affiliateOutboundMatch) {
+    try {
+      const { handleAffiliateOutboundRequest } = await import("./affiliate-commerce.mjs");
+      await handleAffiliateOutboundRequest(request, response, affiliateOutboundMatch[1]);
+    } catch (error) {
+      console.error("WASLA affiliate outbound route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Affiliate redirect service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/platform/affiliate-commerce") {
     try {
       const { handleAffiliateCommerceRequest } = await import("./affiliate-commerce.mjs");
