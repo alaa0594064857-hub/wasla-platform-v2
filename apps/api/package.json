@@ -14,7 +14,8 @@
     "db:migrate": "drizzle-kit migrate --config=drizzle.config.ts",
     "db:check": "drizzle-kit check --config=drizzle.config.ts",
     "db:seed": "tsx scripts/seed.ts",
-    "start:push-worker": "node dist/notifications-push-worker.mjs"
+    "start:push-worker": "node dist/notifications-push-worker.mjs",
+    "start:ai-scheduler": "node dist/platform-ai-scheduler.mjs"
   },
   "dependencies": {
     "@wasla/shared": "workspace:*",
