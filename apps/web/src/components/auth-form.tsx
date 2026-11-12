@@ -137,12 +137,16 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
         }
         const normalizedEmail = email.trim();
         setVerificationEmail(normalizedEmail);
-        const verificationResult = await authClient.sendVerificationEmail({ email: normalizedEmail, callbackURL: "/" });
-        if (verificationResult.error) {
+        try {
+          const verificationResult = await authClient.sendVerificationEmail({ email: normalizedEmail, callbackURL: "/" });
+          if (verificationResult.error) {
+            setError(t.verificationEmailError);
+            return;
+          }
+          setSuccessMessage(t.verificationSent);
+        } catch {
           setError(t.verificationEmailError);
-          return;
         }
-        setSuccessMessage(t.verificationSent);
         return;
       } else {
         const result = await authClient.signIn.email({
