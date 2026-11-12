@@ -289,6 +289,18 @@ async function handleRequest(
     return;
   }
 
+  if (requestUrl.pathname === "/api/platform/affiliate-commerce") {
+    try {
+      const { handleAffiliateCommerceRequest } = await import("./affiliate-commerce.mjs");
+      await handleAffiliateCommerceRequest(request, response);
+    } catch (error) {
+      console.error("WASLA affiliate commerce route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Affiliate commerce service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const officialStoreDataSourceMatch = requestUrl.pathname.match(/^\/api\/platform\/official-store\/data-sources(?:\/([0-9a-f-]{36}))?$/i);
   if (officialStoreDataSourceMatch) {
     try {
@@ -1062,6 +1074,8 @@ if (process.env.NODE_ENV !== "test") {
       await ensureOfficialStoreOpportunityTables();
       const { ensureOfficialStoreDataSourceTables } = await import("./official-store-data-sources.mjs");
       await ensureOfficialStoreDataSourceTables();
+      const { ensureAffiliateCommerceTables } = await import("./affiliate-commerce.mjs");
+      await ensureAffiliateCommerceTables();
 
       const databaseIdentity = await getDatabaseIdentity();
       console.info("WASLA database identity:", databaseIdentity);
