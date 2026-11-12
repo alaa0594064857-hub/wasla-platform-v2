@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useLocale } from "../../../components/locale-provider";
 
@@ -16,7 +17,7 @@ const offices = [
   ["quality_risk_reviewer", "الجودة والمخاطر", "Quality & Risk", "✓"],
 ] as const;
 
-export default function AiOwnerWorkspaceLayout({ children }: { children: React.ReactNode }) {
+export default function AiOwnerWorkspaceLayout({ children }: { children: ReactNode }) {
   const { locale } = useLocale();
   const pathname = usePathname();
   const ar = locale === "ar";
