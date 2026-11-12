@@ -161,6 +161,7 @@ async function processOne():Promise<boolean> {
     const payload=await response.json() as {
       candidates?:{content?:{parts?:{text?:string}[]}[],groundingMetadata?:{
         webSearchQueries?:string[];
+        searchEntryPoint?:{renderedContent?:string};
         groundingChunks?:{web?:{uri?:string;title?:string}}[];
       }}[];
     };
@@ -184,7 +185,10 @@ async function processOne():Promise<boolean> {
     }
     const sourceList=sources.map((source,index)=>`[${index+1}] ${source.title||"Source"} — ${source.uri}`).join("\n");
     const queryList=queries.length?queries.join(" | "):"Not returned by provider";
-    const resultText=`${answer}\n\nResearch metadata\nAccessed: ${new Date().toISOString()}\nSearch queries: ${queryList}\nGrounded sources:\n${sourceList}`;
+    const suggestionHtml=metadata?.searchEntryPoint?.renderedContent;
+    const suggestionBlock=typeof suggestionHtml==="string" && suggestionHtml.trim()
+      ? `\n\nGoogle Search suggestion:\n${suggestionHtml}` : "";
+    const resultText=`${answer}\n\nResearch metadata\nAccessed: ${new Date().toISOString()}\nSearch queries: ${queryList}\nGrounded sources:\n${sourceList}${suggestionBlock}`;
     await db.query(`UPDATE platform_ai_team_tasks SET status='needs_owner_review',result_text=$2,
       provider_model=$3,output_characters=$4,duration_ms=$5,updated_at=NOW(),finished_at=NOW()
       WHERE id=$1 AND status='running'`,[task.id,resultText,model,resultText.length,Date.now()-started]);
