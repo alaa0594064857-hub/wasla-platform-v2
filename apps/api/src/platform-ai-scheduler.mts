@@ -209,6 +209,26 @@ async function processOne():Promise<boolean> {
   return true;
 }
 
+/** Re-queue legacy 429 failures created before retry scheduling was deployed. */
+async function recoverLegacyRateLimitedTasks(): Promise<number> {
+  const db=getDatabasePool();
+  const recovered=await db.query(`UPDATE platform_ai_team_tasks
+    SET status='queued', error_code=NULL,
+        next_attempt_at=NOW()+INTERVAL '60 seconds',
+        finished_at=NULL, updated_at=NOW()
+    WHERE status='failed' AND error_code='PROVIDER_RATE_LIMIT'
+      AND attempt_count<3
+    RETURNING id,owner_user_id,specialist_key`);
+  for(const task of recovered.rows) {
+    await addEvent(task,"legacy_rate_limit_retry_scheduled",{
+      retryAfterSeconds:60,
+      attempt:task.attempt_count,
+      reason:"Recover a rate-limited task created before retry backoff was deployed."
+    });
+  }
+  return recovered.rows.length;
+}
+
 async function generateDailyReports() {
   const db=getDatabasePool();
   const owners=await db.query(`SELECT DISTINCT owner_user_id FROM platform_ai_team_tasks
@@ -235,11 +255,12 @@ export async function runScheduledAiTasks() {
   const control=await getPlatformAiManagerControl();
   if(!control.enabled) return { paused:true, processed:0, seeded:0 };
   const seeded=await seedWeekOneTasks();
+  const recovered=await recoverLegacyRateLimitedTasks();
   let processed=0;
   for(let i=0;i<5;i++) { if(!(await processOne())) break; processed++; }
   await generateDailyReports();
   console.info("WASLA scheduler finished",{seeded,processed});
-  return { paused:false, seeded, processed };
+  return { paused:false, seeded, recovered, processed };
 }
 
 async function main() {
