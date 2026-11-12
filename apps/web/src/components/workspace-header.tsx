@@ -141,6 +141,7 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
         <button type="button" className="wasla-search-trigger" aria-label={ar ? "فتح البحث" : "Open search"} aria-expanded={searchOpen} title={ar ? "البحث الشامل" : "Universal search"} onClick={() => setSearchOpen(value => !value)}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
         </button>
+        {!isPending && !session?.user && <Link href="/register" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "9px 13px", borderRadius: 9, background: "#14283F", border: "1px solid #C6A15B", color: "#FFF9ED", fontWeight: 800, fontSize: 13, textDecoration: "none", whiteSpace: "nowrap" }}>{ar ? "إنشاء حساب" : "Create account"}</Link>}
         <button type="button" className="wasla-workspace-language" onClick={() => setLocale(ar ? "en" : "ar")}>{ar ? "English" : "العربية"}</button>
         <Link href={pathname === "/profile" ? "/" : (session?.user ? "/profile" : "/login")} className="wasla-workspace-user" aria-label={ar ? "الملف الشخصي" : "Profile"}>
           <span className="wasla-workspace-avatar">{avatar ? <img src={avatar} alt="" referrerPolicy="no-referrer"/> : (name.trim().charAt(0) || "W")}</span>
