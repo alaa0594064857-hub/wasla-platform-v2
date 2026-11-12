@@ -21,7 +21,7 @@ export default function AiHeadquartersPage(){
  const {locale}=useLocale(); const ar=locale==="ar";
  const [tasks,setTasks]=useState<Task[]>([]); const [status,setStatus]=useState<{configured:boolean;managerEnabled:boolean}|null>(null);
  const [error,setError]=useState("");
- const [goal,setGoal]=useState(""); const [dispatching,setDispatching]=useState(false); const [dispatchMessage,setDispatchMessage]=useState("");
+ const [error,setError]=useState("");
  useEffect(()=>{let active=true;
   Promise.all([
    fetch("/api/platform/ai/tasks?limit=50",{credentials:"include",cache:"no-store"}).then(async r=>{const d=await r.json();if(!r.ok||!d.success)throw new Error(d.error||"tasks");return d.tasks as Task[]}),
@@ -30,25 +30,6 @@ export default function AiHeadquartersPage(){
   return()=>{active=false};
  },[]);
  const stats=useMemo(()=>({total:tasks.length,waiting:tasks.filter(t=>t.status==="queued"||t.status==="running").length,review:tasks.filter(t=>t.status==="needs_owner_review").length,failed:tasks.filter(t=>t.status==="failed").length}),[tasks]);
- async function assignThroughManager(event:FormEvent<HTMLFormElement>){
-  event.preventDefault(); if(!goal.trim()||dispatching||!status?.configured||!status.managerEnabled)return;
-  setDispatching(true);setError("");setDispatchMessage("");
-  try{
-   const response=await fetch("/api/platform/ai/tasks/dispatch",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({goal:goal.trim()})});
-   const data=await response.json();if(!response.ok||!data.success)throw new Error(data.error||"Manager delegation failed");
-   const assigned=Array.isArray(data.tasks)?data.tasks as Task[]:[];
-   setDispatchMessage((data.summary?String(data.summary)+" · ":"")+(ar?("وزّع المدير "+assigned.length+" مهام على الموظفين. جارٍ تنفيذها..."):("Manager assigned "+assigned.length+" tasks. Running them...")));
-   setGoal("");
-   setTasks(current=>[...assigned,...current].slice(0,50));
-   for(const task of assigned){
-    try{const run=await fetch("/api/platform/ai/tasks/"+task.id+"/execute",{method:"POST",credentials:"include"});const result=await run.json();if(!run.ok||!result.success)throw new Error(result.error||"Task failed");}
-    catch(e){setDispatchMessage(current=>current+" · "+(ar?"تعذر إكمال إحدى المهام: ":"A task could not finish: ")+(e instanceof Error?e.message:"error"));}
-   }
-   const refreshed=await fetch("/api/platform/ai/tasks?limit=50",{credentials:"include",cache:"no-store"});const latest=await refreshed.json();if(refreshed.ok&&latest.success)setTasks(latest.tasks||[]);
-   setDispatchMessage(current=>current+" · "+(ar?"انتهى تشغيل المهام المتاحة؛ راجع النتائج في غرف الموظفين.":"Available task runs finished; review results in the specialist offices."));
-  }catch(e){setError(e instanceof Error?e.message:(ar?"تعذر توزيع المهام.":"Could not delegate tasks."));}
-  finally{setDispatching(false);}
- }
 
  return <main dir={ar?"rtl":"ltr"} lang={locale} className="min-h-screen bg-[#f5f2e9] px-4 py-5 text-slate-900 sm:px-7 sm:py-8">
   <div className="mx-auto max-w-6xl space-y-6">
@@ -66,16 +47,14 @@ export default function AiHeadquartersPage(){
     </div>
    </header>
    {error?<p role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{error}</p>:null}
-   <section className="rounded-2xl border border-[#e3d6b8] bg-white p-5 sm:p-6">
-    <p className="text-xs font-bold tracking-[.18em] text-amber-700">{ar?"تكليف المدير العام":"MANAGER DELEGATION"}</p>
-    <h2 className="mt-2 text-xl font-bold">{ar?"أعطِ المدير هدفاً واحداً":"Give the manager a goal"}</h2>
-    <p className="mt-1 text-sm leading-6 text-slate-600">{ar?"المدير يحلل طلبك ويختار الموظفين المناسبين ويوزع المهام عليهم. لن تحتاج لاختيار الموظف بنفسك.":"The manager analyzes your request, selects the right specialists and assigns their tasks. You do not choose the employee."}</p>
-    <form onSubmit={assignThroughManager} className="mt-4 space-y-3">
-     <textarea value={goal} onChange={e=>setGoal(e.target.value)} rows={4} maxLength={5000} required disabled={!status?.configured||!status.managerEnabled||dispatching} placeholder={ar?"مثال: ادرس فرصة بيع منتجات منزلية في أوروبا، وقارن الطلب والتكلفة والموردين والمخاطر.":"Example: Assess the opportunity to sell home products in Europe, comparing demand, costs, suppliers and risks."} className="w-full rounded-xl border border-slate-300 p-3 text-sm leading-6 outline-none focus:border-amber-500 disabled:bg-slate-50"/>
-     <button type="submit" disabled={!status?.configured||!status.managerEnabled||dispatching||!goal.trim()} className="rounded-xl bg-[#101d35] px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">{dispatching?(ar?"المدير يوزع المهام وينفذها...":"Manager assigning and running tasks..."):(ar?"أرسل الهدف إلى المدير":"Send goal to manager")}</button>
-    </form>
-    {dispatchMessage?<p role="status" className="mt-3 rounded-xl bg-emerald-50 p-3 text-sm leading-6 text-emerald-900">{dispatchMessage}</p>:null}
-    {!status?.configured||!status?.managerEnabled?<p className="mt-3 text-xs text-amber-800">{ar?"يلزم إعداد Gemini وأن يكون المدير نشطاً.":"Gemini must be configured and the manager must be active."}</p>:null}
+   <section className="rounded-2xl border border-amber-200 bg-[#fbf8f0] p-5 sm:p-6">
+    <div className="flex items-start gap-3"><span className="text-xl">⏸</span><div>
+     <p className="text-xs font-bold tracking-[.18em] text-amber-800">{ar?"حالة التشغيل":"EXECUTION STATUS"}</p>
+     <h2 className="mt-2 text-xl font-bold">{ar?"جاهزية الغرف لا تعني بدء التشغيل":"Offices are prepared; execution has not started"}</h2>
+     <p className="mt-2 text-sm leading-7 text-slate-700">{ar?"تم تجهيز الهيكل الإداري ومهام ومسؤوليات الأقسام. أوقفنا توزيع المهام وتنفيذها حتى نحل مشكلة Gemini وننجح في اختبار فعلي.":"The management structure and department responsibilities are prepared. Task dispatch and execution are paused until the Gemini issue is resolved and a real execution test succeeds."}</p>
+     <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2"><p className="rounded-xl bg-white p-3">{ar?"حالة إعداد المزود: ":"Provider configuration: "}<strong>{status?.configured?(ar?"مفتاح موجود — لا يعني أن الخدمة تعمل":"Key present — not proof of service availability"):(ar?"غير مكتمل":"Not configured")}</strong></p><p className="rounded-xl bg-white p-3">{ar?"حالة المدير: ":"Manager flag: "}<strong>{status?.managerEnabled?(ar?"مفعّل إدارياً — التنفيذ موقوف":"Enabled in settings — execution paused"):(ar?"متوقف":"Paused")}</strong></p></div>
+     <p className="mt-3 text-xs leading-6 text-slate-600">{ar?"لن ننشئ مهاماً جديدة أو نعرض إنجازات غير منفذة. بعد حل Gemini سنختبر مهمة واحدة، ثم نفتح التشغيل لبقية الموظفين.":"No new tasks will be created and no unperformed work will be shown as completed. Once Gemini is fixed, we will test one task before enabling the rest of the team."}</p>
+    </div></div>
    </section>
    <section className="grid gap-3 sm:grid-cols-3">
     <Link href="/owner/ai/chat" className="rounded-2xl border border-[#e3d6b8] bg-white p-5 transition hover:border-amber-500"><p className="text-xs font-bold tracking-wider text-amber-700">{ar?"مكتب المدير":"MANAGER OFFICE"}</p><h2 className="mt-2 text-lg font-bold">{ar?"تحدث مع المدير العام":"Talk to the General Manager"}</h2><p className="mt-1 text-sm leading-6 text-slate-600">{ar?"أعطه الهدف، وهو يحدد خطة العمل والمسؤوليات.":"Give the goal; the manager defines the work plan and responsibilities."}</p><span className="mt-4 inline-block text-sm font-semibold text-amber-800">{ar?"فتح المكتب ←":"Open office →"}</span></Link>
