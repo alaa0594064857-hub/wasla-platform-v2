@@ -1,0 +1,115 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { authClient } from "@/lib/auth-client";
+import { useLocale } from "../../../components/locale-provider";
+
+type Program = {
+  id: string; provider: string; marketplace: string; marketplace_domain: string;
+  destination_country: string; currency: string; tracking_id: string | null;
+  status: string; disclosure_en: string; disclosure_ar: string;
+  item_count: number; published_item_count: number;
+};
+type Dashboard = {
+  success: boolean; programs: Program[];
+  safeguards: { publicPublishingEnabled: boolean; amazonProductApiConnected: boolean; amazonLinksEnabled: boolean; turkeyAffiliateProgramConfigured: boolean };
+  note: string;
+};
+
+export default function AffiliateCommercePage() {
+  const { locale } = useLocale();
+  const ar = locale === "ar";
+  const router = useRouter();
+  const { data: session, isPending } = authClient.useSession();
+  const [data, setData] = useState<Dashboard | null>(null);
+  const [denied, setDenied] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    if (isPending) return;
+    if (!session?.user) { router.replace("/login"); return; }
+    let active = true;
+    fetch("/api/platform/security", { credentials: "include", cache: "no-store" })
+      .then(async r => {
+        if (r.status === 401) { router.replace("/login"); return null; }
+        if (!r.ok) throw new Error("security");
+        return r.json();
+      })
+      .then(async security => {
+        if (!security) return;
+        const allowed = security.success && security.platformAccess?.roles?.includes("platform_owner") && security.platformAccess?.permissions?.includes("platform.manage");
+        if (!allowed) { if (active) setDenied(true); return null; }
+        const response = await fetch("/api/platform/affiliate-commerce", { credentials: "include", cache: "no-store" });
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error("affiliate");
+        if (active) setData(result);
+      })
+      .catch(() => { if (active) setError(true); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [isPending, session?.user?.id, router]);
+
+  const t = ar ? {
+    title: "التسويق بالعمولة", back: "العودة إلى المتجر الرسمي",
+    subtitle: "إدارة برامج الإحالة بشكل منفصل عن منتجات WASLA ومخزونها وطلباتها.",
+    pending: "بانتظار استكمال الموافقة", paused: "متوقف عن النشر",
+    country: "السوق", currency: "العملة", tracking: "معرّف الشريك",
+    products: "المنتجات", published: "المنشور", disclosure: "إفصاح العمولة",
+    safety: "حواجز الحماية", noPublish: "النشر العام: معطّل",
+    noApi: "ربط Amazon Product API: غير مفعّل", noLinks: "روابط Amazon: غير مفعّلة",
+    noTurkey: "برنامج تركيا: غير مهيأ", note: "لا توجد منتجات أو أسعار أو صور أو روابط شراء منشورة. لن نستخدم صور Amazon أو بيانات الأسعار والتقييمات قبل توفر مصدر رسمي مصرح به.",
+    owner: "هذه الصفحة مخصصة لمالك المنصة.", loading: "جارٍ تحميل إعدادات التسويق بالعمولة...",
+    error: "تعذر تحميل بيانات التسويق بالعمولة."
+  } : {
+    title: "Affiliate commerce", back: "Back to official store",
+    subtitle: "Manage referral programs separately from WASLA-owned products, inventory and orders.",
+    pending: "Awaiting approval completion", paused: "Publishing paused",
+    country: "Market", currency: "Currency", tracking: "Associate ID",
+    products: "Items", published: "Published", disclosure: "Affiliate disclosure",
+    safety: "Safety gates", noPublish: "Public publishing: disabled",
+    noApi: "Amazon Product API: not connected", noLinks: "Amazon links: disabled",
+    noTurkey: "Turkey program: not configured", note: "No products, prices, images or shopping links are published. Amazon images, prices and ratings will not be used until an authorized official data source is available.",
+    owner: "This page is restricted to the platform owner.", loading: "Loading affiliate settings...",
+    error: "Could not load affiliate commerce data."
+  };
+
+  if (isPending || loading) return <main className="mx-auto max-w-5xl p-6">{t.loading}</main>;
+  if (denied) return <main className="mx-auto max-w-5xl p-6"><h1>{t.owner}</h1><Link href="/owner">{t.back}</Link></main>;
+  return <main dir={ar ? "rtl" : "ltr"} className="mx-auto max-w-5xl space-y-6 p-4 md:p-8">
+    <header className="space-y-2">
+      <Link className="text-sm font-semibold text-amber-800 underline" href="/owner/official-store">← {t.back}</Link>
+      <h1 className="text-2xl font-bold">{t.title}</h1>
+      <p className="text-sm text-slate-600">{t.subtitle}</p>
+    </header>
+    {error ? <p role="alert" className="rounded-xl border border-red-200 p-4 text-red-700">{t.error}</p> : null}
+    <section className="rounded-2xl border p-4 md:p-6">
+      <h2 className="font-bold">{t.safety}</h2>
+      <ul className="mt-3 grid gap-2 text-sm">
+        <li>{t.noPublish}</li><li>{t.noApi}</li><li>{t.noLinks}</li><li>{t.noTurkey}</li>
+      </ul>
+      <p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-950">{t.note}</p>
+    </section>
+    <section className="space-y-4">
+      {(data?.programs || []).map(program => <article key={program.id} className="space-y-3 rounded-2xl border p-4 md:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-bold">{program.marketplace}</h2>
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs">{program.status === "active" ? "Active" : t.pending}</span>
+        </div>
+        <div className="grid gap-3 text-sm sm:grid-cols-2">
+          <p>{t.country}: <strong>{program.destination_country}</strong></p>
+          <p>{t.currency}: <strong>{program.currency}</strong></p>
+          <p>{t.tracking}: <strong dir="ltr">{program.tracking_id || "—"}</strong></p>
+          <p>{t.products}: <strong>{program.item_count}</strong> · {t.published}: <strong>{program.published_item_count}</strong></p>
+        </div>
+        <div className="rounded-xl bg-slate-50 p-3 text-sm">
+          <strong>{t.disclosure}</strong>
+          <p className="mt-1">{ar ? program.disclosure_ar : program.disclosure_en}</p>
+        </div>
+      </article>)}
+      {!error && (data?.programs.length ?? 0) === 0 ? <p className="rounded-xl border p-4 text-sm text-slate-500">—</p> : null}
+    </section>
+  </main>;
+}
