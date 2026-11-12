@@ -135,3 +135,23 @@ export async function runScheduledAiTasks() {
   console.info("WASLA scheduler finished",{processed});
   return { paused:false, processed };
 }
+
+async function main() {
+  if (process.env.DATABASE_URL) {
+    const result = await runScheduledAiTasks();
+    console.info("WASLA scheduler finished", result);
+    return;
+  }
+  const apiUrl = process.env.WASLA_API_URL?.replace(/\\/$/, "");
+  const token = process.env.WASLA_SCHEDULER_TOKEN?.trim();
+  if (!apiUrl || !token) throw new Error("Scheduler requires database access or secure API trigger configuration");
+  const response = await fetch(`${apiUrl}/api/internal/ai/scheduler/run`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(55000),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok || body.success !== true) throw new Error(`Scheduler API returned ${response.status}`);
+  console.info("WASLA scheduler trigger completed", { paused: body.paused === true, processed: Number(body.processed || 0) });
+}
+main().then(()=>process.exit(0)).catch(error=>{console.error("WASLA scheduler fatal error",error);process.exit(1);});
