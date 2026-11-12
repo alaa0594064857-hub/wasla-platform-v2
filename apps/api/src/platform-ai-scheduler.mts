@@ -15,29 +15,19 @@ const roles: Record<string,string> = {
 
 const WEEK_ONE_TASKS = [
   {
-    specialistKey: "market_researcher",
-    title: "Week 1 — US affiliate product category research",
-    inputText: "Research the US market for evergreen affiliate product categories suitable for a new international commerce platform. Use Google Search grounding. Return 5 categories, why each may be commercially relevant, source-backed signals, risks, and direct source URLs. Do not invent sales volume, search volume, prices or commissions. Exclude restricted/high-risk categories. This is research only, not a product approval.",
-  },
-  {
     specialistKey: "product_analyst",
-    title: "Week 1 — Source-backed affiliate product shortlist",
-    inputText: "Find up to 8 real candidate products suitable for US affiliate editorial content. Search the public web and prefer official brand/product pages and reputable independent sources. For each include exact product/brand identity, official source URL, sourced specifications, market fit rationale, unknowns, and date accessed. Do not copy Amazon prices, ratings, reviews, stock or images. Do not create affiliate URLs or claim commissions. If evidence is weak, return fewer candidates.",
+    title: "Week 1 — US affiliate product opportunities and shortlist",
+    inputText: "Research a small, high-quality shortlist for US affiliate commerce. Identify 3 promising evergreen categories and up to 5 real candidate products, prioritizing official brand/product pages and reputable independent sources. For each candidate include exact identity, official source URL, sourced specifications, why it may fit the market, and unknowns. Provide concise Arabic and English summaries. Do not invent demand, sales volume, prices, ratings, stock, commissions or affiliate links. Exclude restricted/high-risk categories.",
   },
   {
     specialistKey: "supplier_researcher",
-    title: "Week 1 — Affiliate program eligibility and terms",
-    inputText: "Research legitimate affiliate programs relevant to US and Türkiye separately. Prioritize official program terms pages. For each report operator, eligible country/residency and traffic markets (only if explicitly stated), application/approval status requirements, commission model only when published, cookie/referral window only when published, product data/API rights, payout restrictions and source URLs. Do not infer acceptance or eligibility. Keep Amazon US separate from Amazon Türkiye.",
-  },
-  {
-    specialistKey: "catalogue_manager",
-    title: "Week 1 — Bilingual private catalogue drafts",
-    inputText: "Using only source-backed candidates discoverable through Google Search, prepare up to 5 private product catalogue drafts in Arabic and English. Each draft must include source URLs, factual claims supported by those sources, unknown fields, target market, and an explicit 'draft only — not published' status. Do not invent prices, stock, ratings, discounts, shipping, images, affiliate links or commission rates. If product sources are not sufficient, create no draft.",
+    title: "Week 1 — Affiliate programs for US and Türkiye",
+    inputText: "Research a short list of legitimate affiliate programs relevant to US and Türkiye separately. Use official program terms. Verify operator, eligible country/residency and traffic markets only when explicitly stated, application and approval requirements, published commission model, referral window, payout restrictions and product data/API/image rights. Include Amazon Associates US separately and mark its approval status as pending unless official evidence says otherwise. Do not infer eligibility or acceptance.",
   },
   {
     specialistKey: "quality_risk_reviewer",
-    title: "Week 1 — Affiliate compliance and publication gates",
-    inputText: "Research official primary-source rules for Amazon Associates US and other candidate affiliate programs relevant to US/Türkiye. Verify disclosures, product content/image/price refresh rights, linking rules, marketplace separation, geographic eligibility and any application requirements. Cite exact official policy URLs and quote no more than needed. Mark every unverified point as unknown. Do not recommend publishing until every required gate is evidenced.",
+    title: "Week 1 — Affiliate compliance and product publication gates",
+    inputText: "Research official primary-source rules for Amazon Associates US and the strongest candidate affiliate programs found for US/Türkiye. Verify disclosure requirements, product content/image/price refresh rights, linking rules, marketplace separation, geographic eligibility and application requirements. Cite exact official policy URLs. Combine these findings with the product shortlist where possible, identify evidence gaps and risks, and state what must be true before any product can be published. Mark every unverified point unknown. Research only; do not approve or publish.",
   },
 ] as const;
 
