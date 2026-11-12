@@ -142,7 +142,7 @@ async function main() {
     console.info("WASLA scheduler finished", result);
     return;
   }
-  const apiUrl = process.env.WASLA_API_URL?.replace(/\\/$/, "");
+  const apiUrl = process.env.WASLA_API_URL?.replace(/\/$/, "");
   const token = process.env.WASLA_SCHEDULER_TOKEN?.trim();
   if (!apiUrl || !token) throw new Error("Scheduler requires database access or secure API trigger configuration");
   const response = await fetch(`${apiUrl}/api/internal/ai/scheduler/run`, {
