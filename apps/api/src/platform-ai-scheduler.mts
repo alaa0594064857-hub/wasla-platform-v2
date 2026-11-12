@@ -124,14 +124,14 @@ async function generateDailyReports() {
   }
 }
 
-async function main() {
+export async function runScheduledAiTasks() {
   if(!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required");
   await ensureWorkerTables();
   const control=await getPlatformAiManagerControl();
-  if(!control.enabled) { console.info("WASLA AI manager is paused; queue untouched."); return; }
+  if(!control.enabled) return { paused:true, processed:0 };
   let processed=0;
   for(let i=0;i<5;i++) { if(!(await processOne())) break; processed++; }
   await generateDailyReports();
   console.info("WASLA scheduler finished",{processed});
+  return { paused:false, processed };
 }
-main().then(()=>process.exit(0)).catch(error=>{console.error("WASLA scheduler fatal error",error);process.exit(1);});
