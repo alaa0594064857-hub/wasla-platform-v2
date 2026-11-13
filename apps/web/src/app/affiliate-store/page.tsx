@@ -1,24 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useLocale } from "@/components/locale-provider";
 import WorkspaceHeader from "@/components/workspace-header";
 
 type AffiliateItem = {
-  id: string;
-  kind: "affiliate" | "editorial";
-  title_ar: string | null;
-  title_en: string | null;
-  description_ar: string | null;
-  description_en: string | null;
-  marketplace: string;
-  destination_country: string;
-  disclosure_ar: string;
-  disclosure_en: string;
-  outbound_path: string;
-  image_url: string | null;
+  id: string; kind: "affiliate" | "editorial";
+  title_ar: string | null; title_en: string | null;
+  description_ar: string | null; description_en: string | null;
+  marketplace: string; destination_country: string;
+  disclosure_ar: string; disclosure_en: string;
+  outbound_path: string; image_url: string | null;
 };
+
+const categories = [
+  { slug: "electronics", icon: "⚡", ar: "الإلكترونيات والشواحن", en: "Electronics & chargers" },
+  { slug: "drinkware", icon: "🥤", ar: "الأكواب والقوارير", en: "Drinkware & bottles" },
+  { slug: "all", icon: "▦", ar: "كل المنتجات", en: "All products" }
+];
+
+function categoryFor(item: AffiliateItem) {
+  const text = `${item.title_en || ""} ${item.title_ar || ""}`.toLowerCase();
+  if (/owala|stanley|tumbler|bottle|قارورة|كوب/.test(text)) return "drinkware";
+  return "electronics";
+}
 
 export default function AffiliateStorePage() {
   const { locale } = useLocale();
@@ -27,11 +33,18 @@ export default function AffiliateStorePage() {
   const [items, setItems] = useState<AffiliateItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("all");
+  const [sort, setSort] = useState("featured");
+
+  useEffect(() => {
+    const selected = new URLSearchParams(window.location.search).get("category");
+    if (selected && categories.some(value => value.slug === selected)) setCategory(selected);
+  }, []);
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
-    setFailed(false);
+    setLoading(true); setFailed(false);
     fetch(`/api/public/affiliate-items?country=${encodeURIComponent(country)}`, { cache: "no-store" })
       .then(async response => {
         const data = await response.json();
@@ -45,103 +58,109 @@ export default function AffiliateStorePage() {
   }, [country]);
 
   const copy = ar ? {
-    eyebrow: "WASLA AFFILIATE SHOPPING",
-    title: "اكتشف منتجات من أسواق موثوقة",
-    intro: "مساحة لاكتشاف المنتجات عبر برامج شراكة معتمدة. عند اختيار منتج، تنتقل إلى موقع المتجر الشريك لإتمام الشراء والدفع والتوصيل معه مباشرة.",
-    country: "السوق / دولة التسوق",
-    emptyTitle: "نجهّز أول مجموعة منتجات",
-    empty: "لا توجد حالياً منتجات عمولة معتمدة لهذا السوق. يمكنك استكشاف اختياراتنا التحريرية من صفحات الشركات الرسمية؛ الأسعار والتوفر والشحن تختلف حسب البلد والبائع.",
-    loading: "جارٍ التحقق من المنتجات المتاحة...",
-    failed: "تعذر تحميل المنتجات الآن. حاول مرة أخرى لاحقاً.",
-    disclosureTitle: "إفصاح مهم",
-    disclosure: "قد تحصل WASLA على عمولة عند الشراء عبر بعض الروابط المؤهلة، دون تكلفة إضافية عليك. يظهر الإفصاح بجوار رابط المنتج عندما تتوفر منتجات معتمدة.",
-    howTitle: "كيف يعمل هذا المتجر؟",
-    step1: "تصفّح منتجات معتمدة ومناسبة للسوق المختار.",
-    step2: "انتقل إلى موقع البائع الشريك عبر رابط واضح.",
-    step3: "أكمل الدفع والشحن وخدمة ما بعد البيع لدى البائع نفسه.",
-    back: "العودة إلى عوالم WASLA",
-    noPayment: "هذه بطاقات اكتشاف وليست عروض بيع مؤكدة. الأسعار والتوفر والشحن وسياسة الإرجاع يحددها الموقع الرسمي. لا تستلم WASLA الدفعة ولا تنفّذ الطلب." ,
-    editorialLabel: "منتج حقيقي · لدى البائع",
-    editorialButton: "عرض المنتج لدى البائع"
+    eyebrow: "WASLA MARKETPLACE", title: "اكتشف، ابحث، وتسوق بذكاء",
+    intro: "كل ما تبحث عنه في مكان واحد. تصفّح الأقسام أو ابحث عن المنتج، ثم انتقل بأمان إلى موقع البائع لإتمام الشراء.",
+    search: "ابحث عن منتج أو علامة تجارية...", country: "سوق التسوق",
+    all: "كل المنتجات", results: "منتج", loading: "جارٍ تحميل المنتجات...",
+    failed: "تعذر تحميل المنتجات الآن. حاول مرة أخرى.",
+    empty: "لا توجد منتجات تطابق بحثك حالياً.", featured: "ترتيب العرض",
+    featuredOption: "المميزة أولاً", az: "الاسم: أ إلى ي",
+    view: "عرض التفاصيل", seller: "لدى البائع", affiliate: "رابط شراكة",
+    disclosure: "قد تحصل WASLA على عمولة من بعض عمليات الشراء المؤهلة دون تكلفة إضافية عليك.",
+    trust: "الشراء والدفع والتوصيل يتم مباشرة لدى البائع. الأسعار والتوفر يحددهما البائع.",
+    shop: "تصفّح المنتجات", back: "الرئيسية"
   } : {
-    eyebrow: "WASLA AFFILIATE SHOPPING",
-    title: "Discover products from trusted marketplaces",
-    intro: "A product-discovery space for approved partner programs. When you choose an item, you continue to the partner retailer to complete checkout, payment and delivery directly with them.",
-    country: "Marketplace / shopping country",
-    emptyTitle: "We are preparing the first product collection",
-    empty: "There are currently no approved affiliate offers for this marketplace. You can still explore editorial product picks linked to official brand pages. Pricing, availability and shipping vary by country and seller.",
-    loading: "Checking available products...",
-    failed: "Products could not be loaded right now. Please try again later.",
-    disclosureTitle: "Important disclosure",
-    disclosure: "WASLA may earn a commission from qualifying purchases through selected links, at no additional cost to you. A disclosure will appear beside each eligible product link.",
-    howTitle: "How this store works",
-    step1: "Browse approved products for your selected marketplace.",
-    step2: "Continue to the partner retailer through a clearly identified link.",
-    step3: "Complete payment, shipping and after-sales service with that retailer.",
-    back: "Back to WASLA worlds",
-    noPayment: "These are product-discovery cards, not confirmed offers. The official seller controls pricing, stock, shipping and returns. WASLA does not collect payment or place orders.",
-    editorialLabel: "Real product · Retailer listing",
-    editorialButton: "View product at retailer"
+    eyebrow: "WASLA MARKETPLACE", title: "Discover, search and shop smarter",
+    intro: "Everything you are looking for in one place. Browse categories or search for a product, then continue securely to the retailer to complete your purchase.",
+    search: "Search products or brands...", country: "Shopping market",
+    all: "All products", results: "products", loading: "Loading products...",
+    failed: "Products could not be loaded. Please try again.",
+    empty: "No products currently match your search.", featured: "Sort products",
+    featuredOption: "Featured first", az: "Name: A to Z",
+    view: "View details", seller: "Retailer listing", affiliate: "Partner link",
+    disclosure: "WASLA may earn a commission on qualifying purchases at no extra cost to you.",
+    trust: "Checkout, payment and delivery take place directly with the retailer. Sellers control price and availability.",
+    shop: "Browse products", back: "Home"
   };
 
+  const visibleItems = useMemo(() => {
+    let result = items.filter(item => {
+      const matchesCategory = category === "all" || categoryFor(item) === category;
+      const haystack = `${item.title_ar || ""} ${item.title_en || ""} ${item.description_ar || ""} ${item.description_en || ""} ${item.marketplace || ""}`.toLowerCase();
+      return matchesCategory && haystack.includes(search.trim().toLowerCase());
+    });
+    if (sort === "az") result = [...result].sort((a,b) => (a.title_en || "").localeCompare(b.title_en || ""));
+    return result;
+  }, [items, category, search, sort]);
+
   return (
-    <main dir={ar ? "rtl" : "ltr"} lang={locale} className="min-h-screen bg-[#f5f1e8] text-[#17253a]">
+    <main dir={ar ? "rtl" : "ltr"} lang={locale} className="min-h-screen bg-[#f6f3ec] text-[#17253a]">
       <WorkspaceHeader section="account" />
-      <section className="border-b border-[#d9cfbb] bg-[#17253a] px-5 py-14 text-white md:px-10 md:py-20">
-        <div className="mx-auto max-w-6xl">
-          <p className="text-xs font-bold tracking-[.2em] text-[#d8bd7c]">{copy.eyebrow}</p>
-          <h1 className="mt-4 max-w-3xl text-3xl font-bold leading-tight md:text-5xl">{copy.title}</h1>
-          <p className="mt-5 max-w-3xl text-base leading-8 text-[#e4e8ef]">{copy.intro}</p>
-          <Link href="/" className="mt-7 inline-flex rounded-xl border border-[#d8bd7c]/70 px-5 py-3 text-sm font-semibold text-[#f4e5bf] hover:bg-white/10">{copy.back} ↗</Link>
+      <section className="bg-[#17253a] px-5 pb-12 pt-12 text-white md:px-10 md:pb-16">
+        <div className="mx-auto max-w-7xl">
+          <p className="text-xs font-bold tracking-[.22em] text-[#d8bd7c]">{copy.eyebrow}</p>
+          <div className="mt-4 grid gap-7 md:grid-cols-[1fr_360px] md:items-end">
+            <div><h1 className="max-w-3xl text-3xl font-bold leading-tight md:text-5xl">{copy.title}</h1>
+              <p className="mt-4 max-w-2xl leading-8 text-[#e2e7ef]">{copy.intro}</p></div>
+            <div className="rounded-2xl bg-white p-2 shadow-xl">
+              <label className="flex items-center gap-3 rounded-xl px-3 text-[#17253a]">
+                <span className="text-2xl">⌕</span>
+                <input value={search} onChange={event => setSearch(event.target.value)} placeholder={copy.search} aria-label={copy.search} className="min-w-0 flex-1 bg-transparent py-3 text-sm outline-none placeholder:text-slate-400" />
+                {search && <button onClick={() => setSearch("")} className="px-2 text-slate-500" aria-label="Clear search">×</button>}
+              </label>
+            </div>
+          </div>
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            {categories.map(value => <Link key={value.slug} href={value.slug === "all" ? "/affiliate-store" : `/affiliate-store/category/${value.slug}`}
+              onClick={() => setCategory(value.slug)}
+              className={`rounded-full border px-5 py-3 text-sm font-semibold transition ${category === value.slug ? "border-[#d8bd7c] bg-[#d8bd7c] text-[#17253a]" : "border-white/25 bg-white/5 text-white hover:bg-white/10"}`}>
+              <span className="me-2">{value.icon}</span>{ar ? value.ar : value.en}
+            </Link>)}
+          </div>
         </div>
       </section>
-      <section className="mx-auto grid max-w-6xl gap-8 px-5 py-10 md:grid-cols-[minmax(0,1fr)_320px] md:px-8">
-        <div className="space-y-6">
-          <label className="block max-w-sm text-sm font-semibold">
-            {copy.country}
-            <select value={country} onChange={event => setCountry(event.target.value)} className="mt-2 w-full rounded-xl border border-[#d9cfbb] bg-white px-4 py-3 text-base">
-              <option value="TR">Türkiye (TR)</option>
-              <option value="US">United States (US)</option>
+
+      <section className="mx-auto max-w-7xl px-5 py-8 md:px-8 md:py-10">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+          <div><h2 className="text-2xl font-bold">{category === "all" ? copy.all : (ar ? categories.find(c => c.slug === category)?.ar : categories.find(c => c.slug === category)?.en)}</h2>
+            <p className="mt-1 text-sm text-slate-500">{visibleItems.length} {copy.results}</p></div>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="text-sm font-medium">{copy.country}
+              <select value={country} onChange={event => setCountry(event.target.value)} className="ms-2 rounded-xl border border-[#ded6c7] bg-white px-3 py-2.5">
+                <option value="TR">Türkiye</option><option value="US">United States</option>
+              </select>
+            </label>
+            <select aria-label={copy.featured} value={sort} onChange={event => setSort(event.target.value)} className="rounded-xl border border-[#ded6c7] bg-white px-3 py-2.5 text-sm">
+              <option value="featured">{copy.featuredOption}</option><option value="az">{copy.az}</option>
             </select>
-          </label>
-          {loading ? <p className="rounded-2xl bg-white p-8 text-center">{copy.loading}</p>
-            : failed ? <p role="alert" className="rounded-2xl bg-white p-8 text-center text-red-700">{copy.failed}</p>
-            : items.length === 0 ? <div className="rounded-3xl border border-[#e0d7c6] bg-white px-6 py-14 text-center shadow-sm">
-                <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[#17253a] text-3xl font-black text-[#d8bd7c]">W</div>
-                <h2 className="mt-6 text-2xl font-bold">{copy.emptyTitle}</h2>
-                <p className="mx-auto mt-3 max-w-xl leading-8 text-slate-600">{copy.empty}</p>
-              </div>
-            : <div className="grid gap-5 sm:grid-cols-2">
-                {items.map(item => <article key={item.id} className="overflow-hidden rounded-2xl border border-[#e4ddcf] bg-white shadow-sm">
-                  <div className="flex h-64 items-center justify-center bg-[#f7f5f0] p-5">
-                    {item.image_url ? <img src={item.image_url} alt={ar ? item.title_ar || item.title_en || "صورة المنتج" : item.title_en || item.title_ar || "Product image"} loading="lazy" className="h-full w-full object-contain" /> : <div className="grid h-full w-full place-items-center rounded-xl bg-[#eee7d8] text-4xl font-bold text-[#96732e]">W</div>}
-                  </div>
-                  <div className="p-5">
-                  <span className="text-xs font-semibold text-[#96732e]">{item.kind === "editorial" ? copy.editorialLabel : item.marketplace}</span>
-                  <h2 className="mt-2 text-lg font-bold">{ar ? item.title_ar : item.title_en}</h2>
-                  <p className="mt-2 text-sm leading-7 text-slate-600">{(ar ? item.description_ar : item.description_en) || ""}</p>
-                  {item.kind === "affiliate" ? <p className="mt-4 text-xs leading-6 text-slate-500">{ar ? item.disclosure_ar : item.disclosure_en}</p> : <p className="mt-4 text-xs leading-6 text-slate-500">{ar ? "قد تختلف الأسعار والتوفر حسب البلد." : "Pricing and availability may vary by country."}</p>}
-                  <a href={item.outbound_path} target="_blank" rel={item.kind === "affiliate" ? "sponsored nofollow noreferrer" : "noopener noreferrer"} className="mt-4 inline-flex rounded-lg bg-[#17253a] px-4 py-3 text-sm font-semibold text-white">{item.kind === "editorial" ? copy.editorialButton : ar ? "عرض لدى المتجر الشريك" : "View at partner retailer"} ↗</a>
-                  </div>
-                </article>)}
-              </div>}
+          </div>
         </div>
-        <aside className="h-fit space-y-5">
-          <div className="rounded-2xl border border-[#d9cfbb] bg-white p-5">
-            <h2 className="font-bold">{copy.disclosureTitle}</h2>
-            <p className="mt-3 text-sm leading-7 text-slate-600">{copy.disclosure}</p>
-          </div>
-          <div className="rounded-2xl bg-[#eee7d8] p-5">
-            <h2 className="font-bold">{copy.howTitle}</h2>
-            <ol className="mt-3 list-decimal space-y-3 ps-5 text-sm leading-7 text-slate-700">
-              <li>{copy.step1}</li>
-              <li>{copy.step2}</li>
-              <li>{copy.step3}</li>
-            </ol>
-            <p className="mt-4 border-t border-[#d9cfbb] pt-4 text-xs leading-6 text-slate-600">{copy.noPayment}</p>
-          </div>
-        </aside>
+
+        {loading ? <div className="rounded-2xl bg-white p-12 text-center">{copy.loading}</div>
+          : failed ? <div role="alert" className="rounded-2xl bg-white p-12 text-center text-red-700">{copy.failed}</div>
+          : visibleItems.length === 0 ? <div className="rounded-2xl border border-[#e5dece] bg-white p-14 text-center"><div className="text-5xl">⌕</div><p className="mt-4 text-lg font-semibold">{copy.empty}</p></div>
+          : <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {visibleItems.map(item => <article key={item.id} className="group overflow-hidden rounded-2xl border border-[#e7e0d3] bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+              <Link href={`/affiliate-store/product/${item.id}`} className="block">
+                <div className="relative flex h-64 items-center justify-center bg-[#f8f7f3] p-5">
+                  {item.image_url ? <img src={item.image_url} alt={ar ? item.title_ar || item.title_en || "صورة المنتج" : item.title_en || item.title_ar || "Product image"} loading="lazy" className="h-full w-full object-contain transition duration-300 group-hover:scale-105" /> : <div className="text-5xl text-[#b59a5b]">W</div>}
+                  <span className="absolute start-3 top-3 rounded-full bg-white/95 px-3 py-1.5 text-[11px] font-bold text-[#8b6d2f] shadow-sm">{item.kind === "affiliate" ? copy.affiliate : copy.seller}</span>
+                </div>
+                <div className="p-5">
+                  <p className="text-xs text-slate-500">{item.marketplace}</p>
+                  <h3 className="mt-2 min-h-12 font-bold leading-6 group-hover:text-[#96732e]">{ar ? item.title_ar || item.title_en : item.title_en || item.title_ar}</h3>
+                  <p className="mt-2 line-clamp-2 min-h-12 text-sm leading-6 text-slate-600">{ar ? item.description_ar : item.description_en}</p>
+                  <span className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-[#96732e]">{copy.view} <span>↗</span></span>
+                </div>
+              </Link>
+            </article>)}
+          </div>}
       </section>
+      <footer className="border-t border-[#ded6c7] bg-white px-5 py-8">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 text-sm leading-7 text-slate-600 md:flex-row md:justify-between">
+          <p>{copy.disclosure}</p><p>{copy.trust}</p>
+        </div>
+      </footer>
     </main>
   );
 }
