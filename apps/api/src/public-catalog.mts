@@ -102,6 +102,7 @@ export async function handlePublicStoresDirectoryRequest(
       `SELECT s.id, s.name, s.slug, a.display_name AS "businessName",
               a.country_code AS "countryCode",
               bp.description AS "businessDescription", bp.website,
+              bp.logo_reference AS "logoReference",
               COUNT(p.id)::int AS "activeProductCount"
        FROM stores s
        INNER JOIN accounts a ON a.id = s.account_id AND a.status = 'active'
@@ -110,7 +111,7 @@ export async function handlePublicStoresDirectoryRequest(
        WHERE s.status = 'active'
          AND ($1 = '' OR s.name ILIKE '%' || $1 || '%' OR a.display_name ILIKE '%' || $1 || '%')
          AND ($2 = '' OR a.country_code = $2)
-       GROUP BY s.id, a.id, bp.description, bp.website
+       GROUP BY s.id, a.id, bp.description, bp.website, bp.logo_reference
        ORDER BY COUNT(p.id) DESC, s.created_at DESC
        LIMIT 50`,
       [search, country],
