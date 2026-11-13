@@ -162,8 +162,18 @@ export default function PublicStorePage() {
                   {store.website && <a href={store.website} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/25 px-5 text-sm font-bold text-white transition hover:bg-white/10">{t.visit} ↗</a>}
                 </div>
               </div>
-              <div className="mx-auto grid h-36 w-36 place-items-center rounded-[36px] border border-[#d6b66f]/50 bg-white/5 shadow-[0_25px_90px_rgba(0,0,0,.2)] sm:h-48 sm:w-48 lg:me-8">
-                <span className="font-serif text-7xl font-bold text-[#e0c17e] sm:text-8xl">{initial}</span>
+              <div className="relative mx-auto grid h-36 w-36 place-items-center overflow-hidden rounded-[36px] border border-[#d6b66f]/50 bg-white/5 shadow-[0_25px_90px_rgba(0,0,0,.2)] sm:h-48 sm:w-48 lg:me-8">
+                <span aria-hidden="true" className="font-serif text-7xl font-bold text-[#e0c17e] sm:text-8xl">{initial}</span>
+                {store.logoReference && (
+                  <img
+                    src={store.logoReference}
+                    alt={ar ? `شعار ${store.name}` : `${store.name} logo`}
+                    loading="eager"
+                    decoding="async"
+                    className="absolute inset-0 h-full w-full rounded-[inherit] object-cover"
+                    onError={(event) => { event.currentTarget.style.display = "none"; }}
+                  />
+                )}
               </div>
             </div>
             <div className="border-t border-white/10 bg-black/10">
