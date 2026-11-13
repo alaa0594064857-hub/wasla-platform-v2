@@ -88,6 +88,23 @@ export async function handleAccountsRequest(
     }
 
     const pool = getDatabasePool();
+    const activeUser = await pool.query(
+      `SELECT id
+       FROM users
+       WHERE id = $1
+         AND status = 'active'
+         AND email_verified = TRUE
+       LIMIT 1`,
+      [session.user.id],
+    );
+
+    if (activeUser.rows.length !== 1) {
+      respond(response, 403, {
+        success: false,
+        error: "An active, verified account is required",
+      });
+      return;
+    }
 
     if (request.method === "GET") {
       const result = await pool.query(
