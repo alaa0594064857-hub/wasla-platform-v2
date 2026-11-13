@@ -50,7 +50,8 @@ export default function StoreDirectoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
-  const [submittedCountry, setSubmittedCountry] = useState("");\n  const requestId = useRef(0);
+  const [submittedCountry, setSubmittedCountry] = useState("");
+  const requestId = useRef(0);
 
   const load = useCallback(async (q: string, market: string, signal?: AbortSignal) => {
     setLoading(true);
@@ -156,7 +157,8 @@ export default function StoreDirectoryPage() {
               <article key={store.id} className="group overflow-hidden rounded-2xl border border-[#e9e6df] bg-white transition duration-300 hover:-translate-y-1 hover:border-[#d6c49c] hover:shadow-[0_18px_50px_rgba(23,38,61,.10)]">
                 <div className="flex min-h-[132px] items-center gap-4 border-b border-[#efede7] bg-[linear-gradient(135deg,#f7f4ec,#eeece5)] p-5">
                   <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-2xl border border-[#e5dfd1] bg-white shadow-sm">
-                    <span className="font-serif text-4xl font-bold text-[#b89545]">{store.name.trim().charAt(0).toUpperCase() || "W"}</span>\n                  </div>
+                    <span className="font-serif text-4xl font-bold text-[#b89545]">{store.name.trim().charAt(0).toUpperCase() || "W"}</span>
+                  </div>
                   <div className="min-w-0">
                     <span className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#a47e37]">{t.verified}</span>
                     <h3 className="mt-1 truncate text-lg font-extrabold">{store.name}</h3>
