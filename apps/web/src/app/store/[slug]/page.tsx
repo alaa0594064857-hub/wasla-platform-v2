@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocale } from "../../../components/locale-provider";
 
 type Product = { id: string; title: string; description?: string; price: string; currency: string; imageUrl?: string };
-type Store = { id: string; name: string; slug: string; businessName?: string; businessDescription?: string; website?: string };
+type Store = { id: string; name: string; slug: string; businessName?: string; businessDescription?: string; website?: string; logoReference?: string | null };
 type ReturnPolicy = {
   acceptsReturns: boolean; acceptsExchanges: boolean; requestWindowDays: number;
   itemConditionsAr: string; itemConditionsEn: string; exclusionsAr: string; exclusionsEn: string;
