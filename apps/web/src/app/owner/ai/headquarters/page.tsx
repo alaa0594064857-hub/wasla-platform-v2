@@ -80,8 +80,8 @@ export default function AiHeadquartersPage() {
     missing: "إعداد المزود غير مكتمل",
     enabled: "مفعّل إدارياً",
     paused: "متوقف إدارياً",
-    limitation: "ملاحظة تشغيلية",
-    limitationText: "وجود مفتاح للمحرك لا يضمن توفر الخدمة في كل لحظة. قد تتأخر المهام عند حدود الاستخدام أو عند تعذر الاتصال. لا تُعد المهمة منجزة إلا بعد حفظ نتيجتها، وتبقى النتائج والمسودات خاضعة لمراجعة المالك.",
+    limitation: "ضوابط التشغيل",
+    limitationText: "تعرض هذه الغرفة الأعمال المحفوظة فعلياً وحالة مراجعة المالك. المهام المنتظرة ليست إنجازات مكتملة، ولا يُسمح بالنشر أو تنفيذ الإجراءات الخارجية قبل توثيق الأدلة واعتماد المالك.",
     workspaces: "غرف الإدارة",
     workspacesText: "كل وظيفة في غرفة مستقلة، بنفس أسلوب البطاقات المستخدم في مركز المالك.",
     managerTitle: "مكتب المدير العام",
@@ -115,8 +115,8 @@ export default function AiHeadquartersPage() {
     missing: "Provider setup incomplete",
     enabled: "Administratively enabled",
     paused: "Administratively paused",
-    limitation: "Operational note",
-    limitationText: "A configured provider key does not guarantee service availability at every moment. Tasks may be delayed by usage limits or connection failures. A task counts as complete only after its result is saved; outputs remain subject to owner review.",
+    limitation: "Operating principles",
+    limitationText: "This headquarters shows saved platform work and owner-review status. Queued items are not completed work. External actions and publication remain blocked until evidence and owner approval are recorded.",
     workspaces: "Management rooms",
     workspacesText: "Every function has its own room, using the same card-based approach as the Owner Center.",
     managerTitle: "General Manager Office",
@@ -162,6 +162,18 @@ export default function AiHeadquartersPage() {
             ))}
           </div>
         </header>
+
+        <nav aria-label={ar ? "اختصارات غرفة الذكاء" : "AI room shortcuts"} className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {rooms.map(room => {
+            const title = room.key === "manager" ? copy.managerTitle : room.key === "reports" ? copy.reportsTitle : copy.meetingTitle;
+            const description = room.key === "manager" ? copy.managerDesc : room.key === "reports" ? copy.reportsDesc : copy.meetingDesc;
+            return <Link key={"quick-" + room.key} href={room.href} className="flex items-center gap-3 rounded-2xl border border-[#dcd4c4] bg-white p-4 text-inherit no-underline shadow-sm transition hover:border-[#b18d4d] hover:shadow-md">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#14243a] text-xl text-[#dfc58f]">{room.icon}</span>
+              <span className="min-w-0"><strong className="block text-sm">{title}</strong><small className="mt-1 block text-xs leading-5 text-slate-500">{description}</small></span>
+              <span className="ms-auto text-sm font-bold text-[#9b783d]">↗</span>
+            </Link>;
+          })}
+        </nav>
 
         {error ? <section role="alert" className="rounded-2xl border border-rose-200 bg-white p-5 text-sm text-rose-800"><strong>{copy.error}</strong><p className="mt-1 break-words text-xs">{error}</p><button onClick={() => void load()} className="mt-3 rounded-lg border border-rose-200 px-3 py-2 font-semibold">{copy.refresh}</button></section> : null}
 
