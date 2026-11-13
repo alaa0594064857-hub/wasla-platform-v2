@@ -71,7 +71,7 @@ export default function ShopManagementPage(){
      <span className="shops-eyebrow">02 / DETAILS</span><h2>{t.status}</h2>
      <div className="shops-info-row"><small>{t.status}</small><strong className="shops-info-status">{store.status==="active"?t.active:store.status}</strong></div>
      <div className="shops-info-row"><small>{t.account}</small><strong>{store.account_name}</strong></div>
-     <div className="shops-info-row"><small>{t.address}</small><strong dir="ltr">/shops/{store.slug}</strong></div>
+     <div className="shops-info-row"><small>{t.address}</small><strong dir="ltr">/store/{store.slug}</strong></div>
      {store.website&&<div className="shops-info-row"><small>Website</small><strong dir="ltr">{store.website}</strong></div>}
     </aside>
    </div>}
