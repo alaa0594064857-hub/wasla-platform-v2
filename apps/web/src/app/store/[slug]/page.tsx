@@ -122,7 +122,7 @@ export default function PublicStorePage() {
             <span className="text-sm font-extrabold tracking-[.16em]">WASLA</span>
           </Link>
           <nav className="flex items-center gap-3 text-xs font-semibold text-slate-600 sm:gap-6 sm:text-sm">
-            <Link href="/" className="transition hover:text-[#a47e37]">{t.home}</Link>
+            <Link href="/" className="transition hover:text-[#a47e37]">{t.home}</Link>\n            <Link href="/store-directory" className="transition hover:text-[#a47e37]">{ar ? "اكتشف المتاجر" : "Discover stores"}</Link>
             {store && <a href="#catalog" className="transition hover:text-[#a47e37]">{t.products}</a>}
             {store && <Link href={`/store/${encodeURIComponent(params.slug)}/orders`} className="hidden transition hover:text-[#a47e37] sm:inline">{t.track}</Link>}
           </nav>
