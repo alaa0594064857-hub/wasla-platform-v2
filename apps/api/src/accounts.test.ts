@@ -38,18 +38,25 @@ describe("business account access isolation", () => {
   });
 
   it("lists only accounts linked to the authenticated user's active account.read membership", async () => {
-    mocks.query.mockResolvedValueOnce({ rows: [{ id: "owned-account", account_type: "company" }] });
+    mocks.query
+      .mockResolvedValueOnce({ rows: [{ id: "signed-in-user" }] })
+      .mockResolvedValueOnce({ rows: [{ id: "owned-account", account_type: "company" }] });
     const response = await fetch(await startServer());
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ success: true, accounts: [{ id: "owned-account" }] });
-    const sql = String(mocks.query.mock.calls[0][0]);
+    const accountGateSql = String(mocks.query.mock.calls[0][0]);
+    expect(accountGateSql).toContain("status = 'active'");
+    expect(accountGateSql).toContain("email_verified = TRUE");
+    expect(mocks.query.mock.calls[0][1]).toEqual(["signed-in-user"]);
+    const sql = String(mocks.query.mock.calls[1][0]);
     expect(sql).toContain("am.user_id = $1");
     expect(sql).toContain("am.status = 'active'");
     expect(sql).toContain("p.permission_key = 'account.read'");
-    expect(mocks.query.mock.calls[0][1]).toEqual(["signed-in-user"]);
+    expect(mocks.query.mock.calls[1][1]).toEqual(["signed-in-user"]);
   });
 
   it("creates the account and owner membership for the authenticated session user in one transaction", async () => {
+    mocks.query.mockResolvedValueOnce({ rows: [{ id: "signed-in-user" }] });
     const client = { query: vi.fn(), release: vi.fn() };
     mocks.connect.mockResolvedValueOnce(client);
     client.query
@@ -76,7 +83,21 @@ describe("business account access isolation", () => {
     expect(client.release).toHaveBeenCalledOnce();
   });
 
+  it("blocks pending, unverified, or suspended users from account operations", async () => {
+    mocks.query.mockResolvedValueOnce({ rows: [] });
+    const response = await fetch(await startServer(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ accountType: "company", legalName: "Example Ltd", displayName: "Example" }),
+    });
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ success: false, error: "An active, verified account is required" });
+    expect(mocks.connect).not.toHaveBeenCalled();
+    expect(mocks.query).toHaveBeenCalledOnce();
+  });
+
   it("rejects invalid account types before opening a transaction", async () => {
+    mocks.query.mockResolvedValueOnce({ rows: [{ id: "signed-in-user" }] });
     const response = await fetch(await startServer(), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
