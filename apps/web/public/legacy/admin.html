@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WASLA Admin</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f4f6f8;color:#17202a;font-family:Arial,sans-serif}
+header{background:#142d4e;color:white;padding:18px;display:flex;justify-content:space-between;align-items:center}
+main{max-width:1000px;margin:25px auto;padding:15px}
+h2{margin-top:30px}
+.panel,.item{background:white;border-radius:12px;padding:16px;margin:12px 0;box-shadow:0 2px 8px #0000000d}
+button,select{padding:10px;border:1px solid #ccd3dc;border-radius:8px;font-size:15px}
+button{background:#176b87;color:white;border:0;cursor:pointer}
+button.secondary{background:#526477}
+.item p{color:#526477;line-height:1.6}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+small{display:block;margin:8px 0;color:#526477}
+#message{padding:12px;border-radius:8px;background:#e8eef5}
+</style>
+</head>
+<body>
+<header>
+  <strong>WASLA — Admin</strong>
+  <div class="actions">
+    <button class="secondary" onclick="toggleLanguage()">English</button>
+    <button class="secondary" onclick="logout()">تسجيل الخروج</button>
+  </div>
+</header>
+
+<main>
+  <div class="panel">
+    <h2 id="pageTitle">لوحة الإدارة</h2>
+    <p id="intro">راجع الشركات والمنتجات وقرر نشرها أو إيقافها.</p>
+    <p id="message">جارٍ التحقق من صلاحية الدخول...</p>
+  </div>
+
+  <h2 id="companiesTitle">الشركات</h2>
+  <div id="companiesList"></div>
+
+  <h2 id="productsTitle">المنتجات</h2>
+  <div id="productsList"></div>
+</main>
+
+<script>
+const SUPABASE_URL = 'https://bzrcbodvcuujdjupfgzw.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_EAWH4688yaEOk537GOBWIg_Hz4DPN3u';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentLanguage = 'ar';
+
+function say(message) {
+  document.getElementById('message').textContent = message;
+}
+
+function statusLabel(status) {
+  const labels = {
+    pending: currentLanguage === 'en' ? 'Pending Review' : 'قيد المراجعة',
+    published: currentLanguage === 'en' ? 'Published' : 'منشور',
+    suspended: currentLanguage === 'en' ? 'Suspended' : 'موقوف'
+  };
+  return labels[status] || status || '';
+}
+
+function makeStatusSelect(currentStatus, table, id) {
+  const select = document.createElement('select');
+
+  [
+    ['pending', currentLanguage === 'en' ? 'Pending Review' : 'قيد المراجعة'],
+    ['published', currentLanguage === 'en' ? 'Published' : 'منشور'],
+    ['suspended', currentLanguage === 'en' ? 'Suspended' : 'موقوف']
+  ].forEach(([value, label]) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = label;
+    select.appendChild(option);
+  });
+
+  select.value = currentStatus || 'pending';
+
+  const button = document.createElement('button');
+  button.textContent = currentLanguage === 'en' ? 'Save Status' : 'حفظ الحالة';
+  button.onclick = () => updateStatus(table, id, select.value);
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'actions';
+  wrapper.append(select, button);
+  return wrapper;
+}
+
+async function updateStatus(table, id, status) {
+  say(currentLanguage === 'en' ? 'Saving...' : 'جارٍ الحفظ...');
+
+  const { error } = await db
+    .from(table)
+    .update({ status })
+    .eq('id', id);
+
+  if (error) {
+    say((currentLanguage === 'en' ? 'Update failed: ' : 'فشل التحديث: ') + error.message);
+    return;
+  }
+
+  say(currentLanguage === 'en' ? 'Status updated.' : 'تم تحديث الحالة.');
+  await loadData();
+}
+
+async function loadData() {
+  const companiesList = document.getElementById('companiesList');
+  const productsList = document.getElementById('productsList');
+
+  companiesList.textContent = currentLanguage === 'en' ? 'Loading...' : 'جارٍ التحميل...';
+  productsList.textContent = currentLanguage === 'en' ? 'Loading...' : 'جارٍ التحميل...';
+
+  const [companiesResult, productsResult] = await Promise.all([
+    db.from('companies')
+      .select('id,name,country,city,sector,business_type,description,status,created_at')
+      .order('created_at', { ascending: false }),
+    db.from('products')
+      .select('id,company_id,name,category,description,status,created_at')
+      .order('created_at', { ascending: false })
+  ]);
+
+  if (companiesResult.error || productsResult.error) {
+    companiesList.textContent = '';
+    productsList.textContent = '';
+    say(
+      (currentLanguage === 'en' ? 'Could not load admin data: ' : 'تعذر تحميل بيانات الإدارة: ') +
+      ((companiesResult.error || productsResult.error).message)
+    );
+    return;
+  }
+
+  companiesList.textContent = '';
+  productsList.textContent = '';
+
+  if (!companiesResult.data.length) {
+    companiesList.textContent = currentLanguage === 'en' ? 'No companies found.' : 'لا توجد شركات.';
+  }
+
+  companiesResult.data.forEach(company => {
+    const item = document.createElement('div');
+    item.className = 'item';
+
+    const title = document.createElement('strong');
+    title.textContent = company.name || '';
+
+    const details = document.createElement('p');
+    details.textContent = [
+      company.country, company.city, company.sector,
+      company.business_type, company.description
+    ].filter(Boolean).join(' — ');
+
+    const status = document.createElement('small');
+    status.textContent = (currentLanguage === 'en' ? 'Current status: ' : 'الحالة الحالية: ') +
+      statusLabel(company.status);
+
+    item.append(title, details, status,
+      makeStatusSelect(company.status, 'companies', company.id));
+    companiesList.appendChild(item);
+  });
+
+  if (!productsResult.data.length) {
+    productsList.textContent = currentLanguage === 'en' ? 'No products found.' : 'لا توجد منتجات.';
+  }
+
+  productsResult.data.forEach(product => {
+    const item = document.createElement('div');
+    item.className = 'item';
+
+    const title = document.createElement('strong');
+    title.textContent = product.name || '';
+
+    const details = document.createElement('p');
+    details.textContent = [product.category, product.description]
+      .filter(Boolean).join(' — ');
+
+    const status = document.createElement('small');
+    status.textContent = (currentLanguage === 'en' ? 'Current status: ' : 'الحالة الحالية: ') +
+      statusLabel(product.status);
+
+    item.append(title, details, status,
+      makeStatusSelect(product.status, 'products', product.id));
+    productsList.appendChild(item);
+  });
+
+  say(currentLanguage === 'en' ? 'Admin data loaded.' : 'تم تحميل بيانات الإدارة.');
+}
+
+async function start() {
+  const { data: { session }, error } = await db.auth.getSession();
+
+  if (error || !session) {
+    say(currentLanguage === 'en' ? 'Please log in first.' : 'يرجى تسجيل الدخول أولاً.');
+    return;
+  }
+
+  await loadData();
+}
+
+async function logout() {
+  await db.auth.signOut();
+  window.location.href = './';
+}
+
+function toggleLanguage() {
+  currentLanguage = currentLanguage === 'ar' ? 'en' : 'ar';
+  const en = currentLanguage === 'en';
+
+  document.documentElement.lang = currentLanguage;
+  document.documentElement.dir = en ? 'ltr' : 'rtl';
+
+  document.getElementById('pageTitle').textContent = en ? 'Admin Dashboard' : 'لوحة الإدارة';
+  document.getElementById('intro').textContent = en
+    ? 'Review companies and products, then approve or suspend them.'
+    : 'راجع الشركات والمنتجات وقرر نشرها أو إيقافها.';
+  document.getElementById('companiesTitle').textContent = en ? 'Companies' : 'الشركات';
+  document.getElementById('productsTitle').textContent = en ? 'Products' : 'المنتجات';
+
+  const buttons = document.querySelectorAll('header button');
+  buttons[0].textContent = en ? 'العربية' : 'English';
+  buttons[1].textContent = en ? 'Log out' : 'تسجيل الخروج';
+
+  loadData();
+}
+
+start();
+</script>
+</body>
+</html>
