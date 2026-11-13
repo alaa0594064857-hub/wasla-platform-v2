@@ -9,6 +9,20 @@ import { useLocale } from "@/components/locale-provider";
 type Product = { id: string; title: string; description?: string; price: string; currency: string; imageUrl?: string; videoUrl?: string; sellerCheckoutUrl?: string | null; storeName: string; storeSlug: string };
 type ProductReview = { id: string; rating: number; title: string | null; body: string; createdAt: string; buyerLabel: string; storeResponse?: string | null; storeResponseCreatedAt?: string | null };
 
+function formatProductPrice(value: string, currency: string, locale: "ar" | "en") {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return `${value} ${currency}`;
+  try {
+    return new Intl.NumberFormat(locale === "ar" ? "ar" : "en", {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  } catch {
+    return `${value} ${currency}`;
+  }
+}
+
 export default function PublicProductPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -19,6 +33,8 @@ export default function PublicProductPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [inquiryOpen, setInquiryOpen] = useState(false);
+  const [inquiryText, setInquiryText] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [reviews, setReviews] = useState<ProductReview[]>([]);
   const [reviewSummary, setReviewSummary] = useState<{ count: number; average: string } | null>(null);
@@ -117,26 +133,46 @@ export default function PublicProductPage() {
     } catch { setMessage(ar ? "تعذر بدء المحادثة. حاول لاحقاً." : "Could not start the conversation. Please try again."); }
     finally { setBusy(false); }
   }
-  async function inquire() {
+  async function submitInquiry() {
     if (!product || busy || !(await requireLogin())) return;
-    const question = window.prompt(ar ? "اكتب استفسارك عن المنتج:" : "Write your product inquiry:");
-    if (!question || question.trim().length < 5) return;
+    const question = inquiryText.trim();
+    if (question.length < 5 || question.length > 2000) {
+      setMessage(ar ? "اكتب استفساراً بين 5 و2000 حرف." : "Enter an inquiry between 5 and 2,000 characters.");
+      return;
+    }
     setBusy(true); setMessage("");
     try {
-      const response = await fetch("/api/product-inquiries", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: product.id, message: question.trim() }) });
+      const response = await fetch("/api/product-inquiries", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId: product.id, message: question }) });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error("inquiry");
+      setInquiryText("");
+      setInquiryOpen(false);
       setMessage(ar ? "تم إرسال استفسارك إلى مسؤول المتجر." : "Your inquiry was sent to the store owner.");
-    } catch { setMessage(ar ? "تعذر إرسال الاستفسار." : "Could not send the inquiry."); }
+    } catch { setMessage(ar ? "تعذر إرسال الاستفسار. حاول مرة أخرى." : "Could not send the inquiry. Please try again."); }
     finally { setBusy(false); }
   }
   return <main className="min-h-screen bg-[#f7f4ec] text-[#14233b]" dir={ar ? "rtl" : "ltr"}>
     <header className="border-b border-[#e5dfd1] bg-white px-5 py-4"><Link href="/" className="font-bold tracking-wide">WASLA <span className="text-[#b89545]">وصلة</span></Link></header>
     <div className="mx-auto max-w-5xl px-4 py-10">
       {error ? <p role="alert">{error}</p> : !product ? <p>{ar ? "جارٍ تحميل المنتج..." : "Loading product..."}</p> : <div className="grid gap-8 rounded-3xl border border-[#e5dfd1] bg-white p-5 md:grid-cols-2 md:p-8">
-        <div>{product.imageUrl ? <img src={product.imageUrl} alt={product.title} className="w-full rounded-2xl object-cover"/> : <div className="flex aspect-square items-center justify-center rounded-2xl bg-[#f2eee4] text-6xl font-bold text-[#b89545]">W</div>}</div>
-        <div className="flex flex-col"><Link href={`/store/${product.storeSlug}`} className="text-sm text-[#9b792f] underline">{product.storeName}</Link><h1 className="mt-3 text-3xl font-bold">{product.title}</h1><p className="mt-4 whitespace-pre-wrap text-sm leading-8 text-slate-600">{product.description}</p><p className="mt-6 text-2xl font-bold text-[#9b792f]">{product.price} {product.currency}</p>
-          <div className="mt-8 space-y-3"><label className="block text-sm font-semibold">{ar ? "الكمية المطلوبة" : "Quantity"}<input type="number" min="1" max="10000" step="1" value={quantity} onChange={event => setQuantity(event.target.value)} className="mt-2 block w-28 rounded-lg border border-[#e5dfd1] px-3 py-2" /></label><button disabled={busy} onClick={() => void requestOrder()} className="rounded-xl bg-[#b89545] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">{ar ? "إرسال طلب للمتجر" : "Request from store"}</button></div><div className="mt-4 flex flex-wrap gap-3"><button disabled={busy} onClick={() => void contactSeller()} className="rounded-xl bg-[#14233b] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">{ar ? "مراسلة البائع" : "Message seller"}</button><button disabled={busy} onClick={() => void inquire()} className="rounded-xl border border-[#b89545] px-5 py-3 text-sm font-semibold text-[#14233b] disabled:opacity-50">{ar ? "استفسار عن المنتج" : "Ask about product"}</button></div>
+        <div className="space-y-4">
+          {product.imageUrl ? <img src={product.imageUrl} alt={product.title} loading="eager" decoding="async" className="aspect-square w-full rounded-2xl bg-[#f2eee4] object-contain"/> : <div className="flex aspect-square items-center justify-center rounded-2xl bg-[#f2eee4] text-6xl font-bold text-[#b89545]">W</div>}
+          {product.videoUrl && <video controls preload="metadata" playsInline className="w-full rounded-2xl bg-black" aria-label={ar ? `فيديو المنتج: ${product.title}` : `Product video: ${product.title}`}>
+            <source src={product.videoUrl} />
+            {ar ? "متصفحك لا يدعم تشغيل الفيديو." : "Your browser does not support video playback."}
+          </video>}
+        </div>
+        <div className="flex flex-col"><Link href={`/store/${product.storeSlug}`} className="text-sm text-[#9b792f] underline">{product.storeName}</Link><h1 className="mt-3 text-3xl font-bold">{product.title}</h1><p className="mt-4 whitespace-pre-wrap text-sm leading-8 text-slate-600">{product.description}</p><p className="mt-6 text-2xl font-bold text-[#9b792f]">{formatProductPrice(product.price, product.currency, ar ? "ar" : "en")}</p>
+          <div className="mt-8 space-y-3"><label className="block text-sm font-semibold">{ar ? "الكمية المطلوبة" : "Quantity"}<input type="number" min="1" max="10000" step="1" value={quantity} onChange={event => setQuantity(event.target.value)} className="mt-2 block w-28 rounded-lg border border-[#e5dfd1] px-3 py-2" /></label><button disabled={busy} onClick={() => void requestOrder()} className="rounded-xl bg-[#b89545] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">{ar ? "إرسال طلب للمتجر" : "Request from store"}</button></div><div className="mt-4 flex flex-wrap gap-3"><button disabled={busy} onClick={() => void contactSeller()} className="rounded-xl bg-[#14233b] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">{ar ? "مراسلة البائع" : "Message seller"}</button><button type="button" disabled={busy} onClick={() => { if (!session?.user) { router.push("/login"); return; } setInquiryOpen(value => !value); setMessage(""); }} className="rounded-xl border border-[#b89545] px-5 py-3 text-sm font-semibold text-[#14233b] disabled:opacity-50">{ar ? "استفسار عن المنتج" : "Ask about product"}</button></div>
+          {inquiryOpen && <form onSubmit={event => { event.preventDefault(); void submitInquiry(); }} className="mt-4 grid gap-3 rounded-xl border border-[#e5dfd1] bg-[#fbfaf6] p-4">
+            <label htmlFor="product-inquiry" className="text-sm font-semibold">{ar ? "اكتب سؤالك للبائع" : "Write your question to the seller"}</label>
+            <textarea id="product-inquiry" value={inquiryText} onChange={event => setInquiryText(event.target.value)} minLength={5} maxLength={2000} required rows={4} className="w-full rounded-lg border border-[#e5dfd1] bg-white px-3 py-2 text-sm" placeholder={ar ? "اسأل عن المقاس أو المواصفات أو التوفر..." : "Ask about size, specifications, or availability..."}/>
+            <div className="flex flex-wrap items-center gap-3">
+              <button type="submit" disabled={busy || inquiryText.trim().length < 5} className="rounded-lg bg-[#14233b] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy ? (ar ? "جارٍ الإرسال..." : "Sending...") : (ar ? "إرسال الاستفسار" : "Send inquiry")}</button>
+              <button type="button" disabled={busy} onClick={() => { setInquiryOpen(false); setInquiryText(""); }} className="rounded-lg border border-[#d8d2c6] px-4 py-2.5 text-sm">{ar ? "إلغاء" : "Cancel"}</button>
+              <span className="text-xs text-slate-500">{inquiryText.length}/2000</span>
+            </div>
+          </form>}
           {product.sellerCheckoutUrl && <div className="mt-4 rounded-xl border border-[#e5dfd1] bg-[#f7f4ec] p-4 text-sm leading-7 text-slate-600">
             {ar ? "سيتم إكمال الشراء لدى المتجر البائع. البائع مسؤول عن تحصيل الدفع وتجهيز الطلب والتوصيل والإرجاع وخدمة ما بعد البيع." : "Checkout takes place with the member seller. The seller is responsible for payment collection, order fulfilment, delivery, returns and after-sales service."}
           </div>}
