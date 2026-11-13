@@ -1,72 +1,216 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useLocale } from "../../../../components/locale-provider";
 
-type Task = { id:string; specialistKey:string; title:string; status:string; resultText?:string|null; createdAt:string };
+type Task = { id: string; specialistKey: string; title: string; status: string; resultText?: string | null; createdAt: string };
+type AssistantStatus = { configured: boolean; managerEnabled: boolean };
+
 const team = [
-  ["market_researcher","باحث الأسواق","Market researcher","يرصد الأسواق والطلب والفرص","Studies markets, demand and opportunities","◉"],
-  ["product_analyst","محلل المنتجات","Product analyst","يحلل المواصفات والمنتجات","Analyzes products and specifications","◇"],
-  ["supplier_researcher","باحث الموردين","Supplier researcher","يقارن أدلة الموردين والعروض","Compares supplier evidence and offers","⌂"],
-  ["catalogue_manager","مدير الكتالوج","Catalogue manager","يجهز بيانات المنتجات والكتالوج","Prepares product data and catalogue","▣"],
-  ["sales_support","المبيعات وخدمة العملاء","Sales & customer care","يدعم المبيعات وتجربة العملاء","Supports sales and customer experience","✧"],
-  ["logistics_analyst","الطلبات والشحن","Orders & logistics","يراجع الشحن والتنفيذ والطلبات","Reviews shipping and fulfilment","⇄"],
-  ["translator","أخصائي الترجمة","Translation specialist","يحافظ على دقة العربية والإنجليزية","Maintains Arabic and English accuracy","文"],
-  ["financial_analyst","المحلل المالي","Financial analyst","يحسب التكلفة والربحية","Calculates costs and profitability","＄"],
-  ["quality_risk_reviewer","الجودة والمخاطر","Quality & risk","يراجع الجودة والمخاطر والامتثال","Reviews quality, risk and compliance","✓"],
+  ["market_researcher", "باحث الأسواق", "Market Research", "يرصد الأسواق والطلب والفرص", "Studies markets, demand and opportunities", "◉"],
+  ["product_analyst", "محلل المنتجات", "Product Analysis", "يحلل المواصفات والمنتجات", "Analyzes products and specifications", "◇"],
+  ["supplier_researcher", "باحث الموردين", "Supplier Research", "يقارن أدلة الموردين والعروض", "Compares supplier evidence and offers", "⌂"],
+  ["catalogue_manager", "مدير الكتالوج", "Catalogue Management", "يجهز بيانات المنتجات والكتالوج", "Prepares product data and catalogue", "▣"],
+  ["sales_support", "المبيعات وخدمة العملاء", "Sales & Customer Care", "يدعم المبيعات وتجربة العملاء", "Supports sales and customer experience", "✧"],
+  ["logistics_analyst", "الطلبات والشحن", "Orders & Logistics", "يراجع الشحن والتنفيذ والطلبات", "Reviews shipping and fulfilment", "⇄"],
+  ["translator", "أخصائي الترجمة", "Translation", "يحافظ على دقة العربية والإنجليزية", "Maintains Arabic and English accuracy", "文"],
+  ["financial_analyst", "المحلل المالي", "Finance", "يحسب التكلفة والربحية", "Calculates costs and profitability", "＄"],
+  ["quality_risk_reviewer", "الجودة والمخاطر", "Quality & Risk", "يراجع الجودة والمخاطر والامتثال", "Reviews quality, risk and compliance", "✓"],
 ] as const;
 
-export default function AiHeadquartersPage(){
- const {locale}=useLocale(); const ar=locale==="ar";
- const [tasks,setTasks]=useState<Task[]>([]); const [status,setStatus]=useState<{configured:boolean;managerEnabled:boolean}|null>(null);
- const [error,setError]=useState("");
- useEffect(()=>{let active=true;
-  Promise.all([
-   fetch("/api/platform/ai/tasks?limit=50",{credentials:"include",cache:"no-store"}).then(async r=>{const d=await r.json();if(!r.ok||!d.success)throw new Error(d.error||"tasks");return d.tasks as Task[]}),
-   fetch("/api/platform/ai/assistant",{credentials:"include",cache:"no-store"}).then(async r=>{const d=await r.json();if(!r.ok||!d.success)throw new Error(d.error||"status");return d})
-  ]).then(([t,s])=>{if(active){setTasks(t);setStatus(s)}}).catch(e=>{if(active)setError(e instanceof Error?e.message:"Unable to load headquarters")});
-  return()=>{active=false};
- },[]);
- const stats=useMemo(()=>({total:tasks.length,waiting:tasks.filter(t=>t.status==="queued"||t.status==="running").length,review:tasks.filter(t=>t.status==="needs_owner_review").length,failed:tasks.filter(t=>t.status==="failed").length}),[tasks]);
+const rooms = [
+  { href: "/owner/ai/chat", key: "manager", icon: "♛" },
+  { href: "/owner/ai/reports", key: "reports", icon: "▤" },
+  { href: "/owner/ai/meeting", key: "meeting", icon: "◷" },
+] as const;
 
- return <main dir={ar?"rtl":"ltr"} lang={locale} className="min-h-screen bg-[#f5f2e9] px-4 py-5 text-slate-900 sm:px-7 sm:py-8">
-  <div className="mx-auto max-w-6xl space-y-6">
-   <header className="rounded-3xl bg-[#101d35] p-5 text-white shadow-sm sm:p-8">
-    <Link href="/owner" className="text-sm text-slate-300 hover:text-white">← {ar?"مركز المالك":"Owner center"}</Link>
-    <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-     <div><p className="text-xs font-bold tracking-[.2em] text-[#d9b76e]">WASLA · EXECUTIVE FLOOR</p><h1 className="mt-2 text-2xl font-bold sm:text-4xl">{ar?"المقر الرئيسي — مكتب المدير العام":"Headquarters — General Manager"}</h1><p className="mt-2 max-w-2xl text-sm leading-7 text-slate-300">{ar?"أنت تتعامل مع المدير العام. هو المسؤول عن تنسيق الفريق وتوزيع العمل ومراجعة النتائج ورفع التقارير إليك.":"You work with the General Manager, who coordinates the team, assigns work, reviews results and reports to you."}</p></div>
-     <div className="flex flex-wrap gap-2">
-      <span className="rounded-full border border-white/20 px-3 py-2 text-xs">{status?.configured?(ar?"محرك الذكاء متصل":"AI configured"):(ar?"المحرك يحتاج إعداداً":"AI setup required")}</span>
-      <span className={"rounded-full px-3 py-2 text-xs "+(status?.managerEnabled?"bg-emerald-400/15 text-emerald-200":"bg-amber-300/15 text-amber-200")}>{status?.managerEnabled?(ar?"المدير نشط":"Manager active"):(ar?"المدير متوقف":"Manager paused")}</span>
-     </div>
-    </div>
-    <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-     {[[ar?"كل المهام":"All tasks",stats.total],[ar?"قيد العمل":"In progress",stats.waiting],[ar?"بانتظار المراجعة":"For review",stats.review],[ar?"تحتاج معالجة":"Needs attention",stats.failed]].map(([label,value])=><div key={String(label)} className="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4"><p className="text-xs text-slate-300">{label}</p><p className="mt-1 text-2xl font-bold">{value}</p></div>)}
-    </div>
-   </header>
-   {error?<p role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{error}</p>:null}
-   <section className="rounded-2xl border border-amber-200 bg-[#fbf8f0] p-5 sm:p-6">
-    <div className="flex items-start gap-3"><span className="text-xl">⏸</span><div>
-     <p className="text-xs font-bold tracking-[.18em] text-amber-800">{ar?"حالة التشغيل":"EXECUTION STATUS"}</p>
-     <h2 className="mt-2 text-xl font-bold">{ar?"الجدولة الآلية تعمل، والإنجاز مرتبط بتوفر Gemini":"Automated scheduling is active; completion depends on Gemini availability"}</h2>
-     <p className="mt-2 text-sm leading-7 text-slate-700">{ar?"الجدولة تعمل تلقائياً كل 15 دقيقة. عند بلوغ Gemini حد الاستخدام، تُؤجَّل المهام تلقائياً إلى موعد إعادة المحاولة. لا تُحتسب أي مهمة منجزة إلا بعد حفظ نتيجتها.":"The scheduler runs automatically every 15 minutes. When Gemini reaches a usage limit, tasks are deferred until their retry time. A task is counted as complete only after its result is saved."}</p>
-     <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2"><p className="rounded-xl bg-white p-3">{ar?"حالة إعداد المزود: ":"Provider configuration: "}<strong>{status?.configured?(ar?"مفتاح موجود — لا يعني أن الخدمة تعمل":"Key present — not proof of service availability"):(ar?"غير مكتمل":"Not configured")}</strong></p><p className="rounded-xl bg-white p-3">{ar?"حالة المدير: ":"Manager flag: "}<strong>{status?.managerEnabled?(ar?"مفعّل إدارياً — التنفيذ موقوف":"Enabled in settings — execution paused"):(ar?"متوقف":"Paused")}</strong></p></div>
-     <p className="mt-3 text-xs leading-6 text-slate-600">{ar?"الفريق مكوّن من تسعة مكاتب متخصصة تعمل بالتعليمات نفسها عبر محرك Gemini واحد. النتائج البحثية والمسودات تبقى للمراجعة، ولا ينشر النظام منتجات أو يتواصل مع الموردين أو ينفذ المدفوعات تلقائياً.":"The team has nine specialist offices using one Gemini model with role-specific instructions. Research and drafts remain subject to review; the system does not publish products, contact suppliers or execute payments autonomously."}</p>
-    </div></div>
-   </section>
-   <section className="grid gap-3 sm:grid-cols-3">
-    <Link href="/owner/ai/chat" className="rounded-2xl border border-[#e3d6b8] bg-white p-5 transition hover:border-amber-500"><p className="text-xs font-bold tracking-wider text-amber-700">{ar?"مكتب المدير":"MANAGER OFFICE"}</p><h2 className="mt-2 text-lg font-bold">{ar?"تحدث مع المدير العام":"Talk to the General Manager"}</h2><p className="mt-1 text-sm leading-6 text-slate-600">{ar?"أعطه الهدف، وهو يحدد خطة العمل والمسؤوليات.":"Give the goal; the manager defines the work plan and responsibilities."}</p><span className="mt-4 inline-block text-sm font-semibold text-amber-800">{ar?"فتح المكتب ←":"Open office →"}</span></Link>
-    <Link href="/owner/ai/reports" className="rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-amber-500"><p className="text-xs font-bold tracking-wider text-amber-700">{ar?"التقارير":"REPORTS"}</p><h2 className="mt-2 text-lg font-bold">{ar?"تقارير الأداء":"Performance reports"}</h2><p className="mt-1 text-sm leading-6 text-slate-600">{ar?"ملخص النشاط والإنجازات والمهام المتأخرة.":"Activity, completed work and outstanding tasks."}</p><span className="mt-4 inline-block text-sm font-semibold text-amber-800">{ar?"عرض التقارير ←":"View reports →"}</span></Link>
-    <Link href="/owner/ai/meeting" className="rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-amber-500"><p className="text-xs font-bold tracking-wider text-amber-700">{ar?"قاعة الاجتماعات":"MEETING ROOM"}</p><h2 className="mt-2 text-lg font-bold">{ar?"الاجتماع الأسبوعي":"Weekly team meeting"}</h2><p className="mt-1 text-sm leading-6 text-slate-600">{ar?"مراجعة النتائج والتحديات وخطة التطوير.":"Review results, challenges and improvement plans."}</p><span className="mt-4 inline-block text-sm font-semibold text-amber-800">{ar?"دخول القاعة ←":"Enter meeting room →"}</span></Link>
-   </section>
-   <section className="space-y-4">
-    <div className="flex flex-wrap items-end justify-between gap-2"><div><p className="text-xs font-bold tracking-[.18em] text-amber-700">{ar?"الأقسام والمكاتب":"DEPARTMENTS & OFFICES"}</p><h2 className="mt-1 text-xl font-bold">{ar?"مكاتب الموظفين التسعة":"Nine specialist offices"}</h2><p className="mt-1 text-sm text-slate-600">{ar?"المدير يكلّف الموظف المناسب؛ هذه الغرف للاطلاع على أعمال كل قسم.":"The manager assigns the right specialist; these rooms let you review each department's work."}</p></div></div>
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-     {team.map(([key,arName,enName,arDesc,enDesc,icon])=><Link key={key} href={"/owner/ai/office/"+key} className="group flex aspect-square flex-col justify-between rounded-2xl border border-slate-200 bg-white p-3 transition hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-sm sm:p-5"><div className="flex items-center justify-between"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#f4efe2] text-xl text-amber-800">{icon}</span><span className="text-xs text-slate-400">{ar?"فتح المكتب":"Open office"} ↗</span></div><h3 className="mt-3 font-bold">{ar?arName:enName}</h3><p className="mt-1 text-sm leading-6 text-slate-600">{ar?arDesc:enDesc}</p><p className="mt-3 text-xs font-semibold text-amber-800">{tasks.filter(t=>t.specialistKey===key).length} {ar?"مهمة مسجلة":"recorded tasks"}</p></Link>)}
-    </div>
-   </section>
-   <footer className="rounded-2xl border border-amber-200 bg-[#fbf8f0] p-4 text-xs leading-6 text-slate-600">{ar?"حدود التشغيل الحالية: الموظفون يستخدمون نموذج الذكاء الاصطناعي نفسه بأدوار متخصصة، والمهام الحالية استشارية وتحتاج مراجعة المالك. لا توجد حتى الآن جدولة تلقائية للتقارير أو اجتماعات دورية منفذة؛ هذه الصفحة هي واجهة المقر ومراجعة النشاط.":"Current operating boundary: specialists use the same AI model with role-specific instructions; task results are advisory and require owner review. Automated report scheduling and recurring meetings are not yet active; this is the headquarters and activity-review interface."}</footer>
-  </div>
- </main>
+export default function AiHeadquartersPage() {
+  const { locale } = useLocale();
+  const ar = locale === "ar";
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [status, setStatus] = useState<AssistantStatus | null>(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [tasksResponse, statusResponse] = await Promise.all([
+        fetch("/api/platform/ai/tasks?limit=50", { credentials: "include", cache: "no-store" }),
+        fetch("/api/platform/ai/assistant", { credentials: "include", cache: "no-store" }),
+      ]);
+      const [tasksData, statusData] = await Promise.all([tasksResponse.json(), statusResponse.json()]);
+      if (!tasksResponse.ok || !tasksData.success) throw new Error(tasksData.error || "Unable to load tasks");
+      if (!statusResponse.ok || !statusData.success) throw new Error(statusData.error || "Unable to load AI status");
+      setTasks(Array.isArray(tasksData.tasks) ? tasksData.tasks : []);
+      setStatus(statusData);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to load AI headquarters");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const stats = useMemo(() => ({
+    total: tasks.length,
+    active: tasks.filter(task => task.status === "queued" || task.status === "running").length,
+    review: tasks.filter(task => task.status === "needs_owner_review").length,
+    failed: tasks.filter(task => task.status === "failed").length,
+  }), [tasks]);
+
+  const copy = ar ? {
+    eyebrow: "WASLA · AI OPERATIONS",
+    title: "غرفة عمليات الذكاء الاصطناعي",
+    subtitle: "مركز قيادة واحد لمتابعة المدير العام والأقسام والمهام والتقارير.",
+    owner: "العودة إلى غرفة المالك",
+    refresh: "تحديث البيانات",
+    loading: "جارٍ تحميل بيانات التشغيل...",
+    total: "إجمالي المهام المعروضة",
+    active: "قيد التنفيذ أو الانتظار",
+    review: "بانتظار مراجعتك",
+    failed: "مهام متعثرة",
+    status: "حالة النظام",
+    engine: "إعداد محرك الذكاء",
+    manager: "حالة المدير العام",
+    configured: "إعداد المزود موجود",
+    missing: "إعداد المزود غير مكتمل",
+    enabled: "مفعّل إدارياً",
+    paused: "متوقف إدارياً",
+    limitation: "ملاحظة تشغيلية",
+    limitationText: "وجود مفتاح للمحرك لا يضمن توفر الخدمة في كل لحظة. قد تتأخر المهام عند حدود الاستخدام أو عند تعذر الاتصال. لا تُعد المهمة منجزة إلا بعد حفظ نتيجتها، وتبقى النتائج والمسودات خاضعة لمراجعة المالك.",
+    workspaces: "غرف الإدارة",
+    workspacesText: "كل وظيفة في غرفة مستقلة، بنفس أسلوب البطاقات المستخدم في مركز المالك.",
+    managerTitle: "مكتب المدير العام",
+    managerDesc: "وجّه الأهداف وتابع توزيع المهام وخطة الفريق.",
+    reportsTitle: "مركز التقارير",
+    reportsDesc: "راجع نتائج التشغيل والإنجازات والمهام التي تحتاج متابعة.",
+    meetingTitle: "قاعة الاجتماعات",
+    meetingDesc: "راجع ملخص الاجتماع وخطة العمل والتحديات.",
+    departments: "الأقسام والمكاتب المتخصصة",
+    departmentsText: "تسعة مكاتب متخصصة، ولكل مكتب مساحة مستقلة لمراجعة مهامه.",
+    open: "فتح المكتب",
+    recorded: "مهمة مسجلة",
+    noData: "لا توجد بيانات مهام معروضة حالياً.",
+    error: "تعذر تحميل بيانات غرفة الذكاء الاصطناعي.",
+    footer: "حدود الصلاحيات: لا ينشر النظام المنتجات ولا يتواصل مع الموردين ولا ينفذ المدفوعات تلقائياً. هذه الإجراءات تبقى خاضعة للمراجعة والاعتماد.",
+  } : {
+    eyebrow: "WASLA · AI OPERATIONS",
+    title: "AI Operations Headquarters",
+    subtitle: "One command center for the general manager, departments, tasks and reports.",
+    owner: "Back to Owner Office",
+    refresh: "Refresh data",
+    loading: "Loading operational data...",
+    total: "Tasks displayed",
+    active: "Queued or in progress",
+    review: "Awaiting your review",
+    failed: "Needs attention",
+    status: "System status",
+    engine: "AI engine setup",
+    manager: "General manager",
+    configured: "Provider configured",
+    missing: "Provider setup incomplete",
+    enabled: "Administratively enabled",
+    paused: "Administratively paused",
+    limitation: "Operational note",
+    limitationText: "A configured provider key does not guarantee service availability at every moment. Tasks may be delayed by usage limits or connection failures. A task counts as complete only after its result is saved; outputs remain subject to owner review.",
+    workspaces: "Management rooms",
+    workspacesText: "Every function has its own room, using the same card-based approach as the Owner Center.",
+    managerTitle: "General Manager Office",
+    managerDesc: "Set objectives and follow task allocation and team plans.",
+    reportsTitle: "Reports Center",
+    reportsDesc: "Review operating results, completed work and items needing attention.",
+    meetingTitle: "Meeting Room",
+    meetingDesc: "Review meeting summaries, plans and team challenges.",
+    departments: "Specialist departments",
+    departmentsText: "Nine specialist offices, each with its own workspace for reviewing assigned tasks.",
+    open: "Open office",
+    recorded: "recorded tasks",
+    noData: "No task data is currently available.",
+    error: "Unable to load AI headquarters data.",
+    footer: "Permission boundary: the system does not publish products, contact suppliers or execute payments automatically. These actions remain subject to review and approval.",
+  };
+
+  const statCards = [
+    { label: copy.total, value: stats.total, icon: "▦", tone: "navy" },
+    { label: copy.active, value: stats.active, icon: "◷", tone: "blue" },
+    { label: copy.review, value: stats.review, icon: "✓", tone: "gold" },
+    { label: copy.failed, value: stats.failed, icon: "!", tone: "rose" },
+  ];
+
+  return (
+    <main dir={ar ? "rtl" : "ltr"} lang={locale} className="min-h-screen bg-[#f7f4ed] px-4 py-5 text-[#14243a] sm:px-7 sm:py-8">
+      <div className="mx-auto max-w-[1440px] space-y-6">
+        <header className="rounded-3xl bg-[#14243a] p-5 text-white shadow-sm sm:p-8">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-[10px] font-extrabold tracking-[.2em] text-[#dfc58f]">{copy.eyebrow}</p>
+            <Link href="/owner" className="rounded-xl border border-white/20 px-4 py-2.5 text-xs font-semibold text-white no-underline transition hover:border-[#dfc58f] hover:text-[#dfc58f]">{copy.owner} ↗</Link>
+          </div>
+          <div className="mt-5 max-w-3xl">
+            <h1 className="text-2xl font-extrabold sm:text-4xl">{copy.title}</h1>
+            <p className="mt-3 text-sm leading-7 text-slate-300">{copy.subtitle}</p>
+          </div>
+          <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {statCards.map(card => (
+              <div key={card.label} className="rounded-2xl border border-white/10 bg-white/[0.07] p-4">
+                <div className="flex items-center justify-between gap-2"><span className="text-xs leading-5 text-slate-300">{card.label}</span><span className="text-lg text-[#dfc58f]">{card.icon}</span></div>
+                <strong className="mt-2 block text-3xl font-extrabold tabular-nums">{loading ? "…" : card.value}</strong>
+              </div>
+            ))}
+          </div>
+        </header>
+
+        {error ? <section role="alert" className="rounded-2xl border border-rose-200 bg-white p-5 text-sm text-rose-800"><strong>{copy.error}</strong><p className="mt-1 break-words text-xs">{error}</p><button onClick={() => void load()} className="mt-3 rounded-lg border border-rose-200 px-3 py-2 font-semibold">{copy.refresh}</button></section> : null}
+
+        <section className="rounded-2xl border border-[#e5e0d5] bg-white p-5 shadow-[0_4px_16px_#17243707] sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div><p className="text-[10px] font-extrabold tracking-[.18em] text-[#9b783d]">SYSTEM CONTROL</p><h2 className="mt-1 text-xl font-extrabold">{copy.status}</h2></div>
+            <button onClick={() => void load()} disabled={loading} className="rounded-xl border border-[#e5e0d5] px-4 py-2.5 text-xs font-bold transition hover:border-[#b18d4d] disabled:opacity-50">{loading ? copy.loading : copy.refresh} ↻</button>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-[#e8e2d6] bg-[#fbfaf7] p-4"><span className="text-xs text-slate-500">{copy.engine}</span><strong className="mt-2 block text-sm">{status ? (status.configured ? copy.configured : copy.missing) : "—"}</strong></div>
+            <div className="rounded-xl border border-[#e8e2d6] bg-[#fbfaf7] p-4"><span className="text-xs text-slate-500">{copy.manager}</span><strong className="mt-2 block text-sm">{status ? (status.managerEnabled ? copy.enabled : copy.paused) : "—"}</strong></div>
+          </div>
+          <div className="mt-3 rounded-xl border border-amber-200 bg-[#fbf8f0] p-4">
+            <p className="text-xs font-extrabold text-[#805f2e]">{copy.limitation}</p>
+            <p className="mt-2 text-sm leading-7 text-slate-700">{copy.limitationText}</p>
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <div><p className="text-[10px] font-extrabold tracking-[.18em] text-[#9b783d]">MANAGEMENT WORKSPACES</p><h2 className="mt-1 text-xl font-extrabold">{copy.workspaces}</h2><p className="mt-1 text-sm text-slate-600">{copy.workspacesText}</p></div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {rooms.map(room => {
+              const title = room.key === "manager" ? copy.managerTitle : room.key === "reports" ? copy.reportsTitle : copy.meetingTitle;
+              const description = room.key === "manager" ? copy.managerDesc : room.key === "reports" ? copy.reportsDesc : copy.meetingDesc;
+              return <Link key={room.key} href={room.href} className="group flex min-h-[178px] flex-col rounded-2xl border border-[#e5e0d5] bg-white p-5 text-inherit no-underline shadow-[0_4px_16px_#17243707] transition hover:-translate-y-0.5 hover:border-[#b18d4d] hover:shadow-md">
+                <div className="flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-xl bg-[#f4efe2] text-xl text-[#9b783d]">{room.icon}</span><span className="text-xs font-bold text-[#9b783d]">{copy.open} ↗</span></div>
+                <h3 className="mt-5 text-lg font-extrabold">{title}</h3><p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
+              </Link>;
+            })}
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <div><p className="text-[10px] font-extrabold tracking-[.18em] text-[#9b783d]">SPECIALIST DEPARTMENTS</p><h2 className="mt-1 text-xl font-extrabold">{copy.departments}</h2><p className="mt-1 text-sm text-slate-600">{copy.departmentsText}</p></div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {team.map(([key, arName, enName, arDesc, enDesc, icon]) => {
+              const count = tasks.filter(task => task.specialistKey === key).length;
+              return <Link key={key} href={"/owner/ai/office/" + key} className="group flex min-h-[174px] flex-col rounded-2xl border border-[#e5e0d5] bg-white p-5 text-inherit no-underline shadow-[0_4px_16px_#17243707] transition hover:-translate-y-0.5 hover:border-[#b18d4d] hover:shadow-md">
+                <div className="flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-xl bg-[#f4efe2] text-xl text-[#9b783d]">{icon}</span><span className="text-xs font-bold text-[#9b783d]">{copy.open} ↗</span></div>
+                <h3 className="mt-4 font-extrabold">{ar ? arName : enName}</h3><p className="mt-1 flex-1 text-sm leading-6 text-slate-600">{ar ? arDesc : enDesc}</p>
+                <div className="mt-4 flex items-center justify-between border-t border-[#f0ede6] pt-3"><span className="text-xs text-slate-500">{copy.recorded}</span><strong className="text-sm tabular-nums text-[#14243a]">{count}</strong></div>
+              </Link>;
+            })}
+          </div>
+          {!loading && tasks.length === 0 && !error ? <p className="rounded-xl border border-dashed border-[#d9d2c5] bg-white p-4 text-sm text-slate-500">{copy.noData}</p> : null}
+        </section>
+
+        <footer className="rounded-2xl border border-[#e5e0d5] bg-white p-5 text-xs leading-6 text-slate-600">{copy.footer}</footer>
+      </div>
+    </main>
+  );
 }
