@@ -7,8 +7,8 @@ import { useLocale } from "../../components/locale-provider";
 type Brand = { id: string; display_name: string; legal_name: string; status: string; country_code: string | null; description: string | null; website: string | null; logo_reference: string | null };
 
 const copy = {
-  ar: { eyebrow: "WASLA BRAND STUDIO", title: "العلامات التجارية والشعارات", intro: "مساحة موحدة لإدارة هويات علاماتك التجارية وشعاراتها داخل وصلة.", empty: "لا توجد علامة تجارية مرتبطة بحسابك حتى الآن.", create: "إنشاء علامة تجارية", manage: "إدارة الحسابات التجارية", upload: "رفع الشعار", save: "حفظ الشعار", saving: "جارٍ الحفظ...", hint: "PNG أو JPG أو WEBP أو SVG — حتى 3 ميغابايت", success: "تم تحديث الشعار.", error: "تعذر تنفيذ العملية. حاول مرة أخرى.", choose: "اختر شعاراً من جهازك", remove: "إزالة الشعار", logo: "الشعار الرسمي", verified: "حالة الحساب" },
-  en: { eyebrow: "WASLA BRAND STUDIO", title: "Brands & logos", intro: "One workspace to manage your brand identities and logos across WASLA.", empty: "No brand accounts are linked to your account yet.", create: "Create a brand", manage: "Manage business accounts", upload: "Upload logo", save: "Save logo", saving: "Saving...", hint: "PNG, JPG, WEBP or SVG — up to 3 MB", success: "Logo updated.", error: "Could not complete the action. Please try again.", choose: "Choose a logo from your device", remove: "Remove logo", logo: "Official logo", verified: "Account status" }
+  ar: { eyebrow: "WASLA BRAND STUDIO", title: "العلامات التجارية والشعارات", intro: "مساحة موحدة لإدارة هويات علاماتك التجارية وشعاراتها داخل وصلة.", empty: "لا توجد علامة تجارية مرتبطة بحسابك حتى الآن.", create: "إنشاء علامة تجارية", manage: "إدارة الحسابات التجارية", upload: "رفع الشعار", save: "حفظ الشعار", saving: "جارٍ الحفظ...", hint: "PNG أو JPG أو WEBP — حتى 3 ميغابايت", success: "تم تحديث الشعار.", error: "تعذر تنفيذ العملية. حاول مرة أخرى.", choose: "اختر شعاراً من جهازك", remove: "إزالة الشعار", logo: "الشعار الرسمي", verified: "حالة الحساب" },
+  en: { eyebrow: "WASLA BRAND STUDIO", title: "Brands & logos", intro: "One workspace to manage your brand identities and logos across WASLA.", empty: "No brand accounts are linked to your account yet.", create: "Create a brand", manage: "Manage business accounts", upload: "Upload logo", save: "Save logo", saving: "Saving...", hint: "PNG, JPG or WEBP — up to 3 MB", success: "Logo updated.", error: "Could not complete the action. Please try again.", choose: "Choose a logo from your device", remove: "Remove logo", logo: "Official logo", verified: "Account status" }
 };
 
 export default function BrandsPage() {
@@ -37,7 +37,7 @@ export default function BrandsPage() {
   async function selectLogo(id: string, event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
-    const allowed = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
+    const allowed = ["image/png", "image/jpeg", "image/webp"];
     if (!allowed.includes(file.type) || file.size > 3 * 1024 * 1024) { setNotice(t.error); event.target.value = ""; return; }
     const reader = new FileReader();
     reader.onload = () => { if (typeof reader.result === "string") setDrafts(current => ({ ...current, [id]: reader.result as string })); };
@@ -72,7 +72,7 @@ export default function BrandsPage() {
           <div className="wasla-brands-grid">{brands.map(brand => (
             <article className="wasla-brand-card" key={brand.id}>
               <div className="wasla-brand-card-top"><div className="wasla-brand-logo">{drafts[brand.id] ? <img src={drafts[brand.id]} alt={brand.display_name} /> : <span>{brand.display_name.slice(0,1).toUpperCase()}</span>}</div><div><h2>{brand.display_name}</h2><p>{brand.legal_name}</p><small>{brand.country_code || "—"} · {brand.status}</small></div></div>
-              <label className="wasla-brand-file">{t.choose}<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={e => void selectLogo(brand.id,e)} /></label>
+              <label className="wasla-brand-file">{t.choose}<input type="file" accept="image/png,image/jpeg,image/webp" onChange={e => void selectLogo(brand.id,e)} /></label>
               <p className="wasla-brand-hint">{t.hint}</p>
               <button type="button" onClick={() => void saveLogo(brand.id)} disabled={saving === brand.id}>{saving === brand.id ? t.saving : t.save}<span>↗</span></button>
             </article>
