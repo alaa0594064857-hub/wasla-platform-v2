@@ -82,6 +82,9 @@ async function ensureWorkerTables() {
     created_at timestamptz NOT NULL DEFAULT NOW())`);
   await db.query(`CREATE INDEX IF NOT EXISTS platform_ai_team_tasks_queue_idx
     ON platform_ai_team_tasks(status,priority DESC,created_at ASC)`);
+  await db.query(`CREATE TABLE IF NOT EXISTS platform_ai_provider_state (
+    provider_key varchar(40) PRIMARY KEY, cooldown_until timestamptz,
+    last_error_code varchar(80), updated_at timestamptz NOT NULL DEFAULT NOW())`);
   await db.query(`CREATE TABLE IF NOT EXISTS platform_ai_daily_reports (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(), owner_user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     report_date date NOT NULL, report_json jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT NOW(),
@@ -95,7 +98,7 @@ async function addEvent(task:any, type:string, metadata:Record<string,unknown>={
     [task.id,task.owner_user_id,task.specialist_key,type,JSON.stringify(metadata)]);
 }
 
-/** Seeds the first-week affiliate research queue once per owner and UTC day. */
+/** Seeds the first-week affiliate research queue once per owner. */
 async function seedWeekOneTasks(): Promise<number> {
   const db=getDatabasePool();
   const owners=await db.query(`SELECT DISTINCT u.id
@@ -107,7 +110,6 @@ async function seedWeekOneTasks(): Promise<number> {
     JOIN permissions p ON p.id=rp.permission_id AND p.scope_type='platform'
       AND p.permission_key='platform.manage'
     WHERE u.status='active' AND u.email_verified=TRUE`);
-  const day=new Date().toISOString().slice(0,10);
   let created=0;
   for(const owner of owners.rows) {
     for(let index=0;index<WEEK_ONE_TASKS.length;index++) {
@@ -119,11 +121,11 @@ async function seedWeekOneTasks(): Promise<number> {
         RETURNING id,owner_user_id,specialist_key,title`,
         [owner.id,task.specialistKey,task.title,task.inputText,
           JSON.stringify({scope:"affiliate_only",marketplaces:["US","TR"],week:1,requiresCitations:true}),
-          `affiliate-week1-${day}-${index+1}`,task.inputText.length]);
+          `affiliate-week1-${index+1}`,task.inputText.length]);
       const row=inserted.rows[0];
       if(row) {
         created++;
-        await addEvent(row,"automatic_task_seeded",{scope:"affiliate_only",utcDate:day,taskNumber:index+1});
+        await addEvent(row,"automatic_task_seeded",{scope:"affiliate_only",week:1,taskNumber:index+1});
       }
     }
   }
@@ -132,6 +134,8 @@ async function seedWeekOneTasks(): Promise<number> {
 
 async function processOne():Promise<boolean> {
   const db=getDatabasePool();
+  const cooldown=await db.query(`SELECT cooldown_until FROM platform_ai_provider_state WHERE provider_key='gemini' LIMIT 1`);
+  if(cooldown.rows[0]?.cooldown_until && new Date(cooldown.rows[0].cooldown_until).getTime()>Date.now()) return false;
   const claim=await db.query(`WITH candidate AS (
     SELECT id FROM platform_ai_team_tasks WHERE status='queued' AND attempt_count<3
       AND (next_attempt_at IS NULL OR next_attempt_at<=NOW())
@@ -202,8 +206,12 @@ async function processOne():Promise<boolean> {
         const retryHeader=response.headers.get("retry-after");
         const retrySeconds=retryHeader
           ? (Number.isFinite(Number(retryHeader)) ? Number(retryHeader) : Math.ceil((Date.parse(retryHeader)-Date.now())/1000))
-          : 21600;
+          : 86400;
         const delaySeconds=Math.min(86400,Math.max(60,Number.isFinite(retrySeconds)?retrySeconds:21600));
+        await db.query(`INSERT INTO platform_ai_provider_state(provider_key,cooldown_until,last_error_code,updated_at)
+          VALUES('gemini',NOW()+($1::int * INTERVAL '1 second'),'PROVIDER_RATE_LIMIT',NOW())
+          ON CONFLICT(provider_key) DO UPDATE SET cooldown_until=EXCLUDED.cooldown_until,
+            last_error_code=EXCLUDED.last_error_code,updated_at=NOW()`,[delaySeconds]);
         await db.query(`UPDATE platform_ai_team_tasks SET status='queued',error_code='PROVIDER_RATE_LIMIT',
           next_attempt_at=NOW()+($2::int * INTERVAL '1 second'),updated_at=NOW(),
           finished_at=NULL,duration_ms=$3 WHERE id=$1 AND status='running'`,
@@ -313,7 +321,8 @@ export async function runScheduledAiTasks() {
   const seeded=await seedWeekOneTasks();
   const recovered=await recoverLegacyRateLimitedTasks();
   let processed=0;
-  for(let i=0;i<5;i++) { if(!(await processOne())) break; processed++; }
+  // One provider request per scheduler run prevents bursts against free-tier quotas.
+  if(await processOne()) processed=1;
   await generateDailyReports();
   console.info("WASLA scheduler finished",{seeded,processed});
   return { paused:false, seeded, recovered, processed };
