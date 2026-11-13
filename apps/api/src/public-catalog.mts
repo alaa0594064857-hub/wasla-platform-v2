@@ -110,7 +110,7 @@ export async function handlePublicStoresDirectoryRequest(
        WHERE s.status = 'active'
          AND ($1 = '' OR s.name ILIKE '%' || $1 || '%' OR a.display_name ILIKE '%' || $1 || '%')
          AND ($2 = '' OR a.country_code = $2)
-       GROUP BY s.id, a.id, bp.description, bp.website, bp.logo_reference
+       GROUP BY s.id, a.id, bp.description, bp.website
        ORDER BY COUNT(p.id) DESC, s.created_at DESC
        LIMIT 50`,
       [search, country],
