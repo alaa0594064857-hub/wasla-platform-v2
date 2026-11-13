@@ -197,6 +197,11 @@ export const auth = betterAuth({
   },
 
   advanced: {
+    ipAddress: {
+      // Render traffic is routed through Cloudflare; this single-value header
+      // is set by Cloudflare at the edge and avoids trusting an appended XFF chain.
+      ipAddressHeaders: ["cf-connecting-ip"],
+    },
     database: {
       generateId: "uuid",
     },
