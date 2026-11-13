@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useLocale } from "../../../../components/locale-provider";
 import "./headquarters.css";
 
-type Task = { id: string; specialistKey: string; title: string; status: string; resultText?: string | null; createdAt: string };
+type Task = { id: string; specialistKey: string; title: string; status: string; resultText?: string | null; errorCode?: string | null; createdAt: string };
 type AssistantStatus = { configured: boolean; managerEnabled: boolean };
 
 const team = [
@@ -55,6 +55,7 @@ export default function AiHeadquartersPage() {
     active: tasks.filter(task => task.status === "queued" || task.status === "running").length,
     review: tasks.filter(task => task.status === "needs_owner_review").length,
     failed: tasks.filter(task => task.status === "failed").length,
+    providerLimited: tasks.some(task => task.errorCode === "PROVIDER_RATE_LIMIT"),
   }), [tasks]);
 
   const copy = ar ? {
@@ -91,6 +92,8 @@ export default function AiHeadquartersPage() {
     recorded: "مهمة مسجلة",
     noData: "لا توجد بيانات مهام معروضة حالياً.",
     error: "تعذر تحميل بيانات غرفة الذكاء الاصطناعي.",
+    quotaTitle: "توقف التنفيذ بسبب حصة مزود الذكاء الاصطناعي",
+    quotaText: "المهام محفوظة، لكن Gemini رفض التنفيذ بسبب استنفاد الحصة (429). لن نعرض المهام كإنجازات حتى ينتج عنها عمل محفوظ فعلياً.",
     footer: "حدود الصلاحيات: لا ينشر النظام المنتجات ولا يتواصل مع الموردين ولا ينفذ المدفوعات تلقائياً. هذه الإجراءات تبقى خاضعة للمراجعة والاعتماد.",
   } : {
     eyebrow: "WASLA · AI OPERATIONS",
@@ -126,6 +129,8 @@ export default function AiHeadquartersPage() {
     recorded: "recorded tasks",
     noData: "No task data is currently available.",
     error: "Unable to load AI headquarters data.",
+    quotaTitle: "Execution paused by AI provider quota",
+    quotaText: "Tasks are safely retained, but Gemini rejected execution because the quota was exhausted (429). No task will be shown as completed without a saved result.",
     footer: "Permission boundary: the system does not publish products, contact suppliers or execute payments automatically. These actions remain subject to review and approval.",
   };
 
@@ -202,6 +207,8 @@ export default function AiHeadquartersPage() {
             })}
           </div>
         </section>
+
+        {stats.providerLimited ? <section role="status" className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-950"><div className="flex items-start gap-3"><span className="text-xl">!</span><div><h2 className="text-sm font-extrabold">{copy.quotaTitle}</h2><p className="mt-1 text-xs leading-6">{copy.quotaText}</p></div></div></section> : null}
 
         <section className="wasla-ai-status">
           <div className="wasla-ai-info-card">
