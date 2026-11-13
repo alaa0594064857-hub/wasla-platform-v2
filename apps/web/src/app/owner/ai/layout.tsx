@@ -38,19 +38,19 @@ export default function AiOwnerWorkspaceLayout({ children }: { children: ReactNo
           <span className="grid"><strong className="text-base tracking-wider text-white">WASLA</strong><small className="text-[10px] tracking-[.2em] text-[#dfc58f]">AI OPERATIONS OFFICE</small></span>
         </Link>
         <div className="px-4 pb-3 pt-5 text-[10px] font-bold tracking-[.2em] text-[#91a0b3]">{ar ? "الإدارة التنفيذية" : "EXECUTIVE OFFICE"}</div>
-        <nav className="grid gap-1 px-3">
+        <nav className="flex gap-1 overflow-x-auto px-3 pb-2 lg:grid lg:overflow-visible">
           {links.map(item => (
-            <Link key={item.href} href={item.href} className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm no-underline transition ${navLink(item.href) ? "bg-[#29425f] font-bold text-[#e6c987] ring-1 ring-inset ring-[#d9b76e]/30" : "text-slate-300 hover:bg-white/5 hover:text-white"}`}>
+            <Link key={item.href} href={item.href} className={`flex shrink-0 items-center gap-3 rounded-xl px-3 py-3 text-xs sm:text-sm no-underline transition ${navLink(item.href) ? "bg-[#29425f] font-bold text-[#e6c987] ring-1 ring-inset ring-[#d9b76e]/30" : "text-slate-300 hover:bg-white/5 hover:text-white"}`}>
               <span className="w-6 text-center text-lg">{item.icon}</span>{item.label}
             </Link>
           ))}
         </nav>
         <div className="px-4 pb-2 pt-7 text-[10px] font-bold tracking-[.2em] text-[#91a0b3]">{ar ? "أقسام الفريق · 9 مكاتب" : "TEAM DEPARTMENTS · 9 OFFICES"}</div>
-        <nav className="grid gap-1 px-3 pb-5 sm:grid-cols-2 lg:grid-cols-1">
+        <nav className="flex gap-1 overflow-x-auto px-3 pb-4 lg:grid lg:overflow-visible lg:grid-cols-1">
           {offices.map(([key, arName, enName, icon]) => {
             const href = `/owner/ai/office/${key}`;
             const active = pathname === href;
-            return <Link key={key} href={href} className={`flex min-w-0 items-center gap-3 rounded-xl px-3 py-2.5 text-xs no-underline transition ${active ? "bg-[#29425f] font-bold text-[#e6c987] ring-1 ring-inset ring-[#d9b76e]/30" : "text-slate-300 hover:bg-white/5 hover:text-white"}`}>
+            return <Link key={key} href={href} className={`flex shrink-0 min-w-0 items-center gap-3 rounded-xl px-3 py-2.5 text-xs no-underline transition ${active ? "bg-[#29425f] font-bold text-[#e6c987] ring-1 ring-inset ring-[#d9b76e]/30" : "text-slate-300 hover:bg-white/5 hover:text-white"}`}>
               <span className="w-6 shrink-0 text-center text-base">{icon}</span><span className="truncate">{ar ? arName : enName}</span>
             </Link>;
           })}
