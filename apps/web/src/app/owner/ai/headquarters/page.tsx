@@ -142,87 +142,79 @@ export default function AiHeadquartersPage() {
   ];
 
   return (
-    <main dir={ar ? "rtl" : "ltr"} lang={locale} className="min-h-screen bg-[#f7f4ed] px-4 py-5 text-[#14243a] sm:px-7 sm:py-8">
-      <div className="mx-auto max-w-[1440px] space-y-6">
-        <header className="rounded-3xl bg-[#14243a] p-5 text-white shadow-sm sm:p-8">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-[10px] font-extrabold tracking-[.2em] text-[#dfc58f]">{copy.eyebrow}</p>
-            <Link href="/owner" className="rounded-xl border border-white/20 px-4 py-2.5 text-xs font-semibold text-white no-underline transition hover:border-[#dfc58f] hover:text-[#dfc58f]">{copy.owner} ↗</Link>
+    <main dir={ar ? "rtl" : "ltr"} lang={locale} className="min-h-screen bg-[#f7f4ed] px-4 py-5 text-[#14243a] sm:px-7 sm:py-7">
+      <div className="mx-auto max-w-[1440px] space-y-5">
+        <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#e5e0d5] bg-white px-5 py-4 shadow-sm">
+          <div>
+            <p className="text-[10px] font-extrabold tracking-[.18em] text-[#9b783d]">WASLA / AI OPERATIONS</p>
+            <h1 className="mt-1 text-xl font-extrabold sm:text-2xl">{copy.title}</h1>
+            <p className="mt-1 text-xs text-slate-500">{ar ? "لوحة الأقسام والإدارة والمهام" : "Departments, management and task dashboard"}</p>
           </div>
-          <div className="mt-5 max-w-3xl">
-            <h1 className="text-2xl font-extrabold sm:text-4xl">{copy.title}</h1>
-            <p className="mt-3 text-sm leading-7 text-slate-300">{copy.subtitle}</p>
-          </div>
-          <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {statCards.map(card => (
-              <div key={card.label} className="rounded-2xl border border-white/10 bg-white/[0.07] p-4">
-                <div className="flex items-center justify-between gap-2"><span className="text-xs leading-5 text-slate-300">{card.label}</span><span className="text-lg text-[#dfc58f]">{card.icon}</span></div>
-                <strong className="mt-2 block text-3xl font-extrabold tabular-nums">{loading ? "…" : card.value}</strong>
-              </div>
-            ))}
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => void load()} disabled={loading} className="rounded-xl border border-[#e5e0d5] px-4 py-2.5 text-xs font-bold hover:border-[#b18d4d] disabled:opacity-50">{loading ? copy.loading : copy.refresh} ↻</button>
+            <Link href="/owner" className="rounded-xl bg-[#14243a] px-4 py-2.5 text-xs font-bold text-white no-underline hover:bg-[#29425f]">{copy.owner} ↗</Link>
           </div>
         </header>
 
-        <nav aria-label={ar ? "اختصارات غرفة الذكاء" : "AI room shortcuts"} className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          {rooms.map(room => {
-            const title = room.key === "manager" ? copy.managerTitle : room.key === "reports" ? copy.reportsTitle : copy.meetingTitle;
-            const description = room.key === "manager" ? copy.managerDesc : room.key === "reports" ? copy.reportsDesc : copy.meetingDesc;
-            return <Link key={"quick-" + room.key} href={room.href} className="flex items-center gap-3 rounded-2xl border border-[#dcd4c4] bg-white p-4 text-inherit no-underline shadow-sm transition hover:border-[#b18d4d] hover:shadow-md">
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#14243a] text-xl text-[#dfc58f]">{room.icon}</span>
-              <span className="min-w-0"><strong className="block text-sm">{title}</strong><small className="mt-1 block text-xs leading-5 text-slate-500">{description}</small></span>
-              <span className="ms-auto text-sm font-bold text-[#9b783d]">↗</span>
-            </Link>;
-          })}
-        </nav>
-
-        {error ? <section role="alert" className="rounded-2xl border border-rose-200 bg-white p-5 text-sm text-rose-800"><strong>{copy.error}</strong><p className="mt-1 break-words text-xs">{error}</p><button onClick={() => void load()} className="mt-3 rounded-lg border border-rose-200 px-3 py-2 font-semibold">{copy.refresh}</button></section> : null}
-
-        <section className="rounded-2xl border border-[#e5e0d5] bg-white p-5 shadow-[0_4px_16px_#17243707] sm:p-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div><p className="text-[10px] font-extrabold tracking-[.18em] text-[#9b783d]">SYSTEM CONTROL</p><h2 className="mt-1 text-xl font-extrabold">{copy.status}</h2></div>
-            <button onClick={() => void load()} disabled={loading} className="rounded-xl border border-[#e5e0d5] px-4 py-2.5 text-xs font-bold transition hover:border-[#b18d4d] disabled:opacity-50">{loading ? copy.loading : copy.refresh} ↻</button>
-          </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-[#e8e2d6] bg-[#fbfaf7] p-4"><span className="text-xs text-slate-500">{copy.engine}</span><strong className="mt-2 block text-sm">{status ? (status.configured ? copy.configured : copy.missing) : "—"}</strong></div>
-            <div className="rounded-xl border border-[#e8e2d6] bg-[#fbfaf7] p-4"><span className="text-xs text-slate-500">{copy.manager}</span><strong className="mt-2 block text-sm">{status ? (status.managerEnabled ? copy.enabled : copy.paused) : "—"}</strong></div>
-          </div>
-          <div className="mt-3 rounded-xl border border-amber-200 bg-[#fbf8f0] p-4">
-            <p className="text-xs font-extrabold text-[#805f2e]">{copy.limitation}</p>
-            <p className="mt-2 text-sm leading-7 text-slate-700">{copy.limitationText}</p>
-          </div>
+        <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {statCards.map(card => (
+            <div key={card.label} className="rounded-2xl border border-[#e5e0d5] bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-2"><span className="text-xs leading-5 text-slate-500">{card.label}</span><span className="text-lg text-[#9b783d]">{card.icon}</span></div>
+              <strong className="mt-2 block text-3xl font-extrabold tabular-nums">{loading ? "…" : card.value}</strong>
+            </div>
+          ))}
         </section>
 
         <section className="space-y-3">
-          <div><p className="text-[10px] font-extrabold tracking-[.18em] text-[#9b783d]">MANAGEMENT WORKSPACES</p><h2 className="mt-1 text-xl font-extrabold">{copy.workspaces}</h2><p className="mt-1 text-sm text-slate-600">{copy.workspacesText}</p></div>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div><p className="text-[10px] font-extrabold tracking-[.18em] text-[#9b783d]">CONTROL ROOMS</p><h2 className="mt-1 text-lg font-extrabold">{copy.workspaces}</h2></div>
+            <span className="text-xs text-slate-500">{ar ? "3 غرف رئيسية" : "3 main rooms"}</span>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {rooms.map(room => {
               const title = room.key === "manager" ? copy.managerTitle : room.key === "reports" ? copy.reportsTitle : copy.meetingTitle;
               const description = room.key === "manager" ? copy.managerDesc : room.key === "reports" ? copy.reportsDesc : copy.meetingDesc;
-              return <Link key={room.key} href={room.href} className="group flex min-h-[178px] flex-col rounded-2xl border border-[#e5e0d5] bg-white p-5 text-inherit no-underline shadow-[0_4px_16px_#17243707] transition hover:-translate-y-0.5 hover:border-[#b18d4d] hover:shadow-md">
-                <div className="flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-xl bg-[#f4efe2] text-xl text-[#9b783d]">{room.icon}</span><span className="text-xs font-bold text-[#9b783d]">{copy.open} ↗</span></div>
-                <h3 className="mt-5 text-lg font-extrabold">{title}</h3><p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
+              return <Link key={room.key} href={room.href} className="group flex min-h-[142px] items-center gap-4 rounded-2xl border border-[#e5e0d5] bg-white p-4 text-inherit no-underline shadow-sm transition hover:-translate-y-0.5 hover:border-[#b18d4d] hover:shadow-md">
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#14243a] text-2xl text-[#dfc58f]">{room.icon}</span>
+                <span className="min-w-0 flex-1"><strong className="block text-sm">{title}</strong><small className="mt-2 block text-xs leading-5 text-slate-500">{description}</small><span className="mt-2 block text-xs font-bold text-[#9b783d]">{copy.open} ↗</span></span>
               </Link>;
             })}
           </div>
         </section>
 
         <section className="space-y-3">
-          <div><p className="text-[10px] font-extrabold tracking-[.18em] text-[#9b783d]">SPECIALIST DEPARTMENTS</p><h2 className="mt-1 text-xl font-extrabold">{copy.departments}</h2><p className="mt-1 text-sm text-slate-600">{copy.departmentsText}</p></div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div><p className="text-[10px] font-extrabold tracking-[.18em] text-[#9b783d]">SPECIALIST OFFICES</p><h2 className="mt-1 text-lg font-extrabold">{copy.departments}</h2></div>
+            <span className="text-xs text-slate-500">{ar ? "9 أقسام مستقلة" : "9 independent departments"}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
             {team.map(([key, arName, enName, arDesc, enDesc, icon]) => {
               const count = tasks.filter(task => task.specialistKey === key).length;
-              return <Link key={key} href={"/owner/ai/office/" + key} className="group flex min-h-[174px] flex-col rounded-2xl border border-[#e5e0d5] bg-white p-5 text-inherit no-underline shadow-[0_4px_16px_#17243707] transition hover:-translate-y-0.5 hover:border-[#b18d4d] hover:shadow-md">
-                <div className="flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-xl bg-[#f4efe2] text-xl text-[#9b783d]">{icon}</span><span className="text-xs font-bold text-[#9b783d]">{copy.open} ↗</span></div>
-                <h3 className="mt-4 font-extrabold">{ar ? arName : enName}</h3><p className="mt-1 flex-1 text-sm leading-6 text-slate-600">{ar ? arDesc : enDesc}</p>
-                <div className="mt-4 flex items-center justify-between border-t border-[#f0ede6] pt-3"><span className="text-xs text-slate-500">{copy.recorded}</span><strong className="text-sm tabular-nums text-[#14243a]">{count}</strong></div>
+              return <Link key={key} href={"/owner/ai/office/" + key} className="group flex min-h-[150px] flex-col rounded-2xl border border-[#e5e0d5] bg-white p-4 text-inherit no-underline shadow-sm transition hover:-translate-y-0.5 hover:border-[#b18d4d] hover:shadow-md">
+                <div className="flex items-center justify-between gap-2"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#f4efe2] text-xl text-[#9b783d]">{icon}</span><span className="text-xs font-bold text-[#9b783d]">↗</span></div>
+                <h3 className="mt-3 text-sm font-extrabold leading-6">{ar ? arName : enName}</h3>
+                <div className="mt-auto flex items-center justify-between border-t border-[#f0ede6] pt-3"><span className="text-[11px] text-slate-500">{copy.recorded}</span><strong className="text-sm tabular-nums">{loading ? "…" : count}</strong></div>
               </Link>;
             })}
           </div>
-          {!loading && tasks.length === 0 && !error ? <p className="rounded-xl border border-dashed border-[#d9d2c5] bg-white p-4 text-sm text-slate-500">{copy.noData}</p> : null}
         </section>
 
-        <footer className="rounded-2xl border border-[#e5e0d5] bg-white p-5 text-xs leading-6 text-slate-600">{copy.footer}</footer>
+        <section className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border border-[#e5e0d5] bg-white p-4 shadow-sm">
+            <div className="flex items-center gap-2"><span className="text-lg text-[#9b783d]">◈</span><h2 className="text-sm font-extrabold">{copy.status}</h2></div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="rounded-xl bg-[#f7f4ed] p-3"><span className="text-[11px] text-slate-500">{copy.engine}</span><strong className="mt-1 block text-xs">{status ? (status.configured ? copy.configured : copy.missing) : "—"}</strong></div>
+              <div className="rounded-xl bg-[#f7f4ed] p-3"><span className="text-[11px] text-slate-500">{copy.manager}</span><strong className="mt-1 block text-xs">{status ? (status.managerEnabled ? copy.enabled : copy.paused) : "—"}</strong></div>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-[#e5e0d5] bg-white p-4 shadow-sm">
+            <h2 className="text-sm font-extrabold">{copy.limitation}</h2>
+            <p className="mt-2 text-xs leading-6 text-slate-600">{copy.limitationText}</p>
+          </div>
+        </section>
+        {error ? <section role="alert" className="rounded-2xl border border-rose-200 bg-white p-4 text-sm text-rose-800"><strong>{copy.error}</strong><p className="mt-1 break-words text-xs">{error}</p><button onClick={() => void load()} className="mt-3 rounded-lg border border-rose-200 px-3 py-2 font-semibold">{copy.refresh}</button></section> : null}
       </div>
     </main>
   );
+}
 }
