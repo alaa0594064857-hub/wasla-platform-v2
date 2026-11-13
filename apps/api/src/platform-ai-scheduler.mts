@@ -106,9 +106,8 @@ async function seedWeekOneTasks(): Promise<number> {
     JOIN platform_role_assignments pra ON pra.user_id=u.id
       AND pra.status='active' AND pra.role_scope='platform'
     JOIN roles r ON r.id=pra.role_id AND r.scope_type='platform' AND r.name='platform_owner'
-    JOIN role_permissions rp ON rp.role_id=r.id AND rp.scope_type='platform'
-    JOIN permissions p ON p.id=rp.permission_id AND p.scope_type='platform'
-      AND p.permission_key='platform.manage'
+    -- Ownership is established by the active platform_owner assignment.
+    -- Do not make automatic task seeding depend on a separately seeded permission join.
     WHERE u.status='active' AND u.email_verified=TRUE`);
   let created=0;
   for(const owner of owners.rows) {
