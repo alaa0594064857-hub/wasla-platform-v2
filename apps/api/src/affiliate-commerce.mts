@@ -192,11 +192,12 @@ export async function handleAffiliatePublicCatalogRequest(req: IncomingMessage, 
        ORDER BY i.updated_at DESC LIMIT 60`,
       [country]
     );
-    const items = result.rows.flatMap((row: Record<string, unknown>) => {
+    const affiliateItems = result.rows.flatMap((row: Record<string, unknown>) => {
       const outboundUrl = approvedOutboundUrl(row.outbound_url, row.marketplace_domain);
       if (!outboundUrl || typeof row.id !== "string") return [];
       return [{
         id: row.id,
+        kind: "affiliate",
         title_en: row.title_en,
         title_ar: row.title_ar,
         description_en: row.description_en,
@@ -208,6 +209,37 @@ export async function handleAffiliatePublicCatalogRequest(req: IncomingMessage, 
         outbound_path: `/api/affiliate/out/${row.id}`
       }];
     });
+    // Editorial discovery cards are not affiliate offers and never imply local stock,
+    // pricing, checkout, or commission. Only allow the three verified manufacturer hosts.
+    const editorialResult = await db.query(
+      `SELECT id,title_en,title_ar,description_en,description_ar,source_url,last_verified_at
+       FROM affiliate_items
+       WHERE content_source='editorial' AND publication_status='draft'
+         AND last_verified_at >= NOW() - INTERVAL '30 days'
+       ORDER BY created_at ASC LIMIT 20`
+    );
+    const allowedEditorialHosts = new Set(["owalalife.com", "www.stanley1913.com", "www.anker.com"]);
+    const editorialItems = editorialResult.rows.flatMap((row: Record<string, unknown>) => {
+      if (typeof row.id !== "string" || typeof row.source_url !== "string") return [];
+      try {
+        const url = new URL(row.source_url);
+        if (url.protocol !== "https:" || !allowedEditorialHosts.has(url.hostname)) return [];
+        return [{
+          id: row.id,
+          kind: "editorial",
+          title_en: row.title_en,
+          title_ar: row.title_ar,
+          description_en: row.description_en,
+          description_ar: row.description_ar,
+          marketplace: "Official brand source",
+          destination_country: country,
+          disclosure_en: "",
+          disclosure_ar: "",
+          outbound_path: url.toString()
+        }];
+      } catch { return []; }
+    });
+    const items = [...editorialItems, ...affiliateItems];
     reply(res, 200, { success: true, country, items });
   } catch (error) {
     console.error("WASLA public affiliate catalog error:", error);
