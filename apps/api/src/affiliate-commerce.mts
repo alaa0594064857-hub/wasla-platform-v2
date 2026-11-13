@@ -232,7 +232,9 @@ export async function handleAffiliatePublicCatalogRequest(req: IncomingMessage, 
        FROM affiliate_items
        WHERE content_source='editorial' AND publication_status='draft'
          AND last_verified_at >= NOW() - INTERVAL '30 days'
-       ORDER BY created_at ASC LIMIT 20`
+         AND (provider_item_id NOT LIKE 'retail:vatan-%' OR $1 = 'TR')
+       ORDER BY created_at ASC LIMIT 20`,
+      [country]
     );
     const allowedEditorialHosts = new Set(["owalalife.com", "www.stanley1913.com", "www.anker.com", "www.vatanbilgisayar.com"]);
     // Official product-page imagery; Vatan thumbnails are served by its product CDN.
