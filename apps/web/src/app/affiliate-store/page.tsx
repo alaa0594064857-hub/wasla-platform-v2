@@ -111,7 +111,7 @@ export default function AffiliateStorePage() {
             </div>
           </div>
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            {categories.map(value => <Link key={value.slug} href={value.slug === "all" ? "/affiliate-store" : `/affiliate-store/category/${value.slug}`}
+            {categories.map(value => <Link key={value.slug} href={value.slug === "all" ? `/affiliate-store?country=${country}` : `/affiliate-store/category/${value.slug}?country=${country}`}
               onClick={() => setCategory(value.slug)}
               className={`rounded-full border px-5 py-3 text-sm font-semibold transition ${category === value.slug ? "border-[#d8bd7c] bg-[#d8bd7c] text-[#17253a]" : "border-white/25 bg-white/5 text-white hover:bg-white/10"}`}>
               <span className="me-2">{value.icon}</span>{ar ? value.ar : value.en}
@@ -141,7 +141,7 @@ export default function AffiliateStorePage() {
           : visibleItems.length === 0 ? <div className="rounded-2xl border border-[#e5dece] bg-white p-14 text-center"><div className="text-5xl">⌕</div><p className="mt-4 text-lg font-semibold">{copy.empty}</p></div>
           : <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {visibleItems.map(item => <article key={item.id} className="group overflow-hidden rounded-2xl border border-[#e7e0d3] bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
-              <Link href={`/affiliate-store/product/${item.id}`} className="block">
+              <Link href={`/affiliate-store/product/${item.id}?country=${country}`} className="block">
                 <div className="relative flex h-64 items-center justify-center bg-[#f8f7f3] p-5">
                   {item.image_url ? <img src={item.image_url} alt={ar ? item.title_ar || item.title_en || "صورة المنتج" : item.title_en || item.title_ar || "Product image"} loading="lazy" className="h-full w-full object-contain transition duration-300 group-hover:scale-105" /> : <div className="text-5xl text-[#b59a5b]">W</div>}
                   <span className="absolute start-3 top-3 rounded-full bg-white/95 px-3 py-1.5 text-[11px] font-bold text-[#8b6d2f] shadow-sm">{item.kind === "affiliate" ? copy.affiliate : copy.seller}</span>
