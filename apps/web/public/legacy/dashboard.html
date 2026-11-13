@@ -1,0 +1,1738 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WASLA | لوحة التحكم</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<style>
+:root{--navy:#0b1d38;--navy2:#173653;--gold:#d9ad58;--cream:#f7f4ed;--white:#fff;--text:#172b46;--muted:#7d8998;--border:#e9e5dc;--green:#16865c;--shadow:0 8px 30px rgba(18,38,64,.06)}
+*{box-sizing:border-box}
+body{margin:0;font-family:Cairo,sans-serif;background:var(--cream);color:var(--text)}
+button,input,select,textarea{font-family:inherit}
+button{cursor:pointer}
+.app{display:flex;min-height:100vh}
+.sidebar{width:250px;background:linear-gradient(180deg,#091a32,#132f50);color:white;position:fixed;right:0;top:0;bottom:0;z-index:30;padding:23px 16px;display:flex;flex-direction:column;overflow-y:auto;transition:.25s}
+.sidebar-backdrop{display:none;position:fixed;inset:0;background:#05112088;z-index:25}
+.sidebar-backdrop.show{display:block}
+.brand{text-align:center;padding:10px 0 25px;border-bottom:1px solid #ffffff19;margin-bottom:20px}
+.brand-mark{width:65px;height:65px;border:2px solid var(--gold);border-radius:19px;display:grid;place-items:center;margin:auto auto 8px;color:var(--gold);font-size:37px;font-weight:900}
+.brand h1{margin:0;font-size:27px;letter-spacing:2px;color:#f2d18e}
+.brand p{margin:0;color:#c3cbd5;font-size:10px;letter-spacing:1px}
+.nav-label{color:#8294aa;font-size:11px;padding:0 13px;margin:13px 0 8px}
+.nav-btn{border:0;background:transparent;color:#d5dce5;width:100%;display:flex;align-items:center;gap:13px;padding:12px 14px;border-radius:12px;text-align:right;font-size:13px;font-weight:700;margin-bottom:5px;transition:.2s}
+.nav-btn i{width:20px;text-align:center}
+.nav-btn:hover{background:#ffffff12;color:white}
+.nav-btn.active{color:#152744;background:linear-gradient(100deg,#f4d99e,#d8aa51)}
+.sidebar-bottom{margin-top:auto;padding-top:20px}
+.upgrade{border:1px solid #d9ad5870;border-radius:16px;padding:15px;text-align:center}
+.upgrade i{color:var(--gold);font-size:23px}
+.upgrade h3{margin:5px 0;color:#f1d28f;font-size:14px}
+.upgrade p{color:#c3cbd5;font-size:11px;line-height:1.8}
+.avatar{width:39px;height:39px;border-radius:50%;background:linear-gradient(140deg,#f4d99e,#c38b31);display:grid;place-items:center;color:var(--navy);font-weight:900;overflow:hidden;flex-shrink:0}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.top-avatar-button{padding:0;border:0;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease}
+.top-avatar-button:hover{transform:scale(1.06);box-shadow:0 0 0 3px #d9ad5840}
+.top-avatar-button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.sidebar-user{display:flex;align-items:center;gap:10px;padding-top:16px;margin-top:15px;border-top:1px solid #ffffff19}
+.sidebar-user strong{font-size:12px;display:block}
+.sidebar-user small{font-size:10px;color:#aebccc}
+.main{margin-right:250px;width:calc(100% - 250px);min-width:0}
+.topbar{height:76px;background:white;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 30px;position:sticky;top:0;z-index:10}
+.top-right,.top-left{display:flex;align-items:center;gap:15px}
+.search{background:#f5f6f8;border-radius:30px;padding:10px 15px;width:260px;display:flex;gap:10px}
+.search input{border:0;background:none;outline:none;width:100%;font-size:12px}
+.top-icon{width:39px;height:39px;border:0;border-radius:50%;background:#f3f5f7;color:var(--navy)}
+.top-icon:hover{background:#e9edf2}
+.top-profile{display:flex;align-items:center;gap:10px}
+.top-profile strong{display:block;font-size:12px}
+.top-profile small{font-size:10px;color:var(--muted)}
+.menu-toggle{display:none}
+.content{padding:27px 30px 45px;max-width:1600px;margin:auto}
+.page{display:none}
+.page.active{display:block;animation:fade .2s ease}
+@keyframes fade{from{opacity:.4;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.page-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:22px}
+.page-heading h2{font-size:22px;margin:0;font-weight:900}
+.page-heading p{font-size:12px;color:var(--muted);margin:3px 0 0}
+.card{background:white;border:1px solid var(--border);border-radius:17px;box-shadow:var(--shadow)}
+.panel{padding:20px}
+.panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:17px}
+.panel-head h3{margin:0;font-size:15px;font-weight:900}
+.btn{border:0;border-radius:10px;padding:10px 17px;font-weight:800;font-size:12px;display:inline-flex;align-items:center;gap:8px}
+.btn-gold{background:linear-gradient(110deg,#f3d99f,#d5a54b);color:#182b45}
+.btn-dark{background:var(--navy);color:white}
+.btn-light{background:#f1f4f7;color:var(--navy)}
+.btn-danger{background:#fff0f0;color:#c94c4c}
+.muted{color:var(--muted)}
+.empty{text-align:center;padding:30px 15px;color:var(--muted)}
+.empty i{font-size:30px;color:#c6ced8;margin-bottom:10px}
+.empty p{font-size:12px}
+.welcome{border-radius:20px;overflow:hidden;background:radial-gradient(circle at 12% 15%,#3e6fa455,transparent 27%),linear-gradient(115deg,#0a1d38,#17395e);color:white;padding:30px 32px;min-height:185px;display:flex;align-items:center;justify-content:space-between;position:relative;margin-bottom:20px}
+.welcome:after{content:"W";position:absolute;left:35px;top:-55px;font-size:250px;font-weight:900;color:#ffffff08}
+.welcome-text{position:relative;z-index:1}
+.welcome .eyebrow{color:#f0cf8b;font-size:11px;font-weight:800}
+.welcome h2{font-size:24px;margin:7px 0 4px;font-weight:900}
+.welcome p{color:#d2dce8;font-size:12px;margin:0 0 16px}
+.welcome-art{position:relative;z-index:1;width:125px;height:110px;border:1px solid #ebca8b55;border-radius:24px;display:grid;place-items:center;background:#ffffff0d}
+.welcome-art i{font-size:55px;color:#e8c47e}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.stat{padding:17px;display:flex;align-items:center;gap:12px;min-width:0}
+.stat-clickable{cursor:pointer;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
+.stat-clickable:hover{transform:translateY(-3px);border-color:var(--gold);box-shadow:0 10px 25px rgba(18,38,64,.11)}
+.stat-clickable:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.stat-icon{width:49px;height:49px;flex-shrink:0;border-radius:15px;display:grid;place-items:center;font-size:19px}
+.ic-blue{background:#e9f1fc;color:#326db5}.ic-gold{background:#fbf1dd;color:#c28d31}.ic-green{background:#e4f4ed;color:#16865c}.ic-purple{background:#f0eafa;color:#7652b2}
+.stat small{color:var(--muted);font-size:10px}
+.stat strong{font-size:23px;display:block;line-height:1.5}
+.stat span{font-size:10px;color:var(--muted)}
+.grid-two{display:grid;grid-template-columns:1.1fr .9fr;gap:17px;margin-bottom:20px}
+.quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+.quick{border:1px solid var(--border);border-radius:13px;padding:13px 6px;text-align:center;background:white;color:var(--text)}
+.quick:hover{border-color:var(--gold);background:#fffaf0}
+.quick i{display:grid;place-items:center;width:41px;height:41px;border-radius:50%;background:#edf3fb;color:#316cac;margin:0 auto 8px}
+.quick strong{font-size:10px;display:block}
+.activity{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid #f0eee9}
+.activity:last-child{border-bottom:0}
+.activity-icon{width:37px;height:37px;border-radius:12px;background:#edf3fb;color:#3976b8;display:grid;place-items:center}
+.activity strong{font-size:11px;display:block}
+.activity small{font-size:10px;color:var(--muted)}
+.text-link{border:0;background:none;color:#2865a5;font-weight:800;font-size:11px}
+.product-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
+.product-card{overflow:hidden}
+.product-image{height:145px;background:#f1f3f5;display:grid;place-items:center;overflow:hidden}
+.product-image img{width:100%;height:100%;object-fit:cover}
+.product-image i{font-size:35px;color:#b7c0ca}
+.product-info{padding:14px}
+.product-info h4{margin:0 0 5px;font-size:14px}
+.product-info p{font-size:11px;color:var(--muted);margin:0 0 12px;line-height:1.7}
+.company-tag{font-size:10px;color:#2865a5;font-weight:800;margin-bottom:5px}
+.product-actions{display:flex;gap:7px;flex-wrap:wrap}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:550px}
+th,td{text-align:right;padding:13px 11px;border-bottom:1px solid #f0eee9;font-size:12px}
+th{color:var(--muted);font-size:10px;background:#faf9f6}
+.pill{display:inline-block;border-radius:20px;padding:5px 10px;font-size:10px;font-weight:800}
+.pill-green{background:#e7f5ed;color:#16865c}.pill-orange{background:#fff2dc;color:#b57a20}.pill-red{background:#fff0f0;color:#c94c4c}.pill-gray{background:#eef1f4;color:#657384}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field.full{grid-column:1/-1}
+.field label{font-size:11px;font-weight:800}
+.field input,.field select,.field textarea{width:100%;border:1px solid var(--border);background:#fcfbf8;border-radius:10px;padding:12px;outline:none;font-size:12px;color:var(--text)}
+.field input:focus,.field textarea:focus{border-color:var(--gold)}
+.field textarea{min-height:100px;resize:vertical}
+.form-actions{display:flex;gap:10px;margin-top:17px}
+.discover-bar{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+.discover-bar input,.discover-bar select{border:1px solid var(--border);border-radius:10px;padding:10px;background:white;font-family:inherit;font-size:12px}
+.inbox-layout{display:grid;grid-template-columns:300px 1fr;gap:15px;min-height:480px}
+.inbox-list{padding:10px;max-height:600px;overflow:auto}
+.inbox-item{padding:13px;border-radius:12px;cursor:pointer;border-bottom:1px solid #f0eee9}
+.inbox-item:hover,.inbox-item.selected{background:#f5f3ed}
+.inbox-item strong{font-size:12px}
+.inbox-item small{display:block;color:var(--muted);font-size:10px}
+.chat-area{display:flex;flex-direction:column;min-height:480px}
+.chat-head{padding:16px;border-bottom:1px solid var(--border);font-size:13px;font-weight:800}
+.chat-messages{flex:1;padding:20px;overflow:auto;max-height:430px}
+.bubble{max-width:75%;padding:11px 14px;border-radius:14px;margin-bottom:10px;font-size:12px;line-height:1.8;overflow-wrap:anywhere}
+.bubble.mine{background:#e9f1fc;margin-right:auto}
+.bubble.theirs{background:#f4f1e9;margin-left:auto}
+.bubble small{display:block;font-size:9px;color:var(--muted);margin-top:4px}
+.chat-compose{display:flex;gap:8px;padding:14px;border-top:1px solid var(--border)}
+.chat-compose input{flex:1;min-width:0;border:1px solid var(--border);border-radius:25px;padding:11px 15px;outline:none}
+.chat-compose button{width:43px;border:0;border-radius:50%;background:var(--navy);color:white}
+.modal{display:none;position:fixed;inset:0;background:#05112099;z-index:50;align-items:center;justify-content:center;padding:15px}
+.modal.show{display:flex}
+.modal-box{background:white;border-radius:18px;padding:23px;width:100%;max-width:530px;max-height:90vh;overflow:auto}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.modal-head h3{margin:0;font-size:17px}
+.modal-close{border:0;background:#f1f3f5;width:32px;height:32px;border-radius:50%}
+.toast{position:fixed;bottom:22px;left:22px;z-index:100;background:var(--navy);color:white;padding:13px 18px;border-radius:12px;font-size:12px;display:none;max-width:90%}
+.toast.show{display:block}
+.loading{padding:25px;text-align:center;color:var(--muted);font-size:12px}
+.profile-layout{display:grid;grid-template-columns:280px 1fr;gap:18px}
+.profile-card{padding:25px;text-align:center}
+.profile-avatar-wrap{position:relative;width:125px;height:125px;margin:0 auto 15px}
+.profile-avatar{width:125px;height:125px;border-radius:50%;background:linear-gradient(140deg,#f4d99e,#c38b31);display:grid;place-items:center;color:var(--navy);font-size:45px;font-weight:900;overflow:hidden;border:4px solid #fff;box-shadow:0 5px 20px rgba(18,38,64,.12)}
+.profile-avatar img{width:100%;height:100%;object-fit:cover}
+.avatar-upload{position:absolute;bottom:2px;right:2px;width:38px;height:38px;border:3px solid white;border-radius:50%;background:var(--navy);color:white;display:grid;place-items:center;cursor:pointer}
+.profile-card h3{margin:8px 0 2px;font-size:17px}
+.profile-card p{margin:0;color:var(--muted);font-size:11px}
+.profile-note{margin-top:18px;background:#faf8f2;border-radius:12px;padding:12px;color:var(--muted);font-size:10px;line-height:1.8}
+.profile-form-panel{padding:20px}
+.profile-file{display:none}
+.url-help{font-size:9px;color:var(--muted);margin-top:2px}
+.direct-layout{display:grid;grid-template-columns:280px 1fr;gap:15px;min-height:520px}
+.direct-side{padding:12px;max-height:650px;overflow:auto}
+.direct-search{width:100%;padding:11px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px;outline:none}
+.direct-tabs{display:flex;gap:7px;margin-bottom:12px}
+.direct-tabs button{flex:1;border:0;border-radius:9px;padding:9px;background:#f1f4f7;color:var(--text);font-size:11px;font-weight:800}
+.direct-tabs button.active{background:var(--navy);color:white}
+.contact-item{display:flex;align-items:center;gap:10px;padding:11px;border-bottom:1px solid #f0eee9;cursor:pointer;border-radius:10px}
+.contact-item:hover,.contact-item.selected{background:#f5f3ed}
+.contact-avatar{width:39px;height:39px;border-radius:50%;background:#e9f1fc;color:#2865a5;display:grid;place-items:center;font-weight:900;flex-shrink:0;overflow:hidden}
+.contact-avatar img{width:100%;height:100%;object-fit:cover}
+.contact-info{min-width:0;flex:1}
+.contact-info strong{display:block;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.contact-info small{display:block;font-size:9px;color:var(--muted)}
+.contact-start{border:0;background:#f1f4f7;border-radius:8px;padding:7px;color:var(--navy)}
+.direct-chat{display:flex;flex-direction:column;min-height:520px}
+.direct-chat .chat-messages{max-height:none}
+.direct-empty{display:grid;place-items:center;min-height:400px;text-align:center;color:var(--muted);padding:20px}
+.direct-empty i{font-size:42px;color:#c6ced8;margin-bottom:12px}
+.direct-chat-head{padding:14px 17px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.direct-chat-head strong{font-size:12px;display:block}
+.direct-chat-head small{font-size:10px;color:var(--muted)}
+.direct-compose input:disabled,.direct-compose button:disabled{opacity:.5;cursor:not-allowed}
+.messaging-tabs{display:flex;gap:9px;margin-bottom:16px;background:#fff;padding:8px;border:1px solid var(--border);border-radius:14px;width:max-content;max-width:100%}
+.messaging-tab{border:0;border-radius:10px;padding:11px 18px;background:transparent;color:var(--muted);font-size:12px;font-weight:800;display:flex;align-items:center;gap:8px}
+.messaging-tab.active{background:var(--navy);color:#fff}
+.messaging-panel{display:none}
+.messaging-panel.active{display:block}
+.inquiry-original{border:1px solid #eadbbd;background:#fffaf0;border-radius:12px;padding:12px;margin:0 0 16px;font-size:12px;line-height:1.8}
+.inquiry-original strong{display:block;color:#9a6c22;margin-bottom:4px;font-size:10px}
+@media(max-width:1100px){.stats{grid-template-columns:repeat(2,1fr)}.product-grid{grid-template-columns:repeat(2,1fr)}.profile-layout{grid-template-columns:1fr}.profile-card{display:flex;align-items:center;text-align:right;gap:18px}.profile-avatar-wrap{margin:0}.profile-note{margin-top:0}}
+@media(max-width:760px){.sidebar{transform:translateX(100%)}.sidebar.open{transform:translateX(0)}.main{margin-right:0;width:100%}.menu-toggle{display:inline-grid;place-items:center}.topbar{padding:0 13px;height:65px}.search{width:40vw;padding:9px 10px}.top-profile .profile-text{display:none}.content{padding:19px 13px 35px}.welcome{padding:22px;min-height:165px}.welcome h2{font-size:18px}.welcome-art{width:75px;height:75px}.welcome-art i{font-size:32px}.grid-two{grid-template-columns:1fr}.inbox-layout,.direct-layout{grid-template-columns:1fr}.inbox-list,.direct-side{max-height:230px}.profile-card{display:block;text-align:center}.profile-avatar-wrap{margin:0 auto 15px}.profile-note{margin-top:18px}}
+@media(max-width:480px){.stats{gap:8px}.stat{padding:11px;gap:7px}.stat-icon{width:37px;height:37px;font-size:14px}.stat strong{font-size:19px}.stat small{font-size:9px}.product-grid{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.quick-grid{grid-template-columns:repeat(2,1fr)}.top-left{gap:7px}.top-left .top-icon{width:35px;height:35px}.messaging-tabs{width:100%}.messaging-tab{flex:1;justify-content:center;padding:10px 7px;font-size:10px}}
+</style>
+</head>
+
+<body>
+<div class="app">
+<aside class="sidebar" id="sidebar">
+ <div class="brand"><div class="brand-mark">W</div><h1>WASLA</h1><p>CONNECT · TRADE · GROW</p></div>
+ <div class="nav-label">مساحة العمل</div>
+ <button class="nav-btn active" data-page="overview"><i class="fa-solid fa-house"></i> الرئيسية</button>
+ <button class="nav-btn" data-page="company"><i class="fa-solid fa-building"></i><span id="accountSectionNavLabel">شركتي</span></button>
+ <button class="nav-btn" data-page="products"><i class="fa-solid fa-box-open"></i> منتجاتي</button>
+ <button class="nav-btn" data-page="discover"><i class="fa-solid fa-compass"></i> اكتشف المنتجات</button>
+ <div class="nav-label">التواصل والتجارة</div>
+ <button class="nav-btn" data-page="inquiries"><i class="fa-solid fa-file-invoice"></i> الاستفسارات</button>
+ <button class="nav-btn" data-page="inbox" data-messaging-mode="inquiries"><i class="fa-solid fa-comments"></i> المراسلات</button>
+ <div class="nav-label">حسابك</div>
+ <button class="nav-btn" data-page="profile"><i class="fa-solid fa-user"></i> الملف الشخصي</button>
+ <button class="nav-btn" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i> تسجيل الخروج</button>
+ <div class="sidebar-bottom">
+  <div class="upgrade"><i class="fa-solid fa-crown"></i><h3>WASLA Business</h3><p>مساحة واحدة لإدارة حضورك التجاري والتواصل مع شركائك.</p></div>
+  <div class="sidebar-user"><div class="avatar" id="sideAvatar">W</div><div><strong id="sideName">مستخدم WASLA</strong><small id="sideType">حساب تجاري</small></div></div>
+ </div>
+</aside>
+
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+<main class="main">
+<header class="topbar">
+ <div class="top-right">
+  <button class="top-icon menu-toggle" id="menuToggle" type="button" aria-label="فتح القائمة" aria-expanded="false"><i class="fa-solid fa-bars"></i></button>
+  <div class="search"><i class="fa-solid fa-magnifying-glass"></i><input id="globalSearch" placeholder="ابحث في المنتجات..."></div>
+ </div>
+ <div class="top-left">
+  <button class="top-icon" onclick="goTo('inquiries')" title="الاستفسارات"><i class="fa-regular fa-bell"></i></button>
+  <button class="top-icon" onclick="goTo('inbox')" title="المراسلات"><i class="fa-regular fa-comments"></i></button>
+  <div class="top-profile">
+   <button class="avatar top-avatar-button" id="topAvatar" type="button" title="الملف الشخصي" aria-label="فتح الملف الشخصي">W</button>
+   <div class="profile-text"><strong id="topName">مرحباً بك في WASLA</strong><small id="topCompany">مساحة أعمالك</small></div>
+  </div>
+ </div>
+</header>
+
+<div class="content">
+<section class="page active" id="page-overview">
+ <div class="welcome">
+  <div class="welcome-text"><div class="eyebrow">WASLA BUSINESS PLATFORM</div><h2>أهلاً بك في عالم الأعمال والتجارة</h2><p>اكتشف منتجات جديدة، اعرض أعمالك، وابنِ علاقات تجارية تتجاوز الحدود.</p><button class="btn btn-gold" onclick="goTo('discover')"><i class="fa-solid fa-arrow-left"></i> اكتشف الفرص التجارية</button></div>
+  <div class="welcome-art"><i class="fa-solid fa-handshake"></i></div>
+ </div>
+ <div class="stats">
+  <div class="card stat stat-clickable" data-page="products" role="button" tabindex="0"><div class="stat-icon ic-gold"><i class="fa-solid fa-box-open"></i></div><div><small>منتجاتي</small><strong id="statProducts">—</strong><span>المنتجات المسجلة</span></div></div>
+  <div class="card stat stat-clickable" data-page="inquiries" role="button" tabindex="0"><div class="stat-icon ic-blue"><i class="fa-solid fa-file-circle-question"></i></div><div><small>الاستفسارات</small><strong id="statInquiries">—</strong><span>المرتبطة بحسابك</span></div></div>
+  <div class="card stat stat-clickable" data-page="inquiries" data-open-only="true" role="button" tabindex="0"><div class="stat-icon ic-green"><i class="fa-solid fa-check-circle"></i></div><div><small>استفسارات مفتوحة</small><strong id="statOpen">—</strong><span>تحتاج إلى متابعة</span></div></div>
+  <div class="card stat stat-clickable" data-page="company" role="button" tabindex="0"><div class="stat-icon ic-purple"><i class="fa-solid fa-building"></i></div><div><small>ملف الحساب</small><strong id="statCompany">—</strong><span>حالة الملف التجاري</span></div></div>
+ </div>
+ <div class="grid-two">
+  <div class="card panel"><div class="panel-head"><h3>الوصول السريع</h3></div><div class="quick-grid">
+   <button class="quick" onclick="goTo('products');openProductModal()"><i class="fa-solid fa-plus"></i><strong>إضافة منتج</strong></button>
+   <button class="quick" onclick="goTo('company')"><i class="fa-solid fa-building"></i><strong>بيانات الحساب</strong></button>
+   <button class="quick" onclick="goTo('discover')"><i class="fa-solid fa-magnifying-glass"></i><strong>تصفح المنتجات</strong></button>
+   <button class="quick" onclick="goTo('inbox')"><i class="fa-solid fa-message"></i><strong>المراسلات</strong></button>
+  </div></div>
+  <div class="card panel"><div class="panel-head"><h3>آخر الاستفسارات</h3><button class="text-link" onclick="goTo('inquiries')">عرض الكل ←</button></div><div id="recentInquiries"><div class="loading">جارٍ تحميل البيانات...</div></div></div>
+ </div>
+ <div class="card panel"><div class="panel-head"><h3>أحدث منتجاتك</h3><button class="text-link" onclick="goTo('products')">عرض الكل ←</button></div><div id="recentProducts" class="product-grid"></div></div>
+</section>
+
+<section class="page" id="page-company">
+ <div class="page-heading"><div><h2 id="accountSectionTitle">ملف شركتي</h2><p>أدر معلومات حسابك التجاري التي تظهر في WASLA.</p></div></div>
+ <div class="card panel"><div class="panel-head"><h3>المعلومات التجارية</h3></div>
+  <form id="companyForm"><div class="form-grid">
+   <div class="field full"><label>اسم الشركة أو النشاط التجاري</label><input id="companyName" required placeholder="اسم الشركة أو النشاط التجاري"></div>
+   <div class="field"><label>الدولة</label><input id="companyCountry" placeholder="الدولة"></div>
+  </div><div class="form-actions"><button class="btn btn-gold" type="submit">حفظ التغييرات</button></div></form>
+ </div>
+</section>
+
+<section class="page" id="page-products">
+ <div class="page-heading"><div><h2>منتجاتي</h2><p>إدارة المنتجات التي تعرضها في منصة WASLA.</p></div><button class="btn btn-gold" onclick="openProductModal()"><i class="fa-solid fa-plus"></i> إضافة منتج</button></div>
+ <div id="myProducts" class="product-grid"></div>
+</section>
+
+<section class="page" id="page-discover">
+ <div class="page-heading"><div><h2>اكتشف المنتجات</h2><p>تصفح المنتجات المنشورة من جميع الحسابات على WASLA.</p></div></div>
+ <div class="discover-bar"><input id="discoverSearch" placeholder="ابحث عن منتج أو وصف..."><select id="discoverCategory"><option value="">كل التصنيفات</option></select><button class="btn btn-dark" onclick="loadDiscover()">بحث</button></div>
+ <div id="discoverProducts" class="product-grid"></div>
+</section>
+
+<section class="page" id="page-inquiries">
+ <div class="page-heading"><div><h2>الاستفسارات التجارية</h2><p id="inquiriesDescription">تابع الاستفسارات المرتبطة بمنتجاتك وطلباتك.</p></div></div>
+ <div class="card panel"><div class="table-wrap"><table><thead><tr><th>المنتج</th><th>الكمية</th><th>الحالة</th><th>التاريخ</th><th>الإجراء</th></tr></thead><tbody id="inquiriesTable"></tbody></table></div></div>
+</section>
+
+<section class="page" id="page-inbox">
+ <div class="page-heading"><div><h2>المراسلات</h2><p>كل محادثاتك التجارية في مكان واحد.</p></div></div>
+
+ <div class="messaging-tabs">
+  <button class="messaging-tab active" id="inquiryMessagingTab" type="button" onclick="switchMessagingMode('inquiries')"><i class="fa-solid fa-file-invoice"></i> محادثات الاستفسارات</button>
+  <button class="messaging-tab" id="directMessagingTab" type="button" onclick="switchMessagingMode('direct')"><i class="fa-solid fa-message"></i> الرسائل المباشرة</button>
+ </div>
+
+ <div class="messaging-panel active" id="inquiryMessagingPanel">
+  <div class="inbox-layout">
+   <div class="card inbox-list" id="inboxList"></div>
+   <div class="card chat-area">
+    <div class="chat-head" id="chatTitle">اختر استفساراً لعرض المحادثة</div>
+    <div class="chat-messages" id="chatMessages"><div class="empty">ستظهر الرسائل هنا</div></div>
+    <form class="chat-compose" id="chatForm"><input id="chatInput" placeholder="اكتب رسالتك..." disabled autocomplete="off"><button type="submit" id="chatSend" disabled><i class="fa-solid fa-paper-plane"></i></button></form>
+   </div>
+  </div>
+ </div>
+
+ <div class="messaging-panel" id="directMessagingPanel">
+  <div class="direct-layout">
+   <div class="card direct-side">
+    <input class="direct-search" id="contactSearch" placeholder="ابحث بالاسم أو نوع الحساب أو الدولة...">
+    <div class="direct-tabs"><button id="contactsTab" class="active" type="button" onclick="switchDirectTab('contacts')">دليل الحسابات</button><button id="conversationsTab" type="button" onclick="switchDirectTab('conversations')">محادثاتي</button></div>
+    <div id="directList"><div class="loading">جارٍ تحميل الحسابات...</div></div>
+   </div>
+   <div class="card direct-chat">
+    <div class="direct-chat-head" id="directChatHead"><div class="contact-avatar"><i class="fa-solid fa-comments"></i></div><div><strong>التواصل المباشر</strong><small>اختر حساباً لبدء المحادثة</small></div></div>
+    <div class="chat-messages" id="directMessages"><div class="direct-empty"><div><i class="fa-regular fa-message"></i><p>اختر حساباً من دليل الحسابات أو محادثاتك السابقة.</p></div></div></div>
+    <form class="chat-compose direct-compose" id="directChatForm"><input id="directMessageInput" placeholder="اكتب رسالتك..." disabled autocomplete="off"><button type="submit" id="directSendButton" disabled><i class="fa-solid fa-paper-plane"></i></button></form>
+   </div>
+  </div>
+ </div>
+</section>
+
+<section class="page" id="page-profile">
+ <div class="page-heading"><div><h2>الملف الشخصي</h2><p>إدارة بياناتك الشخصية وروابط التواصل التي تظهر في WASLA.</p></div></div>
+ <div class="profile-layout">
+  <div class="card profile-card">
+   <div class="profile-avatar-wrap"><div class="profile-avatar" id="profileAvatar"><span id="profileAvatarInitial">W</span></div><label class="avatar-upload" for="profileImageInput" title="تغيير الصورة"><i class="fa-solid fa-camera"></i></label><input type="file" id="profileImageInput" class="profile-file" accept="image/jpeg,image/png,image/webp"></div>
+   <h3 id="profilePreviewName">مستخدم WASLA</h3><p id="profilePreviewType">حساب WASLA</p>
+   <div class="profile-note">الصورة الشخصية اختيارية. الصيغ المدعومة JPEG وPNG وWebP، والحد الأقصى 5MB.</div>
+  </div>
+  <div class="card profile-form-panel">
+   <form id="profileForm"><div class="form-grid">
+    <div class="field full"><label>الاسم الكامل</label><input id="fullName" required placeholder="اسمك الكامل"></div>
+    <div class="field"><label>البريد الإلكتروني</label><input id="email" disabled></div>
+    <div class="field"><label>نوع الحساب</label><input id="accountType" disabled></div>
+    <div class="field full"><label>العبارة التعريفية Tagline</label><input id="profileTagline" maxlength="150" placeholder="مثلاً: مورد موثوق للمنتجات الغذائية"></div>
+    <div class="field full"><label>نبذة عنك</label><textarea id="profileBio" maxlength="1000" placeholder="اكتب نبذة مختصرة عنك أو عن نشاطك..."></textarea></div>
+    <div class="field"><label>WhatsApp</label><input id="profileWhatsapp" type="url" placeholder="https://wa.me/..."><div class="url-help">يفضل استخدام رابط WhatsApp كامل.</div></div>
+    <div class="field"><label>Facebook</label><input id="profileFacebook" type="url" placeholder="https://facebook.com/..."></div>
+    <div class="field full"><label>الموقع الإلكتروني</label><input id="profileWebsite" type="url" placeholder="https://example.com"></div>
+   </div><div class="form-actions"><button class="btn btn-gold" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ الملف الشخصي</button></div></form>
+  </div>
+ </div>
+</section>
+</div>
+</main>
+</div>
+
+<div class="modal" id="productModal"><div class="modal-box">
+ <div class="modal-head"><h3 id="productModalTitle">إضافة منتج جديد</h3><button class="modal-close" onclick="closeProductModal()">×</button></div>
+ <form id="productForm"><input type="hidden" id="productId"><div class="form-grid">
+  <div class="field full"><label>اسم المنتج</label><input id="productName" required></div>
+  <div class="field full"><label>التصنيف</label><input id="productCategory"></div>
+  <div class="field full"><label>وصف المنتج</label><textarea id="productDescription"></textarea></div>
+  <div class="field full"><label>رابط صورة المنتج</label><input id="productImage" type="url"></div>
+ </div><div class="form-actions"><button class="btn btn-gold" type="submit">حفظ المنتج</button><button class="btn btn-light" type="button" onclick="closeProductModal()">إلغاء</button></div></form>
+</div></div>
+
+<div class="modal" id="inquiryModal"><div class="modal-box">
+ <div class="modal-head"><h3>إرسال استفسار تجاري</h3><button class="modal-close" onclick="closeInquiryModal()">×</button></div>
+ <form id="inquiryForm"><input type="hidden" id="inquiryProductId"><div class="form-grid">
+  <div class="field full"><label>الكمية المطلوبة</label><input id="inquiryQuantity" required></div>
+  <div class="field full"><label>رسالتك</label><textarea id="inquiryMessage" required></textarea></div>
+ </div><div class="form-actions"><button class="btn btn-gold" type="submit">إرسال الاستفسار</button></div></form>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL="https://bzrcbodvcuujdjupfgzw.supabase.co";
+const SUPABASE_KEY="sb_publishable_EAWH4688yaEOk537GOBWIg_Hz4DPN3u";
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+const PROFILE_BUCKET="profile-media";
+const MAX_PROFILE_IMAGE_SIZE=5*1024*1024;
+
+let currentUser=null,currentProfile=null,currentCompany=null;
+let products=[],inquiries=[],selectedInquiry=null,messagesChannel=null;
+let dashboardInitialized=false,dashboardInitializing=false;
+let pendingProfileImage=null,profilePreviewObjectUrl=null;
+
+let directProfiles=[];
+let directConversations=[];
+let selectedDirectConversation=null;
+let selectedDirectProfile=null;
+let directMessagesChannel=null;
+let directTab="contacts";
+let messagingMode="inquiries";
+
+let directMessagesRequestId=0;
+let directOpenRequestId=0;
+let directConversationsRequestId=0;
+let inquiryMessagesRequestId=0;
+let inquiryOpenRequestId=0;
+let directStartLocks=new Set();
+let directSending=false;
+let inquirySending=false;
+
+function showToast(message){
+ const toast=document.getElementById("toast");
+ toast.textContent=message;
+ toast.classList.add("show");
+ clearTimeout(window.toastTimer);
+ window.toastTimer=setTimeout(()=>toast.classList.remove("show"),3500);
+}
+function esc(v){
+ return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+}
+function dateText(v){
+ if(!v)return "—";
+ const d=new Date(v);
+ return isNaN(d)?"—":d.toLocaleDateString("ar");
+}
+function timeText(v){
+ if(!v)return "";
+ const d=new Date(v);
+ return isNaN(d)?"":d.toLocaleTimeString("ar",{hour:"2-digit",minute:"2-digit"});
+}
+function accountLabel(t){
+ return({company:"شركة",manufacturer:"مصنّع",brand:"علامة تجارية",trader:"تاجر",buyer:"مشتري"})[t]||t||"حساب WASLA";
+}
+function accountSectionLabel(t){
+ return({company:"شركتي",buyer:"مشتري",trader:"تاجر",manufacturer:"مصنّعي",brand:"علامتي التجارية"})[t]||"حسابي";
+}
+function updateAccountSectionLabel(type){
+ const label=accountSectionLabel(type);
+ const navLabel=document.getElementById("accountSectionNavLabel");
+ const pageTitle=document.getElementById("accountSectionTitle");
+ if(navLabel)navLabel.textContent=label;
+ if(pageTitle)pageTitle.textContent=label;
+}
+function statusLabel(s){
+ return({pending:"قيد الانتظار",open:"مفتوح",accepted:"مقبول",rejected:"مرفوض",completed:"مكتمل",closed:"مغلق"})[s]||s||"غير محدد";
+}
+function statusClass(s){
+ if(["accepted","completed"].includes(s))return "pill-green";
+ if(["pending","open"].includes(s))return "pill-orange";
+ if(["rejected","closed"].includes(s))return "pill-red";
+ return "pill-gray";
+}
+function safeProfileUrl(value,kind="normal"){
+ const raw=String(value||"").trim();
+ if(!raw)return null;
+ try{
+  const url=new URL(raw);
+  if(!["http:","https:"].includes(url.protocol))return null;
+  if(kind==="whatsapp"&&!["wa.me","www.wa.me","api.whatsapp.com","www.api.whatsapp.com"].includes(url.hostname.toLowerCase()))return null;
+  return url.toString();
+ }catch(error){return null;}
+}
+
+/* القائمة الجانبية */
+function openSidebar(){
+ document.getElementById("sidebar").classList.add("open");
+ document.getElementById("sidebarBackdrop").classList.add("show");
+ document.getElementById("menuToggle").setAttribute("aria-expanded","true");
+}
+function closeSidebar(){
+ document.getElementById("sidebar").classList.remove("open");
+ document.getElementById("sidebarBackdrop").classList.remove("show");
+ document.getElementById("menuToggle").setAttribute("aria-expanded","false");
+}
+function toggleSidebar(){
+ document.getElementById("sidebar").classList.contains("open")?closeSidebar():openSidebar();
+}
+
+/* التنقل */
+let currentDashboardPage="overview",currentOpenOnly=false;
+function showDashboardPage(page,openOnly=false){
+ const target=document.getElementById("page-"+page);
+ if(!target){showToast("القسم المطلوب غير موجود.");return false;}
+ currentDashboardPage=page;
+ currentOpenOnly=Boolean(openOnly);
+ document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+ target.classList.add("active");
+
+ document.querySelectorAll(".nav-btn[data-page]").forEach(b=>{
+  const active=b.dataset.page===page;
+  b.classList.toggle("active",active);
+ });
+
+ closeSidebar();
+ window.scrollTo({top:0,behavior:"smooth"});
+
+ if(page==="discover")loadDiscover();
+ if(page==="inbox"){
+  loadInbox();
+  if(messagingMode==="direct")loadDirectPage();
+ }
+ if(page==="inquiries")renderInquiries(currentOpenOnly);
+ return true;
+}
+function goTo(page,openOnly=false){
+ const same=currentDashboardPage===page&&currentOpenOnly===Boolean(openOnly);
+ if(!same){
+  try{history.pushState({waslaDashboard:true,page,openOnly:Boolean(openOnly)},"",location.href);}catch(e){console.warn(e);}
+ }
+ showDashboardPage(page,openOnly);
+}
+function setupDashboardHistory(){
+ const state=history.state;
+ if(state?.waslaDashboard===true){showDashboardPage(state.page||"overview",Boolean(state.openOnly));return;}
+ try{history.replaceState({waslaDashboard:true,page:"overview",openOnly:false},"",location.href);}catch(e){console.warn(e);}
+ showDashboardPage("overview",false);
+}
+window.addEventListener("popstate",e=>{
+ const s=e.state;
+ if(s?.waslaDashboard===true){showDashboardPage(s.page||"overview",Boolean(s.openOnly));return;}
+ try{history.pushState({waslaDashboard:true,page:currentDashboardPage,openOnly:currentOpenOnly},"",location.href);}catch(err){showDashboardPage("overview");}
+});
+document.addEventListener("click",e=>{
+ const b=e.target.closest("[data-page]");
+ if(b){e.preventDefault();goTo(b.dataset.page,b.dataset.openOnly==="true");}
+});
+document.addEventListener("keydown",e=>{
+ const card=e.target.closest(".stat-clickable");
+ if(card&&(e.key==="Enter"||e.key===" ")){e.preventDefault();goTo(card.dataset.page,card.dataset.openOnly==="true");}
+});
+
+/* التبديل بين نوعي المراسلات */
+function switchMessagingMode(mode){
+ messagingMode=mode==="direct"?"direct":"inquiries";
+ document.getElementById("inquiryMessagingTab").classList.toggle("active",messagingMode==="inquiries");
+ document.getElementById("directMessagingTab").classList.toggle("active",messagingMode==="direct");
+ document.getElementById("inquiryMessagingPanel").classList.toggle("active",messagingMode==="inquiries");
+ document.getElementById("directMessagingPanel").classList.toggle("active",messagingMode==="direct");
+
+ if(messagingMode==="inquiries")loadInbox();
+ else loadDirectPage();
+}
+
+/* بدء التشغيل */
+async function init(){
+ if(dashboardInitializing)return;
+ dashboardInitializing=true;
+ try{
+  const {data,error}=await db.auth.getSession();
+  if(error){console.error(error);showToast("تعذر التحقق من الجلسة.");return;}
+  if(!data?.session){location.replace("index.html");return;}
+  currentUser=data.session.user;
+  document.getElementById("email").value=currentUser.email||"";
+  if(!dashboardInitialized){
+   setupDashboardHistory();
+   dashboardInitialized=true;
+   await loadAccountData();
+  }
+ }catch(error){console.error(error);showToast("حدث خطأ أثناء تحميل لوحة التحكم.");}
+ finally{dashboardInitializing=false;}
+}
+window.addEventListener("pageshow",e=>{if(e.persisted)init();});
+
+async function loadAccountData(){
+ const {data,error}=await db.from("profiles")
+  .select("id,full_name,account_type,avatar_url,bio,tagline,whatsapp_url,facebook_url,website_url,country")
+  .eq("id",currentUser.id).maybeSingle();
+ if(error){showToast("تعذر تحميل الملف الشخصي: "+error.message);return;}
+ if(!data){showToast("لم يتم العثور على ملف شخصي لهذا الحساب.");return;}
+ currentProfile=data;
+
+ updateAccountSectionLabel(data.account_type);
+
+ const name=data.full_name||"مستخدم WASLA";
+ const initial=name.trim().charAt(0)||"W";
+ const type=accountLabel(data.account_type);
+ document.getElementById("topName").textContent="مرحباً، "+name;
+ document.getElementById("sideName").textContent=name;
+ document.getElementById("topCompany").textContent=type;
+ document.getElementById("sideType").textContent=type;
+ document.getElementById("fullName").value=data.full_name||"";
+ document.getElementById("accountType").value=type;
+ document.getElementById("profileTagline").value=data.tagline||"";
+ document.getElementById("profileBio").value=data.bio||"";
+ document.getElementById("profileWhatsapp").value=data.whatsapp_url||"";
+ document.getElementById("profileFacebook").value=data.facebook_url||"";
+ document.getElementById("profileWebsite").value=data.website_url||"";
+ document.getElementById("profilePreviewName").textContent=name;
+ document.getElementById("profilePreviewType").textContent=type;
+ setAvatar("topAvatar",data.avatar_url,initial);
+ setAvatar("sideAvatar",data.avatar_url,initial);
+ setProfileAvatar(data.avatar_url,initial);
+
+ await loadCompany();
+ await Promise.all([loadMyProducts(),loadMyInquiries()]);
+ renderOverview();
+ setupRealtime();
+}
+function setAvatar(id,url,initial){
+ const el=document.getElementById(id);if(!el)return;
+ if(url){el.innerHTML=`<img src="${esc(url)}" alt="الصورة الشخصية" onerror="this.parentElement.textContent='${esc(initial||"W")}'">`;}
+ else el.textContent=initial||"W";
+}
+function setProfileAvatar(url,initial){
+ const el=document.getElementById("profileAvatar");if(!el)return;
+ if(url)el.innerHTML=`<img src="${esc(url)}" alt="الصورة الشخصية" onerror="showProfileInitial('${esc(initial||"W")}')">`;
+ else showProfileInitial(initial||"W");
+}
+function showProfileInitial(initial){
+ const el=document.getElementById("profileAvatar");
+ if(el)el.innerHTML=`<span>${esc(initial||"W")}</span>`;
+}
+async function uploadProfileImage(file){
+ if(!currentUser||!file)throw new Error("لم يتم اختيار صورة.");
+ if(!["image/jpeg","image/png","image/webp"].includes(file.type))throw new Error("الصورة يجب أن تكون JPEG أو PNG أو WebP.");
+ if(file.size>MAX_PROFILE_IMAGE_SIZE)throw new Error("حجم الصورة يجب ألا يتجاوز 5MB.");
+ const ext=file.type==="image/jpeg"?"jpg":file.type==="image/png"?"png":"webp";
+ const path=`${currentUser.id}/avatar-${Date.now()}.${ext}`;
+ const {error}=await db.storage.from(PROFILE_BUCKET).upload(path,file,{contentType:file.type,upsert:false});
+ if(error)throw new Error("تعذر رفع الصورة: "+error.message);
+ const {data}=db.storage.from(PROFILE_BUCKET).getPublicUrl(path);
+ if(!data?.publicUrl)throw new Error("تعذر الحصول على رابط الصورة.");
+ return data.publicUrl;
+}
+document.getElementById("profileImageInput").addEventListener("change",function(e){
+ const file=e.target.files?.[0];if(!file)return;
+ if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>MAX_PROFILE_IMAGE_SIZE){
+  showToast("اختر صورة JPEG أو PNG أو WebP بحجم لا يتجاوز 5MB.");this.value="";pendingProfileImage=null;return;
+ }
+ pendingProfileImage=file;
+ if(profilePreviewObjectUrl)URL.revokeObjectURL(profilePreviewObjectUrl);
+ profilePreviewObjectUrl=URL.createObjectURL(file);
+ setProfileAvatar(profilePreviewObjectUrl,document.getElementById("fullName").value.trim().charAt(0)||"W");
+ showToast("تم اختيار الصورة. اضغط حفظ الملف الشخصي لرفعها.");
+});
+
+/* الشركة */
+async function loadCompany(){
+ const {data,error}=await db.from("companies")
+  .select("id,owner_id,name,country")
+  .eq("owner_id",currentUser.id)
+  .maybeSingle();
+
+ if(error){console.error("Company load error:",error);return;}
+
+ currentCompany=data||null;
+ document.getElementById("companyName").value=data?.name||"";
+ document.getElementById("companyCountry").value=data?.country||"";
+ document.getElementById("statCompany").textContent=data?.name?"مضاف":"غير مضاف";
+}
+document.getElementById("companyForm").addEventListener("submit",async e=>{
+ e.preventDefault();
+ const name=document.getElementById("companyName").value.trim();
+ const country=document.getElementById("companyCountry").value.trim();
+ if(!name)return showToast("يرجى إدخال اسم الشركة.");
+
+ let result;
+ if(currentCompany){
+  result=await db.from("companies")
+   .update({name,country})
+   .eq("owner_id",currentUser.id);
+ }else{
+  result=await db.from("companies")
+   .insert({owner_id:currentUser.id,name,country});
+ }
+
+ if(result.error)return showToast("تعذر حفظ الشركة: "+result.error.message);
+
+ showToast("تم حفظ بيانات الحساب.");
+ await loadCompany();
+ await loadMyProducts();
+ await loadMyInquiries();
+ renderOverview();
+});
+
+/* المنتجات */
+async function loadMyProducts(){
+ if(!currentCompany?.id){
+  products=[];
+  renderMyProducts();
+  document.getElementById("myProducts").innerHTML='<div class="empty card"><i class="fa-solid fa-building"></i><p>أكمل بيانات حسابك التجاري أولاً حتى تتمكن من إضافة المنتجات.</p><button class="btn btn-gold" onclick="goTo(\'company\')">إكمال بيانات الحساب</button></div>';
+  return;
+ }
+
+ const {data,error}=await db.from("products")
+  .select("id,company_id,name,description,category,image_url,status,created_at")
+  .eq("company_id",currentCompany.id)
+  .order("created_at",{ascending:false});
+
+ if(error){
+  console.error(error);products=[];
+  document.getElementById("myProducts").innerHTML='<div class="empty card">تعذر تحميل المنتجات: '+esc(error.message)+'</div>';
+  return;
+ }
+
+ products=data||[];
+ renderMyProducts();
+}
+function productCard(p,owner=false){
+ return `<article class="card product-card">
+  <div class="product-image">${p.image_url?`<img src="${esc(p.image_url)}" alt="${esc(p.name)}" onerror="this.style.display='none'">`:'<i class="fa-solid fa-box"></i>'}</div>
+  <div class="product-info"><div class="company-tag">${esc(p.category||"عام")}</div><h4>${esc(p.name)}</h4><p>${esc(p.description||"لا يوجد وصف لهذا المنتج حتى الآن.")}</p>
+  ${owner?`<div class="product-actions"><button class="btn btn-light" onclick="editProduct('${p.id}')">تعديل</button><button class="btn btn-danger" onclick="deleteProduct('${p.id}')"><i class="fa-solid fa-trash"></i></button></div>`:`<div class="product-actions"><button class="btn btn-gold" onclick="openInquiryModal('${p.id}')">إرسال استفسار</button><button class="btn btn-light" onclick="startDirectChat('${p.owner_user_id||""}')"><i class="fa-solid fa-message"></i> مراسلة</button></div>`}
+  </div></article>`;
+}
+function renderMyProducts(){
+ const container=document.getElementById("myProducts"),recent=document.getElementById("recentProducts");
+ if(!products.length){
+  container.innerHTML='<div class="empty card"><i class="fa-solid fa-box-open"></i><p>لم تضف أي منتجات بعد.</p><button class="btn btn-gold" onclick="openProductModal()">أضف أول منتج</button></div>';
+  recent.innerHTML='<div class="empty">ستظهر منتجاتك هنا بعد إضافتها.</div>';
+  document.getElementById("statProducts").textContent="0";
+  return;
+ }
+ container.innerHTML=products.map(p=>productCard(p,true)).join("");
+ recent.innerHTML=products.slice(0,3).map(p=>productCard(p,true)).join("");
+ document.getElementById("statProducts").textContent=products.length;
+}
+function openProductModal(){
+ if(!currentCompany?.id){
+  showToast("احفظ بيانات حسابك التجاري أولاً قبل إضافة المنتجات.");
+  goTo("company");
+  return;
+ }
+ document.getElementById("productForm").reset();
+ document.getElementById("productId").value="";
+ document.getElementById("productModalTitle").textContent="إضافة منتج جديد";
+ document.getElementById("productModal").classList.add("show");
+}
+function closeProductModal(){document.getElementById("productModal").classList.remove("show");}
+function editProduct(id){
+ const p=products.find(x=>String(x.id)===String(id));if(!p)return;
+ document.getElementById("productId").value=p.id;
+ document.getElementById("productName").value=p.name||"";
+ document.getElementById("productCategory").value=p.category||"";
+ document.getElementById("productDescription").value=p.description||"";
+ document.getElementById("productImage").value=p.image_url||"";
+ document.getElementById("productModalTitle").textContent="تعديل المنتج";
+ document.getElementById("productModal").classList.add("show");
+}
+document.getElementById("productForm").addEventListener("submit",async e=>{
+ e.preventDefault();
+ if(!currentCompany?.id)return showToast("يجب حفظ بيانات الحساب التجاري أولاً.");
+
+ const id=document.getElementById("productId").value;
+ const payload={
+  company_id:currentCompany.id,
+  name:document.getElementById("productName").value.trim(),
+  category:document.getElementById("productCategory").value.trim(),
+  description:document.getElementById("productDescription").value.trim(),
+  image_url:document.getElementById("productImage").value.trim()||null
+ };
+ if(!payload.name)return showToast("اسم المنتج مطلوب.");
+
+ const result=id
+  ?await db.from("products").update(payload).eq("id",id).eq("company_id",currentCompany.id)
+  :await db.from("products").insert(payload);
+
+ if(result.error)return showToast("تعذر حفظ المنتج: "+result.error.message);
+ closeProductModal();
+ showToast("تم حفظ المنتج بنجاح.");
+ await loadMyProducts();
+ renderOverview();
+});
+async function deleteProduct(id){
+ if(!confirm("هل أنت متأكد من حذف هذا المنتج؟"))return;
+ const {error}=await db.from("products").delete().eq("id",id).eq("company_id",currentCompany?.id);
+ if(error)return showToast("تعذر حذف المنتج: "+error.message);
+ showToast("تم حذف المنتج.");
+ await loadMyProducts();
+ renderOverview();
+}
+
+/* اكتشاف المنتجات */
+async function loadDiscover(){
+ const container=document.getElementById("discoverProducts");
+ container.innerHTML='<div class="loading">جارٍ البحث...</div>';
+
+ const search=document.getElementById("discoverSearch").value.trim();
+ const category=document.getElementById("discoverCategory").value;
+
+ let query=db.from("products")
+  .select("id,company_id,name,description,category,image_url,status,created_at,companies(name,country,owner_id)")
+  .eq("status","published")
+  .order("created_at",{ascending:false})
+  .limit(60);
+
+ if(search)query=query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
+ if(category)query=query.eq("category",category);
+
+ const {data,error}=await query;
+
+ if(error){
+  container.innerHTML='<div class="empty card">تعذر تحميل المنتجات: '+esc(error.message)+'</div>';
+  return;
+ }
+
+ const visible=(data||[]).filter(p=>String(p.companies?.owner_id||"")!==String(currentUser.id));
+
+ if(!visible.length){
+  container.innerHTML='<div class="empty card"><i class="fa-solid fa-magnifying-glass"></i><p>لا توجد منتجات منشورة مطابقة لبحثك.</p></div>';
+  return;
+ }
+
+ const categories=[...new Set((data||[]).map(p=>p.category).filter(Boolean))];
+ const select=document.getElementById("discoverCategory");
+ const old=select.value;
+ select.innerHTML='<option value="">كل التصنيفات</option>'+categories.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
+ select.value=old;
+
+ container.innerHTML=visible.map(p=>`
+ <article class="card product-card">
+  <div class="product-image">${p.image_url?`<img src="${esc(p.image_url)}" alt="${esc(p.name)}" onerror="this.style.display='none'">`:'<i class="fa-solid fa-box"></i>'}</div>
+  <div class="product-info">
+   <div class="company-tag">${esc(p.companies?.name||"حساب على WASLA")} · ${esc(p.companies?.country||"")}</div>
+   <h4>${esc(p.name)}</h4>
+   <p>${esc(p.description||"لا يوجد وصف لهذا المنتج.")}</p>
+   <div class="product-actions">
+    <button class="btn btn-gold" onclick="openInquiryModal('${p.id}')">إرسال استفسار</button>
+    <button class="btn btn-light" onclick="startDirectChat('${p.companies?.owner_id||""}')"><i class="fa-solid fa-message"></i> مراسلة</button>
+   </div>
+  </div>
+ </article>`).join("");
+}
+
+/* الاستفسارات */
+async function loadMyInquiries(){
+ let query=db.from("inquiries")
+  .select("id,product_id,company_id,buyer_id,quantity,message,status,created_at,reply,responded_at,products(name),companies(name)")
+  .order("created_at",{ascending:false});
+
+ if(currentCompany?.id){
+  query=query.or(`buyer_id.eq.${currentUser.id},company_id.eq.${currentCompany.id}`);
+ }else{
+  query=query.eq("buyer_id",currentUser.id);
+ }
+
+ const {data,error}=await query;
+
+ if(error){
+  console.error("Inquiries load error:",error);
+  inquiries=[];
+  renderInquiries();
+  return;
+ }
+
+ inquiries=data||[];
+ renderInquiries();
+}
+function renderInquiries(openOnly=false){
+ const body=document.getElementById("inquiriesTable");
+ const description=document.getElementById("inquiriesDescription");
+ if(!body)return;
+
+ const rows=openOnly?inquiries.filter(i=>!["completed","closed","rejected"].includes(i.status)):inquiries;
+
+ if(description)description.textContent=openOnly?"هذه الاستفسارات التي تحتاج إلى متابعة.":"تابع الاستفسارات المرتبطة بمنتجاتك وطلباتك.";
+
+ if(!rows.length){
+  body.innerHTML=openOnly
+   ?'<tr><td colspan="5"><div class="empty"><i class="fa-solid fa-check-circle"></i><p>لا توجد استفسارات مفتوحة حالياً.</p></div></td></tr>'
+   :'<tr><td colspan="5"><div class="empty"><i class="fa-regular fa-folder-open"></i><p>لا توجد استفسارات حتى الآن.</p></div></td></tr>';
+  return;
+ }
+
+ body.innerHTML=rows.map(i=>`
+ <tr>
+  <td>${esc(i.products?.name||"منتج")}</td>
+  <td>${esc(i.quantity||"—")}</td>
+  <td><span class="pill ${statusClass(i.status)}">${esc(statusLabel(i.status))}</span></td>
+  <td>${dateText(i.created_at)}</td>
+  <td><button class="btn btn-light" onclick="openChat('${i.id}')">فتح المحادثة</button></td>
+ </tr>`).join("");
+}
+function renderOverview(){
+ document.getElementById("statProducts").textContent=products.length;
+ document.getElementById("statInquiries").textContent=inquiries.length;
+ document.getElementById("statOpen").textContent=inquiries.filter(i=>!["completed","closed","rejected"].includes(i.status)).length;
+ document.getElementById("statCompany").textContent=currentCompany?.name?"مضاف":"غير مضاف";
+
+ const recent=document.getElementById("recentInquiries");
+ recent.innerHTML=inquiries.length
+  ?inquiries.slice(0,4).map(i=>`
+   <div class="activity">
+    <div class="activity-icon"><i class="fa-solid fa-file-lines"></i></div>
+    <div><strong>${esc(i.products?.name||"استفسار تجاري")}</strong><small>${dateText(i.created_at)}</small></div>
+    <span class="pill ${statusClass(i.status)}">${esc(statusLabel(i.status))}</span>
+   </div>`).join("")
+  :'<div class="empty"><i class="fa-regular fa-envelope"></i><p>لا توجد استفسارات حتى الآن.</p></div>';
+}
+
+/* إنشاء استفسار */
+function openInquiryModal(id){
+ document.getElementById("inquiryForm").reset();
+ document.getElementById("inquiryProductId").value=id;
+ document.getElementById("inquiryModal").classList.add("show");
+}
+function closeInquiryModal(){document.getElementById("inquiryModal").classList.remove("show");}
+document.getElementById("inquiryForm").addEventListener("submit",async e=>{
+ e.preventDefault();
+
+ const productId=document.getElementById("inquiryProductId").value;
+ const product=await db.from("products")
+  .select("id,company_id")
+  .eq("id",productId)
+  .maybeSingle();
+
+ if(product.error||!product.data)return showToast("لم نتمكن من العثور على المنتج.");
+
+ const targetCompanyId=product.data.company_id;
+
+ if(currentCompany?.id&&String(targetCompanyId)===String(currentCompany.id)){
+  return showToast("لا يمكنك إرسال استفسار إلى منتجك.");
+ }
+
+ const quantity=document.getElementById("inquiryQuantity").value.trim();
+ const message=document.getElementById("inquiryMessage").value.trim();
+
+ if(!quantity||!message)return showToast("أكمل الكمية والرسالة.");
+
+ const {error}=await db.from("inquiries").insert({
+  product_id:productId,
+  company_id:targetCompanyId,
+  buyer_id:currentUser.id,
+  quantity,
+  message,
+  status:"pending"
+ });
+
+ if(error)return showToast("تعذر إرسال الاستفسار: "+error.message);
+
+ closeInquiryModal();
+ showToast("تم إرسال الاستفسار بنجاح.");
+ await loadMyInquiries();
+ renderOverview();
+});
+
+/* صندوق محادثات الاستفسارات */
+async function loadInbox(){
+ const list=document.getElementById("inboxList");
+ if(!inquiries.length){
+  list.innerHTML='<div class="empty"><i class="fa-regular fa-comments"></i><p>لا توجد محادثات استفسارات بعد.</p></div>';
+  return;
+ }
+
+ list.innerHTML=inquiries.map(i=>`
+  <div class="inbox-item ${String(selectedInquiry)===String(i.id)?"selected":""}" onclick="openChat('${i.id}')">
+   <strong>${esc(i.products?.name||"استفسار تجاري")}</strong>
+   <small>${esc(i.companies?.name||"محادثة تجارية")}</small>
+   <small>${dateText(i.created_at)} · ${esc(statusLabel(i.status))}</small>
+  </div>`).join("");
+}
+async function openChat(id){
+ const requestId=++inquiryOpenRequestId;
+ selectedInquiry=String(id);
+ switchMessagingMode("inquiries");
+ goTo("inbox");
+ await loadInbox();
+
+ const inquiry=inquiries.find(i=>String(i.id)===String(id));
+ if(!inquiry)return;
+
+ document.getElementById("chatTitle").textContent="محادثة: "+(inquiry.products?.name||"استفسار تجاري");
+ document.getElementById("chatInput").disabled=false;
+ document.getElementById("chatSend").disabled=false;
+
+ await loadMessages(id,requestId);
+}
+async function loadMessages(id,openRequestId=null){
+ const requestId=++inquiryMessagesRequestId;
+ const container=document.getElementById("chatMessages");
+
+ const inquiry=inquiries.find(i=>String(i.id)===String(id));
+ if(!inquiry)return;
+
+ const {data,error}=await db.from("inquiry_messages")
+  .select("id,inquiry_id,sender_id,message,created_at")
+  .eq("inquiry_id",id)
+  .order("created_at",{ascending:true});
+
+ if(requestId!==inquiryMessagesRequestId)return;
+ if(String(selectedInquiry)!==String(id))return;
+ if(openRequestId!==null&&openRequestId!==inquiryOpenRequestId)return;
+
+ if(error){
+  container.innerHTML='<div class="empty">تعذر تحميل الرسائل: '+esc(error.message)+'</div>';
+  return;
+ }
+
+ const rows=data||[];
+ const originalMessage=String(inquiry.message||"").trim();
+
+ let html="";
+
+ if(originalMessage){
+  const originalExists=rows.some(m=>String(m.message||"").trim()===originalMessage&&String(m.sender_id)===String(inquiry.buyer_id));
+  if(!originalExists){
+   html+=`<div class="bubble ${String(inquiry.buyer_id)===String(currentUser.id)?"mine":"theirs"}">${esc(originalMessage)}<small>الرسالة الأصلية للاستفسار · ${dateText(inquiry.created_at)}</small></div>`;
+  }
+ }
+
+ html+=rows.map(m=>`
+  <div class="bubble ${String(m.sender_id)===String(currentUser.id)?"mine":"theirs"}">
+   ${esc(m.message)}
+   <small>${dateText(m.created_at)} · ${timeText(m.created_at)}</small>
+  </div>`).join("");
+
+ container.innerHTML=html||'<div class="empty"><i class="fa-regular fa-message"></i><p>لا توجد رسائل في هذه المحادثة بعد.</p></div>';
+ container.scrollTop=container.scrollHeight;
+}
+
+/* إرسال رد على الاستفسار */
+document.getElementById("chatForm").addEventListener("submit",async e=>{
+ e.preventDefault();
+
+ if(inquirySending||!selectedInquiry)return;
+
+ const input=document.getElementById("chatInput");
+ const send=document.getElementById("chatSend");
+ const message=input.value.trim();
+
+ if(!message)return;
+
+ const inquiryId=String(selectedInquiry);
+ const inquiry=inquiries.find(i=>String(i.id)===inquiryId);
+ if(!inquiry)return;
+
+ inquirySending=true;
+ input.disabled=true;
+ send.disabled=true;
+
+ try{
+  const {error}=await db.from("inquiry_messages").insert({
+   inquiry_id:inquiryId,
+   sender_id:currentUser.id,
+   message
+  });
+
+  if(error){
+   showToast("تعذر إرسال الرسالة: "+error.message);
+   return;
+  }
+
+  if(String(selectedInquiry)===inquiryId){
+   if(input.value.trim()===message)input.value="";
+   await loadMessages(inquiryId);
+  }
+
+  if(String(inquiry.buyer_id)!==String(currentUser.id)&&inquiry.status==="pending"){
+   const statusResult=await db.from("inquiries")
+    .update({status:"open"})
+    .eq("id",inquiryId)
+    .eq("company_id",currentCompany?.id);
+
+   if(!statusResult.error){
+    inquiry.status="open";
+    renderInquiries();
+    renderOverview();
+    loadInbox();
+   }else{
+    console.warn("Inquiry status update was not permitted:",statusResult.error);
+   }
+  }
+
+ }catch(error){
+  console.error("Inquiry message send error:",error);
+  showToast("حدث خطأ أثناء إرسال الرسالة.");
+ }finally{
+  inquirySending=false;
+  input.disabled=!selectedInquiry;
+  send.disabled=!selectedInquiry;
+ }
+});
+
+/* ==================================================
+   الرسائل المباشرة - Direct Messaging
+================================================== */
+
+/* تحميل صفحة المراسلات المباشرة */
+async function loadDirectPage(){
+ if(!currentUser)return;
+
+ const container=document.getElementById("directList");
+
+ if(!directProfiles.length){
+  container.innerHTML='<div class="loading"><i class="fa-solid fa-spinner fa-spin"></i> جارٍ تحميل الحسابات...</div>';
+ }
+
+ await Promise.all([
+  loadDirectProfiles(),
+  loadDirectConversations()
+ ]);
+
+ renderDirectList();
+}
+
+/* دليل الحسابات */
+async function loadDirectProfiles(){
+ const {data,error}=await db.from("profiles")
+  .select("id,full_name,account_type,avatar_url,tagline,bio,country")
+  .neq("id",currentUser.id)
+  .order("full_name",{ascending:true})
+  .limit(300);
+
+ if(error){
+  console.error("Profiles directory error:",error);
+  if(!directProfiles.length){
+   document.getElementById("directList").innerHTML=
+    '<div class="empty">تعذر تحميل دليل الحسابات: '+esc(error.message)+'</div>';
+  }
+  return;
+ }
+
+ directProfiles=data||[];
+}
+
+/* استخراج الطرف الآخر */
+function getOtherId(conversation){
+ return String(conversation.user_one)===String(currentUser.id)
+  ?conversation.user_two
+  :conversation.user_one;
+}
+
+/* العثور على ملف مستخدم */
+function profileFor(id){
+ return directProfiles.find(p=>String(p.id)===String(id));
+}
+
+/* تحميل المحادثات السابقة */
+async function loadDirectConversations(){
+ if(!currentUser)return;
+
+ const requestId=++directConversationsRequestId;
+ const uid=currentUser.id;
+
+ const {data,error}=await db.from("conversations")
+  .select("id,user_one,user_two,created_at,updated_at")
+  .or(`user_one.eq.${uid},user_two.eq.${uid}`)
+  .order("updated_at",{ascending:false});
+
+ if(requestId!==directConversationsRequestId)return;
+
+ if(error){
+  console.error("Conversations error:",error);
+  if(!directConversations.length){
+   document.getElementById("directList").innerHTML=
+    '<div class="empty">تعذر تحميل المحادثات: '+esc(error.message)+'</div>';
+  }
+  return;
+ }
+
+ directConversations=data||[];
+
+ const missingIds=[...new Set(directConversations.map(getOtherId))]
+  .filter(id=>id&&!profileFor(id));
+
+ if(missingIds.length){
+  const {data:extraProfiles,error:profilesError}=await db.from("profiles")
+   .select("id,full_name,account_type,avatar_url,tagline,bio,country")
+   .in("id",missingIds);
+
+  if(requestId!==directConversationsRequestId)return;
+
+  if(!profilesError&&extraProfiles?.length){
+   const existing=new Set(directProfiles.map(p=>String(p.id)));
+   extraProfiles.forEach(p=>{
+    if(!existing.has(String(p.id)))directProfiles.push(p);
+   });
+  }
+ }
+}
+
+/* صورة الحساب */
+function avatarMarkup(profile){
+ const initial=(profile?.full_name||"?").trim().charAt(0)||"?";
+
+ return profile?.avatar_url
+  ?`<div class="contact-avatar"><img src="${esc(profile.avatar_url)}" alt="" onerror="this.parentElement.textContent='${esc(initial)}'"></div>`
+  :`<div class="contact-avatar">${esc(initial)}</div>`;
+}
+
+/* التبديل بين دليل الحسابات والمحادثات */
+function switchDirectTab(tab){
+ directTab=tab==="conversations"?"conversations":"contacts";
+
+ document.getElementById("contactsTab").classList.toggle("active",directTab==="contacts");
+ document.getElementById("conversationsTab").classList.toggle("active",directTab==="conversations");
+
+ renderDirectList();
+}
+
+/* عرض الحسابات والمحادثات */
+function renderDirectList(){
+ const container=document.getElementById("directList");
+ const term=document.getElementById("contactSearch").value.trim().toLowerCase();
+
+ if(directTab==="contacts"){
+
+  const filtered=directProfiles.filter(p=>{
+   const text=[
+    p.full_name,
+    p.account_type,
+    accountLabel(p.account_type),
+    p.tagline,
+    p.bio,
+    p.country
+   ].join(" ").toLowerCase();
+
+   return text.includes(term);
+  });
+
+  if(!filtered.length){
+   container.innerHTML='<div class="empty"><i class="fa-solid fa-users"></i><p>لا توجد حسابات مطابقة لبحثك.</p></div>';
+   return;
+  }
+
+  container.innerHTML=filtered.map(p=>`
+   <div class="contact-item ${String(selectedDirectProfile?.id)===String(p.id)?"selected":""}"
+    onclick="startDirectChat('${p.id}')">
+    ${avatarMarkup(p)}
+    <div class="contact-info">
+     <strong>${esc(p.full_name||"مستخدم WASLA")}</strong>
+     <small>${esc(accountLabel(p.account_type))}${p.country?" · "+esc(p.country):""}</small>
+    </div>
+    <button class="contact-start" type="button" title="مراسلة">
+     <i class="fa-solid fa-message"></i>
+    </button>
+   </div>`).join("");
+
+ }else{
+
+  const rows=directConversations.map(c=>({
+   conversation:c,
+   profile:profileFor(getOtherId(c))
+  })).filter(x=>{
+   const p=x.profile;
+   return !term||[
+    p?.full_name,
+    p?.account_type,
+    accountLabel(p?.account_type),
+    p?.country
+   ].join(" ").toLowerCase().includes(term);
+  });
+
+  if(!rows.length){
+   container.innerHTML='<div class="empty"><i class="fa-regular fa-comments"></i><p>لا توجد محادثات مباشرة بعد. اختر حساباً من دليل الحسابات لبدء محادثة.</p></div>';
+   return;
+  }
+
+  container.innerHTML=rows.map(x=>{
+   const p=x.profile||{
+    id:getOtherId(x.conversation),
+    full_name:"حساب WASLA"
+   };
+
+   return `
+    <div class="contact-item ${String(selectedDirectConversation?.id)===String(x.conversation.id)?"selected":""}"
+     onclick="openDirectConversation('${x.conversation.id}')">
+     ${avatarMarkup(p)}
+     <div class="contact-info">
+      <strong>${esc(p.full_name||"مستخدم WASLA")}</strong>
+      <small>${esc(accountLabel(p.account_type))} · ${dateText(x.conversation.updated_at||x.conversation.created_at)}</small>
+     </div>
+     <i class="fa-solid fa-chevron-left muted"></i>
+    </div>`;
+  }).join("");
+ }
+}
+
+/* البحث في دليل الحسابات والمحادثات */
+document.getElementById("contactSearch").addEventListener("input",function(){
+ renderDirectList();
+});
+
+/* إنشاء محادثة جديدة أو استرجاع الموجودة */
+async function startDirectChat(targetId){
+ if(!targetId||!currentUser)return;
+ if(String(targetId)===String(currentUser.id))return;
+
+ const targetKey=String(targetId);
+
+ if(directStartLocks.has(targetKey))return;
+ directStartLocks.add(targetKey);
+
+ const openRequestId=++directOpenRequestId;
+
+ try{
+
+  let target=profileFor(targetId);
+
+  if(!target){
+   const {data,error}=await db.from("profiles")
+    .select("id,full_name,account_type,avatar_url,tagline,bio,country")
+    .eq("id",targetId)
+    .maybeSingle();
+
+   if(openRequestId!==directOpenRequestId)return;
+
+   if(error||!data){
+    showToast("لم نتمكن من العثور على هذا الحساب.");
+    return;
+   }
+
+   target=data;
+
+   if(!profileFor(targetId)){
+    directProfiles.push(target);
+   }
+  }
+
+  if(openRequestId!==directOpenRequestId)return;
+
+  const ids=[String(currentUser.id),targetKey].sort();
+
+  let {data:conversation,error}=await db.from("conversations")
+   .select("id,user_one,user_two,created_at,updated_at")
+   .eq("user_one",ids[0])
+   .eq("user_two",ids[1])
+   .maybeSingle();
+
+  if(openRequestId!==directOpenRequestId)return;
+
+  if(error){
+   showToast("تعذر البحث عن المحادثة: "+error.message);
+   return;
+  }
+
+  if(!conversation){
+
+   const result=await db.from("conversations")
+    .insert({
+     user_one:ids[0],
+     user_two:ids[1]
+    })
+    .select("id,user_one,user_two,created_at,updated_at")
+    .single();
+
+   if(openRequestId!==directOpenRequestId)return;
+
+   if(result.error){
+
+    /* إعادة البحث عند إنشاء المحادثة من الطرف الآخر في نفس الوقت */
+    const retry=await db.from("conversations")
+     .select("id,user_one,user_two,created_at,updated_at")
+     .eq("user_one",ids[0])
+     .eq("user_two",ids[1])
+     .maybeSingle();
+
+    if(openRequestId!==directOpenRequestId)return;
+
+    if(retry.error||!retry.data){
+     showToast("تعذر إنشاء المحادثة: "+result.error.message);
+     return;
+    }
+
+    conversation=retry.data;
+
+   }else{
+    conversation=result.data;
+   }
+  }
+
+  if(openRequestId!==directOpenRequestId)return;
+
+  selectedDirectProfile=target;
+  selectedDirectConversation=conversation;
+
+  switchMessagingMode("direct");
+  goTo("inbox");
+
+  await loadDirectConversations();
+
+  if(openRequestId!==directOpenRequestId)return;
+
+  switchDirectTab("conversations");
+  renderDirectList();
+
+  await showDirectChat(target,conversation);
+
+ }catch(error){
+  console.error("Start direct chat error:",error);
+
+  if(openRequestId===directOpenRequestId){
+   showToast("حدث خطأ أثناء فتح المحادثة.");
+  }
+
+ }finally{
+  directStartLocks.delete(targetKey);
+ }
+}
+
+/* فتح محادثة موجودة */
+async function openDirectConversation(id){
+ const requestId=++directOpenRequestId;
+
+ const conversation=directConversations.find(c=>String(c.id)===String(id));
+ if(!conversation)return;
+
+ const otherId=getOtherId(conversation);
+ let profile=profileFor(otherId);
+
+ if(!profile){
+
+  const {data,error}=await db.from("profiles")
+   .select("id,full_name,account_type,avatar_url,tagline,bio,country")
+   .eq("id",otherId)
+   .maybeSingle();
+
+  if(requestId!==directOpenRequestId)return;
+
+  if(error)console.error("Direct profile error:",error);
+
+  profile=data||{
+   id:otherId,
+   full_name:"حساب WASLA"
+  };
+
+  if(data&&!profileFor(otherId)){
+   directProfiles.push(data);
+  }
+ }
+
+ if(requestId!==directOpenRequestId)return;
+
+ selectedDirectProfile=profile;
+ selectedDirectConversation=conversation;
+
+ switchMessagingMode("direct");
+ goTo("inbox");
+
+ await showDirectChat(profile,conversation);
+
+ if(requestId===directOpenRequestId){
+  renderDirectList();
+ }
+}
+
+/* عرض رأس المحادثة */
+async function showDirectChat(profile,conversation){
+ if(!profile||!conversation)return;
+
+ selectedDirectConversation=conversation;
+ selectedDirectProfile=profile;
+
+ const head=document.getElementById("directChatHead");
+ const input=document.getElementById("directMessageInput");
+ const send=document.getElementById("directSendButton");
+ const container=document.getElementById("directMessages");
+
+ head.innerHTML=`
+  ${avatarMarkup(profile)}
+  <div>
+   <strong>${esc(profile.full_name||"مستخدم WASLA")}</strong>
+   <small>${esc(accountLabel(profile.account_type))}${profile.country?" · "+esc(profile.country):""}</small>
+  </div>`;
+
+ input.disabled=true;
+ send.disabled=true;
+
+ container.innerHTML='<div class="loading"><i class="fa-solid fa-spinner fa-spin"></i> جارٍ تحميل الرسائل...</div>';
+
+ await loadDirectMessages(conversation.id);
+
+ if(String(selectedDirectConversation?.id)===String(conversation.id)){
+  input.disabled=false;
+  send.disabled=directSending;
+ }
+}
+
+/* تحميل الرسائل */
+async function loadDirectMessages(conversationId){
+ const requestId=++directMessagesRequestId;
+ const container=document.getElementById("directMessages");
+
+ if(String(selectedDirectConversation?.id)!==String(conversationId))return;
+
+ container.innerHTML='<div class="loading">جارٍ تحميل الرسائل...</div>';
+
+ const {data,error}=await db.from("conversation_messages")
+  .select("id,conversation_id,sender_id,message,created_at")
+  .eq("conversation_id",conversationId)
+  .order("created_at",{ascending:true});
+
+ if(requestId!==directMessagesRequestId)return;
+
+ if(String(selectedDirectConversation?.id)!==String(conversationId))return;
+
+ if(error){
+  console.error("Direct messages load error:",error);
+  container.innerHTML='<div class="empty">تعذر تحميل الرسائل: '+esc(error.message)+'</div>';
+  return;
+ }
+
+ container.innerHTML=data?.length
+  ?data.map(m=>`
+   <div class="bubble ${String(m.sender_id)===String(currentUser.id)?"mine":"theirs"}">
+    ${esc(m.message)}
+    <small>${dateText(m.created_at)} · ${timeText(m.created_at)}</small>
+   </div>`).join("")
+  :'<div class="direct-empty"><div><i class="fa-regular fa-message"></i><p>هذه بداية المحادثة. أرسل رسالتك الأولى.</p></div></div>';
+
+ container.scrollTop=container.scrollHeight;
+}
+
+/* إرسال رسالة مباشرة */
+document.getElementById("directChatForm").addEventListener("submit",async e=>{
+ e.preventDefault();
+
+ if(directSending||!selectedDirectConversation||!currentUser)return;
+
+ const input=document.getElementById("directMessageInput");
+ const send=document.getElementById("directSendButton");
+
+ const message=input.value.trim();
+ if(!message)return;
+
+ const conversationId=selectedDirectConversation.id;
+ const messageText=message;
+
+ directSending=true;
+ input.disabled=true;
+ send.disabled=true;
+
+ try{
+
+  const {error}=await db.from("conversation_messages").insert({
+   conversation_id:conversationId,
+   sender_id:currentUser.id,
+   message:messageText
+  });
+
+  if(error){
+   console.error("Direct message insert error:",error);
+   showToast("تعذر إرسال الرسالة: "+error.message);
+   return;
+  }
+
+  if(String(selectedDirectConversation?.id)===String(conversationId)){
+   if(input.value.trim()===messageText){
+    input.value="";
+   }
+
+   await loadDirectMessages(conversationId);
+  }
+
+  /* تحديث تاريخ المحادثة */
+  const updateResult=await db.from("conversations")
+   .update({updated_at:new Date().toISOString()})
+   .eq("id",conversationId);
+
+  if(updateResult.error){
+   console.warn("Conversation timestamp update:",updateResult.error);
+  }
+
+  await loadDirectConversations();
+
+  if(messagingMode==="direct"){
+   renderDirectList();
+  }
+
+ }catch(error){
+  console.error("Direct message send error:",error);
+  showToast("حدث خطأ أثناء إرسال الرسالة.");
+
+ }finally{
+  directSending=false;
+
+  if(String(selectedDirectConversation?.id)===String(conversationId)){
+   input.disabled=false;
+   send.disabled=false;
+  }else{
+   input.disabled=!selectedDirectConversation;
+   send.disabled=!selectedDirectConversation;
+  }
+ }
+});
+
+/* استقبال رسالة مباشرة جديدة */
+async function refreshDirectRealtimeMessage(payload){
+ const msg=payload?.new;
+ if(!msg||!msg.conversation_id)return;
+
+ const conversationId=String(msg.conversation_id);
+ const selectedId=String(selectedDirectConversation?.id||"");
+
+ if(selectedId&&conversationId===selectedId){
+  await loadDirectMessages(conversationId);
+ }
+
+ await loadDirectConversations();
+
+ if(messagingMode==="direct"){
+  renderDirectList();
+ }
+}
+
+/* الملف الشخصي */
+document.getElementById("profileForm").addEventListener("submit",async e=>{
+ e.preventDefault();
+
+ if(!currentUser)return showToast("لا توجد جلسة مستخدم.");
+
+ const full_name=document.getElementById("fullName").value.trim();
+ const tagline=document.getElementById("profileTagline").value.trim();
+ const bio=document.getElementById("profileBio").value.trim();
+ const whatsappInput=document.getElementById("profileWhatsapp").value.trim();
+ const facebookInput=document.getElementById("profileFacebook").value.trim();
+ const websiteInput=document.getElementById("profileWebsite").value.trim();
+
+ if(!full_name)return showToast("يرجى إدخال الاسم.");
+
+ const whatsapp_url=safeProfileUrl(whatsappInput,"whatsapp");
+ if(whatsappInput&&!whatsapp_url)return showToast("رابط WhatsApp غير صالح.");
+
+ const facebook_url=safeProfileUrl(facebookInput);
+ if(facebookInput&&!facebook_url)return showToast("رابط Facebook غير صالح.");
+
+ const website_url=safeProfileUrl(websiteInput);
+ if(websiteInput&&!website_url)return showToast("رابط الموقع الإلكتروني غير صالح.");
+
+ let avatar_url=currentProfile?.avatar_url||null;
+
+ try{
+  if(pendingProfileImage){
+   showToast("جارٍ رفع الصورة...");
+   avatar_url=await uploadProfileImage(pendingProfileImage);
+  }
+ }catch(error){
+  console.error(error);
+  showToast(error.message||"تعذر رفع الصورة.");
+  return;
+ }
+
+ const payload={full_name,avatar_url,tagline,bio,whatsapp_url,facebook_url,website_url};
+
+ const {error}=await db.from("profiles").update(payload).eq("id",currentUser.id);
+ if(error)return showToast("تعذر تحديث الملف: "+error.message);
+
+ currentProfile={...currentProfile,...payload};
+ pendingProfileImage=null;
+ document.getElementById("profileImageInput").value="";
+
+ if(profilePreviewObjectUrl){
+  URL.revokeObjectURL(profilePreviewObjectUrl);
+  profilePreviewObjectUrl=null;
+ }
+
+ const initial=full_name.charAt(0)||"W";
+
+ document.getElementById("topName").textContent="مرحباً، "+full_name;
+ document.getElementById("sideName").textContent=full_name;
+ document.getElementById("topCompany").textContent=accountLabel(currentProfile.account_type);
+ document.getElementById("sideType").textContent=accountLabel(currentProfile.account_type);
+
+ setAvatar("topAvatar",avatar_url,initial);
+ setAvatar("sideAvatar",avatar_url,initial);
+ setProfileAvatar(avatar_url,initial);
+
+ document.getElementById("profilePreviewName").textContent=full_name;
+ document.getElementById("profilePreviewType").textContent=accountLabel(currentProfile.account_type);
+
+ showToast("تم تحديث الملف الشخصي بنجاح.");
+
+ const profile=profileFor(currentUser.id);
+ if(profile)profile.full_name=full_name;
+});
+
+/* التنقل والبحث */
+document.getElementById("menuToggle").addEventListener("click",toggleSidebar);
+document.getElementById("sidebarBackdrop").addEventListener("click",closeSidebar);
+document.getElementById("topAvatar").addEventListener("click",()=>goTo("profile"));
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSidebar();});
+
+document.getElementById("discoverSearch").addEventListener("keydown",e=>{
+ if(e.key==="Enter")loadDiscover();
+});
+
+document.getElementById("globalSearch").addEventListener("keydown",e=>{
+ if(e.key==="Enter"){
+  document.getElementById("discoverSearch").value=e.target.value;
+  goTo("discover");
+ }
+});
+
+/* تسجيل الخروج */
+document.getElementById("logoutBtn").addEventListener("click",async()=>{
+ const button=document.getElementById("logoutBtn");
+ button.disabled=true;
+
+ try{
+  const {error}=await db.auth.signOut();
+  if(error){
+   button.disabled=false;
+   return showToast("تعذر تسجيل الخروج: "+error.message);
+  }
+  location.replace("index.html");
+ }catch(error){
+  button.disabled=false;
+  console.error(error);
+  showToast("حدث خطأ أثناء تسجيل الخروج.");
+ }
+});
+
+/* التحديث المباشر */
+function setupRealtime(){
+
+ if(messagesChannel){
+  db.removeChannel(messagesChannel);
+ }
+
+ messagesChannel=db.channel("wasla-inquiry-messages")
+  .on("postgres_changes",{
+   event:"INSERT",
+   schema:"public",
+   table:"inquiry_messages"
+  },payload=>{
+   if(selectedInquiry&&String(payload.new.inquiry_id)===String(selectedInquiry)){
+    loadMessages(selectedInquiry);
+   }
+  })
+  .subscribe();
+
+ if(directMessagesChannel){
+  db.removeChannel(directMessagesChannel);
+ }
+
+ directMessagesChannel=db.channel("wasla-direct-messages")
+  .on("postgres_changes",{
+   event:"INSERT",
+   schema:"public",
+   table:"conversation_messages"
+  },refreshDirectRealtimeMessage)
+  .on("postgres_changes",{
+   event:"INSERT",
+   schema:"public",
+   table:"conversations"
+  },async()=>{
+   await loadDirectConversations();
+   if(messagingMode==="direct")renderDirectList();
+  })
+  .subscribe();
+}
+
+/* تشغيل اللوحة */
+init();
+</script>
+</body>
+</html>
