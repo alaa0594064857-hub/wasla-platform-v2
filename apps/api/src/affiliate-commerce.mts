@@ -108,6 +108,22 @@ export async function ensureAffiliateCommerceTables(): Promise<void> {
         sourceUrl: "https://www.stanley1913.com/products/quencher-h2-0-flowstate-tumbler-40-oz"
       },
       {
+        id: "retail:vatan-anker-312-25w",
+        titleEn: "Anker 312 25W USB-C Charger — Black",
+        titleAr: "شاحن Anker 312 USB-C بقدرة 25 واط — أسود",
+        descriptionEn: "A compact 25W USB-C wall charger listed by Vatan Bilgisayar. Check the retailer page for the latest price, stock, delivery options, plug details and device compatibility before ordering.",
+        descriptionAr: "شاحن جداري مدمج بمنفذ USB-C وقدرة 25 واط، معروض لدى متجر Vatan Bilgisayar. راجع صفحة البائع للتأكد من السعر والمخزون وخيارات التوصيل وتفاصيل القابس والتوافق قبل الطلب.",
+        sourceUrl: "https://www.vatanbilgisayar.com/anker-312-sarj-cihazi-25w-sarj-cihazi.html"
+      },
+      {
+        id: "retail:vatan-anker-nano-45w-black",
+        titleEn: "Anker Nano 45W USB-C Charger with Cable — Black",
+        titleAr: "شاحن Anker Nano بقدرة 45 واط مع كابل USB-C — أسود",
+        descriptionEn: "A 45W USB-C charger supplied with a USB-C cable, listed by Vatan Bilgisayar. Confirm the current price, stock, delivery, regional plug and compatibility on the retailer's page.",
+        descriptionAr: "شاحن USB-C بقدرة 45 واط مرفق معه كابل USB-C، معروض لدى متجر Vatan Bilgisayar. تحقق من السعر الحالي والمخزون والتوصيل ونوع القابس والتوافق من صفحة المتجر.",
+        sourceUrl: "https://www.vatanbilgisayar.com/anker-nano-45w-sarj-cihazi-usb-c-kablo-dahil-siyah.html"
+      },
+      {
         id: "editorial:anker-735-nano-ii-65w",
         titleEn: "Anker 735 Charger (Nano II 65W)",
         titleAr: "شاحن Anker 735 Nano II بقدرة 65 واط",
@@ -218,7 +234,7 @@ export async function handleAffiliatePublicCatalogRequest(req: IncomingMessage, 
          AND last_verified_at >= NOW() - INTERVAL '30 days'
        ORDER BY created_at ASC LIMIT 20`
     );
-    const allowedEditorialHosts = new Set(["owalalife.com", "www.stanley1913.com", "www.anker.com"]);
+    const allowedEditorialHosts = new Set(["owalalife.com", "www.stanley1913.com", "www.anker.com", "www.vatanbilgisayar.com"]);
     const editorialItems = editorialResult.rows.flatMap((row: Record<string, unknown>) => {
       if (typeof row.id !== "string" || typeof row.source_url !== "string") return [];
       try {
@@ -231,7 +247,7 @@ export async function handleAffiliatePublicCatalogRequest(req: IncomingMessage, 
           title_ar: row.title_ar,
           description_en: row.description_en,
           description_ar: row.description_ar,
-          marketplace: "Official brand source",
+          marketplace: url.hostname === "www.vatanbilgisayar.com" ? "Vatan Bilgisayar" : "Official brand source",
           destination_country: country,
           disclosure_en: "",
           disclosure_ar: "",
