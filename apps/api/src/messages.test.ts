@@ -200,6 +200,22 @@ describe("product-based private messaging", () => {
     expect(String(mocks.query.mock.calls[1][0])).toContain("participant_high_last_read_at");
   });
 
+  it("does not let a non-participant send messages into another user's conversation", async () => {
+    mocks.query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
+
+    const baseUrl = await startServer("11111111-1111-4111-8111-111111111111");
+    const response = await fetch(`${baseUrl}/api/messages/11111111-1111-4111-8111-111111111111`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: "Unauthorized message" }),
+    });
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ success: false, error: "Conversation not found" });
+    expect(mocks.query).toHaveBeenCalledOnce();
+    expect(String(mocks.query.mock.calls[0][0])).toContain("participant_low = $2 OR participant_high = $2");
+  });
+
   it("does not reveal messages to a user who is not a conversation participant", async () => {
     mocks.query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
 
