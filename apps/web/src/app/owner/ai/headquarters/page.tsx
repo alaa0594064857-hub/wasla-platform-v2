@@ -19,12 +19,6 @@ const team = [
   ["quality_risk_reviewer", "الجودة والمخاطر", "Quality & Risk", "يراجع الجودة والمخاطر والامتثال", "Reviews quality, risk and compliance", "✓"],
 ] as const;
 
-const rooms = [
-  { href: "/owner/ai/chat", key: "manager", icon: "♛" },
-  { href: "/owner/ai/reports", key: "reports", icon: "▤" },
-  { href: "/owner/ai/meeting", key: "meeting", icon: "◷" },
-] as const;
-
 export default function AiHeadquartersPage() {
   const { locale } = useLocale();
   const ar = locale === "ar";
