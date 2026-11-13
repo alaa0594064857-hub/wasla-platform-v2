@@ -30,6 +30,8 @@ export default function AffiliateStorePage() {
   const { locale } = useLocale();
   const ar = locale === "ar";
   const [country, setCountry] = useState("TR");
+  const [marketReady, setMarketReady] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const [items, setItems] = useState<AffiliateItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -38,12 +40,25 @@ export default function AffiliateStorePage() {
   const [sort, setSort] = useState("featured");
 
   useEffect(() => {
-    const selected = new URLSearchParams(window.location.search).get("category");
-    if (selected && categories.some(value => value.slug === selected)) setCategory(selected);
+    const params = new URLSearchParams(window.location.search);
+    const selectedCountry = params.get("country");
+    const selectedCategory = params.get("category");
+    if (selectedCountry && /^[A-Z]{2}$/.test(selectedCountry.toUpperCase())) setCountry(selectedCountry.toUpperCase());
+    if (selectedCategory && categories.some(value => value.slug === selectedCategory)) setCategory(selectedCategory);
+    setMarketReady(true);
   }, []);
+
+  function updateMarket(nextCountry: string) {
+    setCountry(nextCountry);
+    const params = new URLSearchParams(window.location.search);
+    params.set("country", nextCountry);
+    const query = params.toString();
+    window.history.replaceState(null, "", query ? `/affiliate-store?${query}` : "/affiliate-store");
+  }
 
   useEffect(() => {
     let active = true;
+    if (!marketReady) return;
     setLoading(true); setFailed(false);
     fetch(`/api/public/affiliate-items?country=${encodeURIComponent(country)}`, { cache: "no-store" })
       .then(async response => {
@@ -55,7 +70,7 @@ export default function AffiliateStorePage() {
       .catch(() => { if (active) setFailed(true); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [country]);
+  }, [country, marketReady, retryCount]);
 
   const copy = ar ? {
     eyebrow: "WASLA MARKETPLACE", title: "اكتشف، ابحث، وتسوق بذكاء",
@@ -67,7 +82,7 @@ export default function AffiliateStorePage() {
     featuredOption: "المميزة أولاً", az: "الاسم: أ إلى ي",
     view: "عرض التفاصيل", seller: "لدى البائع", affiliate: "رابط شراكة",
     disclosure: "قد تحصل WASLA على عمولة من بعض عمليات الشراء المؤهلة دون تكلفة إضافية عليك.",
-    trust: "الشراء والدفع والتوصيل يتم مباشرة لدى البائع. الأسعار والتوفر يحددهما البائع.",
+    trust: "تفاصيل المنتج والشراء والتوفر تُراجع على الموقع الرسمي للعلامة أو البائع.",
     shop: "تصفّح المنتجات", back: "الرئيسية"
   } : {
     eyebrow: "WASLA MARKETPLACE", title: "Discover, search and shop smarter",
@@ -77,9 +92,9 @@ export default function AffiliateStorePage() {
     failed: "Products could not be loaded. Please try again.",
     empty: "No products currently match your search.", featured: "Sort products",
     featuredOption: "Featured first", az: "Name: A to Z",
-    view: "View details", seller: "Retailer listing", affiliate: "Partner link",
+    view: "View details", seller: "Official source", affiliate: "Partner link",
     disclosure: "WASLA may earn a commission on qualifying purchases at no extra cost to you.",
-    trust: "Checkout, payment and delivery take place directly with the retailer. Sellers control price and availability.",
+    trust: "Check product details, purchase terms and availability on the official brand or retailer website.",
     shop: "Browse products", back: "Home"
   };
 
@@ -126,7 +141,7 @@ export default function AffiliateStorePage() {
             <p className="mt-1 text-sm text-slate-500">{visibleItems.length} {copy.results}</p></div>
           <div className="flex flex-wrap items-center gap-3">
             <label className="text-sm font-medium">{copy.country}
-              <select value={country} onChange={event => setCountry(event.target.value)} className="ms-2 rounded-xl border border-[#ded6c7] bg-white px-3 py-2.5">
+              <select value={country} onChange={event => updateMarket(event.target.value)} className="ms-2 rounded-xl border border-[#ded6c7] bg-white px-3 py-2.5">
                 <option value="TR">Türkiye</option><option value="US">United States</option>
               </select>
             </label>
@@ -137,7 +152,7 @@ export default function AffiliateStorePage() {
         </div>
 
         {loading ? <div className="rounded-2xl bg-white p-12 text-center">{copy.loading}</div>
-          : failed ? <div role="alert" className="rounded-2xl bg-white p-12 text-center text-red-700">{copy.failed}</div>
+          : failed ? <div role="alert" className="rounded-2xl bg-white p-12 text-center text-red-700">{copy.failed}<div><button type="button" onClick={() => setRetryCount(value => value + 1)} className="mt-4 rounded-full bg-[#17253a] px-5 py-2.5 text-sm font-semibold text-white">{ar ? "إعادة المحاولة" : "Try again"}</button></div></div>
           : visibleItems.length === 0 ? <div className="rounded-2xl border border-[#e5dece] bg-white p-14 text-center"><div className="text-5xl">⌕</div><p className="mt-4 text-lg font-semibold">{copy.empty}</p></div>
           : <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {visibleItems.map(item => <article key={item.id} className="group overflow-hidden rounded-2xl border border-[#e7e0d3] bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
@@ -158,7 +173,7 @@ export default function AffiliateStorePage() {
       </section>
       <footer className="border-t border-[#ded6c7] bg-white px-5 py-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 text-sm leading-7 text-slate-600 md:flex-row md:justify-between">
-          <p>{copy.disclosure}</p><p>{copy.trust}</p>
+          {items.some(item => item.kind === "affiliate") && <p>{copy.disclosure}</p>}<p>{copy.trust}</p>
         </div>
       </footer>
     </main>
