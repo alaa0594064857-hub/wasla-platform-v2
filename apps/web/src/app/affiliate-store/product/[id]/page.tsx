@@ -18,22 +18,35 @@ export default function AffiliateProductPage() {
   const ar = locale === "ar";
   const [item, setItem] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
+  const [country, setCountry] = useState<"TR" | "US">("TR");
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("country");
+    if (requested === "TR" || requested === "US") setCountry(requested);
+  }, []);
   useEffect(() => {
     let active = true;
-    fetch("/api/public/affiliate-items?country=TR", { cache: "no-store" })
+    setLoading(true);
+    fetch(`/api/public/affiliate-items?country=${country}`, { cache: "no-store" })
       .then(r => r.json())
       .then(data => { if (active && data.success && Array.isArray(data.items)) setItem(data.items.find((x: Item) => x.id === params.id) || null); })
       .catch(() => { if (active) setItem(null); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [params.id]);
+  }, [params.id, country]);
   const title = item ? (ar ? item.title_ar || item.title_en : item.title_en || item.title_ar) || "" : "";
   const description = item ? (ar ? item.description_ar || item.description_en : item.description_en || item.description_ar) : "";
   return (
     <main dir={ar ? "rtl" : "ltr"} lang={locale} className="min-h-screen bg-[#f6f3ec] text-[#17253a]">
       <WorkspaceHeader section="account" />
       <div className="mx-auto max-w-6xl px-5 py-8 md:px-8">
-        <Link href="/affiliate-store" className="text-sm font-semibold text-[#96732e]">← {ar ? "العودة إلى المتجر" : "Back to store"}</Link>
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+          <Link href={`/affiliate-store?country=${country}`} className="text-sm font-semibold text-[#96732e]">← {ar ? "العودة إلى المتجر" : "Back to store"}</Link>
+          <label className="text-sm font-medium">{ar ? "سوق التسوق" : "Shopping market"}
+            <select value={country} onChange={event => setCountry(event.target.value as "TR" | "US")} className="ms-2 rounded-xl border border-[#ded6c7] bg-white px-3 py-2.5">
+              <option value="TR">Türkiye</option><option value="US">United States</option>
+            </select>
+          </label>
+        </div>
         {loading ? <p className="mt-8 rounded-2xl bg-white p-10 text-center">{ar ? "جارٍ تحميل المنتج..." : "Loading product..."}</p>
           : !item ? <p className="mt-8 rounded-2xl bg-white p-10 text-center">{ar ? "المنتج غير متاح حالياً." : "This product is currently unavailable."}</p>
           : <div className="mt-7 grid gap-8 rounded-3xl border border-[#e7e0d3] bg-white p-5 shadow-sm md:grid-cols-2 md:p-9">
