@@ -87,7 +87,7 @@ describe("public catalog privacy and visibility", () => {
     mocks.query
       .mockResolvedValueOnce({
         rowCount: 1,
-        rows: [{ id: "store-id", name: "Member Store", slug: "member-store", businessName: "Member Business", businessDescription: null, website: null }],
+        rows: [{ id: "store-id", name: "Member Store", slug: "member-store", businessName: "Member Business", businessDescription: null, website: null, logoReference: "https://cdn.example/logo.webp" }],
       })
       .mockResolvedValueOnce({
         rows: [{ id: "product-id", title: "Public item", price: "12.00", currency: "USD" }],
@@ -99,6 +99,7 @@ describe("public catalog privacy and visibility", () => {
     expect(response.status).toBe(200);
     expect(data.success).toBe(true);
     expect(data.store.slug).toBe("member-store");
+    expect(data.store.logoReference).toBe("https://cdn.example/logo.webp");
     expect(data.products).toHaveLength(1);
     expect(JSON.stringify(data)).not.toMatch(/supplier|source_offer|supplier_price|supplier_name/i);
     expect(String(mocks.query.mock.calls[0][0])).toContain("s.status = 'active'");
