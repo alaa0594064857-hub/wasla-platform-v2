@@ -59,11 +59,13 @@ export async function ensureAffiliateCommerceTables(): Promise<void> {
       publication_status varchar(16) NOT NULL DEFAULT 'draft'
         CHECK (publication_status IN ('draft','published','archived')),
       last_verified_at timestamptz,
+      source_url text,
       created_at timestamptz NOT NULL DEFAULT NOW(),
       updated_at timestamptz NOT NULL DEFAULT NOW(),
       UNIQUE(program_id, provider_item_id)
     )
   `);
+  await db.query(`ALTER TABLE affiliate_items ADD COLUMN IF NOT EXISTS source_url text`);
   await db.query(`CREATE INDEX IF NOT EXISTS affiliate_items_public_idx ON affiliate_items(program_id, publication_status, updated_at DESC)`);
   await db.query(`
     CREATE TABLE IF NOT EXISTS affiliate_clicks (
@@ -82,6 +84,49 @@ export async function ensureAffiliateCommerceTables(): Promise<void> {
        'بصفتي شريكاً في Amazon، أكسب من عمليات الشراء المؤهلة.')
     ON CONFLICT (provider, marketplace_domain) DO NOTHING
   `);
+
+  const program = await db.query(
+    `SELECT id FROM affiliate_programs WHERE provider='amazon_associates' AND marketplace_domain='amazon.com' LIMIT 1`
+  );
+  const programId = program.rows[0]?.id;
+  if (programId) {
+    const editorialCandidates = [
+      {
+        id: "editorial:owala-freesip-stainless-24oz",
+        titleEn: "Owala FreeSip Stainless Steel Water Bottle — 24 oz",
+        titleAr: "قارورة أوالا FreeSip المعزولة من الستانلس ستيل — 24 أونصة",
+        descriptionEn: "Insulated stainless-steel bottle with Owala's dual-function FreeSip spout, built-in straw and wide-mouth opening. The manufacturer lists a leak-proof lid, triple-layer insulation, a carry loop and a 24-hour cold claim. Verify the selected size and current details on the brand page.",
+        descriptionAr: "قارورة معزولة من الستانلس ستيل بفوهة FreeSip ذات طريقتَي الشرب، مع شفاطة مدمجة وفتحة واسعة. تذكر الشركة غطاءً مانعاً للتسرب وعزلاً ثلاثي الطبقات وحلقة حمل واحتفاظاً بالبرودة لمدة 24 ساعة. يجب مراجعة المقاس والتفاصيل الحالية لدى الشركة.",
+        sourceUrl: "https://owalalife.com/products/freesip"
+      },
+      {
+        id: "editorial:stanley-quencher-h2o-flowstate-40oz",
+        titleEn: "Stanley Quencher H2.0 FlowState Tumbler — 40 oz",
+        titleAr: "كوب ستانلي Quencher H2.0 FlowState — 40 أونصة",
+        descriptionEn: "Reusable 40 oz tumbler with double-wall vacuum insulation, a three-position FlowState lid, reusable straw and comfort-grip handle. Stanley lists recycled 18/8 stainless steel and compatibility with most car cup holders. Colors and availability vary by listing.",
+        descriptionAr: "كوب قابل لإعادة الاستخدام بسعة 40 أونصة، بعزل حراري مزدوج الجدار وغطاء FlowState بثلاث وضعيات وشفاطة قابلة لإعادة الاستخدام ومقبض مريح. تذكر ستانلي استخدام فولاذ 18/8 معاد التدوير والتوافق مع معظم حاملات أكواب السيارات. تختلف الألوان والتوفّر حسب صفحة المنتج.",
+        sourceUrl: "https://www.stanley1913.com/products/quencher-h2-0-flowstate-tumbler-40-oz"
+      },
+      {
+        id: "editorial:anker-735-nano-ii-65w",
+        titleEn: "Anker 735 Charger (Nano II 65W)",
+        titleAr: "شاحن Anker 735 Nano II بقدرة 65 واط",
+        descriptionEn: "Compact GaN II wall charger with three ports: two USB-C and one USB-A. Anker's specifications list up to 65W single-port output; combined output depends on which ports are used. Check device compatibility and the regional plug version before purchase.",
+        descriptionAr: "شاحن جداري مدمج بتقنية GaN II وثلاثة منافذ: منفذا USB-C ومنفذ USB-A. تذكر مواصفات Anker قدرة تصل إلى 65 واط عند استخدام منفذ واحد، بينما تختلف القدرة المشتركة حسب المنافذ المستخدمة. يجب التحقق من توافق الجهاز ونوع القابس الخاص بالمنطقة قبل الشراء.",
+        sourceUrl: "https://www.anker.com/eu-en/products/a2667"
+      }
+    ];
+    for (const item of editorialCandidates) {
+      await db.query(
+        `INSERT INTO affiliate_items
+          (program_id, provider_item_id, title_en, title_ar, description_en, description_ar,
+           source_url, content_source, destination_countries, publication_status, last_verified_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,'editorial','[]'::jsonb,'draft',NOW())
+         ON CONFLICT (program_id, provider_item_id) DO NOTHING`,
+        [programId, item.id, item.titleEn, item.titleAr, item.descriptionEn, item.descriptionAr, item.sourceUrl]
+      );
+    }
+  }
 }
 
 export async function handleAffiliateCommerceRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -98,9 +143,15 @@ export async function handleAffiliateCommerceRequest(req: IncomingMessage, res: 
        FROM affiliate_programs p LEFT JOIN affiliate_items i ON i.program_id=p.id
        GROUP BY p.id ORDER BY p.created_at ASC`
     );
+    const items = await db.query(
+      `SELECT id, provider_item_id, title_en, title_ar, description_en, description_ar,
+              source_url, content_source, publication_status, last_verified_at
+       FROM affiliate_items ORDER BY created_at DESC LIMIT 100`
+    );
     reply(res, 200, {
       success: true,
       programs: programs.rows,
+      items: items.rows,
       safeguards: {
         publicPublishingEnabled: false,
         amazonProductApiConnected: false,
