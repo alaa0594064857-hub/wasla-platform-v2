@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useLocale } from "../../../../components/locale-provider";
+import "./headquarters.css";
 
 type Task = { id: string; specialistKey: string; title: string; status: string; resultText?: string | null; createdAt: string };
 type AssistantStatus = { configured: boolean; managerEnabled: boolean };
@@ -129,9 +130,9 @@ export default function AiHeadquartersPage() {
   };
 
   return (
-    <main dir={ar ? "rtl" : "ltr"} lang={locale} className="min-h-screen bg-[#f7f4ed] px-4 py-5 text-[#14243a] sm:px-7 sm:py-7">
-      <div className="mx-auto max-w-[1440px] space-y-5">
-        <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#e5e0d5] bg-white px-5 py-4 shadow-sm">
+    <main dir={ar ? "rtl" : "ltr"} lang={locale} className="wasla-ai-headquarters">
+      <div className="wasla-ai-shell">
+        <header className="wasla-ai-header">
           <div>
             <p className="text-[10px] font-extrabold tracking-[.18em] text-[#9b783d]">WASLA / AI OPERATIONS</p>
             <h1 className="mt-1 text-xl font-extrabold sm:text-2xl">{copy.title}</h1>
@@ -143,7 +144,7 @@ export default function AiHeadquartersPage() {
           </div>
         </header>
 
-        <section aria-labelledby="ai-general-manager" className="overflow-hidden rounded-3xl border-2 border-[#b18d4d] bg-gradient-to-br from-[#14243a] via-[#1d3552] to-[#29425f] p-5 text-white shadow-lg sm:p-7">
+        <section aria-labelledby="ai-general-manager" className="wasla-ai-manager">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 items-center gap-4 sm:gap-5">
               <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl border border-[#dfc58f]/50 bg-[#dfc58f]/15 text-4xl text-[#dfc58f] sm:h-20 sm:w-20">♛</div>
@@ -166,7 +167,7 @@ export default function AiHeadquartersPage() {
               { label: copy.review, value: stats.review },
               { label: copy.failed, value: stats.failed },
             ].map(item => (
-              <div key={item.label} className="rounded-xl border border-white/10 bg-white/5 px-3 py-3">
+              <div key={item.label} className="wasla-ai-stat">
                 <span className="block text-[11px] leading-5 text-slate-300">{item.label}</span>
                 <strong className="mt-1 block text-2xl font-extrabold tabular-nums text-[#dfc58f]">{loading ? "…" : item.value}</strong>
               </div>
@@ -178,15 +179,15 @@ export default function AiHeadquartersPage() {
           </div>
         </section>
 
-        <section className="space-y-4" aria-labelledby="ai-team-heading">
+        <section className="wasla-ai-departments" aria-labelledby="ai-team-heading">
           <div className="flex flex-wrap items-end justify-between gap-2">
             <div><p className="text-[10px] font-extrabold tracking-[.18em] text-[#9b783d]">AI TEAM · REPORTING TO GENERAL MANAGER</p><h2 id="ai-team-heading" className="mt-1 text-lg font-extrabold">{copy.departments}</h2><p className="mt-1 text-xs text-slate-500">{copy.departmentsText}</p></div>
             <span className="rounded-full border border-[#e5e0d5] bg-white px-3 py-1.5 text-xs font-bold text-[#9b783d]">{ar ? "9 موظفين متخصصين" : "9 specialist employees"}</span>
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-3">
+          <div className="wasla-ai-team-grid">
             {team.map(([key, arName, enName, arDesc, enDesc, icon], index) => {
               const count = tasks.filter(task => task.specialistKey === key).length;
-              return <Link key={key} href={"/owner/ai/office/" + key} className="group flex min-h-[158px] flex-col rounded-2xl border border-[#e5e0d5] bg-white p-4 text-inherit no-underline shadow-sm transition hover:-translate-y-0.5 hover:border-[#b18d4d] hover:shadow-md sm:min-h-[174px] sm:p-5">
+              return <Link key={key} href={"/owner/ai/office/" + key} className="wasla-ai-team-card">
                 <div className="flex items-center justify-between gap-2">
                   <span className="grid h-11 w-11 place-items-center rounded-xl bg-[#f4efe2] text-xl text-[#9b783d]">{icon}</span>
                   <span className="rounded-full bg-[#f7f4ed] px-2.5 py-1 text-[10px] font-bold text-slate-500">{ar ? "موظف" : "SPECIALIST"} {index + 1}</span>
@@ -202,8 +203,8 @@ export default function AiHeadquartersPage() {
           </div>
         </section>
 
-        <section className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-2xl border border-[#e5e0d5] bg-white p-4 shadow-sm">
+        <section className="wasla-ai-status">
+          <div className="wasla-ai-info-card">
             <div className="flex items-center gap-2"><span className="text-lg text-[#9b783d]">◈</span><h2 className="text-sm font-extrabold">{copy.status}</h2></div>
             <div className="mt-3 grid grid-cols-2 gap-2">
               <div className="rounded-xl bg-[#f7f4ed] p-3"><span className="text-[11px] text-slate-500">{copy.engine}</span><strong className="mt-1 block text-xs">{status ? (status.configured ? copy.configured : copy.missing) : "—"}</strong></div>
