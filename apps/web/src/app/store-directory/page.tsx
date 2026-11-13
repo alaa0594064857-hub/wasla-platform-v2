@@ -54,6 +54,7 @@ export default function StoreDirectoryPage() {
   const requestId = useRef(0);
 
   const load = useCallback(async (q: string, market: string, signal?: AbortSignal) => {
+    const currentRequest = ++requestId.current;
     setLoading(true);
     setError("");
     try {
@@ -70,8 +71,7 @@ export default function StoreDirectoryPage() {
       if (requestId.current === currentRequest) setStores(data.stores);
     } catch (cause) {
       if (cause instanceof Error && cause.name === "AbortError") return;
-      setError(t.error);
-      setStores([]);
+      if (requestId.current === currentRequest) { setError(t.error); setStores([]); }
     } finally {
       if (!signal?.aborted && requestId.current === currentRequest) setLoading(false);
     }
