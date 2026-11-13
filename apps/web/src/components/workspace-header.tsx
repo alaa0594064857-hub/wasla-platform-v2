@@ -123,7 +123,8 @@ export default function WorkspaceHeader({ section = "account" }: { section?: "ac
       <Link href="/" className="wasla-workspace-brand"><span>W</span><strong>{ar ? "وصلة" : "WASLA"}</strong></Link>
       <nav className="wasla-workspace-nav" aria-label={ar ? "التنقل الرئيسي" : "Main navigation"}>
         <Link href={accountHref} aria-current={inAccountSpace ? "page" : undefined}>{isPending ? "..." : session?.user ? (ar ? "مساحة عملي" : "My workspace") : (ar ? "الرئيسية" : "Home")}</Link>
-        <Link href="/store-directory">{ar ? "اكتشف المتاجر" : "Discover stores"}</Link>\n        <Link href="/shops">{ar ? "متاجري" : "My shops"}</Link>
+        <Link href="/store-directory">{ar ? "اكتشف المتاجر" : "Discover stores"}</Link>
+        <Link href="/shops">{ar ? "متاجري" : "My shops"}</Link>
         <Link href="/business">{ar ? "الأعمال" : "Business"}</Link>
         <Link href="/trade" aria-current={pathname === "/trade" ? "page" : undefined}>{ar ? "الصفقات" : "Trade"}</Link>
         <Link href="/network" aria-current={pathname === "/network" ? "page" : undefined}>{ar ? "شبكتي" : "My network"}</Link>
