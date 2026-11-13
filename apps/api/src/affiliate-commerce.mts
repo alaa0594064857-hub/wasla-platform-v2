@@ -7,7 +7,7 @@ function reply(res: ServerResponse, status: number, data: Record<string, unknown
   res.end(JSON.stringify(data));
 }
 
-function approvedOutboundUrl(value: unknown, marketplaceDomain: unknown): string | null {
+export function approvedOutboundUrl(value: unknown, marketplaceDomain: unknown): string | null {
   if (typeof value !== "string" || typeof marketplaceDomain !== "string") return null;
   try {
     const url = new URL(value);
