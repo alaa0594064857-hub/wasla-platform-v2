@@ -19,20 +19,35 @@ export default function AffiliateProductPage() {
   const [item, setItem] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
   const [country, setCountry] = useState<"TR" | "US">("TR");
+  const [marketReady, setMarketReady] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [failed, setFailed] = useState(false);
   useEffect(() => {
     const requested = new URLSearchParams(window.location.search).get("country");
     if (requested === "TR" || requested === "US") setCountry(requested);
+    setMarketReady(true);
   }, []);
+  function updateMarket(nextCountry: "TR" | "US") {
+    setCountry(nextCountry);
+    const params = new URLSearchParams(window.location.search);
+    params.set("country", nextCountry);
+    window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
+  }
   useEffect(() => {
     let active = true;
+    if (!marketReady) return;
     setLoading(true);
+    setFailed(false);
     fetch(`/api/public/affiliate-items?country=${country}`, { cache: "no-store" })
-      .then(r => r.json())
-      .then(data => { if (active && data.success && Array.isArray(data.items)) setItem(data.items.find((x: Item) => x.id === params.id) || null); })
-      .catch(() => { if (active) setItem(null); })
+      .then(async r => { if (!r.ok) throw new Error("Catalog request failed"); return r.json(); })
+      .then(data => {
+        if (!data.success || !Array.isArray(data.items)) throw new Error("Invalid catalog response");
+        if (active) setItem(data.items.find((x: Item) => x.id === params.id) || null);
+      })
+      .catch(() => { if (active) { setItem(null); setFailed(true); } })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [params.id, country]);
+  }, [params.id, country, marketReady, retryCount]);
   const title = item ? (ar ? item.title_ar || item.title_en : item.title_en || item.title_ar) || "" : "";
   const description = item ? (ar ? item.description_ar || item.description_en : item.description_en || item.description_ar) : "";
   return (
@@ -42,12 +57,13 @@ export default function AffiliateProductPage() {
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
           <Link href={`/affiliate-store?country=${country}`} className="text-sm font-semibold text-[#96732e]">← {ar ? "العودة إلى المتجر" : "Back to store"}</Link>
           <label className="text-sm font-medium">{ar ? "سوق التسوق" : "Shopping market"}
-            <select value={country} onChange={event => setCountry(event.target.value as "TR" | "US")} className="ms-2 rounded-xl border border-[#ded6c7] bg-white px-3 py-2.5">
+            <select value={country} onChange={event => updateMarket(event.target.value as "TR" | "US")} className="ms-2 rounded-xl border border-[#ded6c7] bg-white px-3 py-2.5">
               <option value="TR">Türkiye</option><option value="US">United States</option>
             </select>
           </label>
         </div>
         {loading ? <p className="mt-8 rounded-2xl bg-white p-10 text-center">{ar ? "جارٍ تحميل المنتج..." : "Loading product..."}</p>
+          : failed ? <div role="alert" className="mt-8 rounded-2xl bg-white p-10 text-center text-red-700">{ar ? "تعذر تحميل المنتج. تحقق من اتصالك وحاول مرة أخرى." : "Could not load this product. Check your connection and try again."}<div><button type="button" onClick={() => setRetryCount(value => value + 1)} className="mt-4 rounded-full bg-[#17253a] px-5 py-2.5 text-sm font-semibold text-white">{ar ? "إعادة المحاولة" : "Try again"}</button></div></div>
           : !item ? <p className="mt-8 rounded-2xl bg-white p-10 text-center">{ar ? "المنتج غير متاح حالياً." : "This product is currently unavailable."}</p>
           : <div className="mt-7 grid gap-8 rounded-3xl border border-[#e7e0d3] bg-white p-5 shadow-sm md:grid-cols-2 md:p-9">
             <div className="flex min-h-[320px] items-center justify-center rounded-2xl bg-[#f8f7f3] p-6 md:min-h-[480px]">
