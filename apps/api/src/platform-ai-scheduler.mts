@@ -112,6 +112,9 @@ async function seedWeekOneTasks(): Promise<number> {
     WHERE u.status='active' AND u.email_verified=TRUE`);
   let created=0;
   for(const owner of owners.rows) {
+    const priorWeekOne=await db.query(`SELECT 1 FROM platform_ai_team_tasks
+      WHERE owner_user_id=$1 AND idempotency_key LIKE 'affiliate-week1-%' LIMIT 1`,[owner.id]);
+    if(priorWeekOne.rows.length>0) continue;
     for(let index=0;index<WEEK_ONE_TASKS.length;index++) {
       const task=WEEK_ONE_TASKS[index];
       const inserted=await db.query(`INSERT INTO platform_ai_team_tasks
