@@ -17,6 +17,7 @@ type AffiliateItem = {
   disclosure_ar: string;
   disclosure_en: string;
   outbound_path: string;
+  image_url: string | null;
 };
 
 export default function AffiliateStorePage() {
@@ -111,12 +112,17 @@ export default function AffiliateStorePage() {
                 <p className="mx-auto mt-3 max-w-xl leading-8 text-slate-600">{copy.empty}</p>
               </div>
             : <div className="grid gap-5 sm:grid-cols-2">
-                {items.map(item => <article key={item.id} className="rounded-2xl border border-[#e4ddcf] bg-white p-5 shadow-sm">
+                {items.map(item => <article key={item.id} className="overflow-hidden rounded-2xl border border-[#e4ddcf] bg-white shadow-sm">
+                  <div className="flex h-64 items-center justify-center bg-[#f7f5f0] p-5">
+                    {item.image_url ? <img src={item.image_url} alt={ar ? item.title_ar || item.title_en || "صورة المنتج" : item.title_en || item.title_ar || "Product image"} loading="lazy" className="h-full w-full object-contain" /> : <div className="grid h-full w-full place-items-center rounded-xl bg-[#eee7d8] text-4xl font-bold text-[#96732e]">W</div>}
+                  </div>
+                  <div className="p-5">
                   <span className="text-xs font-semibold text-[#96732e]">{item.kind === "editorial" ? copy.editorialLabel : item.marketplace}</span>
                   <h2 className="mt-2 text-lg font-bold">{ar ? item.title_ar : item.title_en}</h2>
                   <p className="mt-2 text-sm leading-7 text-slate-600">{(ar ? item.description_ar : item.description_en) || ""}</p>
                   {item.kind === "affiliate" ? <p className="mt-4 text-xs leading-6 text-slate-500">{ar ? item.disclosure_ar : item.disclosure_en}</p> : <p className="mt-4 text-xs leading-6 text-slate-500">{ar ? "قد تختلف الأسعار والتوفر حسب البلد." : "Pricing and availability may vary by country."}</p>}
                   <a href={item.outbound_path} target="_blank" rel={item.kind === "affiliate" ? "sponsored nofollow noreferrer" : "noopener noreferrer"} className="mt-4 inline-flex rounded-lg bg-[#17253a] px-4 py-3 text-sm font-semibold text-white">{item.kind === "editorial" ? copy.editorialButton : ar ? "عرض لدى المتجر الشريك" : "View at partner retailer"} ↗</a>
+                  </div>
                 </article>)}
               </div>}
         </div>
