@@ -1086,7 +1086,7 @@ if (process.env.NODE_ENV !== "test") {
   const server = createWaslaServer();
 
   void import("./database.js")
-    .then(async ({ ensureRegistrationTypeColumn, ensureAccountOwnerRole, ensureStoreOwnerRole, ensurePlatformOwnerRole, ensurePersonalThemesTable, ensureStoreProductsTable, ensureNetworkTables, ensureProductInquiryTables, ensureVerifiedReviewTables, ensureSubscriptionBillingTables, ensureMemberStoreOrderTables, getDatabaseIdentity }) => {
+    .then(async ({ ensureRegistrationTypeColumn, ensureAccountOwnerRole, ensureStoreOwnerRole, ensurePlatformOwnerRole, ensurePersonalThemesTable, ensureStoreProductsTable, ensureNetworkTables, ensureProductInquiryTables, ensureVerifiedReviewTables, ensureSubscriptionBillingTables, ensureMemberStoreOrderTables, getDatabasePool, getDatabaseIdentity }) => {
       const { ensureAuthorizationRoles } = await import("./authorization-bootstrap.mjs");
       await ensureRegistrationTypeColumn();
       await ensureAuthorizationRoles();
@@ -1104,6 +1104,7 @@ if (process.env.NODE_ENV !== "test") {
       await ensureProductInquiryTables();
       await ensureVerifiedReviewTables();
       await ensureSubscriptionBillingTables();
+      await getDatabasePool().query('ALTER TABLE "business_profiles" ADD COLUMN IF NOT EXISTS "logo_reference" text');
       const { ensureNotificationsTable } = await import("./notifications.mjs");
       await ensureNotificationsTable();
       const { ensureTradeTables } = await import("./trade.mjs");
