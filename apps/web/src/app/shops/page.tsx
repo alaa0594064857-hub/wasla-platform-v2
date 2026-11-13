@@ -20,7 +20,7 @@ const copy = {
     noAccounts: "تحتاج أولاً إلى إنشاء حساب تجاري تملكه أو تملك صلاحية إدارته.",
     retry: "إعادة المحاولة", error: "تعذر إكمال الطلب. تحقق من تسجيل الدخول وصلاحيات الحساب.",
     active: "نشط", suspended: "موقوف", slug: "رابط المتجر", owner: "حساب النشاط",
-    success: "تم إنشاء المتجر بنجاح.", intro: "مساحة عمل التاجر",
+    success: "تم إنشاء المتجر بنجاح.", intro: "مساحة عمل التاجر", viewPublic: "معاينة المتجر العام",
   },
   en: {
     title: "My private shops", subtitle: "Create and manage the shops connected to your business accounts in one place.",
@@ -30,7 +30,7 @@ const copy = {
     noAccounts: "First create a business account that you own or are authorized to manage.",
     retry: "Try again", error: "Could not complete the request. Check your sign-in and account permissions.",
     active: "Active", suspended: "Suspended", slug: "Shop address", owner: "Business account",
-    success: "Your shop was created successfully.", intro: "Seller workspace",
+    success: "Your shop was created successfully.", intro: "Seller workspace", viewPublic: "View public shop",
   },
 };
 
@@ -123,8 +123,8 @@ export default function ShopsPage() {
                 {stores.map(store => (
                   <article className="shops-card" key={store.id}>
                     <div className="shops-card-top"><span className="shops-card-mark">W</span><span className={`shops-status ${store.status === "active" ? "is-active" : ""}`}>{store.status === "active" ? t.active : t.suspended}</span></div>
-                    <h3><Link href={`/store/${encodeURIComponent(store.slug)}`}>{store.name}</Link></h3><p>{t.owner}: {store.account_name}</p>
-                    <div className="shops-slug"><small>{t.slug}</small><strong dir="ltr">/store/{store.slug}</strong></div>
+                    <h3><Link href={`/shops/${encodeURIComponent(store.slug)}`}>{store.name}</Link></h3><p>{t.owner}: {store.account_name}</p>
+                    <div className="shops-slug"><small>{t.slug}</small><strong dir="ltr">/store/{store.slug}</strong></div><Link href={`/store/${encodeURIComponent(store.slug)}`} target="_blank" rel="noreferrer" className="mt-4 inline-flex rounded-lg border border-[#b89545] px-3 py-2 text-xs font-bold text-[#92713a] hover:bg-[#f7f4ec]">{t.viewPublic} ↗</Link>
                   </article>
                 ))}
               </div>
