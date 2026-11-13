@@ -12,8 +12,13 @@ type Program = {
   status: string; disclosure_en: string; disclosure_ar: string;
   item_count: number; published_item_count: number;
 };
+type AffiliateItem = {
+  id: string; provider_item_id: string; title_en: string | null; title_ar: string | null;
+  description_en: string | null; description_ar: string | null; source_url: string | null;
+  content_source: string; publication_status: string; last_verified_at: string | null;
+};
 type Dashboard = {
-  success: boolean; programs: Program[];
+  success: boolean; programs: Program[]; items: AffiliateItem[];
   safeguards: { publicPublishingEnabled: boolean; amazonProductApiConnected: boolean; amazonLinksEnabled: boolean; turkeyAffiliateProgramConfigured: boolean };
   note: string;
 };
@@ -62,7 +67,8 @@ export default function AffiliateCommercePage() {
     noApi: "ربط Amazon Product API: غير مفعّل", noLinks: "روابط Amazon: غير مفعّلة",
     noTurkey: "برنامج تركيا: غير مهيأ", note: "لا توجد منتجات أو أسعار أو صور أو روابط شراء منشورة. لن نستخدم صور Amazon أو بيانات الأسعار والتقييمات قبل توفر مصدر رسمي مصرح به.",
     owner: "هذه الصفحة مخصصة لمالك المنصة.", loading: "جارٍ تحميل إعدادات التسويق بالعمولة...",
-    error: "تعذر تحميل بيانات التسويق بالعمولة."
+    error: "تعذر تحميل بيانات التسويق بالعمولة.", candidates: "المنتجات المرشحة (مسودات خاصة)", draft: "مسودة — غير منشور",
+    source: "المصدر الرسمي", noCandidates: "لا توجد منتجات مرشحة بعد.", reviewed: "آخر تحقق"
   } : {
     title: "Affiliate commerce", back: "Back to official store",
     subtitle: "Manage referral programs separately from WASLA-owned products, inventory and orders.",
@@ -73,7 +79,8 @@ export default function AffiliateCommercePage() {
     noApi: "Amazon Product API: not connected", noLinks: "Amazon links: disabled",
     noTurkey: "Turkey program: not configured", note: "No products, prices, images or shopping links are published. Amazon images, prices and ratings will not be used until an authorized official data source is available.",
     owner: "This page is restricted to the platform owner.", loading: "Loading affiliate settings...",
-    error: "Could not load affiliate commerce data."
+    error: "Could not load affiliate commerce data.", candidates: "Product candidates (private drafts)", draft: "Draft — unpublished",
+    source: "Official source", noCandidates: "No product candidates yet.", reviewed: "Last checked"
   };
 
   if (isPending || loading) return <main className="mx-auto max-w-5xl p-6">{t.loading}</main>;
@@ -110,6 +117,22 @@ export default function AffiliateCommercePage() {
         </div>
       </article>)}
       {!error && (data?.programs.length ?? 0) === 0 ? <p className="rounded-xl border p-4 text-sm text-slate-500">—</p> : null}
+    </section>
+    <section className="space-y-4">
+      <h2 className="text-xl font-bold">{t.candidates}</h2>
+      {(data?.items || []).map(item => <article key={item.id} className="space-y-2 rounded-2xl border bg-white p-4 md:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="font-bold">{ar ? item.title_ar || item.title_en : item.title_en || item.title_ar}</h3>
+          <span className="rounded-full bg-amber-50 px-3 py-1 text-xs text-amber-900">{t.draft}</span>
+        </div>
+        <p className="text-sm leading-7 text-slate-600">{ar ? item.description_ar : item.description_en}</p>
+        <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
+          <span>{item.content_source}</span>
+          {item.last_verified_at ? <span>{t.reviewed}: {new Date(item.last_verified_at).toLocaleDateString(ar ? "ar" : "en-US")}</span> : null}
+          {item.source_url ? <a className="font-semibold text-amber-800 underline" href={item.source_url} target="_blank" rel="noreferrer">{t.source} ↗</a> : null}
+        </div>
+      </article>)}
+      {!error && (data?.items.length ?? 0) === 0 ? <p className="rounded-xl border p-4 text-sm text-slate-500">{t.noCandidates}</p> : null}
     </section>
   </main>;
 }
