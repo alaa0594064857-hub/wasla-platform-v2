@@ -123,15 +123,15 @@ export default function ShopsPage() {
                 {stores.map(store => (
                   <article className="shops-card" key={store.id}>
                     <div className="shops-card-top"><span className="shops-card-mark">W</span><span className={`shops-status ${store.status === "active" ? "is-active" : ""}`}>{store.status === "active" ? t.active : t.suspended}</span></div>
-                    <h3><Link href={`/shops/${store.slug}`}>{store.name}</Link></h3><p>{t.owner}: {store.account_name}</p>
-                    <div className="shops-slug"><small>{t.slug}</small><strong dir="ltr">/shops/{store.slug}</strong></div>
+                    <h3><Link href={`/store/${encodeURIComponent(store.slug)}`}>{store.name}</Link></h3><p>{t.owner}: {store.account_name}</p>
+                    <div className="shops-slug"><small>{t.slug}</small><strong dir="ltr">/store/{store.slug}</strong></div>
                   </article>
                 ))}
               </div>
             )}
           </section>
 
-          {stores.length === 0 && !loading && (
+          {!loading && (
             <aside className="shops-create-card">
               <span className="shops-eyebrow">{locale === "ar" ? "02 / ابدأ رحلتك" : "02 / GET STARTED"}</span><h2>{t.create}</h2>
               <form onSubmit={createStore}>
