@@ -18,14 +18,14 @@ const emptyLinks = { instagram: "", facebook: "", linkedin: "", x: "", youtube: 
 const labels = {
   ar: {
     eyebrow: "WASLA ID · هويتك الرقمية", title: "ملفي الشخصي", subtitle: "أنشئ حضورك الشخصي على وصلة. معلوماتك وروابطك تظهر ضمن هويتك الموحدة.",
-    photo: "الصورة الشخصية", upload: "اختيار صورة من الهاتف", photoHint: "PNG أو JPG أو WEBP أو GIF — حتى 3 ميغابايت",
+    photo: "الصورة الشخصية", upload: "اختيار صورة من الهاتف", photoHint: "PNG أو JPG أو WEBP — حتى 3 ميغابايت",
     name: "الاسم الظاهر", email: "البريد الإلكتروني", bio: "نبذة عنك", bioHint: "اكتب نبذة قصيرة تعرّف الآخرين بك...", website: "موقعك الإلكتروني",
     socials: "روابطك وحساباتك", save: "حفظ الملف الشخصي", saving: "جارٍ الحفظ...", loading: "جارٍ تحميل ملفك...", saved: "تم حفظ ملفك الشخصي.", error: "تعذر حفظ التغييرات. تحقق من البيانات وحاول مجدداً.",
     home: "الرئيسية", remove: "إزالة الصورة", preview: "معاينة الصورة", invalid: "اختر صورة صالحة أصغر من 3 ميغابايت."
   },
   en: {
     eyebrow: "WASLA ID · YOUR DIGITAL IDENTITY", title: "My profile", subtitle: "Build your personal presence on WASLA. Your details and links belong to your unified identity.",
-    photo: "Profile photo", upload: "Choose a photo from your device", photoHint: "PNG, JPG, WEBP or GIF — up to 3 MB",
+    photo: "Profile photo", upload: "Choose a photo from your device", photoHint: "PNG, JPG or WEBP — up to 3 MB",
     name: "Display name", email: "Email address", bio: "About you", bioHint: "Write a short introduction...", website: "Your website",
     socials: "Your links & social accounts", save: "Save profile", saving: "Saving...", loading: "Loading your profile...", saved: "Your profile has been saved.", error: "Could not save changes. Check the details and try again.",
     home: "Home", remove: "Remove photo", preview: "Photo preview", invalid: "Choose a valid image smaller than 3 MB."
@@ -144,7 +144,7 @@ export default function ProfilePage() {
                   {avatarReference ? <img src={avatarReference} alt={t.preview} /> : <span>{(displayName.trim().charAt(0) || "W").toUpperCase()}</span>}
                 </div>
                 <div className="wasla-profile-photo-actions">
-                  <label className="wasla-profile-upload">{t.upload}<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={choosePhoto} /></label>
+                  <label className="wasla-profile-upload">{t.upload}<input type="file" accept="image/png,image/jpeg,image/webp" onChange={choosePhoto} /></label>
                   {avatarReference && <button type="button" className="wasla-profile-remove" onClick={() => setAvatarReference("")}>{t.remove}</button>}
                 </div>
               </div>
