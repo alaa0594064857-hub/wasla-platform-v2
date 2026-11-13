@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale } from "../../components/locale-provider";
 import WorkspaceHeader from "../../components/workspace-header";
 
@@ -50,7 +50,7 @@ export default function StoreDirectoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
-  const [submittedCountry, setSubmittedCountry] = useState("");
+  const [submittedCountry, setSubmittedCountry] = useState("");\n  const requestId = useRef(0);
 
   const load = useCallback(async (q: string, market: string, signal?: AbortSignal) => {
     setLoading(true);
@@ -66,20 +66,20 @@ export default function StoreDirectoryPage() {
       if (!response.ok || !data.success || !Array.isArray(data.stores)) {
         throw new Error("directory");
       }
-      setStores(data.stores);
+      if (requestId.current === currentRequest) setStores(data.stores);
     } catch (cause) {
       if (cause instanceof Error && cause.name === "AbortError") return;
       setError(t.error);
       setStores([]);
     } finally {
-      if (!signal?.aborted) setLoading(false);
+      if (!signal?.aborted && requestId.current === currentRequest) setLoading(false);
     }
   }, [t.error]);
 
   useEffect(() => {
     const controller = new AbortController();
     void load("", "", controller.signal);
-    return () => controller.abort();
+    return () => { controller.abort(); requestId.current += 1; };
   }, [load]);
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
