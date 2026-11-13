@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { fromNodeHeaders } from "better-auth/node";
 import { auth } from "./auth.mjs";
 import { getDatabasePool } from "./database.js";
+import { normalizeImageDataUrl } from "./media-storage.mjs";
 
 function reply(res: ServerResponse, status: number, data: Record<string, unknown>) {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
@@ -47,11 +48,21 @@ export async function handleBrandsRequest(req: IncomingMessage, res: ServerRespo
     if (logoReference !== null && typeof logoReference !== "string") {
       reply(res, 400, { success: false, error: "Invalid logo" }); return;
     }
+    let safeLogoReference = logoReference as string | null;
     if (typeof logoReference === "string") {
-      const dataImage = /^data:image\/(png|jpeg|webp|svg\+xml);base64,[A-Za-z0-9+/=]+$/.test(logoReference);
-      const httpsUrl = /^https:\/\//i.test(logoReference);
-      if ((!dataImage && !httpsUrl) || logoReference.length > 5_000_000) {
-        reply(res, 400, { success: false, error: "Choose an image under 3 MB or provide an HTTPS image URL" }); return;
+      if (logoReference.startsWith("data:")) {
+        const normalized = await normalizeImageDataUrl(logoReference);
+        if (!normalized) {
+          reply(res, 400, { success: false, error: "Use a valid PNG, JPEG or WebP logo under 3 MB" }); return;
+        }
+        safeLogoReference = normalized;
+      } else {
+        let parsed: URL | undefined;
+        try { parsed = new URL(logoReference); } catch { /* validated below */ }
+        if (!parsed || parsed.protocol !== "https:" || !parsed.hostname ||
+            parsed.username || parsed.password || logoReference.length > 2048) {
+          reply(res, 400, { success: false, error: "Choose a valid image under 3 MB or provide an HTTPS image URL" }); return;
+        }
       }
     }
     const permission = await db.query(
@@ -66,7 +77,7 @@ export async function handleBrandsRequest(req: IncomingMessage, res: ServerRespo
     if (!permission.rowCount) { reply(res, 403, { success: false, error: "Only the brand owner can update its logo" }); return; }
     await db.query(
       `UPDATE business_profiles SET logo_reference = $1, updated_at = NOW() WHERE account_id = $2`,
-      [logoReference || null, accountId],
+      [safeLogoReference || null, accountId],
     );
     reply(res, 200, { success: true });
   } catch (error) {
