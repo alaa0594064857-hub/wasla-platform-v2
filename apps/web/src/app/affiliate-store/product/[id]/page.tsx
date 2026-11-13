@@ -27,7 +27,7 @@ export default function AffiliateProductPage() {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [params.id]);
-  const title = item ? (ar ? item.title_ar || item.title_en : item.title_en || item.title_ar) : "";
+  const title = item ? (ar ? item.title_ar || item.title_en : item.title_en || item.title_ar) || "" : "";
   const description = item ? (ar ? item.description_ar || item.description_en : item.description_en || item.description_ar) : "";
   return (
     <main dir={ar ? "rtl" : "ltr"} lang={locale} className="min-h-screen bg-[#f6f3ec] text-[#17253a]">
