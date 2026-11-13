@@ -7,6 +7,7 @@ import WorkspaceHeader from "@/components/workspace-header";
 
 type AffiliateItem = {
   id: string;
+  kind: "affiliate" | "editorial";
   title_ar: string | null;
   title_en: string | null;
   description_ar: string | null;
@@ -48,7 +49,7 @@ export default function AffiliateStorePage() {
     intro: "مساحة لاكتشاف المنتجات عبر برامج شراكة معتمدة. عند اختيار منتج، تنتقل إلى موقع المتجر الشريك لإتمام الشراء والدفع والتوصيل معه مباشرة.",
     country: "السوق / دولة التسوق",
     emptyTitle: "نجهّز أول مجموعة منتجات",
-    empty: "لا توجد حالياً منتجات عمولة معتمدة ومتاحة لهذا السوق. لن نعرض روابط أو أسعاراً غير مؤكدة. نضيف المنتجات بعد اعتماد برنامج الشراكة والتحقق من مصدر البيانات والرابط.",
+    empty: "لا توجد حالياً منتجات عمولة معتمدة لهذا السوق. يمكنك استكشاف اختياراتنا التحريرية من صفحات الشركات الرسمية؛ الأسعار والتوفر والشحن تختلف حسب البلد والبائع.",
     loading: "جارٍ التحقق من المنتجات المتاحة...",
     failed: "تعذر تحميل المنتجات الآن. حاول مرة أخرى لاحقاً.",
     disclosureTitle: "إفصاح مهم",
@@ -58,14 +59,16 @@ export default function AffiliateStorePage() {
     step2: "انتقل إلى موقع البائع الشريك عبر رابط واضح.",
     step3: "أكمل الدفع والشحن وخدمة ما بعد البيع لدى البائع نفسه.",
     back: "العودة إلى عوالم WASLA",
-    noPayment: "لا تستلم WASLA دفعتك ولا تنفّذ الطلبات نيابة عن المتجر الشريك."
+    noPayment: "هذه بطاقات اكتشاف وليست عروض بيع مؤكدة. الأسعار والتوفر والشحن وسياسة الإرجاع يحددها الموقع الرسمي. لا تستلم WASLA الدفعة ولا تنفّذ الطلب." ,
+    editorialLabel: "اختيار تحريري · المصدر الرسمي",
+    editorialButton: "تفاصيل المنتج لدى الشركة"
   } : {
     eyebrow: "WASLA AFFILIATE SHOPPING",
     title: "Discover products from trusted marketplaces",
     intro: "A product-discovery space for approved partner programs. When you choose an item, you continue to the partner retailer to complete checkout, payment and delivery directly with them.",
     country: "Marketplace / shopping country",
     emptyTitle: "We are preparing the first product collection",
-    empty: "There are currently no approved affiliate products available for this marketplace. We will not show unverified links or prices. Products are added only after partner approval and source and link verification.",
+    empty: "There are currently no approved affiliate offers for this marketplace. You can still explore editorial product picks linked to official brand pages. Pricing, availability and shipping vary by country and seller.",
     loading: "Checking available products...",
     failed: "Products could not be loaded right now. Please try again later.",
     disclosureTitle: "Important disclosure",
@@ -75,7 +78,9 @@ export default function AffiliateStorePage() {
     step2: "Continue to the partner retailer through a clearly identified link.",
     step3: "Complete payment, shipping and after-sales service with that retailer.",
     back: "Back to WASLA worlds",
-    noPayment: "WASLA does not collect your payment or place orders on the partner retailer's behalf."
+    noPayment: "These are product-discovery cards, not confirmed offers. The official seller controls pricing, stock, shipping and returns. WASLA does not collect payment or place orders.",
+    editorialLabel: "Editorial pick · Official source",
+    editorialButton: "Product details at brand"
   };
 
   return (
@@ -107,11 +112,11 @@ export default function AffiliateStorePage() {
               </div>
             : <div className="grid gap-5 sm:grid-cols-2">
                 {items.map(item => <article key={item.id} className="rounded-2xl border border-[#e4ddcf] bg-white p-5 shadow-sm">
-                  <span className="text-xs font-semibold text-[#96732e]">{item.marketplace}</span>
+                  <span className="text-xs font-semibold text-[#96732e]">{item.kind === "editorial" ? copy.editorialLabel : item.marketplace}</span>
                   <h2 className="mt-2 text-lg font-bold">{ar ? item.title_ar : item.title_en}</h2>
                   <p className="mt-2 text-sm leading-7 text-slate-600">{(ar ? item.description_ar : item.description_en) || ""}</p>
-                  <p className="mt-4 text-xs leading-6 text-slate-500">{ar ? item.disclosure_ar : item.disclosure_en}</p>
-                  <a href={item.outbound_path} target="_blank" rel="sponsored nofollow noreferrer" className="mt-4 inline-flex rounded-lg bg-[#17253a] px-4 py-3 text-sm font-semibold text-white">{ar ? "عرض لدى المتجر الشريك" : "View at partner retailer"} ↗</a>
+                  {item.kind === "affiliate" ? <p className="mt-4 text-xs leading-6 text-slate-500">{ar ? item.disclosure_ar : item.disclosure_en}</p> : <p className="mt-4 text-xs leading-6 text-slate-500">{ar ? "قد تختلف الأسعار والتوفر حسب البلد." : "Pricing and availability may vary by country."}</p>}
+                  <a href={item.outbound_path} target="_blank" rel={item.kind === "affiliate" ? "sponsored nofollow noreferrer" : "noopener noreferrer"} className="mt-4 inline-flex rounded-lg bg-[#17253a] px-4 py-3 text-sm font-semibold text-white">{item.kind === "editorial" ? copy.editorialButton : ar ? "عرض لدى المتجر الشريك" : "View at partner retailer"} ↗</a>
                 </article>)}
               </div>}
         </div>
