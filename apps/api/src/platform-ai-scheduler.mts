@@ -368,12 +368,12 @@ async function main() {
       lastError = error;
       if (attempt === 4) break;
       if (error instanceof Error && error.message.startsWith("Scheduler API returned ")) {
-        const status = Number(error.message.match(/\\d+$/)?.[0]);
+        const status = Number(error.message.match(/\d+$/)?.[0]);
         if (![502, 503, 504].includes(status)) throw error;
       }
     }
 
-    const delayMs = [2000, 5000, 10000][attempt - 1];
+    const delayMs = [5000, 10000, 20000][attempt - 1];
     console.warn("WASLA scheduler API temporarily unavailable; retrying", {
       attempt,
       nextAttempt: attempt + 1,
