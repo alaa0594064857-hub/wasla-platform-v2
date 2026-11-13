@@ -228,13 +228,21 @@ export async function handleAffiliatePublicCatalogRequest(req: IncomingMessage, 
     // Editorial discovery cards are not affiliate offers and never imply local stock,
     // pricing, checkout, or commission. Only allow the three verified manufacturer hosts.
     const editorialResult = await db.query(
-      `SELECT id,title_en,title_ar,description_en,description_ar,source_url,last_verified_at
+      `SELECT id,provider_item_id,title_en,title_ar,description_en,description_ar,source_url,last_verified_at
        FROM affiliate_items
        WHERE content_source='editorial' AND publication_status='draft'
          AND last_verified_at >= NOW() - INTERVAL '30 days'
        ORDER BY created_at ASC LIMIT 20`
     );
     const allowedEditorialHosts = new Set(["owalalife.com", "www.stanley1913.com", "www.anker.com", "www.vatanbilgisayar.com"]);
+    // Official product-page imagery; Vatan thumbnails are served by its product CDN.
+    const editorialImages: Record<string, string> = {
+      "editorial:owala-freesip-stainless-24oz": "https://cdn.shopify.com/s/files/1/0439/2537/3087/files/OW_24oz_Free_Sip_Plaid_and_Simple_fall_stock_2026_SC_copy_dddd98b0-02e0-4909-adc3-6545e0096ded.png?crop=center&height=500&v=1788969809&width=500",
+      "editorial:stanley-quencher-h2o-flowstate-40oz": "https://www.stanley1913.com/cdn/shop/files/Web_PNG_Square-TheQuencherH2.0FlowstateTumbler-40OZ-SorbetWildflower-Front.png?v=1782915015&width=990",
+      "editorial:anker-735-nano-ii-65w": "https://cdn.shopify.com/s/files/1/0595/4034/0926/products/A2667311-Anker_735_Charger_Nano_II_65W.png?v=1758191630&width=3840",
+      "retail:vatan-anker-312-25w": "https://cdn.vatanbilgisayar.com/Upload/PRODUCT/anker/thumb/139689-1_small.jpg",
+      "retail:vatan-anker-nano-45w-black": "https://cdn.vatanbilgisayar.com/Upload/PRODUCT/anker/thumb/153187-1_small.jpg"
+    };
     const editorialItems = editorialResult.rows.flatMap((row: Record<string, unknown>) => {
       if (typeof row.id !== "string" || typeof row.source_url !== "string") return [];
       try {
@@ -248,6 +256,7 @@ export async function handleAffiliatePublicCatalogRequest(req: IncomingMessage, 
           description_en: row.description_en,
           description_ar: row.description_ar,
           marketplace: url.hostname === "www.vatanbilgisayar.com" ? "Vatan Bilgisayar" : "Official brand source",
+          image_url: typeof row.provider_item_id === "string" ? editorialImages[row.provider_item_id] || null : null,
           destination_country: country,
           disclosure_en: "",
           disclosure_ar: "",
