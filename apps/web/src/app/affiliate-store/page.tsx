@@ -60,8 +60,8 @@ export default function AffiliateStorePage() {
     step3: "أكمل الدفع والشحن وخدمة ما بعد البيع لدى البائع نفسه.",
     back: "العودة إلى عوالم WASLA",
     noPayment: "هذه بطاقات اكتشاف وليست عروض بيع مؤكدة. الأسعار والتوفر والشحن وسياسة الإرجاع يحددها الموقع الرسمي. لا تستلم WASLA الدفعة ولا تنفّذ الطلب." ,
-    editorialLabel: "اختيار تحريري · المصدر الرسمي",
-    editorialButton: "تفاصيل المنتج لدى الشركة"
+    editorialLabel: "منتج حقيقي · لدى البائع",
+    editorialButton: "عرض المنتج لدى البائع"
   } : {
     eyebrow: "WASLA AFFILIATE SHOPPING",
     title: "Discover products from trusted marketplaces",
@@ -79,8 +79,8 @@ export default function AffiliateStorePage() {
     step3: "Complete payment, shipping and after-sales service with that retailer.",
     back: "Back to WASLA worlds",
     noPayment: "These are product-discovery cards, not confirmed offers. The official seller controls pricing, stock, shipping and returns. WASLA does not collect payment or place orders.",
-    editorialLabel: "Editorial pick · Official source",
-    editorialButton: "Product details at brand"
+    editorialLabel: "Real product · Retailer listing",
+    editorialButton: "View product at retailer"
   };
 
   return (
