@@ -9,7 +9,7 @@ import { useLocale } from "../../../components/locale-provider";
 type Program = {
   id: string; provider: string; marketplace: string; marketplace_domain: string;
   destination_country: string; currency: string; tracking_id: string | null;
-  status: string; disclosure_en: string; disclosure_ar: string;
+  status: string; disclosure_en: string; disclosure_ar: string; terms_reviewed_at: string | null;
   item_count: number; published_item_count: number;
 };
 type AffiliateItem = {
@@ -60,7 +60,7 @@ export default function AffiliateCommercePage() {
   const t = ar ? {
     title: "التسويق بالعمولة", back: "العودة إلى المتجر الرسمي",
     subtitle: "إدارة برامج الإحالة بشكل منفصل عن منتجات WASLA ومخزونها وطلباتها.",
-    pending: "بانتظار استكمال الموافقة", paused: "متوقف عن النشر",
+    pending: "بانتظار موافقة الشبكة", paused: "متوقف عن النشر", active: "مقبول ومفعّل", rejected: "مرفوض", terms: "مراجعة الشروط", termsDone: "تمت مراجعة الشروط", termsMissing: "لم تتم مراجعة الشروط", approval: "حالة الموافقة",
     country: "السوق", currency: "العملة", tracking: "معرّف الشريك",
     products: "المنتجات", published: "المنشور", disclosure: "إفصاح العمولة",
     safety: "حواجز الحماية", noPublish: "النشر العام: معطّل",
@@ -72,7 +72,7 @@ export default function AffiliateCommercePage() {
   } : {
     title: "Affiliate commerce", back: "Back to official store",
     subtitle: "Manage referral programs separately from WASLA-owned products, inventory and orders.",
-    pending: "Awaiting approval completion", paused: "Publishing paused",
+    pending: "Awaiting network approval", paused: "Publishing paused", active: "Approved and active", rejected: "Rejected", terms: "Terms review", termsDone: "Terms reviewed", termsMissing: "Terms not reviewed", approval: "Approval status",
     country: "Market", currency: "Currency", tracking: "Associate ID",
     products: "Items", published: "Published", disclosure: "Affiliate disclosure",
     safety: "Safety gates", noPublish: "Public publishing: disabled",
@@ -103,17 +103,20 @@ export default function AffiliateCommercePage() {
       {(data?.programs || []).map(program => <article key={program.id} className="space-y-3 rounded-2xl border p-4 md:p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-bold">{program.marketplace}</h2>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs">{program.status === "active" ? "Active" : t.pending}</span>
+          <span className={`rounded-full px-3 py-1 text-xs ${program.status === "active" ? "bg-emerald-100 text-emerald-800" : program.status === "rejected" ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-900"}`}>{program.status === "active" ? t.active : program.status === "rejected" ? t.rejected : program.status === "paused" ? t.paused : t.pending}</span>
         </div>
         <div className="grid gap-3 text-sm sm:grid-cols-2">
           <p>{t.country}: <strong>{program.destination_country}</strong></p>
           <p>{t.currency}: <strong>{program.currency}</strong></p>
           <p>{t.tracking}: <strong dir="ltr">{program.tracking_id || "—"}</strong></p>
+          <p>{t.approval}: <strong>{program.status === "active" ? t.active : program.status === "rejected" ? t.rejected : program.status === "paused" ? t.paused : t.pending}</strong></p>
+          <p>{t.terms}: <strong>{program.terms_reviewed_at ? t.termsDone : t.termsMissing}</strong></p>
           <p>{t.products}: <strong>{program.item_count}</strong> · {t.published}: <strong>{program.published_item_count}</strong></p>
         </div>
         <div className="rounded-xl bg-slate-50 p-3 text-sm">
           <strong>{t.disclosure}</strong>
           <p className="mt-1">{ar ? program.disclosure_ar : program.disclosure_en}</p>
+          {program.terms_reviewed_at ? <p className="mt-2 text-xs text-slate-500">{t.terms}: {new Date(program.terms_reviewed_at).toLocaleDateString(ar ? "ar" : "en-US")}</p> : null}
         </div>
       </article>)}
       {!error && (data?.programs.length ?? 0) === 0 ? <p className="rounded-xl border p-4 text-sm text-slate-500">—</p> : null}
