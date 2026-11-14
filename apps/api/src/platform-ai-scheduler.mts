@@ -325,7 +325,7 @@ export async function runScheduledAiTasks() {
   let processed=0;
   // One provider request per scheduler run prevents bursts against free-tier quotas.
   if(await processOne()) processed=1;
-  await generateDailyReports();
+  // Owner preference: no daily reports or notifications. Weekly summaries are reviewed manually.
   console.info("WASLA scheduler finished",{seeded,processed});
   return { paused:false, seeded, recovered, processed };
 }
