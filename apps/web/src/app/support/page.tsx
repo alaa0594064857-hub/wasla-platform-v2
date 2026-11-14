@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useLocale } from "../../components/locale-provider";
 import { authClient } from "@/lib/auth-client";
 
-type Ticket={id:string;ticketNumber:string;category:string;subject:string;priority:string;status:string;createdAt:string;updatedAt:string};
+type Ticket={id:string;ticketNumber:string;category:string;subject:string;description:string;priority:string;status:string;createdAt:string;updatedAt:string};
 type Message={id:string;authorUserId:string|null;body:string;createdAt:string};
 const categories=["account_access","payments_billing","orders_delivery","returns_refunds","store_seller","trade_business","affiliate_commissions","technical_issue","security_report","other"];
 export default function SupportPage(){
