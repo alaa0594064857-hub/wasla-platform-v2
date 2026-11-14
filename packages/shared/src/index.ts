@@ -305,6 +305,11 @@ export const ROLE_DEFINITIONS = [
       "platform.reports.manage",
       "platform.settings.manage",
       "platform.audit.read",
+      "platform.support.queue.read",
+      "platform.support.case.reply",
+      "platform.support.case.assign",
+      "platform.support.case.status",
+      "platform.support.reports.read",
     ],
   },
   {
@@ -313,6 +318,10 @@ export const ROLE_DEFINITIONS = [
     permissions: [
       "platform.users.read",
       "platform.audit.read",
+      "platform.support.queue.read",
+      "platform.support.case.reply",
+      "platform.support.case.status",
+      "platform.support.reports.read",
     ],
   },
   {
