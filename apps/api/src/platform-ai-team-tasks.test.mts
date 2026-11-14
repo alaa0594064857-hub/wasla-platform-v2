@@ -62,7 +62,7 @@ describe("WASLA owner digital team task API", () => {
     expect(response.status).toBe(200);
     expect(data.tasks).toHaveLength(1);
     const listCall = mocks.query.mock.calls.find(call => String(call[0]).includes("ORDER BY created_at DESC"));
-    expect(listCall?.[1]).toEqual(["owner-1", 50]);
+    expect(listCall?.[1]).toEqual(["owner-1", 50, null]);
     expect(String(listCall?.[0])).toContain("WHERE owner_user_id = $1");
   });
 
@@ -150,6 +150,32 @@ describe("WASLA owner digital team task API", () => {
     expect((await response.json()).status).toBe("cancelled");
   });
 
+  it("requeues only Gemini rate-limited failures and resets their exhausted attempts", async () => {
+    mocks.query.mockImplementation(async (sql: string) => {
+      if (String(sql).includes("FROM platform_ai_manager_control WHERE")) return { rows: [{ enabled: true, pausedReason: null }] };
+      if (String(sql).includes("FROM platform_ai_provider_state")) return { rows: [] };
+      if (String(sql).includes("SET status='queued', attempt_count=0")) return { rows: [{ id: "11111111-1111-4111-8111-111111111111", specialistKey: "translator", title: "Translate", status: "queued", attemptCount: 0 }] };
+      return { rows: [], rowCount: 0 };
+    });
+    const base = await startServer();
+    const response = await fetch(base + "/api/platform/ai/tasks/11111111-1111-4111-8111-111111111111/retry", { method: "POST" });
+    const data = await response.json();
+    expect(response.status).toBe(200);
+    expect(data.task.status).toBe("queued");
+    expect(String(mocks.query.mock.calls.find(call => String(call[0]).includes("SET status='queued', attempt_count=0"))?.[0])).toContain("error_code='PROVIDER_RATE_LIMIT'");
+  });
+
+  it("does not change failed tasks while Gemini cooldown is active", async () => {
+    mocks.query.mockImplementation(async (sql: string) => {
+      if (String(sql).includes("FROM platform_ai_manager_control WHERE")) return { rows: [{ enabled: true, pausedReason: null }] };
+      if (String(sql).includes("FROM platform_ai_provider_state")) return { rows: [{ cooldownUntil: new Date(Date.now() + 60000).toISOString() }] };
+      return { rows: [], rowCount: 0 };
+    });
+    const base = await startServer();
+    const response = await fetch(base + "/api/platform/ai/tasks/11111111-1111-4111-8111-111111111111/retry", { method: "POST" });
+    expect(response.status).toBe(429);
+    expect(mocks.query.mock.calls.some(call => String(call[0]).includes("SET status='queued', attempt_count=0"))).toBe(false);
+  });
   it("creates a queued task without executing it and marks owner review as required", async () => {
     const base = await startServer();
     const response = await fetch(base + "/api/platform/ai/tasks", {

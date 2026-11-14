@@ -151,7 +151,7 @@ export async function handlePlatformAiTeamTasksRequest(req: IncomingMessage, res
   try {
     await ensureTaskTables();
     const url = new URL(req.url || "/", "http://localhost");
-    const match = url.pathname.match(/^\/api\/platform\/ai\/tasks(?:\/(dispatch|[0-9a-f-]{36})(?:\/(execute|cancel))?)?$/i);
+    const match = url.pathname.match(/^\/api\/platform\/ai\/tasks(?:\/(dispatch|[0-9a-f-]{36})(?:\/(execute|cancel|retry))?)?$/i);
     if (!match) { reply(res, 404, { success: false, error: "Task route not found" }); return; }
     const routeToken = match[1];
     const taskId = routeToken && routeToken !== "dispatch" ? routeToken : undefined;
@@ -352,6 +352,36 @@ export async function handlePlatformAiTeamTasksRequest(req: IncomingMessage, res
       return;
     }
 
+    if (req.method === "POST" && taskId && action === "retry") {
+      if (!UUID.test(taskId)) { reply(res, 400, { success: false, error: "Invalid task ID" }); return; }
+      const providerCooldown = await db.query(
+        `SELECT cooldown_until AS "cooldownUntil" FROM platform_ai_provider_state
+         WHERE provider_key = 'gemini' LIMIT 1`,
+      );
+      const cooldownUntil = providerCooldown.rows[0]?.cooldownUntil;
+      if (cooldownUntil && new Date(cooldownUntil).getTime() > Date.now()) {
+        reply(res, 429, { success: false, code: "PROVIDER_COOLDOWN", cooldownUntil,
+          error: "Gemini is still rate-limited. The failed task was not changed; retry after the cooldown." });
+        return;
+      }
+      const retried = await db.query(
+        `UPDATE platform_ai_team_tasks
+         SET status='queued', attempt_count=0, error_code=NULL, next_attempt_at=NULL,
+             finished_at=NULL, started_at=NULL, updated_at=NOW()
+         WHERE id=$1 AND owner_user_id=$2 AND status='failed'
+           AND error_code='PROVIDER_RATE_LIMIT'
+         RETURNING id, specialist_key AS "specialistKey", title, status,
+                   attempt_count AS "attemptCount"` ,
+        [taskId, access.userId],
+      );
+      if (!retried.rows[0]) {
+        reply(res, 409, { success: false, error: "Only failed tasks blocked by the Gemini rate limit can be retried." });
+        return;
+      }
+      await addEvent(taskId, access.userId, "owner", null, "task_owner_retry_requested", { previousError: "PROVIDER_RATE_LIMIT", attemptsReset: true });
+      reply(res, 200, { success: true, task: retried.rows[0], message: "Task safely returned to the queue." });
+      return;
+    }
     if (req.method === "POST" && taskId && action === "execute") {
       if (!UUID.test(taskId)) { reply(res, 400, { success: false, error: "Invalid task ID" }); return; }
       const apiKey = process.env.GEMINI_API_KEY?.trim();
