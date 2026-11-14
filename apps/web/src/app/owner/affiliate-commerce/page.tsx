@@ -63,9 +63,7 @@ export default function AffiliateCommercePage() {
     pending: "بانتظار موافقة الشبكة", paused: "متوقف عن النشر", active: "مقبول ومفعّل", rejected: "مرفوض", terms: "مراجعة الشروط", termsDone: "تمت مراجعة الشروط", termsMissing: "لم تتم مراجعة الشروط", approval: "حالة الموافقة",
     country: "السوق", currency: "العملة", tracking: "معرّف الشريك",
     products: "المنتجات", publishedCount: "المنشور", clicks: "النقرات المسجلة", disclosure: "إفصاح العمولة",
-    safety: "حواجز الحماية", noPublish: "النشر العام: معطّل",
-    noApi: "ربط Amazon Product API: غير مفعّل", noLinks: "روابط Amazon: غير مفعّلة",
-    noTurkey: "برنامج تركيا: غير مهيأ", note: "لا توجد منتجات أو أسعار أو صور أو روابط شراء منشورة. لن نستخدم صور Amazon أو بيانات الأسعار والتقييمات قبل توفر مصدر رسمي مصرح به.",
+    safety: "حواجز الحماية", publicPublishing: "النشر العام", amazonApi: "واجهة Amazon Product API", amazonLinks: "روابط Amazon", turkeyProgram: "برنامج العمولة في تركيا", enabled: "مفعّل", disabled: "معطّل", connected: "متصل", notConnected: "غير متصل", configured: "مهيأ", notConfigured: "غير مهيأ", note: "لا توجد منتجات أو أسعار أو صور أو روابط شراء منشورة. لن نستخدم صور Amazon أو بيانات الأسعار والتقييمات قبل توفر مصدر رسمي مصرح به.",
     owner: "هذه الصفحة مخصصة لمالك المنصة.", loading: "جارٍ تحميل إعدادات التسويق بالعمولة...",
     error: "تعذر تحميل بيانات التسويق بالعمولة.", candidates: "المنتجات المرشحة (مسودات خاصة)", draft: "مسودة — غير منشور", published: "منشور", archived: "مؤرشف",
     source: "المصدر الرسمي", noCandidates: "لا توجد منتجات مرشحة بعد.", reviewed: "آخر تحقق"
@@ -75,9 +73,7 @@ export default function AffiliateCommercePage() {
     pending: "Awaiting network approval", paused: "Publishing paused", active: "Approved and active", rejected: "Rejected", terms: "Terms review", termsDone: "Terms reviewed", termsMissing: "Terms not reviewed", approval: "Approval status",
     country: "Market", currency: "Currency", tracking: "Associate ID",
     products: "Items", publishedCount: "Published", clicks: "Recorded clicks", disclosure: "Affiliate disclosure",
-    safety: "Safety gates", noPublish: "Public publishing: disabled",
-    noApi: "Amazon Product API: not connected", noLinks: "Amazon links: disabled",
-    noTurkey: "Turkey program: not configured", note: "No products, prices, images or shopping links are published. Amazon images, prices and ratings will not be used until an authorized official data source is available.",
+    safety: "Safety gates", publicPublishing: "Public publishing", amazonApi: "Amazon Product API", amazonLinks: "Amazon links", turkeyProgram: "Turkey affiliate program", enabled: "Enabled", disabled: "Disabled", connected: "Connected", notConnected: "Not connected", configured: "Configured", notConfigured: "Not configured", note: "No products, prices, images or shopping links are published. Amazon images, prices and ratings will not be used until an authorized official data source is available.",
     owner: "This page is restricted to the platform owner.", loading: "Loading affiliate settings...",
     error: "Could not load affiliate commerce data.", candidates: "Product candidates (private drafts)", draft: "Draft — unpublished", published: "Published", archived: "Archived",
     source: "Official source", noCandidates: "No product candidates yet.", reviewed: "Last checked"
@@ -95,7 +91,10 @@ export default function AffiliateCommercePage() {
     <section className="rounded-2xl border p-4 md:p-6">
       <h2 className="font-bold">{t.safety}</h2>
       <ul className="mt-3 grid gap-2 text-sm">
-        <li>{t.noPublish}</li><li>{t.noApi}</li><li>{t.noLinks}</li><li>{t.noTurkey}</li>
+        <li>{t.publicPublishing}: <strong>{data?.safeguards.publicPublishingEnabled ? t.enabled : t.disabled}</strong></li>
+        <li>{t.amazonApi}: <strong>{data?.safeguards.amazonProductApiConnected ? t.connected : t.notConnected}</strong></li>
+        <li>{t.amazonLinks}: <strong>{data?.safeguards.amazonLinksEnabled ? t.enabled : t.disabled}</strong></li>
+        <li>{t.turkeyProgram}: <strong>{data?.safeguards.turkeyAffiliateProgramConfigured ? t.configured : t.notConfigured}</strong></li>
       </ul>
       <p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-950">{t.note}</p>
     </section>
