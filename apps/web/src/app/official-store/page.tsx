@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useLocale } from "@/components/locale-provider";
 import WorkspaceHeader from "@/components/workspace-header";
@@ -25,6 +25,8 @@ export default function OfficialStorePage() {
   const { locale } = useLocale();
   const ar = locale === "ar";
   const [products, setProducts] = useState<OfficialProduct[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState("newest");
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [selected, setSelected] = useState<OfficialProduct | null>(null);
@@ -45,6 +47,7 @@ export default function OfficialStorePage() {
     empty: "نعمل على تجهيز المنتجات والتحقق من الموردين قبل فتح المتجر للعملاء. لن نعرض منتجات غير مؤكدة.",
     unavailable: "تعذر تحميل الكتالوج حالياً. حاول مرة أخرى لاحقاً.",
     products: "منتجات المتجر الرسمي",
+    search: "ابحث عن منتج بالاسم أو الوصف", sort: "ترتيب حسب", newest: "الأحدث", priceLow: "السعر: الأقل أولاً", priceHigh: "السعر: الأعلى أولاً", noResults: "لا توجد منتجات تطابق بحثك", noResultsHint: "جرّب كلمة أخرى أو امسح البحث لعرض جميع المنتجات.",
     catalogueCountry: "اختر دولة التوصيل لعرض المنتجات والأسعار المعتمدة", countryRequired: "أدخل رمز الدولة من حرفين، مثل TR لتركيا أو US لأمريكا.",
     details: "التفاصيل",
     close: "إغلاق",
@@ -78,6 +81,7 @@ export default function OfficialStorePage() {
     empty: "We are preparing the catalogue and confirming suppliers before opening the store to customers. Unverified products will not be listed.",
     unavailable: "The catalogue could not be loaded. Please try again later.",
     products: "Official store products",
+    search: "Search products by name or description", sort: "Sort by", newest: "Newest", priceLow: "Price: low to high", priceHigh: "Price: high to low", noResults: "No products match your search", noResultsHint: "Try another keyword or clear your search to see all products.",
     catalogueCountry: "Choose a delivery country to view products and approved prices", countryRequired: "Enter a two-letter country code, such as TR or US.",
     details: "Details",
     close: "Close",
@@ -166,6 +170,20 @@ export default function OfficialStorePage() {
     return () => { active = false; };
   }, [catalogueCountry]);
 
+  const visibleProducts = useMemo(() => {
+    const term = searchTerm.trim().toLocaleLowerCase(ar ? "ar" : "en");
+    const filtered = products.filter(product => {
+      const title = (ar ? product.title_ar : product.title_en).toLocaleLowerCase(ar ? "ar" : "en");
+      const description = (ar ? product.description_ar : product.description_en) || "";
+      return !term || title.includes(term) || description.toLocaleLowerCase(ar ? "ar" : "en").includes(term);
+    });
+    return [...filtered].sort((a, b) => {
+      if (sortBy === "price-low") return Number(a.price) - Number(b.price);
+      if (sortBy === "price-high") return Number(b.price) - Number(a.price);
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+  }, [products, searchTerm, sortBy, ar]);
+
   return <main className="min-h-screen bg-[#f5f1e8] text-[#17253a]" dir={ar ? "rtl" : "ltr"} lang={locale}>
     <WorkspaceHeader section="account" />
     <section className="relative overflow-hidden border-b border-[#d9cfbb] bg-[#17253a] px-5 py-16 text-white md:px-12 md:py-24">
@@ -185,19 +203,30 @@ export default function OfficialStorePage() {
         </label>
         <p className="mt-2 text-xs text-slate-500">{copy.countryRequired}</p>
       </div>
+      <div className="mb-7 grid gap-4 rounded-2xl border border-[#e4ddcf] bg-white p-4 shadow-sm sm:grid-cols-[1fr_auto] sm:items-center">
+        <label className="block min-w-0 text-xs font-bold text-[#6d7580]">{copy.search}
+          <input value={searchTerm} onChange={event => setSearchTerm(event.target.value)} type="search" className="mt-2 h-12 w-full rounded-xl border border-[#e4ddcf] bg-[#fbfaf7] px-4 text-sm font-normal text-[#17253a] outline-none transition focus:border-[#b89545] focus:ring-4 focus:ring-[#c6a15b]/15" />
+        </label>
+        <label className="block text-xs font-bold text-[#6d7580]">{copy.sort}
+          <select value={sortBy} onChange={event => setSortBy(event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-[#e4ddcf] bg-[#fbfaf7] px-4 text-sm font-semibold text-[#17253a] sm:min-w-52">
+            <option value="newest">{copy.newest}</option><option value="price-low">{copy.priceLow}</option><option value="price-high">{copy.priceHigh}</option>
+          </select>
+        </label>
+      </div>
       <div className="mb-7 flex flex-wrap items-end justify-between gap-3">
         <div><span className="text-xs font-bold tracking-widest text-[#9a742d]">WASLA OFFICIAL</span><h2 className="mt-2 text-2xl font-bold">{copy.products}</h2></div>
         <span className="rounded-full border border-[#d7c79f] bg-[#fffaf0] px-4 py-2 text-xs font-semibold text-[#755b29]">{copy.storePromise}</span>
       </div>
       {loading ? <p className="rounded-2xl bg-white p-8 text-center">{copy.loading}</p>
         : failed ? <p role="alert" className="rounded-2xl bg-white p-8 text-center text-[#963f35]">{copy.unavailable}</p>
-        : products.length === 0 ? <div className="rounded-3xl border border-[#e0d7c6] bg-white px-6 py-16 text-center shadow-sm">
+        : visibleProducts.length === 0 ? <div className="rounded-3xl border border-[#e0d7c6] bg-white px-6 py-16 text-center shadow-sm">
             <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[#17253a] text-3xl font-black text-[#d8bd7c]">W</div>
-            <h3 className="mt-6 text-2xl font-bold">{catalogueCountry ? copy.emptyTitle : copy.catalogueCountry}</h3>
-            <p className="mx-auto mt-3 max-w-xl leading-8 text-slate-600">{catalogueCountry ? copy.empty : copy.countryRequired}</p>
+            <h3 className="mt-6 text-2xl font-bold">{products.length > 0 ? copy.noResults : catalogueCountry ? copy.emptyTitle : copy.catalogueCountry}</h3>
+            <p className="mx-auto mt-3 max-w-xl leading-8 text-slate-600">{products.length > 0 ? copy.noResultsHint : catalogueCountry ? copy.empty : copy.countryRequired}</p>
+            {searchTerm && products.length > 0 && <button type="button" onClick={() => setSearchTerm("")} className="mt-5 rounded-xl bg-[#17253a] px-5 py-3 text-sm font-bold text-white">{ar ? "مسح البحث" : "Clear search"}</button>}
           </div>
         : <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {products.map(product => <article key={product.id} className="overflow-hidden rounded-2xl border border-[#e4ddcf] bg-white shadow-sm">
+          {visibleProducts.map(product => <article key={product.id} className="overflow-hidden rounded-2xl border border-[#e4ddcf] bg-white shadow-sm">
             {product.image_url ? <img src={product.image_url} alt={ar ? product.title_ar : product.title_en} className="aspect-[4/3] w-full object-cover" /> : <div className="grid aspect-[4/3] place-items-center bg-[#ece6d9] text-6xl font-black text-[#b89545]">W</div>}
             <div className="p-5">
               <span className="text-xs font-semibold text-[#96732e]">{availabilityLabel(product.availability_status)}</span>
