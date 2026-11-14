@@ -39,16 +39,11 @@ const nextConfig: NextConfig = {
           "https://wasla-apiwasla-api-v2.onrender.com/api/auth/:path*",
       },
       {
-        // Public member-store and product catalogue reads are served by the API.
-        source: "/api/public/:path*",
+        // All non-auth application APIs are served by the dedicated API service.
+        // Keep auth above this catch-all so its same-origin cookie path remains explicit.
+        source: "/api/:path*",
         destination:
-          "https://wasla-apiwasla-api-v2.onrender.com/api/public/:path*",
-      },
-      {
-        // Member-store order, return-policy and storefront APIs share this prefix.
-        source: "/api/stores/:path*",
-        destination:
-          "https://wasla-apiwasla-api-v2.onrender.com/api/stores/:path*",
+          "https://wasla-apiwasla-api-v2.onrender.com/api/:path*",
       },
     ];
   },
