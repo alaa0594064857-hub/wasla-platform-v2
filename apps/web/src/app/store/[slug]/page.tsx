@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocale } from "../../../components/locale-provider";
 
-type Product = { id: string; title: string; description?: string; price: string; currency: string; imageUrl?: string };
+type Product = { id: string; title: string; description?: string; price: string; currency: string; imageUrl?: string; createdAt?: string };
 type Store = { id: string; name: string; slug: string; businessName?: string; businessDescription?: string; website?: string; logoReference?: string | null };
 type ReturnPolicy = {
   acceptsReturns: boolean; acceptsExchanges: boolean; requestWindowDays: number;
@@ -16,7 +16,7 @@ type ReturnPolicy = {
 const copy = {
   ar: {
     eyebrow: "متجر مستقل على WASLA", home: "الرئيسية", products: "اكتشف المنتجات", search: "ابحث عن منتج...",
-    sort: "ترتيب حسب", newest: "الأحدث", priceLow: "السعر: الأقل أولاً", priceHigh: "السعر: الأعلى أولاً",
+    sort: "ترتيب حسب", newest: "الأحدث", nameAZ: "الاسم: أ إلى ي", nameZA: "الاسم: ي إلى أ", priceLow: "السعر: الأقل أولاً", priceHigh: "السعر: الأعلى أولاً",
     count: "منتج", emptyTitle: "لا توجد منتجات مطابقة", empty: "جرّب تغيير كلمات البحث أو العودة لاحقاً.",
     all: "كل المنتجات", visit: "زيارة الموقع", track: "طلباتي مع هذا المتجر", about: "عن المتجر",
     returns: "الإرجاع والاستبدال", loading: "نجهّز متجرك...", notFound: "تعذر العثور على هذا المتجر.",
@@ -31,7 +31,7 @@ const copy = {
   },
   en: {
     eyebrow: "Independent store on WASLA", home: "Home", products: "Explore products", search: "Search products...",
-    sort: "Sort by", newest: "Newest", priceLow: "Price: low to high", priceHigh: "Price: high to low",
+    sort: "Sort by", newest: "Newest", nameAZ: "Name: A to Z", nameZA: "Name: Z to A", priceLow: "Price: low to high", priceHigh: "Price: high to low",
     count: "products", emptyTitle: "No matching products", empty: "Try another search or check back later.",
     all: "All products", visit: "Visit website", track: "My orders with this store", about: "About this store",
     returns: "Returns & exchanges", loading: "Preparing your store...", notFound: "This store could not be found.",
@@ -99,15 +99,32 @@ export default function PublicStorePage() {
   }, [params.slug]);
 
   const visibleProducts = useMemo(() => {
-    const term = search.trim().toLocaleLowerCase(ar ? "ar" : "en");
+    const language = ar ? "ar" : "en";
+    const normalize = (value: string) => value
+      .normalize("NFKC")
+      .toLocaleLowerCase(language)
+      .replace(/[\u064B-\u065F\u0670]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    const term = normalize(search);
     const filtered = products.filter(product =>
-      !term || product.title.toLocaleLowerCase(ar ? "ar" : "en").includes(term) ||
-      (product.description ?? "").toLocaleLowerCase(ar ? "ar" : "en").includes(term)
+      !term || normalize(product.title).includes(term) ||
+      normalize(product.description ?? "").includes(term)
     );
+    const collator = new Intl.Collator(language, { sensitivity: "base", numeric: true });
     return [...filtered].sort((a, b) => {
-      if (sort === "price-low") return Number(a.price) - Number(b.price);
-      if (sort === "price-high") return Number(b.price) - Number(a.price);
-      return 0;
+      if (sort === "price-low" || sort === "price-high") {
+        const priceA = Number(a.price);
+        const priceB = Number(b.price);
+        if (Number.isFinite(priceA) && Number.isFinite(priceB) && priceA !== priceB) {
+          return sort === "price-low" ? priceA - priceB : priceB - priceA;
+        }
+      }
+      if (sort === "name-az") return collator.compare(a.title, b.title);
+      if (sort === "name-za") return collator.compare(b.title, a.title);
+      const dateA = Date.parse(a.createdAt ?? "");
+      const dateB = Date.parse(b.createdAt ?? "");
+      return (Number.isFinite(dateB) ? dateB : 0) - (Number.isFinite(dateA) ? dateA : 0);
     });
   }, [products, search, sort, ar]);
 
@@ -201,6 +218,8 @@ export default function PublicStorePage() {
                   <span>{t.sort}</span>
                   <select value={sort} onChange={event => setSort(event.target.value)} className="max-w-[155px] bg-transparent text-sm font-bold text-[#17263d] outline-none">
                     <option value="newest">{t.newest}</option>
+                    <option value="name-az">{t.nameAZ}</option>
+                    <option value="name-za">{t.nameZA}</option>
                     <option value="price-low">{t.priceLow}</option>
                     <option value="price-high">{t.priceHigh}</option>
                   </select>
@@ -218,7 +237,7 @@ export default function PublicStorePage() {
             ) : (
               <div className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 xl:grid-cols-4">
                 {visibleProducts.map((product, index) => (
-                  <Link key={product.id} href={`/product/${product.id}`} className="group overflow-hidden rounded-2xl border border-[#e9e6df] bg-white transition duration-300 hover:-translate-y-1 hover:border-[#d6c49c] hover:shadow-[0_18px_50px_rgba(23,38,61,.10)]">
+                  <Link key={product.id} href={`/product/${product.id}`} className="group overflow-hidden rounded-2xl border border-[#e9e6df] bg-white transition duration-300 hover:-translate-y-1 hover:border-[#d6c49c] hover:shadow-[0_18px_50px_rgba(23,38,61,.10)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#c6a15b]/40">
                     <div className="relative aspect-[4/4.5] overflow-hidden bg-[#f0eee8]">
                       {product.imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
