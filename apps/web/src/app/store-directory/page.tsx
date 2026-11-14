@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocale } from "../../components/locale-provider";
 import WorkspaceHeader from "../../components/workspace-header";
 
@@ -26,7 +26,7 @@ const text = {
     emptyTitle: "لم نعثر على متاجر مطابقة", empty: "جرّب اسماً آخر أو أزل فلتر الدولة.",
     loading: "نبحث عن المتاجر...", error: "تعذر تحميل المتاجر حالياً.",
     retry: "إعادة المحاولة", all: "دليل المتاجر", noDescription: "متجر مستقل على WASLA.",
-    market: "سوق", count: "متجراً", verified: "متجر نشط", back: "الرئيسية",
+    market: "سوق", count: "متجراً", verified: "متجر نشط", back: "الرئيسية", sort: "ترتيب المتاجر", mostProducts: "الأكثر منتجات", nameAZ: "الاسم أ–ي", nameZA: "الاسم ي–أ",
   },
   en: {
     eyebrow: "Discover independent brands and stores", title: "Stores from different markets. One destination.",
@@ -36,7 +36,7 @@ const text = {
     emptyTitle: "No matching stores found", empty: "Try another name or remove the country filter.",
     loading: "Finding stores...", error: "Stores could not be loaded right now.",
     retry: "Try again", all: "Store directory", noDescription: "An independent store on WASLA.",
-    market: "Market", count: "stores", verified: "Active store", back: "Home",
+    market: "Market", count: "stores", verified: "Active store", back: "Home", sort: "Sort stores", mostProducts: "Most products", nameAZ: "Name A–Z", nameZA: "Name Z–A",
   },
 };
 
@@ -51,6 +51,7 @@ export default function StoreDirectoryPage() {
   const [error, setError] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [submittedCountry, setSubmittedCountry] = useState("");
+  const [sortBy, setSortBy] = useState("products");
   const requestId = useRef(0);
 
   const load = useCallback(async (q: string, market: string, signal?: AbortSignal) => {
@@ -82,6 +83,12 @@ export default function StoreDirectoryPage() {
     void load("", "", controller.signal);
     return () => { controller.abort(); requestId.current += 1; };
   }, [load]);
+
+  const visibleStores = useMemo(() => [...stores].sort((a, b) => {
+    if (sortBy === "name-asc") return a.name.localeCompare(b.name, ar ? "ar" : "en");
+    if (sortBy === "name-desc") return b.name.localeCompare(a.name, ar ? "ar" : "en");
+    return b.activeProductCount - a.activeProductCount;
+  }), [stores, sortBy, ar]);
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -131,9 +138,16 @@ export default function StoreDirectoryPage() {
           <div>
             <p className="text-[11px] font-extrabold uppercase tracking-[.2em] text-[#a47e37]">{t.all}</p>
             <h2 className="mt-2 text-3xl font-extrabold">{t.all}</h2>
-            <p className="mt-2 text-sm text-slate-500">{stores.length} {t.count}</p>
+            <p className="mt-2 text-sm text-slate-500">{visibleStores.length} {t.count}</p>
           </div>
-          {(submittedQuery || submittedCountry) && <button type="button" onClick={clear} className="rounded-xl border border-[#ded8ca] bg-white px-4 py-2.5 text-sm font-bold text-[#92713a]">{t.clear}</button>}
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex h-11 items-center gap-2 rounded-xl border border-[#ded8ca] bg-white px-3 text-xs font-semibold text-slate-500">{t.sort}
+              <select value={sortBy} onChange={event => setSortBy(event.target.value)} className="max-w-[150px] bg-transparent text-sm font-bold text-[#17263d] outline-none">
+                <option value="products">{t.mostProducts}</option><option value="name-asc">{t.nameAZ}</option><option value="name-desc">{t.nameZA}</option>
+              </select>
+            </label>
+            {(submittedQuery || submittedCountry) && <button type="button" onClick={clear} className="rounded-xl border border-[#ded8ca] bg-white px-4 py-2.5 text-sm font-bold text-[#92713a]">{t.clear}</button>}
+          </div>
         </div>
 
         {loading ? (
@@ -153,9 +167,9 @@ export default function StoreDirectoryPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {stores.map(store => (
+            {visibleStores.map(store => (
               <article key={store.id} className="group overflow-hidden rounded-2xl border border-[#e9e6df] bg-white transition duration-300 hover:-translate-y-1 hover:border-[#d6c49c] hover:shadow-[0_18px_50px_rgba(23,38,61,.10)]">
-                <div className="flex min-h-[132px] items-center gap-4 border-b border-[#efede7] bg-[linear-gradient(135deg,#f7f4ec,#eeece5)] p-5">
+                <div className="relative flex min-h-[158px] items-center gap-4 overflow-hidden border-b border-[#efede7] bg-[radial-gradient(ellipse_at_85%_10%,rgba(198,161,91,.22),transparent_38%),linear-gradient(135deg,#17263d,#263e5e)] p-5 text-white">
                   <div className="relative grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-2xl border border-[#e5dfd1] bg-white shadow-sm">
                     <span className="font-serif text-4xl font-bold text-[#b89545]">{store.name.trim().charAt(0).toUpperCase() || "W"}</span>
                     {store.logoReference && (
@@ -171,9 +185,9 @@ export default function StoreDirectoryPage() {
                     )}
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#a47e37]">{t.verified}</span>
-                    <h3 className="mt-1 truncate text-lg font-extrabold">{store.name}</h3>
-                    {store.businessName && <p className="mt-1 truncate text-xs text-slate-500">{store.businessName}</p>}
+                    <span className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#e0c17e]">{t.verified}</span>
+                    <h3 className="mt-1 truncate text-lg font-extrabold text-white">{store.name}</h3>
+                    {store.businessName && <p className="mt-1 truncate text-xs text-slate-300">{store.businessName}</p>}
                   </div>
                 </div>
                 <div className="p-5">
