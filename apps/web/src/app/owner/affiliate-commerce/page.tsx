@@ -10,7 +10,7 @@ type Program = {
   id: string; provider: string; marketplace: string; marketplace_domain: string;
   destination_country: string; currency: string; tracking_id: string | null;
   status: string; disclosure_en: string; disclosure_ar: string; terms_reviewed_at: string | null;
-  item_count: number; published_item_count: number;
+  item_count: number; published_item_count: number; click_count: number;
 };
 type AffiliateItem = {
   id: string; provider_item_id: string; title_en: string | null; title_ar: string | null;
@@ -62,7 +62,7 @@ export default function AffiliateCommercePage() {
     subtitle: "إدارة برامج الإحالة بشكل منفصل عن منتجات WASLA ومخزونها وطلباتها.",
     pending: "بانتظار موافقة الشبكة", paused: "متوقف عن النشر", active: "مقبول ومفعّل", rejected: "مرفوض", terms: "مراجعة الشروط", termsDone: "تمت مراجعة الشروط", termsMissing: "لم تتم مراجعة الشروط", approval: "حالة الموافقة",
     country: "السوق", currency: "العملة", tracking: "معرّف الشريك",
-    products: "المنتجات", published: "المنشور", disclosure: "إفصاح العمولة",
+    products: "المنتجات", published: "المنشور", clicks: "النقرات المسجلة", disclosure: "إفصاح العمولة",
     safety: "حواجز الحماية", noPublish: "النشر العام: معطّل",
     noApi: "ربط Amazon Product API: غير مفعّل", noLinks: "روابط Amazon: غير مفعّلة",
     noTurkey: "برنامج تركيا: غير مهيأ", note: "لا توجد منتجات أو أسعار أو صور أو روابط شراء منشورة. لن نستخدم صور Amazon أو بيانات الأسعار والتقييمات قبل توفر مصدر رسمي مصرح به.",
@@ -74,7 +74,7 @@ export default function AffiliateCommercePage() {
     subtitle: "Manage referral programs separately from WASLA-owned products, inventory and orders.",
     pending: "Awaiting network approval", paused: "Publishing paused", active: "Approved and active", rejected: "Rejected", terms: "Terms review", termsDone: "Terms reviewed", termsMissing: "Terms not reviewed", approval: "Approval status",
     country: "Market", currency: "Currency", tracking: "Associate ID",
-    products: "Items", published: "Published", disclosure: "Affiliate disclosure",
+    products: "Items", published: "Published", clicks: "Recorded clicks", disclosure: "Affiliate disclosure",
     safety: "Safety gates", noPublish: "Public publishing: disabled",
     noApi: "Amazon Product API: not connected", noLinks: "Amazon links: disabled",
     noTurkey: "Turkey program: not configured", note: "No products, prices, images or shopping links are published. Amazon images, prices and ratings will not be used until an authorized official data source is available.",
@@ -112,6 +112,7 @@ export default function AffiliateCommercePage() {
           <p>{t.approval}: <strong>{program.status === "active" ? t.active : program.status === "rejected" ? t.rejected : program.status === "paused" ? t.paused : t.pending}</strong></p>
           <p>{t.terms}: <strong>{program.terms_reviewed_at ? t.termsDone : t.termsMissing}</strong></p>
           <p>{t.products}: <strong>{program.item_count}</strong> · {t.published}: <strong>{program.published_item_count}</strong></p>
+          <p>{t.clicks}: <strong>{program.click_count}</strong></p>
         </div>
         <div className="rounded-xl bg-slate-50 p-3 text-sm">
           <strong>{t.disclosure}</strong>
