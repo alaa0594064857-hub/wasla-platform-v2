@@ -370,6 +370,7 @@ export async function handlePlatformAiTeamTasksRequest(req: IncomingMessage, res
          SET status = 'running', attempt_count = attempt_count + 1,
              started_at = NOW(), updated_at = NOW()
          WHERE id = $1 AND owner_user_id = $2 AND status = 'queued' AND attempt_count < 3
+           AND (next_attempt_at IS NULL OR next_attempt_at <= NOW())
          RETURNING id, specialist_key AS "specialistKey", title, input_text AS "inputText",
                    input_context AS "inputContext", attempt_count AS "attemptCount"`,
         [taskId, access.userId],
