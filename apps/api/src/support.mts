@@ -24,7 +24,7 @@ export async function handleSupportRequest(req:IncomingMessage,res:ServerRespons
    }
    if(!id){send(res,405,{success:false,error:"Method not allowed"});return;}
    if(req.method==="GET"){
-    const ticket=await db.query(`SELECT id,ticket_number AS "ticketNumber",requester_user_id AS "requesterUserId",category,subject,description,priority,status,assigned_to_user_id AS "assignedToUserId",created_at AS "createdAt",updated_at AS "updatedAt" FROM support_tickets WHERE id=$1`,[id]);
+    const ticket=await db.query(`SELECT t.id,t.ticket_number AS "ticketNumber",t.requester_user_id AS "requesterUserId",t.category,t.subject,t.description,t.priority,t.status,t.assigned_to_user_id AS "assignedToUserId",t.created_at AS "createdAt",t.updated_at AS "updatedAt",u.name AS "requesterName",u.email AS "requesterEmail" FROM support_tickets t JOIN users u ON u.id=t.requester_user_id WHERE t.id=$1`,[id]);
     if(!ticket.rowCount){send(res,404,{success:false,error:"Ticket not found"});return;}
     const msgs=await db.query(`SELECT id,author_user_id AS "authorUserId",body,visibility,created_at AS "createdAt" FROM support_messages WHERE ticket_id=$1 ORDER BY created_at`,[id]);
     const events=await db.query(`SELECT id,actor_user_id AS "actorUserId",event_type AS "eventType",from_value AS "fromValue",to_value AS "toValue",note,created_at AS "createdAt" FROM support_ticket_events WHERE ticket_id=$1 ORDER BY created_at`,[id]);
@@ -78,7 +78,10 @@ export async function handleSupportRequest(req:IncomingMessage,res:ServerRespons
   if(id&&req.method==="POST"&&messagesPath){
    const input=await readBody(req),body=typeof input?.body==="string"?input.body.trim():"";if(!body||body.length>8000){send(res,400,{success:false,error:"Message must contain 1–8000 characters"});return;}
    const c=await db.connect();try{await c.query("BEGIN");const ticket=await c.query("SELECT status FROM support_tickets WHERE id=$1 AND requester_user_id=$2 FOR UPDATE",[id,session.user.id]);if(!ticket.rowCount){await c.query("ROLLBACK");send(res,404,{success:false,error:"Ticket not found"});return;}if(ticket.rows[0].status==="closed"){await c.query("ROLLBACK");send(res,409,{success:false,error:"Closed tickets cannot receive replies"});return;}
-    const msg=await c.query("INSERT INTO support_messages(ticket_id,author_user_id,body,visibility) VALUES($1,$2,$3,'public') RETURNING id,body,created_at AS \"createdAt\"",[id,session.user.id,body]);await c.query("INSERT INTO support_ticket_events(ticket_id,actor_user_id,event_type) VALUES($1,$2,'replied')",[id,session.user.id]);await c.query("UPDATE support_tickets SET status=CASE WHEN status='resolved' THEN 'open' ELSE status END,last_message_at=NOW(),updated_at=NOW() WHERE id=$1",[id]);await c.query("COMMIT");send(res,201,{success:true,message:msg.rows[0]});return;
+    const msg=await c.query("INSERT INTO support_messages(ticket_id,author_user_id,body,visibility) VALUES($1,$2,$3,'public') RETURNING id,body,created_at AS \"createdAt\"",[id,session.user.id,body]);await c.query("INSERT INTO support_ticket_events(ticket_id,actor_user_id,event_type) VALUES($1,$2,'replied')",[id,session.user.id]);const nextStatus=ticket.rows[0].status==="resolved"?"open":ticket.rows[0].status==="waiting_for_user"?"in_progress":ticket.rows[0].status;
+    await c.query("UPDATE support_tickets SET status=$2,last_message_at=NOW(),updated_at=NOW() WHERE id=$1",[id,nextStatus]);
+    if(nextStatus!==ticket.rows[0].status)await c.query("INSERT INTO support_ticket_events(ticket_id,actor_user_id,event_type,from_value,to_value) VALUES($1,$2,'status_changed',$3,$4)",[id,session.user.id,ticket.rows[0].status,nextStatus]);
+    await c.query("COMMIT");send(res,201,{success:true,message:msg.rows[0]});return;
    }catch(e){await c.query("ROLLBACK");throw e;}finally{c.release();}
   }
   send(res,405,{success:false,error:"Method not allowed"});
