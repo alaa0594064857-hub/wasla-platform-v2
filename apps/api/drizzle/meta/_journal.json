@@ -64,6 +64,13 @@
       "when": 1794078004000,
       "tag": "0008_trade_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794700800000,
+      "tag": "0009_unified_support_center",
+      "breakpoints": true
     }
   ]
 }

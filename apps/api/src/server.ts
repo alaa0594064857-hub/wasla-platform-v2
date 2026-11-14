@@ -185,6 +185,19 @@ async function handleRequest(
     return;
   }
 
+  const platformSupportMatch = requestUrl.pathname.match(/^\/api\/platform\/support\/tickets(?:\/([0-9a-f-]{36})(?:\/messages)?)?$/i);
+  if (platformSupportMatch) {
+    try { const { handleSupportRequest } = await import("./support.mjs"); await handleSupportRequest(request,response,platformSupportMatch[1],true); }
+    catch (error) { console.error("WASLA platform support route error:",error); if(!response.headersSent) sendJson(response,500,{success:false,error:"Platform support service error"}); else response.destroy(error instanceof Error?error:undefined); }
+    return;
+  }
+  const supportMatch = requestUrl.pathname.match(/^\/api\/support\/tickets(?:\/([0-9a-f-]{36})(?:\/messages)?)?$/i);
+  if (supportMatch) {
+    try { const { handleSupportRequest } = await import("./support.mjs"); await handleSupportRequest(request,response,supportMatch[1],false); }
+    catch (error) { console.error("WASLA support route error:",error); if(!response.headersSent) sendJson(response,500,{success:false,error:"Support service error"}); else response.destroy(error instanceof Error?error:undefined); }
+    return;
+  }
+
   const messageConversationMatch = requestUrl.pathname.match(/^\/api\/messages\/([0-9a-f-]{36})$/i);
   if (messageConversationMatch || requestUrl.pathname === "/api/messages") {
     try {

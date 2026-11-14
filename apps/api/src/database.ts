@@ -277,6 +277,11 @@ export async function ensurePlatformOwnerRole(): Promise<void> {
       ["platform.security.read", "View platform security information"],
       ["platform.security.manage", "Manage platform security controls"],
       ["platform.audit.read", "View platform audit records"],
+      ["platform.support.queue.read", "View support queues and cases"],
+      ["platform.support.case.reply", "Reply to support cases and add internal notes"],
+      ["platform.support.case.assign", "Assign support cases and manage ownership"],
+      ["platform.support.case.status", "Change support case status and priority"],
+      ["platform.support.reports.read", "View support performance reports"],
     ] as const;
 
     for (const [key, description] of permissions) {
