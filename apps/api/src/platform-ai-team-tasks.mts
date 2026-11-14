@@ -107,6 +107,14 @@ async function ensureTaskTables(): Promise<void> {
           CREATE INDEX IF NOT EXISTS platform_ai_team_task_events_task_created_idx
           ON platform_ai_team_task_events(task_id, created_at ASC)
         `);
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS platform_ai_provider_state (
+            provider_key varchar(40) PRIMARY KEY,
+            cooldown_until timestamptz,
+            last_error_code varchar(80),
+            updated_at timestamptz NOT NULL DEFAULT NOW()
+          )
+        `);
         await client.query("COMMIT");
       } catch (error) {
         await client.query("ROLLBACK").catch(() => undefined);
@@ -162,7 +170,26 @@ export async function handlePlatformAiTeamTasksRequest(req: IncomingMessage, res
          ORDER BY created_at DESC LIMIT $2`,
         [access.userId, limit],
       );
-      reply(res, 200, { success: true, tasks: result.rows, specialists: Object.keys(SPECIALISTS), managerEnabled: (await getPlatformAiManagerControl()).enabled });
+      const providerResult = await db.query(
+        `SELECT cooldown_until AS "cooldownUntil", last_error_code AS "lastErrorCode",
+                updated_at AS "updatedAt"
+         FROM platform_ai_provider_state WHERE provider_key = 'gemini' LIMIT 1`,
+      );
+      const providerState = providerResult.rows[0] || null;
+      const countsResult = await db.query(
+        `SELECT status, COUNT(*)::int AS count
+         FROM platform_ai_team_tasks WHERE owner_user_id = $1 GROUP BY status`,
+        [access.userId],
+      );
+      const taskCounts = Object.fromEntries(countsResult.rows.map((row: { status: string; count: number }) => [row.status, row.count]));
+      reply(res, 200, {
+        success: true,
+        tasks: result.rows,
+        specialists: Object.keys(SPECIALISTS),
+        managerEnabled: (await getPlatformAiManagerControl()).enabled,
+        providerState,
+        taskCounts,
+      });
       return;
     }
 

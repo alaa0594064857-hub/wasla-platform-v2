@@ -66,6 +66,31 @@ describe("WASLA owner digital team task API", () => {
     expect(String(listCall?.[0])).toContain("WHERE owner_user_id = $1");
   });
 
+  it("returns Gemini cooldown metadata and owner-scoped task counts", async () => {
+    mocks.query.mockImplementation(async (sql: string) => {
+      if (String(sql).includes("FROM platform_ai_manager_control WHERE")) {
+        return { rows: [{ enabled: true, pausedReason: null, updatedAt: new Date().toISOString() }] };
+      }
+      if (String(sql).includes("FROM platform_ai_provider_state")) {
+        return { rows: [{ cooldownUntil: "2026-11-15T09:00:00.000Z", lastErrorCode: "PROVIDER_RATE_LIMIT" }] };
+      }
+      if (String(sql).includes("GROUP BY status")) {
+        return { rows: [{ status: "queued", count: 15 }, { status: "failed", count: 3 }] };
+      }
+      if (String(sql).includes("FROM platform_ai_team_tasks") && String(sql).includes("ORDER BY created_at DESC")) {
+        return { rows: [{ id: "11111111-1111-4111-8111-111111111111", specialistKey: "translator", title: "Translate product", status: "queued" }] };
+      }
+      return { rows: [], rowCount: 0 };
+    });
+    const base = await startServer();
+    const response = await fetch(base + "/api/platform/ai/tasks");
+    const data = await response.json();
+    expect(response.status).toBe(200);
+    expect(data.providerState.lastErrorCode).toBe("PROVIDER_RATE_LIMIT");
+    expect(data.providerState.cooldownUntil).toBe("2026-11-15T09:00:00.000Z");
+    expect(data.taskCounts).toEqual({ queued: 15, failed: 3 });
+  });
+
   it("rejects unsupported specialist roles and oversized input", async () => {
     const base = await startServer();
     const response = await fetch(base + "/api/platform/ai/tasks", {

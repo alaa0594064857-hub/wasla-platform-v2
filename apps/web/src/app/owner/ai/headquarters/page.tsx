@@ -7,6 +7,7 @@ import "./headquarters.css";
 
 type Task = { id: string; specialistKey: string; title: string; status: string; resultText?: string | null; errorCode?: string | null; createdAt: string };
 type AssistantStatus = { configured: boolean; managerEnabled: boolean };
+type ProviderState = { cooldownUntil?: string | null; lastErrorCode?: string | null; updatedAt?: string | null } | null;
 
 const team = [
   ["market_researcher", "باحث الأسواق", "Market Research", "يرصد الأسواق والطلب والفرص", "Studies markets, demand and opportunities", "◉"],
@@ -25,6 +26,7 @@ export default function AiHeadquartersPage() {
   const ar = locale === "ar";
   const [tasks, setTasks] = useState<Task[]>([]);
   const [status, setStatus] = useState<AssistantStatus | null>(null);
+  const [providerState, setProviderState] = useState<ProviderState>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -40,6 +42,7 @@ export default function AiHeadquartersPage() {
       if (!tasksResponse.ok || !tasksData.success) throw new Error(tasksData.error || "Unable to load tasks");
       if (!statusResponse.ok || !statusData.success) throw new Error(statusData.error || "Unable to load AI status");
       setTasks(Array.isArray(tasksData.tasks) ? tasksData.tasks : []);
+      setProviderState(tasksData.providerState || null);
       setStatus(statusData);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to load AI headquarters");
@@ -55,8 +58,9 @@ export default function AiHeadquartersPage() {
     active: tasks.filter(task => task.status === "queued" || task.status === "running").length,
     review: tasks.filter(task => task.status === "needs_owner_review").length,
     failed: tasks.filter(task => task.status === "failed").length,
-    providerLimited: tasks.some(task => task.errorCode === "PROVIDER_RATE_LIMIT"),
-  }), [tasks]);
+    providerLimited: tasks.some(task => task.errorCode === "PROVIDER_RATE_LIMIT")
+      || Boolean(providerState?.cooldownUntil && new Date(providerState.cooldownUntil).getTime() > Date.now()),
+  }), [tasks, providerState]);
 
   const copy = ar ? {
     eyebrow: "WASLA · AI OPERATIONS",
@@ -95,6 +99,9 @@ export default function AiHeadquartersPage() {
     error: "تعذر تحميل بيانات غرفة الذكاء الاصطناعي.",
     quotaTitle: "توقف التنفيذ بسبب حصة مزود الذكاء الاصطناعي",
     quotaText: "المهام محفوظة، لكن Gemini رفض التنفيذ بسبب استنفاد الحصة (429). لن نعرض المهام كإنجازات حتى ينتج عنها عمل محفوظ فعلياً.",
+    quotaUntil: "موعد إعادة المحاولة بعد: ",
+    quotaUnknown: "موعد انتهاء الانتظار غير متاح حالياً.",
+    quotaAttempts: "المهام التي استنفدت محاولاتها تبقى محفوظة ولا تُعاد تلقائياً من دون مراجعة آمنة.",
     footer: "حدود الصلاحيات: لا ينشر النظام المنتجات ولا يتواصل مع الموردين ولا ينفذ المدفوعات تلقائياً. هذه الإجراءات تبقى خاضعة للمراجعة والاعتماد.",
   } : {
     eyebrow: "WASLA · AI OPERATIONS",
@@ -133,6 +140,9 @@ export default function AiHeadquartersPage() {
     error: "Unable to load AI headquarters data.",
     quotaTitle: "Execution paused by AI provider quota",
     quotaText: "Tasks are safely retained, but Gemini rejected execution because the quota was exhausted (429). No task will be shown as completed without a saved result.",
+    quotaUntil: "Retry window begins after: ",
+    quotaUnknown: "The cooldown end time is not currently available.",
+    quotaAttempts: "Tasks that exhausted their attempts remain saved and are not reset automatically.",
     footer: "Permission boundary: the system does not publish products, contact suppliers or execute payments automatically. These actions remain subject to review and approval.",
   };
 
@@ -239,7 +249,7 @@ export default function AiHeadquartersPage() {
           </div>
         </section>
 
-        {stats.providerLimited ? <section role="status" className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-950"><div className="flex items-start gap-3"><span className="text-xl">!</span><div><h2 className="text-sm font-extrabold">{copy.quotaTitle}</h2><p className="mt-1 text-xs leading-6">{copy.quotaText}</p></div></div></section> : null}
+        {stats.providerLimited ? <section role="status" className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-950"><div className="flex items-start gap-3"><span className="text-xl">!</span><div><h2 className="text-sm font-extrabold">{copy.quotaTitle}</h2><p className="mt-1 text-xs leading-6">{copy.quotaText}</p><p className="mt-2 text-xs font-bold">{providerState?.cooldownUntil ? copy.quotaUntil + new Date(providerState.cooldownUntil).toLocaleString(ar ? "ar" : "en", { dateStyle: "medium", timeStyle: "short" }) : copy.quotaUnknown}</p><p className="mt-1 text-xs leading-6">{copy.quotaAttempts}</p></div></div></section> : null}
 
         <section className="wasla-ai-status">
           <div className="wasla-ai-info-card">
