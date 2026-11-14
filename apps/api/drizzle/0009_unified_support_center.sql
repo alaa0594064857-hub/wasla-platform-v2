@@ -52,3 +52,9 @@ CREATE INDEX IF NOT EXISTS support_tickets_assignee_idx ON support_tickets (assi
 CREATE INDEX IF NOT EXISTS support_messages_ticket_created_idx ON support_messages (ticket_id, created_at);
 --> statement-breakpoint
 CREATE INDEX IF NOT EXISTS support_ticket_events_ticket_created_idx ON support_ticket_events (ticket_id, created_at DESC);
+
+--> statement-breakpoint
+ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
+--> statement-breakpoint
+ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
+  CHECK (type IN ('account_invitation','message_received','product_inquiry','friend_request','trade_deal','official_store_order','member_store_order','support_ticket'));
