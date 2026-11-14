@@ -151,7 +151,7 @@ export async function handlePlatformAiTeamTasksRequest(req: IncomingMessage, res
   try {
     await ensureTaskTables();
     const url = new URL(req.url || "/", "http://localhost");
-    const match = url.pathname.match(/^\/api\/platform\/ai\/tasks(?:\/(dispatch|[0-9a-f-]{36})(?:\/(execute|cancel))?)?$/i);
+    const match = url.pathname.match(/^\/api\/platform\/ai\/tasks(?:\/(dispatch|[0-9a-f-]{36})(?:\/(execute|cancel|retry))?)?$/i);
     if (!match) { reply(res, 404, { success: false, error: "Task route not found" }); return; }
     const routeToken = match[1];
     const taskId = routeToken && routeToken !== "dispatch" ? routeToken : undefined;
