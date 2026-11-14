@@ -107,6 +107,7 @@ async function ensureTaskTables(): Promise<void> {
           CREATE INDEX IF NOT EXISTS platform_ai_team_task_events_task_created_idx
           ON platform_ai_team_task_events(task_id, created_at ASC)
         `);
+        await client.query(`ALTER TABLE platform_ai_team_tasks ADD COLUMN IF NOT EXISTS next_attempt_at timestamptz`);
         await client.query(`
           CREATE TABLE IF NOT EXISTS platform_ai_provider_state (
             provider_key varchar(40) PRIMARY KEY,
@@ -350,6 +351,20 @@ export async function handlePlatformAiTeamTasksRequest(req: IncomingMessage, res
       if (!UUID.test(taskId)) { reply(res, 400, { success: false, error: "Invalid task ID" }); return; }
       const apiKey = process.env.GEMINI_API_KEY?.trim();
       if (!apiKey) { reply(res, 503, { success: false, code: "AI_PROVIDER_NOT_CONFIGURED", error: "Gemini is not configured." }); return; }
+      const providerCooldown = await db.query(
+        `SELECT cooldown_until AS "cooldownUntil" FROM platform_ai_provider_state
+         WHERE provider_key = 'gemini' LIMIT 1`,
+      );
+      const cooldownUntil = providerCooldown.rows[0]?.cooldownUntil;
+      if (cooldownUntil && new Date(cooldownUntil).getTime() > Date.now()) {
+        reply(res, 429, {
+          success: false,
+          code: "PROVIDER_COOLDOWN",
+          cooldownUntil,
+          error: "Gemini is temporarily rate-limited. This task remains queued and can be retried after the cooldown.",
+        });
+        return;
+      }
       const claimed = await db.query(
         `UPDATE platform_ai_team_tasks
          SET status = 'running', attempt_count = attempt_count + 1,
@@ -388,14 +403,43 @@ export async function handlePlatformAiTeamTasksRequest(req: IncomingMessage, res
           const status = upstream.status;
           await upstream.text().catch(() => "");
           const code = status === 429 ? "PROVIDER_RATE_LIMIT" : "PROVIDER_REQUEST_FAILED";
-          await db.query(
-            `UPDATE platform_ai_team_tasks SET status = 'failed', error_code = $3,
-             updated_at = NOW(), finished_at = NOW(), duration_ms = $4
-             WHERE id = $1 AND owner_user_id = $2 AND status = 'running'`,
-            [taskId, access.userId, code, Date.now() - started],
-          );
-          await addEvent(taskId, access.userId, "system", null, "task_failed", { code });
-          reply(res, status === 429 ? 429 : 502, { success: false, code, error: status === 429 ? "Gemini free-tier quota reached. No paid fallback is enabled." : "The specialist could not complete this task." });
+          if (status === 429 && task.attemptCount < 3) {
+            const retryHeader = upstream.headers.get("retry-after");
+            const retrySeconds = retryHeader
+              ? (Number.isFinite(Number(retryHeader)) ? Number(retryHeader) : Math.ceil((Date.parse(retryHeader) - Date.now()) / 1000))
+              : 86400;
+            const delaySeconds = Math.min(86400, Math.max(60, Number.isFinite(retrySeconds) ? retrySeconds : 21600));
+            await db.query(
+              `INSERT INTO platform_ai_provider_state(provider_key,cooldown_until,last_error_code,updated_at)
+               VALUES('gemini',NOW()+($1::int * INTERVAL '1 second'),'PROVIDER_RATE_LIMIT',NOW())
+               ON CONFLICT(provider_key) DO UPDATE SET cooldown_until=EXCLUDED.cooldown_until,
+                 last_error_code=EXCLUDED.last_error_code,updated_at=NOW()`,
+              [delaySeconds],
+            );
+            await db.query(
+              `UPDATE platform_ai_team_tasks SET status='queued',error_code='PROVIDER_RATE_LIMIT',
+               next_attempt_at=NOW()+($3::int * INTERVAL '1 second'),updated_at=NOW(),
+               finished_at=NULL,duration_ms=$4
+               WHERE id=$1 AND owner_user_id=$2 AND status='running'`,
+              [taskId, access.userId, delaySeconds, Date.now() - started],
+            );
+            await addEvent(taskId, access.userId, "system", null, "task_retry_scheduled", {
+              code, retryAfterSeconds: delaySeconds, attempt: task.attemptCount,
+            });
+          } else {
+            await db.query(
+              `UPDATE platform_ai_team_tasks SET status = 'failed', error_code = $3,
+               updated_at = NOW(), finished_at = NOW(), duration_ms = $4
+               WHERE id = $1 AND owner_user_id = $2 AND status = 'running'`,
+              [taskId, access.userId, code, Date.now() - started],
+            );
+            await addEvent(taskId, access.userId, "system", null, "task_failed", { code });
+          }
+          reply(res, status === 429 ? 429 : 502, {
+            success: false, code,
+            retryScheduled: status === 429 && task.attemptCount < 3,
+            error: status === 429 ? "Gemini free-tier quota reached. The task was safely queued for retry; no paid fallback is enabled." : "The specialist could not complete this task.",
+          });
           return;
         }
         const payload = await upstream.json() as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
