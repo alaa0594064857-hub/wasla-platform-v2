@@ -186,6 +186,33 @@ export default function AiHeadquartersPage() {
           </div>
         </section>
 
+        <section className="wasla-ai-workspaces" aria-labelledby="ai-workspaces-heading">
+          <div className="wasla-ai-workspaces-heading">
+            <div>
+              <p>WASLA · COMMAND ROOMS</p>
+              <h2 id="ai-workspaces-heading">{copy.workspaces}</h2>
+              <span>{copy.workspacesText}</span>
+            </div>
+          </div>
+          <div className="wasla-ai-workspaces-grid">
+            <Link href="/owner/ai/chat" className="wasla-ai-workspace-card">
+              <span className="wasla-ai-workspace-icon">♛</span>
+              <div><h3>{copy.managerTitle}</h3><p>{copy.managerDesc}</p></div>
+              <strong>{copy.open} ↗</strong>
+            </Link>
+            <Link href="/owner/ai/reports" className="wasla-ai-workspace-card">
+              <span className="wasla-ai-workspace-icon">▤</span>
+              <div><h3>{copy.reportsTitle}</h3><p>{copy.reportsDesc}</p></div>
+              <strong>{copy.open} ↗</strong>
+            </Link>
+            <Link href="/owner/ai/meeting" className="wasla-ai-workspace-card">
+              <span className="wasla-ai-workspace-icon">◎</span>
+              <div><h3>{copy.meetingTitle}</h3><p>{copy.meetingDesc}</p></div>
+              <strong>{copy.open} ↗</strong>
+            </Link>
+          </div>
+        </section>
+
         <section className="wasla-ai-departments" aria-labelledby="ai-team-heading">
           <div className="flex flex-wrap items-end justify-between gap-2">
             <div><p className="text-[10px] font-extrabold tracking-[.18em] text-[#9b783d]">AI TEAM · REPORTING TO GENERAL MANAGER</p><h2 id="ai-team-heading" className="mt-1 text-lg font-extrabold">{copy.departments}</h2><p className="mt-1 text-xs text-slate-500">{copy.departmentsText}</p></div>
