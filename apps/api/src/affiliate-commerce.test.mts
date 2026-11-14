@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({ query: vi.fn(), authorize: vi.fn() }));
 vi.mock("./database.js", () => ({ getDatabasePool: () => ({ query: mocks.query }) }));
 vi.mock("./platform-security.mjs", () => ({ authorizePlatformPermission: mocks.authorize }));
 
+let handleAffiliateCommerceRequest: (req: IncomingMessage, res: ServerResponse) => Promise<void>;
 let handleAffiliatePublicCatalogRequest: (req: IncomingMessage, res: ServerResponse) => Promise<void>;
 let handleAffiliateOutboundRequest: (req: IncomingMessage, res: ServerResponse, id: string) => Promise<void>;
 let approvedOutboundUrl: (value: unknown, domain: unknown) => string | null;
@@ -23,6 +24,7 @@ async function startServer(handler: (req: IncomingMessage, res: ServerResponse) 
 
 beforeEach(async () => {
   const module = await import("./affiliate-commerce.mjs");
+  handleAffiliateCommerceRequest = module.handleAffiliateCommerceRequest;
   handleAffiliatePublicCatalogRequest = module.handleAffiliatePublicCatalogRequest;
   handleAffiliateOutboundRequest = module.handleAffiliateOutboundRequest;
   approvedOutboundUrl = module.approvedOutboundUrl;
@@ -112,5 +114,26 @@ describe("affiliate outbound redirect", () => {
     expect(String(mocks.query.mock.calls[0][0])).toContain("i.last_verified_at >= NOW() - INTERVAL '30 days'");
     expect(String(mocks.query.mock.calls[1][0])).toContain("INSERT INTO affiliate_clicks");
     expect(mocks.query.mock.calls[1][1]).toEqual([validId, "program-1"]);
+  });
+});
+
+
+describe("affiliate owner metrics", () => {
+  it("returns distinct item and click counts without multiplying item totals", async () => {
+    mocks.authorize.mockResolvedValueOnce({ user: { id: "owner-1" } });
+    mocks.query
+      .mockResolvedValueOnce({ rows: [{ id: "program-1", item_count: 5, published_item_count: 2, click_count: 7 }] })
+      .mockResolvedValueOnce({ rows: [] });
+    const baseUrl = await startServer((req, res) => { void handleAffiliateCommerceRequest(req, res); });
+    const response = await fetch(baseUrl + "/");
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      success: true,
+      programs: [{ item_count: 5, published_item_count: 2, click_count: 7 }],
+    });
+    const sql = String(mocks.query.mock.calls[0][0]);
+    expect(sql).toContain("COUNT(DISTINCT i.id)::int AS item_count");
+    expect(sql).toContain("COUNT(DISTINCT i.id) FILTER (WHERE i.publication_status='published')::int AS published_item_count");
+    expect(sql).toContain("COUNT(DISTINCT c.id)::int AS click_count");
   });
 });
