@@ -7,6 +7,28 @@ const nextConfig: NextConfig = {
   productionBrowserSourceMaps: false,
   transpilePackages: ["@wasla/shared"],
 
+  // Apply conservative browser security headers to every web route.
+  // CSP is intentionally not set here until all third-party/auth/media origins
+  // are inventoried, so we do not break legitimate production flows.
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
+          { key: "Strict-Transport-Security", value: "max-age=31536000" },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=()",
+          },
+        ],
+      },
+    ];
+  },
+
   // Keep Better Auth on the WASLA domain so browser cookies remain first-party.
   // Next.js proxies these requests to the separate API service.
   async rewrites() {

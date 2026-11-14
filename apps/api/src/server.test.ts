@@ -63,6 +63,16 @@ describe("WASLA API", () => {
     });
   });
 
+  it("applies baseline security headers to API responses", async () => {
+    const baseUrl = await startTestServer();
+    const response = await fetch(`${baseUrl}/unknown`);
+
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(response.headers.get("x-frame-options")).toBe("DENY");
+    expect(response.headers.get("referrer-policy")).toBe("strict-origin-when-cross-origin");
+    expect(response.headers.get("x-permitted-cross-domain-policies")).toBe("none");
+  });
+
   it("rejects unsupported methods on /health", async () => {
     const baseUrl = await startTestServer();
     const response = await fetch(`${baseUrl}/health`, {
