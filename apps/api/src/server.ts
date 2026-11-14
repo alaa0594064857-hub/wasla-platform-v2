@@ -24,6 +24,16 @@ async function handleRequest(
   request: IncomingMessage,
   response: ServerResponse,
 ): Promise<void> {
+  // Apply baseline security headers before routing so every API module,
+  // Better Auth, health checks and error responses inherit the same policy.
+  response.setHeader("X-Content-Type-Options", "nosniff");
+  response.setHeader("X-Frame-Options", "DENY");
+  response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.setHeader("X-Permitted-Cross-Domain-Policies", "none");
+  if (process.env.NODE_ENV === "production") {
+    response.setHeader("Strict-Transport-Security", "max-age=31536000");
+  }
+
   const requestUrl = new URL(
     request.url ?? "/",
     "http://localhost",
