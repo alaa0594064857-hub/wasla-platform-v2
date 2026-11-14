@@ -180,7 +180,7 @@ export default function AiHeadquartersPage() {
             </div>
             <Link href="/owner/ai/chat" className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-xl border border-[#dfc58f] bg-[#dfc58f] px-6 py-3 text-sm font-extrabold text-[#14243a] no-underline transition hover:bg-[#f0dcae]">{ar ? "الدخول إلى مكتب المدير" : "Enter Manager Office"} ↗</Link>
           </div>
-          <div className="mt-6 grid grid-cols-2 gap-2 border-t border-white/15 pt-5 sm:grid-cols-4">
+          <div className="mt-6 grid grid-cols-2 gap-2 border-t border-white/15 pt-5 sm:grid-cols-5">
             {[
               { label: copy.total, value: stats.total },
               { label: copy.active, value: stats.active },
