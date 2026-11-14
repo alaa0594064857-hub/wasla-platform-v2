@@ -20,6 +20,8 @@ export default function PlatformOwnerPage() {
   const [denied, setDenied] = useState(false);
   const [users, setUsers] = useState<PlatformUser[]>([]);
   const [usersTotal, setUsersTotal] = useState<number | null>(null);
+  const [usersPage, setUsersPage] = useState(1);
+  const usersPageSize = 25;
   const [usersLoading, setUsersLoading] = useState(false);
   const [userSearch, setUserSearch] = useState("");
   const [usersError, setUsersError] = useState(false);
@@ -59,7 +61,7 @@ export default function PlatformOwnerPage() {
     let active = true;
     setUsersLoading(true);
     setUsersError(false);
-    const params = new URLSearchParams({ page: "1", limit: "25" });
+    const params = new URLSearchParams({ page: String(usersPage), limit: String(usersPageSize) });
     if (userSearch.trim()) params.set("search", userSearch.trim());
     fetch(`/api/platform/users?${params.toString()}`, { credentials: "include", cache: "no-store" })
       .then(async response => {
@@ -70,7 +72,7 @@ export default function PlatformOwnerPage() {
       .catch(() => { if (active) setUsersError(true); })
       .finally(() => { if (active) setUsersLoading(false); });
     return () => { active = false; };
-  }, [access, userSearch]);
+  }, [access, userSearch, usersPage]);
 
   useEffect(() => {
     if (!access?.permissions.includes("platform.reports.read")) return;
@@ -97,7 +99,7 @@ export default function PlatformOwnerPage() {
     search: "ابحث بالاسم أو البريد الإلكتروني", name: "الاسم", email: "البريد الإلكتروني",
     status: "الحالة", verifiedCol: "تأكيد البريد", type: "نوع الحساب", yes: "مؤكد",
     no: "غير مؤكد", loadingUsers: "جارٍ تحميل المستخدمين...", failed: "تعذر تحميل قائمة المستخدمين.",
-    empty: "لا توجد نتائج مطابقة.", securityTitle: "حالة الحماية والصلاحيات",
+    empty: "لا توجد نتائج مطابقة.", previous: "السابق", next: "التالي", page: "صفحة", of: "من", securityTitle: "حالة الحماية والصلاحيات",
     securityNote: "التحقق من صلاحيات المالك يتم على الخادم، وليس اعتماداً على عناصر الواجهة.",
     openAccount: "إعدادات الحساب", signOut: "تسجيل الخروج", restricted: "هذه المساحة مخصصة لمالك المنصة",
     restrictedNote: "لم يتم منح هذا الحساب صلاحية الدخول. لم يتم عرض أي بيانات إدارية.",
@@ -114,7 +116,7 @@ export default function PlatformOwnerPage() {
     search: "Search by name or email", name: "Name", email: "Email",
     status: "Status", verifiedCol: "Email verified", type: "Account type", yes: "Verified",
     no: "Unverified", loadingUsers: "Loading users...", failed: "Could not load users.",
-    empty: "No matching users.", securityTitle: "Security & access status",
+    empty: "No matching users.", previous: "Previous", next: "Next", page: "Page", of: "of", securityTitle: "Security & access status",
     securityNote: "Owner permissions are verified on the server, not trusted from the interface.",
     openAccount: "Account settings", signOut: "Sign out", restricted: "This area is restricted to the platform owner",
     restrictedNote: "This account has not been granted access. No administrative data was disclosed.",
@@ -168,6 +170,7 @@ export default function PlatformOwnerPage() {
     return overview?.accountsByType.filter(row => row.account_type === type && row.status === status).reduce((total, row) => total + Number(row.total), 0) || 0;
   }
   const selectedRoomDef = roomDefs.find(room => room.id === selectedRoom);
+  const usersPageCount = Math.max(1, Math.ceil((usersTotal ?? 0) / usersPageSize));
 
   return <main dir={ar ? "rtl" : "ltr"} lang={locale} style={styles.shell}>
     <aside style={styles.sidebar}>
@@ -227,12 +230,19 @@ export default function PlatformOwnerPage() {
 
         <section id="users" style={styles.panel}>
           <div style={styles.panelHead}><div><span style={styles.panelEyebrow}>01 / DIRECTORY</span><h2>{copy.directory}</h2><p>{copy.directoryNote}</p></div><span style={styles.readOnly}>{ar ? "قراءة فقط" : "READ ONLY"}</span></div>
-          <input value={userSearch} onChange={event => setUserSearch(event.target.value)} placeholder={copy.search} aria-label={copy.search} style={styles.search}/>
+          <input value={userSearch} onChange={event => { setUsersPage(1); setUserSearch(event.target.value); }} placeholder={copy.search} aria-label={copy.search} style={styles.search}/>
           {usersLoading ? <p style={styles.notice}>{copy.loadingUsers}</p> : usersError ? <p style={styles.notice}>{copy.failed}</p> : <div style={{ overflowX: "auto" }}>
             <table style={styles.table}><thead><tr><th>{copy.name}</th><th>{copy.email}</th><th>{copy.status}</th><th>{copy.verifiedCol}</th><th>{copy.type}</th></tr></thead>
               <tbody>{users.map(user => <tr key={user.id}><td><strong>{user.name}</strong>{user.is_platform_owner ? <small style={styles.ownerTag}>{ar ? "مالك المنصة" : "PLATFORM OWNER"}</small> : null}</td><td>{user.email}</td><td><span style={styles.userStatus}>{user.status}</span></td><td>{user.email_verified ? copy.yes : copy.no}</td><td>{user.registration_type || "—"}</td></tr>)}</tbody>
             </table>
             {!users.length && <p style={styles.notice}>{copy.empty}</p>}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginTop: 14 }}>
+              <span style={{ color: "#738092", fontSize: 12 }}>{copy.page} {usersPage} {copy.of} {usersPageCount} · {usersTotal ?? users.length}</span>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button type="button" disabled={usersPage <= 1 || usersLoading} onClick={() => setUsersPage(page => Math.max(1, page - 1))} style={{ padding: "8px 13px", borderRadius: 8, border: "1px solid #d9dfe7", background: usersPage <= 1 ? "#f1f3f5" : "#fff", color: "#14243a", cursor: usersPage <= 1 ? "not-allowed" : "pointer" }}>{copy.previous}</button>
+                <button type="button" disabled={usersPage >= usersPageCount || usersLoading} onClick={() => setUsersPage(page => Math.min(usersPageCount, page + 1))} style={{ padding: "8px 13px", borderRadius: 8, border: "1px solid #d9dfe7", background: usersPage >= usersPageCount ? "#f1f3f5" : "#fff", color: "#14243a", cursor: usersPage >= usersPageCount ? "not-allowed" : "pointer" }}>{copy.next}</button>
+              </div>
+            </div>
           </div>}
         </section>
 
