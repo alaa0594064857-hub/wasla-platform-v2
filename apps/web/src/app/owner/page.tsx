@@ -142,6 +142,9 @@ export default function PlatformOwnerPage() {
     { id: "trade-commissions", label: ar ? "سجل العمولات" : "Trade commissions", icon: "＄", href: "/owner/trade/commission-ledger" },
     { id: "trade-invoices", label: ar ? "فواتير العمولات" : "Commission invoices", icon: "▤", href: "/owner/trade/commission-invoices" }
   ];
+  if (access.permissions.includes("platform.support.queue.read")) {
+    nav.push({ id: "support-center", label: ar ? "مركز الدعم الموحد" : "Unified support center", icon: "✉", href: "/owner/support" });
+  }
   if (access.permissions.includes("platform.reports.manage")) {
     nav.push({ id: "return-escalations", label: ar ? "تصعيدات الإرجاع والدعم" : "Return support escalations", icon: "⚑", href: "/owner/support/return-escalations" });
   }
