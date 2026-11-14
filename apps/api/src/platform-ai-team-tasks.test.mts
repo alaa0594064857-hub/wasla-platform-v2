@@ -66,6 +66,22 @@ describe("WASLA owner digital team task API", () => {
     expect(String(listCall?.[0])).toContain("WHERE owner_user_id = $1");
   });
 
+  it("filters the task history by a validated specialist key", async () => {
+    const base = await startServer();
+    const response = await fetch(base + "/api/platform/ai/tasks?specialistKey=translator");
+    expect(response.status).toBe(200);
+    const listCall = mocks.query.mock.calls.find(call => String(call[0]).includes("ORDER BY created_at DESC"));
+    expect(listCall?.[1]).toEqual(["owner-1", 20, "translator"]);
+    expect(String(listCall?.[0])).toContain("specialist_key = $3");
+  });
+
+  it("rejects unknown specialist filters", async () => {
+    const base = await startServer();
+    const response = await fetch(base + "/api/platform/ai/tasks?specialistKey=unknown");
+    expect(response.status).toBe(400);
+    expect(mocks.query.mock.calls.some(call => String(call[0]).includes("ORDER BY created_at DESC"))).toBe(false);
+  });
+
   it("returns Gemini cooldown metadata and owner-scoped task counts", async () => {
     mocks.query.mockImplementation(async (sql: string) => {
       if (String(sql).includes("FROM platform_ai_manager_control WHERE")) {

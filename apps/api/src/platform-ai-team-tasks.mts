@@ -160,6 +160,11 @@ export async function handlePlatformAiTeamTasksRequest(req: IncomingMessage, res
 
     if (req.method === "GET" && !taskId) {
       const limit = Math.min(50, Math.max(1, Number(url.searchParams.get("limit")) || 20));
+      const specialistKey = url.searchParams.get("specialistKey");
+      if (specialistKey && !Object.hasOwn(SPECIALISTS, specialistKey)) {
+        reply(res, 400, { success: false, error: "Unsupported specialistKey." });
+        return;
+      }
       const result = await db.query(
         `SELECT id, specialist_key AS "specialistKey", title, status,
                 priority, attempt_count AS "attemptCount", result_text AS "resultText",
@@ -167,9 +172,9 @@ export async function handlePlatformAiTeamTasksRequest(req: IncomingMessage, res
                 created_at AS "createdAt", updated_at AS "updatedAt",
                 started_at AS "startedAt", finished_at AS "finishedAt"
          FROM platform_ai_team_tasks
-         WHERE owner_user_id = $1
+         WHERE owner_user_id = $1 AND ($3::varchar IS NULL OR specialist_key = $3)
          ORDER BY created_at DESC LIMIT $2`,
-        [access.userId, limit],
+        [access.userId, limit, specialistKey],
       );
       const providerResult = await db.query(
         `SELECT cooldown_until AS "cooldownUntil", last_error_code AS "lastErrorCode",
