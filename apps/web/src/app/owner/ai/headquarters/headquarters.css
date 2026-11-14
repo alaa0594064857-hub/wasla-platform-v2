@@ -27,6 +27,18 @@
 .wasla-ai-stat strong{display:block;margin-top:5px;color:#dfc58f;font-size:25px}
 .wasla-ai-manager>div:nth-child(3){display:flex;flex-wrap:wrap;gap:9px;margin-top:16px}
 .wasla-ai-manager>div:nth-child(3) a{padding:9px 13px;border:1px solid rgba(255,255,255,.24);border-radius:9px;font-size:11px;font-weight:800}
+.wasla-ai-workspaces{display:grid;gap:13px}
+.wasla-ai-workspaces-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.wasla-ai-workspaces-heading p{margin:0;color:#9b783d;font-size:10px;font-weight:800;letter-spacing:1.5px}
+.wasla-ai-workspaces-heading h2{margin:5px 0;font-size:21px;font-weight:800}
+.wasla-ai-workspaces-heading span{color:#718096;font-size:12px;line-height:1.8}
+.wasla-ai-workspaces-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.wasla-ai-workspace-card{display:grid;grid-template-columns:48px minmax(0,1fr);align-items:start;gap:12px;min-width:0;padding:18px;border:1px solid #e5e0d5;border-radius:17px;background:#fff;color:#14243a;text-decoration:none;box-shadow:0 5px 18px rgba(20,36,58,.05);transition:border-color .18s,box-shadow .18s,transform .18s}
+.wasla-ai-workspace-card:hover{border-color:#b18d4d;box-shadow:0 12px 26px rgba(20,36,58,.09);transform:translateY(-2px)}
+.wasla-ai-workspace-icon{display:grid;width:48px;height:48px;place-items:center;border-radius:13px;background:#f4efe2;color:#9b783d;font-size:25px}
+.wasla-ai-workspace-card h3{margin:1px 0 5px;font-size:14px;font-weight:800;line-height:1.5}
+.wasla-ai-workspace-card p{margin:0;color:#718096;font-size:11px;line-height:1.8}
+.wasla-ai-workspace-card strong{grid-column:2;color:#9b783d;font-size:11px;font-weight:800}
 .wasla-ai-departments{display:grid;gap:15px}
 .wasla-ai-departments>div:first-child{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px}
 .wasla-ai-departments h2{margin:6px 0;font-size:21px;font-weight:800}
@@ -67,6 +79,7 @@
  .wasla-ai-manager>div:first-child>div:first-child{align-items:flex-start}
  .wasla-ai-manager>div:first-child>a{width:100%}
  .wasla-ai-manager>div:nth-child(2){grid-template-columns:repeat(2,minmax(0,1fr))}
+ .wasla-ai-workspaces-grid{grid-template-columns:1fr;gap:10px}
  .wasla-ai-team-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
  .wasla-ai-team-card{min-height:165px;padding:13px}
  .wasla-ai-status{grid-template-columns:1fr}
