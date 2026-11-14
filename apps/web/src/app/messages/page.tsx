@@ -73,9 +73,9 @@ export default function MessagesPage() {
     }
   }, [router, t.loadError]);
 
-  const loadMessages = useCallback(async (conversationId: string) => {
-    setChatLoading(true);
-    setError("");
+  const loadMessages = useCallback(async (conversationId: string, silent = false) => {
+    if (!silent) setChatLoading(true);
+    if (!silent) setError("");
     try {
       const response = await fetch(`/api/messages/${encodeURIComponent(conversationId)}`, { credentials: "include", cache: "no-store" });
       const data = await response.json();
@@ -83,9 +83,9 @@ export default function MessagesPage() {
       setMessages(data.messages);
       window.dispatchEvent(new Event("wasla:messages-updated"));
     } catch {
-      setError(t.loadError);
+      if (!silent) setError(t.loadError);
     } finally {
-      setChatLoading(false);
+      if (!silent) setChatLoading(false);
     }
   }, [t.loadError]);
 
@@ -99,6 +99,18 @@ export default function MessagesPage() {
     if (selected) void loadMessages(selected);
     else setMessages([]);
   }, [selected, loadMessages]);
+
+  // Keep the inbox fresh while it is open without interrupting the reader.
+  useEffect(() => {
+    if (isPending || !session?.user) return;
+    const refresh = () => {
+      if (document.visibilityState !== "visible") return;
+      void loadConversations();
+      if (selected) void loadMessages(selected, true);
+    };
+    const timer = window.setInterval(refresh, 15000);
+    return () => window.clearInterval(timer);
+  }, [isPending, session?.user?.id, selected, loadConversations, loadMessages]);
 
   async function searchRecipients(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
