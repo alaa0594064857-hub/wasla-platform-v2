@@ -90,6 +90,7 @@ export default function AiHeadquartersPage() {
     departmentsText: "تسعة مكاتب متخصصة، ولكل مكتب مساحة مستقلة لمراجعة مهامه.",
     open: "فتح المكتب",
     recorded: "مهمة مسجلة",
+    blockedOffice: "متوقف بسبب حصة Gemini",
     noData: "لا توجد بيانات مهام معروضة حالياً.",
     error: "تعذر تحميل بيانات غرفة الذكاء الاصطناعي.",
     quotaTitle: "توقف التنفيذ بسبب حصة مزود الذكاء الاصطناعي",
@@ -127,6 +128,7 @@ export default function AiHeadquartersPage() {
     departmentsText: "Nine specialist offices, each with its own workspace for reviewing assigned tasks.",
     open: "Open office",
     recorded: "recorded tasks",
+    blockedOffice: "Paused by Gemini quota",
     noData: "No task data is currently available.",
     error: "Unable to load AI headquarters data.",
     quotaTitle: "Execution paused by AI provider quota",
@@ -191,7 +193,9 @@ export default function AiHeadquartersPage() {
           </div>
           <div className="wasla-ai-team-grid">
             {team.map(([key, arName, enName, arDesc, enDesc, icon], index) => {
-              const count = tasks.filter(task => task.specialistKey === key).length;
+              const officeTasks = tasks.filter(task => task.specialistKey === key);
+              const count = officeTasks.length;
+              const quotaBlocked = officeTasks.some(task => task.errorCode === "PROVIDER_RATE_LIMIT");
               return <Link key={key} href={"/owner/ai/office/" + key} className="wasla-ai-team-card">
                 <div className="flex items-center justify-between gap-2">
                   <span className="grid h-11 w-11 place-items-center rounded-xl bg-[#f4efe2] text-xl text-[#9b783d]">{icon}</span>
@@ -201,7 +205,7 @@ export default function AiHeadquartersPage() {
                 <p className="mt-1 text-[11px] leading-5 text-slate-500">{ar ? arDesc : enDesc}</p>
                 <div className="mt-auto flex items-center justify-between border-t border-[#f0ede6] pt-3">
                   <span className="text-[11px] font-semibold text-[#9b783d]">{copy.open} ↗</span>
-                  <span className="text-[11px] text-slate-500">{loading ? "…" : count} {copy.recorded}</span>
+                  <span className={"text-[10px] font-semibold " + (quotaBlocked ? "text-amber-700" : "text-slate-500")}>{loading ? "…" : quotaBlocked ? copy.blockedOffice : count + " " + copy.recorded}</span>
                 </div>
               </Link>;
             })}
