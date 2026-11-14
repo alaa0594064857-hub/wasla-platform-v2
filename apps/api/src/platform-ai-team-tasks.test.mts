@@ -62,7 +62,7 @@ describe("WASLA owner digital team task API", () => {
     expect(response.status).toBe(200);
     expect(data.tasks).toHaveLength(1);
     const listCall = mocks.query.mock.calls.find(call => String(call[0]).includes("ORDER BY created_at DESC"));
-    expect(listCall?.[1]).toEqual(["owner-1", 50]);
+    expect(listCall?.[1]).toEqual(["owner-1", 50, null]);
     expect(String(listCall?.[0])).toContain("WHERE owner_user_id = $1");
   });
 
