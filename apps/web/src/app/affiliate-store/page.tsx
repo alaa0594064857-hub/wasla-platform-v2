@@ -80,7 +80,7 @@ export default function AffiliateStorePage() {
     failed: "تعذر تحميل المنتجات الآن. حاول مرة أخرى.",
     empty: "لا توجد منتجات تطابق بحثك حالياً.", featured: "ترتيب العرض",
     featuredOption: "المميزة أولاً", az: "الاسم: أ إلى ي",
-    view: "عرض التفاصيل", seller: "المصدر الرسمي", affiliate: "رابط شراكة",
+    view: "عرض التفاصيل", seller: "مصدر رسمي · دون عمولة", affiliate: "رابط شراكة",
     disclosure: "قد تحصل WASLA على عمولة من بعض عمليات الشراء المؤهلة دون تكلفة إضافية عليك.",
     trust: "تفاصيل المنتج والشراء والتوفر تُراجع على الموقع الرسمي للعلامة أو البائع.",
     shop: "تصفّح المنتجات", back: "الرئيسية"
@@ -92,7 +92,7 @@ export default function AffiliateStorePage() {
     failed: "Products could not be loaded. Please try again.",
     empty: "No products currently match your search.", featured: "Sort products",
     featuredOption: "Featured first", az: "Name: A to Z",
-    view: "View details", seller: "Official source", affiliate: "Partner link",
+    view: "View details", seller: "Official source · no commission", affiliate: "Partner link",
     disclosure: "WASLA may earn a commission on qualifying purchases at no extra cost to you.",
     trust: "Check product details, purchase terms and availability on the official brand or retailer website.",
     shop: "Browse products", back: "Home"
