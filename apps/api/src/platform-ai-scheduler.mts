@@ -291,26 +291,6 @@ async function recoverLegacyRateLimitedTasks(): Promise<number> {
   return recovered.rows.length;
 }
 
-async function generateDailyReports() {
-  const db=getDatabasePool();
-  const owners=await db.query(`SELECT DISTINCT owner_user_id FROM platform_ai_team_tasks
-    WHERE created_at >= date_trunc('day',NOW()) - interval '1 day'`);
-  for(const row of owners.rows) {
-    const data=await db.query(`SELECT specialist_key AS "specialistKey",title,status,
-      result_text AS "resultText",error_code AS "errorCode",created_at AS "createdAt",
-      finished_at AS "finishedAt" FROM platform_ai_team_tasks
-      WHERE owner_user_id=$1 AND created_at >= date_trunc('day',NOW()) - interval '1 day'
-      ORDER BY created_at DESC LIMIT 100`,[row.owner_user_id]);
-    const report={period:"last_24_hours",generatedAt:new Date().toISOString(),
-      taskCount:data.rows.length,completed:data.rows.filter((t:any)=>t.status==="needs_owner_review"||t.status==="completed").length,
-      queued:data.rows.filter((t:any)=>t.status==="queued").length,
-      failed:data.rows.filter((t:any)=>t.status==="failed").length,tasks:data.rows};
-    await db.query(`INSERT INTO platform_ai_daily_reports(owner_user_id,report_date,report_json)
-      VALUES($1,CURRENT_DATE,$2::jsonb) ON CONFLICT(owner_user_id,report_date)
-      DO UPDATE SET report_json=EXCLUDED.report_json,created_at=NOW()`,[row.owner_user_id,JSON.stringify(report)]);
-  }
-}
-
 export async function runScheduledAiTasks() {
   if(process.env.WASLA_AI_EXECUTION_PAUSED?.trim().toLowerCase()==="true") {
     console.info("WASLA AI execution is paused by environment safeguard");
