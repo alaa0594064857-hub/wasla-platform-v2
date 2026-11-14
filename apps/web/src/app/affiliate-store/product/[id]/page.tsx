@@ -74,10 +74,10 @@ export default function AffiliateProductPage() {
               <h1 className="mt-3 text-3xl font-bold leading-tight md:text-4xl">{title}</h1>
               <p className="mt-5 whitespace-pre-line text-base leading-8 text-slate-600">{description}</p>
               <p className="mt-6 rounded-xl bg-[#f6f3ec] p-4 text-sm leading-7 text-slate-600">
-                {ar ? "السعر والتوفر والشحن يحددها البائع في صفحته. تنتقل إليه لإتمام الشراء والدفع مباشرة." : "The retailer controls current pricing, availability and shipping. Continue to its website to complete checkout and payment directly."}
+                {item.kind === "affiliate" ? (ar ? "السعر والتوفر والشحن يحددها البائع. قد تحصل WASLA على عمولة من عملية شراء مؤهلة دون تكلفة إضافية عليك." : "The retailer controls current pricing, availability and shipping. WASLA may earn a commission from a qualifying purchase at no extra cost to you.") : (ar ? "هذا عرض استكشافي من مصدر رسمي، وليس رابط تسويق بالعمولة. لا تسجل WASLA عمولة من هذا الرابط. تحقق من السعر والتوفر والشحن لدى المصدر." : "This is an editorial discovery listing from an official source, not an affiliate link. WASLA does not earn a commission from this link. Check price, availability and shipping with the source.")}
               </p>
               <a href={item.outbound_path} target="_blank" rel={item.kind === "affiliate" ? "sponsored nofollow noreferrer" : "noopener noreferrer"} className="mt-6 inline-flex justify-center rounded-xl bg-[#17253a] px-6 py-4 font-bold text-white hover:bg-[#263c5b]">
-                {ar ? "الانتقال إلى موقع البائع" : "Continue to retailer"} ↗
+                {item.kind === "affiliate" ? (ar ? "الانتقال إلى موقع الشريك" : "Continue to partner") : (ar ? "زيارة المصدر الرسمي" : "Visit official source")} ↗
               </a>
               {item.kind === "affiliate" && <p className="mt-3 text-xs leading-6 text-slate-500">{ar ? item.disclosure_ar : item.disclosure_en}</p>}
             </div>
