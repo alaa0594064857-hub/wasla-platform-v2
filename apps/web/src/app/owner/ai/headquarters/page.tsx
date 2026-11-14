@@ -58,6 +58,7 @@ export default function AiHeadquartersPage() {
     active: tasks.filter(task => task.status === "queued" || task.status === "running").length,
     review: tasks.filter(task => task.status === "needs_owner_review").length,
     failed: tasks.filter(task => task.status === "failed").length,
+    completed: tasks.filter(task => task.status === "completed").length,
     providerLimited: tasks.some(task => task.errorCode === "PROVIDER_RATE_LIMIT")
       || Boolean(providerState?.cooldownUntil && new Date(providerState.cooldownUntil).getTime() > Date.now()),
   }), [tasks, providerState]);
@@ -73,6 +74,7 @@ export default function AiHeadquartersPage() {
     active: "قيد التنفيذ أو الانتظار",
     review: "بانتظار مراجعتك",
     failed: "مهام متعثرة",
+    completed: "مهام مكتملة بنتيجة محفوظة",
     status: "حالة النظام",
     engine: "إعداد محرك الذكاء",
     manager: "حالة المدير العام",
@@ -114,6 +116,7 @@ export default function AiHeadquartersPage() {
     active: "Queued or in progress",
     review: "Awaiting your review",
     failed: "Needs attention",
+    completed: "Completed with saved result",
     status: "System status",
     engine: "AI engine setup",
     manager: "General manager",
@@ -183,6 +186,7 @@ export default function AiHeadquartersPage() {
               { label: copy.active, value: stats.active },
               { label: copy.review, value: stats.review },
               { label: copy.failed, value: stats.failed },
+              { label: copy.completed, value: stats.completed },
             ].map(item => (
               <div key={item.label} className="wasla-ai-stat">
                 <span className="block text-[11px] leading-5 text-slate-300">{item.label}</span>
