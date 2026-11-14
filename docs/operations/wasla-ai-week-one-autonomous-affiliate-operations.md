@@ -1,7 +1,7 @@
 # WASLA AI — Week 1 Autonomous Affiliate Operations
 
 Effective date: 2026-11-12
-Owner instruction: operate continuously without requiring a daily owner prompt; send a daily activity report and accept strategic direction at the weekly review.
+Owner instruction: operate continuously without requiring a daily owner prompt. Do not send daily reports or notifications. Provide one weekly summary during the first week only; no recurring reports after week one unless the owner asks.
 
 ## Week 1 scope
 - Affiliate commerce only.
@@ -25,7 +25,7 @@ Owner instruction: operate continuously without requiring a daily owner prompt; 
 - Reports must be based on recorded task events and actual catalogue state, not invented progress.
 
 ## Safety and release gates
-- The existing AI team task system is currently advisory and manually initiated. This document does not itself create a scheduler, external browsing capability, affiliate API connection, or publishing permission.
+- The AI team task system may process queued research tasks through the configured scheduler and provider. This document does not itself create an external browsing capability, affiliate API connection, or publishing permission.
 - Public product publication must remain blocked until the catalogue's affiliate-specific fields, link validation, disclosure, source provenance, and image-rights checks are implemented and tested.
 - Amazon Associates application status remains pending final review until the program confirms otherwise.
 - If a source cannot be accessed or a program's terms cannot be verified, mark the item blocked and continue with other eligible research.
