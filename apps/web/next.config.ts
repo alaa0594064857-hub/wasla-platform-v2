@@ -38,6 +38,18 @@ const nextConfig: NextConfig = {
         destination:
           "https://wasla-apiwasla-api-v2.onrender.com/api/auth/:path*",
       },
+      {
+        // Public member-store and product catalogue reads are served by the API.
+        source: "/api/public/:path*",
+        destination:
+          "https://wasla-apiwasla-api-v2.onrender.com/api/public/:path*",
+      },
+      {
+        // Member-store order, return-policy and storefront APIs share this prefix.
+        source: "/api/stores/:path*",
+        destination:
+          "https://wasla-apiwasla-api-v2.onrender.com/api/stores/:path*",
+      },
     ];
   },
 
