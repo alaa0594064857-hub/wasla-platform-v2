@@ -32,6 +32,10 @@ export async function handleSupportRequest(req:IncomingMessage,res:ServerRespons
    }
    if(req.method==="PATCH"){
     const input=await readBody(req);if(!input){send(res,400,{success:false,error:"Invalid request body"});return;}
+    if(Object.prototype.hasOwnProperty.call(input,"assignedToUserId")){
+      const assignmentAccess=await authorizePlatformPermission(req,res,"platform.support.case.assign");
+      if(!assignmentAccess)return;
+    }
     const c=await db.connect();try{await c.query("BEGIN");const old=await c.query("SELECT status,priority,assigned_to_user_id AS assignee FROM support_tickets WHERE id=$1 FOR UPDATE",[id]);if(!old.rowCount){await c.query("ROLLBACK");send(res,404,{success:false,error:"Ticket not found"});return;}
      const before=old.rows[0],status=input.status===undefined?before.status:String(input.status),priority=input.priority===undefined?before.priority:String(input.priority),assignee=input.assignedToUserId===undefined?before.assignee:input.assignedToUserId;
      if(!statuses.includes(status)||!priorities.includes(priority)||(assignee!==null&&typeof assignee!=="string")||(typeof assignee==="string"&&!uuid.test(assignee))){await c.query("ROLLBACK");send(res,400,{success:false,error:"Invalid status, priority, or assignee"});return;}
