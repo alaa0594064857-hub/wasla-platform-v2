@@ -43,6 +43,10 @@ export async function handleSupportRequest(req:IncomingMessage,res:ServerRespons
      if(typeof assignee==="string"&&!(await c.query("SELECT id FROM users WHERE id=$1 AND status='active' AND email_verified=TRUE",[assignee])).rowCount){await c.query("ROLLBACK");send(res,400,{success:false,error:"Assignee must be active and verified"});return;}
      const updated=await c.query(`UPDATE support_tickets SET status=$2,priority=$3,assigned_to_user_id=$4,updated_at=NOW(),resolved_at=CASE WHEN $2='resolved' THEN COALESCE(resolved_at,NOW()) WHEN $2='in_progress' THEN NULL ELSE resolved_at END,closed_at=CASE WHEN $2='closed' THEN COALESCE(closed_at,NOW()) ELSE NULL END WHERE id=$1 RETURNING id,status,priority,assigned_to_user_id AS "assignedToUserId",updated_at AS "updatedAt"`,[id,status,priority,assignee]);
      for(const [oldValue,newValue,event] of [[before.status,status,"status_changed"],[before.priority,priority,"priority_changed"],[before.assignee,assignee,"assigned"]] as const)if(oldValue!==newValue)await c.query("INSERT INTO support_ticket_events(ticket_id,actor_user_id,event_type,from_value,to_value) VALUES($1,$2,$3,$4,$5)",[id,access.userId,event,String(oldValue??""),String(newValue??"")]);
+     if(status!==before.status){
+      const requester=await c.query("SELECT requester_user_id,ticket_number FROM support_tickets WHERE id=$1",[id]);
+      if(requester.rowCount)await c.query(`INSERT INTO notifications(user_id,type,title_ar,title_en,body_ar,body_en,action_url,resource_id,metadata) VALUES($1,'support_ticket','تحديث على تذكرة الدعم','Support ticket updated','تم تحديث حالة تذكرتك','Your support ticket status changed',$2,$3,$4::jsonb)`,[requester.rows[0].requester_user_id,`/support/tickets/${id}`,id,JSON.stringify({ticketNumber:requester.rows[0].ticket_number})]);
+     }
      await c.query("COMMIT");send(res,200,{success:true,ticket:updated.rows[0]});return;
     }catch(e){await c.query("ROLLBACK");throw e;}finally{c.release();}
    }
