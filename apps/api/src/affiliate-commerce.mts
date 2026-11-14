@@ -155,8 +155,10 @@ export async function handleAffiliateCommerceRequest(req: IncomingMessage, res: 
       `SELECT p.id,p.provider,p.marketplace,p.marketplace_domain,p.destination_country,p.currency,
               p.tracking_id,p.status,p.disclosure_en,p.disclosure_ar,p.terms_reviewed_at,
               p.created_at,p.updated_at,COUNT(i.id)::int AS item_count,
-              COUNT(i.id) FILTER (WHERE i.publication_status='published')::int AS published_item_count
+              COUNT(i.id) FILTER (WHERE i.publication_status='published')::int AS published_item_count,
+              COUNT(DISTINCT c.id)::int AS click_count
        FROM affiliate_programs p LEFT JOIN affiliate_items i ON i.program_id=p.id
+       LEFT JOIN affiliate_clicks c ON c.program_id=p.id
        GROUP BY p.id ORDER BY p.created_at ASC`
     );
     const items = await db.query(
