@@ -71,7 +71,18 @@ export async function handleSupportRequest(req:IncomingMessage,res:ServerRespons
    if(!categories.includes(category)||subject.length<4||subject.length>180||description.length<10||description.length>8000){send(res,400,{success:false,error:"Choose a category and provide a subject and description"});return;}
    const c=await db.connect();try{await c.query("BEGIN");const seq=await c.query("SELECT nextval('support_ticket_number_seq') AS value"),number=`WASLA-${new Date().getUTCFullYear()}-${String(seq.rows[0].value).padStart(6,"0")}`;
     const created=await c.query(`INSERT INTO support_tickets(ticket_number,requester_user_id,category,subject,description,priority) VALUES($1,$2,$3,$4,$5,$6) RETURNING id,ticket_number AS "ticketNumber",category,subject,priority,status,created_at AS "createdAt"`,[number,session.user.id,category,subject,description,priority]);
-    await c.query("INSERT INTO support_ticket_events(ticket_id,actor_user_id,event_type,to_value) VALUES($1,$2,'created','open')",[created.rows[0].id,session.user.id]);await c.query("COMMIT");send(res,201,{success:true,ticket:created.rows[0]});return;
+    await c.query("INSERT INTO support_ticket_events(ticket_id,actor_user_id,event_type,to_value) VALUES($1,$2,'created','open')",[created.rows[0].id,session.user.id]);
+    await c.query(`INSERT INTO notifications(user_id,type,title_ar,title_en,body_ar,body_en,action_url,resource_id,metadata)
+      SELECT DISTINCT u.id,'support_ticket','تذكرة دعم جديدة','New support ticket','وصل طلب دعم جديد إلى قائمة المعالجة','A new support request entered the queue',$1,$2,$3::jsonb
+      FROM users u
+      JOIN platform_role_assignments pra ON pra.user_id=u.id AND pra.status='active' AND pra.role_scope='platform'
+      JOIN roles r ON r.id=pra.role_id AND r.scope_type='platform'
+      JOIN role_permissions rp ON rp.role_id=r.id AND rp.scope_type='platform'
+      JOIN permissions p ON p.id=rp.permission_id AND p.scope_type='platform'
+      WHERE u.status='active' AND u.email_verified=TRUE AND p.permission_key='platform.support.queue.read' AND u.id<>$4
+        AND NOT EXISTS(SELECT 1 FROM notifications n WHERE n.user_id=u.id AND n.type='support_ticket' AND n.resource_id=$2)`,
+      [`/owner/support`,created.rows[0].id,JSON.stringify({ticketNumber:number}),session.user.id]);
+    await c.query("COMMIT");send(res,201,{success:true,ticket:created.rows[0]});return;
    }catch(e){await c.query("ROLLBACK");throw e;}finally{c.release();}
   }
   if(id&&req.method==="GET"){
@@ -89,5 +100,5 @@ export async function handleSupportRequest(req:IncomingMessage,res:ServerRespons
    }catch(e){await c.query("ROLLBACK");throw e;}finally{c.release();}
   }
   send(res,405,{success:false,error:"Method not allowed"});
- }catch(error){console.error("WASLA support center error:",error);if(!res.headersSent)send(res,500,{success:false,error:"Support center request failed"});else res.destroy(error instanceof Error?error:undefined);}
+ }catch(error){console.error("WASLA support center error:",error);if(!res.headersSent)send(res,error instanceof Error&&error.message==="too_large"?413:500,{success:false,error:error instanceof Error&&error.message==="too_large"?"Request body too large":"Support center request failed"});else res.destroy(error instanceof Error?error:undefined);}
 }
