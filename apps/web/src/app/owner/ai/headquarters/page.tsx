@@ -25,6 +25,7 @@ export default function AiHeadquartersPage() {
   const { locale } = useLocale();
   const ar = locale === "ar";
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [taskCounts, setTaskCounts] = useState<Record<string, number>>({});
   const [status, setStatus] = useState<AssistantStatus | null>(null);
   const [providerState, setProviderState] = useState<ProviderState>(null);
   const [error, setError] = useState("");
@@ -42,6 +43,7 @@ export default function AiHeadquartersPage() {
       if (!tasksResponse.ok || !tasksData.success) throw new Error(tasksData.error || "Unable to load tasks");
       if (!statusResponse.ok || !statusData.success) throw new Error(statusData.error || "Unable to load AI status");
       setTasks(Array.isArray(tasksData.tasks) ? tasksData.tasks : []);
+      setTaskCounts(tasksData.taskCounts && typeof tasksData.taskCounts === "object" ? tasksData.taskCounts : {});
       setProviderState(tasksData.providerState || null);
       setStatus(statusData);
     } catch (cause) {
@@ -54,14 +56,14 @@ export default function AiHeadquartersPage() {
   useEffect(() => { void load(); }, [load]);
 
   const stats = useMemo(() => ({
-    total: tasks.length,
-    active: tasks.filter(task => task.status === "queued" || task.status === "running").length,
-    review: tasks.filter(task => task.status === "needs_owner_review").length,
-    failed: tasks.filter(task => task.status === "failed").length,
-    completed: tasks.filter(task => task.status === "completed").length,
+    total: Object.values(taskCounts).reduce((sum, count) => sum + count, 0),
+    active: (taskCounts.queued || 0) + (taskCounts.running || 0),
+    review: taskCounts.needs_owner_review || 0,
+    failed: taskCounts.failed || 0,
+    completed: taskCounts.completed || 0,
     providerLimited: tasks.some(task => task.errorCode === "PROVIDER_RATE_LIMIT")
       || Boolean(providerState?.cooldownUntil && new Date(providerState.cooldownUntil).getTime() > Date.now()),
-  }), [tasks, providerState]);
+  }), [tasks, taskCounts, providerState]);
 
   const copy = ar ? {
     eyebrow: "WASLA · AI OPERATIONS",
