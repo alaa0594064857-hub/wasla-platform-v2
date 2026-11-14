@@ -65,6 +65,7 @@ describe("public catalog privacy and visibility", () => {
     expect(JSON.stringify(data)).not.toMatch(/supplier|source_product_url|supplier_price|supplier_reference/i);
     const sql = String(mocks.query.mock.calls[0][0]);
     expect(sql).toContain("p.status = 'active'");
+    expect(sql).toContain("p.stock_quantity > 0");
     expect(sql).not.toMatch(/supplier_name|supplier_price|source_product_url|source_offer/i);
   });
 
@@ -104,6 +105,7 @@ describe("public catalog privacy and visibility", () => {
     expect(JSON.stringify(data)).not.toMatch(/supplier|source_offer|supplier_price|supplier_name/i);
     expect(String(mocks.query.mock.calls[0][0])).toContain("s.status = 'active'");
     expect(String(mocks.query.mock.calls[1][0])).toContain("status = 'active'");
+    expect(String(mocks.query.mock.calls[1][0])).toContain("stock_quantity > 0");
     expect(String(mocks.query.mock.calls[1][0])).not.toMatch(/supplier|source_offer/i);
   });
 });
@@ -145,6 +147,7 @@ describe("public member store directory", () => {
     expect(sql).toContain("s.status = 'active'");
     expect(sql).toContain("a.status = 'active'");
     expect(sql).toContain("p.status = 'active'");
+    expect(sql).toContain("p.stock_quantity > 0");
     expect(sql).toContain("LIMIT 50");
     expect(sql).not.toMatch(/supplier|source_offer|supplier_price|supplier_name/i);
     expect(mocks.query.mock.calls[0][1]).toEqual(["green", "TR"]);

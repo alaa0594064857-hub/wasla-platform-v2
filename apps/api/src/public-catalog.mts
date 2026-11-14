@@ -36,7 +36,7 @@ export async function handlePublicCatalogRequest(
          FROM store_products p
          INNER JOIN stores s ON s.id = p.store_id AND s.status = 'active'
          INNER JOIN accounts a ON a.id = s.account_id AND a.status = 'active'
-         WHERE p.id = $1 AND p.status = 'active'
+         WHERE p.id = $1 AND p.status = 'active' AND p.stock_quantity > 0
          LIMIT 1`,
         [productId],
       );
@@ -70,7 +70,7 @@ export async function handlePublicCatalogRequest(
       `SELECT id, title, description, price::text AS price, currency,
               image_url AS "imageUrl", created_at AS "createdAt"
        FROM store_products
-       WHERE store_id = $1 AND status = 'active'
+       WHERE store_id = $1 AND status = 'active' AND stock_quantity > 0
        ORDER BY created_at DESC LIMIT 100`,
       [store.rows[0].id],
     );
@@ -107,7 +107,7 @@ export async function handlePublicStoresDirectoryRequest(
        FROM stores s
        INNER JOIN accounts a ON a.id = s.account_id AND a.status = 'active'
        LEFT JOIN business_profiles bp ON bp.account_id = a.id
-       LEFT JOIN store_products p ON p.store_id = s.id AND p.status = 'active'
+       LEFT JOIN store_products p ON p.store_id = s.id AND p.status = 'active' AND p.stock_quantity > 0
        WHERE s.status = 'active'
          AND ($1 = '' OR s.name ILIKE '%' || $1 || '%' OR a.display_name ILIKE '%' || $1 || '%')
          AND ($2 = '' OR a.country_code = $2)
