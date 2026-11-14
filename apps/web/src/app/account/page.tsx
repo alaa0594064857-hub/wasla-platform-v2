@@ -16,6 +16,7 @@ const words = {
   profile:"ملفك الشخصي", edit:"تعديل الملف الشخصي", email:"البريد الإلكتروني", member:"عضو وصلة",
   messages:"الرسائل", notifications:"الإشعارات", messagesInfo:"تابع محادثاتك مع المتاجر والشركات والأعضاء من مكان واحد.",
   notificationsInfo:"تابع تنبيهات الدعوات والرسائل واستفسارات المنتجات وطلبات المتجر الرسمي.",
+  support:"مركز الدعم", supportInfo:"افتح تذكرة دعم وتابع الردود وحالة طلبك من مكان واحد.",
   worlds:"مساحات نشاطك", shops:"متاجري", business:"حسابات الأعمال", network:"شبكتي", open:"فتح", storesCount:"متجر", accountsCount:"حساب أعمال",
   loading:"جارٍ تحميل بيانات الحساب...", error:"تعذر تحميل بعض بيانات الحساب. يمكنك المحاولة مجدداً.",
   retry:"إعادة المحاولة", publicHome:"بوابة وصلة", signOut:"تسجيل الخروج", signingOut:"جارٍ تسجيل الخروج...",
@@ -30,6 +31,7 @@ const words = {
   profile:"Your profile", edit:"Edit profile", email:"Email address", member:"WASLA member",
   messages:"Messages", notifications:"Notifications", messagesInfo:"Manage your conversations with shops, businesses and WASLA members in one place.",
   notificationsInfo:"Track account invitations, messages, product inquiries and official-store order alerts.",
+  support:"Help & Support", supportInfo:"Open a support ticket and track replies and request status in one place.",
   worlds:"Your activity spaces", shops:"My shops", business:"Business accounts", network:"My network", open:"Open", storesCount:"shops", accountsCount:"business accounts",
   loading:"Loading your account...", error:"Some account information could not be loaded. You can try again.",
   retry:"Try again", publicHome:"WASLA gateway", signOut:"Sign out", signingOut:"Signing out...",
@@ -125,6 +127,7 @@ export default function AccountHomePage() {
    <section className="account-notice-grid">
     <Link href="/messages" id="messages" className="account-notice-card"><div className="account-notice-icon">✉</div><div><span className="account-eyebrow">01 / {t.messages}</span><h2>{t.messages}</h2><p>{t.messagesInfo}</p></div><b>{locale==="ar"?"فتح الرسائل ↗":"Open messages ↗"}</b></Link>
     <Link href="/notifications" id="notifications" className="account-notice-card"><div className="account-notice-icon">♧</div><div><span className="account-eyebrow">02 / {t.notifications}</span><h2>{t.notifications}</h2><p>{t.notificationsInfo}</p></div><b>{locale==="ar"?"فتح الإشعارات ↗":"Open notifications ↗"}</b></Link>
+    <Link href="/support" id="support" className="account-notice-card"><div className="account-notice-icon">✧</div><div><span className="account-eyebrow">03 / {t.support}</span><h2>{t.support}</h2><p>{t.supportInfo}</p></div><b>{locale==="ar"?"فتح مركز الدعم ↗":"Open support center ↗"}</b></Link>
    </section>
    <section className="account-worlds">
     <div className="account-section-heading"><div><span className="account-eyebrow">WASLA ID</span><h2>{t.network}</h2></div><span className="account-live-dot">●</span></div>
