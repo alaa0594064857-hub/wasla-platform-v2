@@ -16,10 +16,15 @@ vi.mock("./database.js", () => ({
 }));
 
 let handleStoreProductsRequest: (request: IncomingMessage, response: ServerResponse, slug: string) => Promise<void>;
+let handleStoreProductDetailRequest: (request: IncomingMessage, response: ServerResponse, slug: string, productId: string) => Promise<void>;
 let server: Server | undefined;
 
 async function startServer(): Promise<string> {
   server = createServer((request, response) => {
+    if (request.method === "PATCH") {
+      void handleStoreProductDetailRequest(request, response, "sample-store", "product-1");
+      return;
+    }
     void handleStoreProductsRequest(request, response, "sample-store");
   });
   await new Promise<void>((resolve, reject) => {
@@ -32,7 +37,7 @@ async function startServer(): Promise<string> {
 }
 
 beforeEach(async () => {
-  ({ handleStoreProductsRequest } = await import("./store-products.mjs"));
+  ({ handleStoreProductsRequest, handleStoreProductDetailRequest } = await import("./store-products.mjs"));
   mocks.getSession.mockResolvedValue({ user: { id: "store-employee" } });
 });
 
