@@ -269,6 +269,7 @@ export async function handleStoreProductDetailRequest(
         `UPDATE store_products p SET ${fields.join(", ")}, updated_at = NOW()
          FROM stores s
          WHERE p.id = $3 AND p.store_id = s.id AND s.slug = $1
+           AND p.status <> 'active'
            AND s.status = 'active' AND ${hasStoreProductPermissionSql(["account.product.update", "store.product.update"])}
          RETURNING p.id, p.store_id AS "storeId", p.title, p.description, p.sku,
            p.price::text AS price, p.currency, p.stock_quantity AS "stockQuantity",
