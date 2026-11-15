@@ -142,7 +142,7 @@ export default function PublicStorePage() {
             <Link href="/" className="transition hover:text-[#a47e37]">{t.home}</Link>
             <Link href="/store-directory" className="transition hover:text-[#a47e37]">{ar ? "اكتشف المتاجر" : "Discover stores"}</Link>
             {store && <a href="#catalog" className="transition hover:text-[#a47e37]">{t.products}</a>}
-            {store && <Link href={`/store/${encodeURIComponent(params.slug)}/orders`} className="hidden transition hover:text-[#a47e37] sm:inline">{t.track}</Link>}
+            {store && <Link href={`/store/${encodeURIComponent(params.slug)}/orders`} className="transition hover:text-[#a47e37]">{t.track}</Link>}
           </nav>
           <span className="hidden rounded-full border border-[#e9e2d2] px-3 py-1.5 text-[11px] font-semibold text-[#92713a] sm:inline-flex">{t.eyebrow}</span>
         </div>
