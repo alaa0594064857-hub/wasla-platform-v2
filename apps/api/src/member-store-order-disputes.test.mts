@@ -80,7 +80,7 @@ describe("member store order complaints", () => {
     expect(connect).not.toHaveBeenCalled();
   });
   it("denies an unauthorized user from resolving a complaint before opening a transaction", async () => {
-    vi.mocked(authorizePlatformPermission).mockResolvedValueOnce(null as never);
+    vi.mocked(authorizePlatformPermission).mockImplementationOnce(async (_request, response) => { response.writeHead(403, { "Content-Type": "application/json" }); response.end(JSON.stringify({ success: false, error: "Insufficient platform permissions" })); return null; });
     const base = await start();
     const response = await fetch(base + "/api/platform/order-disputes/" + disputeId, {
       method: "PATCH",
