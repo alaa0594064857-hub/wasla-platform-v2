@@ -55,6 +55,18 @@ describe("member product moderation", () => {
     expect(query).not.toHaveBeenCalled();
   });
 
+  it("does not allow a platform admin without the owner role to moderate products", async () => {
+    vi.mocked(authorizePlatformPermission).mockResolvedValueOnce({
+      userId: "11111111-1111-4111-8111-111111111111",
+      roleNames: ["platform_admin"], permissions: ["platform.manage"],
+    });
+    const base = await startServer();
+    const response = await fetch(`${base}/api/platform/member-products/review`);
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ success: false, error: "Platform owner access required" });
+    expect(query).not.toHaveBeenCalled();
+  });
+
   it("lists drafts only from active stores and active business accounts", async () => {
     query.mockResolvedValueOnce({ rowCount: 1, rows: [{ id: productId, title: "Sample", storeName: "Store" }] });
     const base = await startServer();
