@@ -167,7 +167,7 @@ describe("store product operation permissions", () => {
     const updateSql = String(clientQuery.mock.calls[1][0]);
     expect(updateSql).toContain("p.status <> 'active' OR $5::boolean");
     expect(clientQuery.mock.calls[1][1]).toEqual(["sample-store", "store-employee", "product-1", 8, true]);
-    expect(String(clientQuery.mock.calls[2][0])).toContain("product.stock_updated");
+    expect(clientQuery.mock.calls[2][1][1]).toBe("product.stock_updated");
     expect(clientQuery.mock.calls[3][0]).toBe("COMMIT");
     expect(release).toHaveBeenCalledOnce();
   });
