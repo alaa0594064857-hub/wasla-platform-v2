@@ -11,6 +11,7 @@ export default function SettingsPage() {
     { href: "/profile", icon: "◎", title: ar ? "الملف الشخصي والهوية" : "Profile & identity", desc: ar ? "الاسم والصورة والنبذة والروابط" : "Name, photo, bio and links" },
     { href: "/brands", icon: "✧", title: ar ? "هوية العلامة والشعار" : "Brand identity & logo", desc: ar ? "إدارة شعارات علاماتك التجارية" : "Manage your brand logos" },
     { href: "/account", icon: "◉", title: ar ? "الحساب والعضويات" : "Account & memberships", desc: ar ? "إدارة مساحاتك التجارية" : "Manage your business spaces" },
+    { href: "/delete-account", icon: "⌫", title: ar ? "حذف الحساب والبيانات" : "Account & data deletion", desc: ar ? "تقديم طلب حذف ومراجعة البيانات التي قد يلزم الاحتفاظ بها" : "Request deletion and review data that may need to be retained" },
   ];
   return <main className="wasla-settings-page" dir={ar ? "rtl" : "ltr"} lang={locale}>
     <WorkspaceHeader section="account" />
