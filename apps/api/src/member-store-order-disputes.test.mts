@@ -72,7 +72,7 @@ describe("member store order complaints", () => {
     expect(authorizePlatformPermission).toHaveBeenCalledWith(expect.anything(), expect.anything(), "platform.reports.manage");
   });
   it("denies an unauthorized user access to the moderator queue before reading disputes", async () => {
-    vi.mocked(authorizePlatformPermission).mockResolvedValueOnce(null as never);
+    vi.mocked(authorizePlatformPermission).mockImplementationOnce(async (_request, response) => { response.writeHead(403, { "Content-Type": "application/json" }); response.end(JSON.stringify({ success: false, error: "Insufficient platform permissions" })); return null; });
     const base = await start();
     const response = await fetch(base + "/api/platform/order-disputes");
     expect(response.status).toBe(403);
