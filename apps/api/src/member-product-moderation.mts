@@ -34,6 +34,10 @@ export async function handleMemberProductModeration(
   try {
     const access = await authorizePlatformPermission(request, response, "platform.manage");
     if (!access) return;
+    if (!access.roleNames.includes("platform_owner")) {
+      reply(response, 403, { success: false, error: "Platform owner access required" });
+      return;
+    }
 
     const pool = getDatabasePool();
     if (request.method === "GET" && !productId) {
@@ -86,7 +90,7 @@ export async function handleMemberProductModeration(
       await client.query("BEGIN");
       const locked = await client.query(
         `SELECT p.id, p.status, p.store_id, s.status AS store_status,
-                a.status AS account_status
+                a.id AS account_id, a.status AS account_status
          FROM store_products p
          INNER JOIN stores s ON s.id = p.store_id
          INNER JOIN accounts a ON a.id = s.account_id
@@ -117,12 +121,12 @@ export async function handleMemberProductModeration(
         [productId, nextStatus],
       );
       await client.query(
-        `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, metadata)
-         VALUES ($1, $2, 'store_product', $3,
-                 jsonb_build_object('decision', $4::text, 'previous_status', 'draft',
-                                    'new_status', $5::text, 'note', $6::text))`,
+        `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, account_id, store_id, metadata)
+         VALUES ($1, $2, 'store_product', $3, $4, $5,
+                 jsonb_build_object('decision', $6::text, 'previous_status', 'draft',
+                                    'new_status', $7::text, 'note', $8::text))`,
         [access.userId, decision === "approve" ? "member_product.approved" : "member_product.rejected",
-          productId, decision, nextStatus, note || null],
+          productId, product.account_id, product.store_id, decision, nextStatus, note || null],
       );
       await client.query("COMMIT");
       reply(response, 200, { success: true, productId, status: nextStatus });
