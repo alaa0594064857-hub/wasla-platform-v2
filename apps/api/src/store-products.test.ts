@@ -107,7 +107,7 @@ describe("store product operation permissions", () => {
     expect(mocks.connect).not.toHaveBeenCalled();
   });
 
-  it("keeps new member products in draft until platform review is enabled", async () => {
+  it("rejects direct public publishing until the platform owner approves the product", async () => {
     mocks.query.mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "store-1", account_id: "account-1" }] });
     const baseUrl = await startServer();
     const response = await fetch(`${baseUrl}/api/stores/sample-store/products`, {
@@ -149,6 +149,28 @@ describe("store product operation permissions", () => {
     expect(mocks.connect).not.toHaveBeenCalled();
   });
 
+  it("allows an authorized seller to update stock on a published product without changing its content", async () => {
+    const clientQuery = vi.fn()
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "product-1", storeId: "store-1", title: "Published item", price: "10.00", currency: "USD", stockQuantity: 8, status: "active" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: null, rows: [] });
+    const release = vi.fn();
+    mocks.connect.mockResolvedValueOnce({ query: clientQuery, release });
+    const baseUrl = await startServer();
+    const response = await fetch(baseUrl + "/api/stores/sample-store/products/product-1", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ stockQuantity: 8 }),
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ success: true, product: { status: "active", stockQuantity: 8 } });
+    const updateSql = String(clientQuery.mock.calls[1][0]);
+    expect(updateSql).toContain("p.status <> 'active' OR $5::boolean");
+    expect(clientQuery.mock.calls[1][1]).toEqual(["sample-store", "store-employee", "product-1", 8, true]);
+    expect(String(clientQuery.mock.calls[2][0])).toContain("product.stock_updated");
+    expect(clientQuery.mock.calls[3][0]).toBe("COMMIT");
+    expect(release).toHaveBeenCalledOnce();
+  });
   it("does not allow a user without product-update permission to modify a store product", async () => {
     const clientQuery = vi.fn()
       .mockResolvedValueOnce({ rowCount: null, rows: [] })
