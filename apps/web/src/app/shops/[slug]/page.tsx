@@ -103,8 +103,8 @@ export default function ShopManagementPage(){
         {product.description&&<p>{product.description}</p>}
         <small>{t.stock}: {product.stockQuantity}{product.sku? ` · ${product.sku}`:""}</small>
         <div className="mt-3 flex flex-wrap items-end gap-2"><label className="min-w-0 flex-1 text-xs font-semibold">{t.stock}<input aria-label={`${t.stock}: ${product.title}`} type="number" min="0" step="1" value={stockDrafts[product.id]??String(product.stockQuantity)} onChange={event=>setStockDrafts(current=>({...current,[product.id]:event.target.value}))} className="mt-1 w-full rounded-lg border border-[#ded7c8] bg-white px-3 py-2 text-sm text-[#14233b]"/></label><button type="button" onClick={()=>void updateStock(product)} disabled={savingStockId===product.id||Number(stockDrafts[product.id]??product.stockQuantity)===product.stockQuantity}>{savingStockId===product.id?t.updatingStock:t.updateStock}</button></div>
-        <div className="shops-product-actions"><span className={`shops-product-status status-${product.status}`}>{product.status==="active"?t.published:product.status==="archived"?t.archived:t.draft}</span>
-         <button type="button" onClick={()=>void updateProductStatus(product,product.status==="active"?"draft":"active")}>{product.status==="active"?t.draft:t.published}</button>
+        <div className="shops-product-actions"><span className={`shops-product-status status-${product.status}`}>{product.status==="active"?t.published:product.status==="archived"?t.archived:t.reviewPending}</span>
+         {product.status==="archived"&&<button type="button" onClick={()=>void updateProductStatus(product,"draft")}>{t.resubmit}</button>}
         </div>
        </div>
       </article>)}
