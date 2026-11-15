@@ -936,6 +936,19 @@ async function handleRequest(
     return;
   }
 
+  const memberProductModerationMatch = requestUrl.pathname.match(/^\/api\/platform\/member-products\/review(?:\/([0-9a-f-]{36}))?$/i);
+  if (memberProductModerationMatch) {
+    try {
+      const { handleMemberProductModeration } = await import("./member-product-moderation.mjs");
+      await handleMemberProductModeration(request, response, memberProductModerationMatch[1]);
+    } catch (error) {
+      console.error("WASLA member product moderation route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Member product moderation service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const storeProductsMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/products$/);
   if (storeProductsMatch) {
     try {
