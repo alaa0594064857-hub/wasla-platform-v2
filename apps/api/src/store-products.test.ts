@@ -107,6 +107,19 @@ describe("store product operation permissions", () => {
     expect(mocks.connect).not.toHaveBeenCalled();
   });
 
+  it("keeps new member products in draft until platform review is enabled", async () => {
+    mocks.query.mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "store-1", account_id: "account-1" }] });
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/stores/sample-store/products`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "Public product", price: 10, currency: "USD", stockQuantity: 1, status: "active" }),
+    });
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ success: false, code: "PRODUCT_REVIEW_REQUIRED" });
+    expect(mocks.connect).not.toHaveBeenCalled();
+  });
+
   it("requires product-create permission before accepting a new product", async () => {
     mocks.query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
 
@@ -121,6 +134,18 @@ describe("store product operation permissions", () => {
     const accessSql = String(mocks.query.mock.calls[0][0]);
     expect(accessSql).toContain("'account.product.create'");
     expect(accessSql).toContain("'store.product.create'");
+    expect(mocks.connect).not.toHaveBeenCalled();
+  });
+
+  it("prevents publishing an existing draft directly from the seller update route", async () => {
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/stores/sample-store/products/product-1`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "active" }),
+    });
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ success: false, code: "PRODUCT_REVIEW_REQUIRED" });
     expect(mocks.connect).not.toHaveBeenCalled();
   });
 
