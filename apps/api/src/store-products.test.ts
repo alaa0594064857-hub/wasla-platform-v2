@@ -62,6 +62,24 @@ describe("store product operation permissions", () => {
     expect(accessSql).not.toContain("'store.product.create'");
   });
 
+  it("does not expose a private store catalog when the signed-in user lacks read permission", async () => {
+    mocks.query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
+
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/stores/sample-store/products`);
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({
+      success: false,
+      error: "Store not found or access denied",
+    });
+    const accessSql = String(mocks.query.mock.calls[0][0]);
+    expect(accessSql).toContain("'account.product.read'");
+    expect(accessSql).toContain("'store.product.read'");
+    expect(mocks.query).toHaveBeenCalledTimes(1);
+    expect(mocks.connect).not.toHaveBeenCalled();
+  });
+
   it("rejects insecure, credential-bearing, and local external checkout URLs", async () => {
     const baseUrl = await startServer();
     for (const sellerCheckoutUrl of [
