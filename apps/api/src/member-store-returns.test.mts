@@ -17,16 +17,6 @@ beforeEach(()=>{
  connect.mockResolvedValue({query:clientQuery,release});
  vi.mocked(getDatabasePool).mockReturnValue({query,connect} as never);
 
- it("requires authentication for buyer return escalation before opening the database",async()=>{
-  vi.mocked(auth.api.getSession).mockResolvedValueOnce(null as never);
-  const base=await start();
-  const response=await fetch(base+path+"/escalation",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({reason:"dispute",details:"I need help resolving this return request."})});
-  expect(response.status).toBe(401);
-  expect(await response.json()).toMatchObject({success:false,error:"Authentication required"});
-  expect(connect).not.toHaveBeenCalled();
-  expect(query).not.toHaveBeenCalled();
- });
-
 });
 afterEach(async()=>{if(server?.listening)await new Promise<void>((resolve,reject)=>server!.close(e=>e?reject(e):resolve()));server=undefined;vi.clearAllMocks();});
 async function start(){server=createWaslaServer();await new Promise<void>((resolve,reject)=>{server!.once("error",reject);server!.listen(0,"127.0.0.1",resolve);});const a=server.address();if(!a||typeof a==="string")throw new Error("No test address");return "http://127.0.0.1:"+a.port;}
@@ -181,5 +171,16 @@ describe("member store returns and exchanges",()=>{
   expect(query).not.toHaveBeenCalled();
   expect(connect).not.toHaveBeenCalled();
  });
+
+ it("requires authentication for buyer return escalation before opening the database",async()=>{
+  vi.mocked(auth.api.getSession).mockResolvedValueOnce(null as never);
+  const base=await start();
+  const response=await fetch(base+path+"/escalation",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({reason:"dispute",details:"I need help resolving this return request."})});
+  expect(response.status).toBe(401);
+  expect(await response.json()).toMatchObject({success:false,error:"Authentication required"});
+  expect(connect).not.toHaveBeenCalled();
+  expect(query).not.toHaveBeenCalled();
+ });
+
 
 });
