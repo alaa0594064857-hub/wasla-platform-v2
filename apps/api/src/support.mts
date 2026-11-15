@@ -5,7 +5,7 @@ import { authorizePlatformPermission } from "./platform-security.mjs";
 import { getDatabasePool } from "./database.js";
 
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const categories=["account_access","payments_billing","orders_delivery","returns_refunds","store_seller","trade_business","affiliate_commissions","technical_issue","security_report","other"];
+const categories=["account_access","account_deletion","payments_billing","orders_delivery","returns_refunds","store_seller","trade_business","affiliate_commissions","technical_issue","security_report","other"];
 const priorities=["low","normal","high","urgent"], statuses=["open","in_progress","waiting_for_user","resolved","closed"];
 function send(res:ServerResponse,status:number,data:Record<string,unknown>){res.writeHead(status,{"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store","X-Content-Type-Options":"nosniff","Referrer-Policy":"no-referrer"});res.end(JSON.stringify(data));}
 async function readBody(req:IncomingMessage):Promise<Record<string,unknown>|null>{const chunks:Buffer[]=[];let size=0;for await(const chunk of req){const b=Buffer.isBuffer(chunk)?chunk:Buffer.from(chunk);size+=b.length;if(size>10000)throw new Error("too_large");chunks.push(b);}try{const x:unknown=JSON.parse(Buffer.concat(chunks).toString("utf8"));return x&&typeof x==="object"&&!Array.isArray(x)?x as Record<string,unknown>:null;}catch{return null;}}
