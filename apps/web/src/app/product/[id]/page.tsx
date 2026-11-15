@@ -33,6 +33,7 @@ export default function PublicProductPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [orderSubmitted, setOrderSubmitted] = useState(false);
   const [inquiryOpen, setInquiryOpen] = useState(false);
   const [inquiryText, setInquiryText] = useState("");
   const [quantity, setQuantity] = useState("1");
@@ -114,10 +115,10 @@ export default function PublicProductPage() {
       });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(typeof data.error === "string" ? data.error : "order");
+      setOrderSubmitted(true);
       setMessage(ar
-        ? "تم إرسال طلبك إلى المتجر. الطلب بانتظار مراجعة البائع؛ لم يتم تحصيل أي مبلغ ولم يتم حجز المخزون."
-        : "Your request was sent to the store. It is awaiting merchant review; no payment was collected and no stock was reserved.");
-      router.push(`/store/${encodeURIComponent(product.storeSlug)}/orders`);
+        ? "تم إرسال طلبك إلى المتجر بنجاح. الطلب بانتظار مراجعة البائع؛ لم يتم تحصيل أي مبلغ ولم يتم حجز المخزون."
+        : "Your request was sent to the store successfully. It is awaiting merchant review; no payment was collected and no stock was reserved.");
     } catch {
       setMessage(ar ? "تعذر إرسال الطلب. تحقق من تسجيل الدخول وحاول مرة أخرى." : "Could not submit the request. Check your sign-in and try again.");
     } finally { setBusy(false); }
@@ -163,7 +164,7 @@ export default function PublicProductPage() {
           </video>}
         </div>
         <div className="flex flex-col"><Link href={`/store/${product.storeSlug}`} className="text-sm text-[#9b792f] underline">{product.storeName}</Link><h1 className="mt-3 text-3xl font-bold">{product.title}</h1><p className="mt-4 whitespace-pre-wrap text-sm leading-8 text-slate-600">{product.description}</p><p className="mt-6 text-2xl font-bold text-[#9b792f]">{formatProductPrice(product.price, product.currency, ar ? "ar" : "en")}</p>
-          <div className="mt-8 space-y-3"><label className="block text-sm font-semibold">{ar ? "الكمية المطلوبة" : "Quantity"}<input type="number" min="1" max="10000" step="1" value={quantity} onChange={event => setQuantity(event.target.value)} className="mt-2 block w-28 rounded-lg border border-[#e5dfd1] px-3 py-2" /></label><button disabled={busy} onClick={() => void requestOrder()} className="rounded-xl bg-[#b89545] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">{ar ? "إرسال طلب للمتجر" : "Request from store"}</button></div><div className="mt-4 flex flex-wrap gap-3"><button disabled={busy} onClick={() => void contactSeller()} className="rounded-xl bg-[#14233b] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">{ar ? "مراسلة البائع" : "Message seller"}</button><button type="button" disabled={busy} onClick={() => { if (!session?.user) { router.push("/login"); return; } setInquiryOpen(value => !value); setMessage(""); }} className="rounded-xl border border-[#b89545] px-5 py-3 text-sm font-semibold text-[#14233b] disabled:opacity-50">{ar ? "استفسار عن المنتج" : "Ask about product"}</button></div>
+          <div className="mt-8 space-y-3"><label className="block text-sm font-semibold">{ar ? "الكمية المطلوبة" : "Quantity"}<input type="number" min="1" max="10000" step="1" value={quantity} onChange={event => setQuantity(event.target.value)} className="mt-2 block w-28 rounded-lg border border-[#e5dfd1] px-3 py-2" /></label><button disabled={busy} onClick={() => void requestOrder()} className="rounded-xl bg-[#b89545] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">{ar ? "إرسال طلب للمتجر" : "Request from store"}</button>{orderSubmitted && <Link href={`/store/${encodeURIComponent(product.storeSlug)}/orders`} className="inline-flex items-center rounded-xl border border-[#b89545] px-5 py-3 text-sm font-semibold text-[#14233b]">{ar ? "متابعة طلباتي" : "Track my requests"} ↗</Link>}</div><div className="mt-4 flex flex-wrap gap-3"><button disabled={busy} onClick={() => void contactSeller()} className="rounded-xl bg-[#14233b] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">{ar ? "مراسلة البائع" : "Message seller"}</button><button type="button" disabled={busy} onClick={() => { if (!session?.user) { router.push("/login"); return; } setInquiryOpen(value => !value); setMessage(""); }} className="rounded-xl border border-[#b89545] px-5 py-3 text-sm font-semibold text-[#14233b] disabled:opacity-50">{ar ? "استفسار عن المنتج" : "Ask about product"}</button></div>
           {inquiryOpen && <form onSubmit={event => { event.preventDefault(); void submitInquiry(); }} className="mt-4 grid gap-3 rounded-xl border border-[#e5dfd1] bg-[#fbfaf6] p-4">
             <label htmlFor="product-inquiry" className="text-sm font-semibold">{ar ? "اكتب سؤالك للبائع" : "Write your question to the seller"}</label>
             <textarea id="product-inquiry" value={inquiryText} onChange={event => setInquiryText(event.target.value)} minLength={5} maxLength={2000} required rows={4} className="w-full rounded-lg border border-[#e5dfd1] bg-white px-3 py-2 text-sm" placeholder={ar ? "اسأل عن المقاس أو المواصفات أو التوفر..." : "Ask about size, specifications, or availability..."}/>
