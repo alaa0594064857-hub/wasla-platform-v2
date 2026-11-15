@@ -1148,3 +1148,17 @@ This section supersedes the earlier 2026-11-11 Render deployment-blocked snapsho
 - The current deployment proves that services build and start. It does not prove all buyer, merchant, administrator, email, payment, carrier, or mobile journeys work end-to-end.
 - Remaining release gates: verified production email sender and delivery test; hosted authentication and cross-account authorization tests; repeatable WASLA AI task-table initialization; payment-provider and legal readiness; carrier integration; production media storage; Android/iOS builds and physical-device tests; accessibility and privacy review.
 - No paid service, spend-limit change, database data mutation, or legacy-service deletion was performed as part of this checkpoint.
+
+
+## Production checkpoint — 2026-11-15
+
+This checkpoint supersedes earlier deployment-blocked statements where they conflict with the current Render deployment records.
+
+- GitHub `main` is at commit `d25e770eba951b482714ad048f57640fbc22cd73` (PR #162, account-deletion request path).
+- Render's primary API service `wasla-apiwasla-api-v2` and web service `wasla-web` both report a successful `live` deployment of that exact commit. The API health-check path is configured as `/health`; the web and API services are not suspended.
+- The same deployed commit includes the AI specialist-task retry route fix (PR #161) and the owner AI-room link to the operations headquarters (PR #160).
+- The public `/delete-account` page explains the bilingual request process and links to Support. It does not execute immediate account deletion; requests require review because shared orders, business records, disputes and legal retention may apply.
+- Render deployment status confirms that the services started successfully. It does not establish successful external HTTP journeys, authenticated buyer/merchant/admin acceptance, cross-account isolation, email delivery, payment processing, carrier fulfilment, or mobile-device readiness.
+- The latest checked Gemini provider state remains rate-limited on the free quota, with queued specialist tasks preserved. Do not mark those tasks complete or bypass the provider cooldown. No paid plan, spend-limit change, secret replacement, or database mutation was made.
+- Release gates remain: verified production email sender and external delivery test; hosted authenticated journeys and negative cross-account tests; payment/legal/provider readiness; carrier integration; scalable production media storage; Android/iOS builds and physical-device tests; accessibility, privacy and localization review.
+
