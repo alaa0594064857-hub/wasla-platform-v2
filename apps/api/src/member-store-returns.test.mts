@@ -155,4 +155,20 @@ describe("member store returns and exchanges",()=>{
   expect(response.status).toBe(201);
   expect(String(clientQuery.mock.calls[3][0])).toContain("INSERT INTO member_store_return_requests");
  });
+
+ it("denies an unauthorized user access to the platform return queue before reading requests",async()=>{
+  vi.mocked(authorizePlatformPermission).mockImplementationOnce(async(_request,response)=>{
+   response.writeHead(403,{"Content-Type":"application/json"});
+   response.end(JSON.stringify({success:false,error:"Insufficient platform permissions"}));
+   return null;
+  });
+  const base=await start();
+  const response=await fetch(base+"/api/platform/store-returns");
+  expect(response.status).toBe(403);
+  expect(await response.json()).toEqual({success:false,error:"Insufficient platform permissions"});
+  expect(authorizePlatformPermission).toHaveBeenCalledWith(expect.anything(),expect.anything(),"platform.reports.manage");
+  expect(query).not.toHaveBeenCalled();
+  expect(connect).not.toHaveBeenCalled();
+ });
+
 });
