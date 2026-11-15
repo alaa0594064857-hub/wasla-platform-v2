@@ -542,4 +542,23 @@ it("notifies the buyer when a merchant accepts a pending request", async () => {
     ]);
     expect(sql).toContain("LIMIT 100");
   });
+
+  it("does not reveal an order timeline to an unrelated signed-in user", async () => {
+    query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/stores/demo/orders/22222222-2222-4222-8222-222222222222`);
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ success: false, error: "Order not found" });
+    expect(query).toHaveBeenCalledTimes(1);
+    expect(String(query.mock.calls[0][0])).toContain("o.buyer_user_id = $3");
+    expect(String(query.mock.calls[0][0])).toContain("store.order.read");
+    expect(query.mock.calls[0][1]).toEqual([
+      "22222222-2222-4222-8222-222222222222",
+      "demo",
+      "11111111-1111-4111-8111-111111111111",
+      ["store.order.read", "account.order.read"],
+    ]);
+    expect(String(query.mock.calls[0][0])).not.toContain("FROM member_store_order_events");
+  });
+
 });
