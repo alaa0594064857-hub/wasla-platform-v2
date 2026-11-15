@@ -24,6 +24,7 @@ const text = {
     search: "ابحث باسم المتجر أو الشركة", country: "رمز الدولة (مثل TR أو GB)",
     find: "بحث", clear: "مسح", products: "منتج متاح", visit: "زيارة المتجر",
     emptyTitle: "لم نعثر على متاجر مطابقة", empty: "جرّب اسماً آخر أو أزل فلتر الدولة.",
+    emptyDirectoryTitle: "كن من أوائل أصحاب المتاجر على وصلة", emptyDirectory: "دليل المتاجر يستعد لاستقبال العلامات التجارية المستقلة. أنشئ متجرك وابدأ ببناء حضورك التجاري.", openShop: "أنشئ متجرك على وصلة",
     loading: "نبحث عن المتاجر...", error: "تعذر تحميل المتاجر حالياً.",
     retry: "إعادة المحاولة", all: "دليل المتاجر", noDescription: "متجر مستقل على WASLA.",
     market: "سوق", count: "متجراً", verified: "متجر نشط", back: "الرئيسية", sort: "ترتيب المتاجر", mostProducts: "الأكثر منتجات", nameAZ: "الاسم أ–ي", nameZA: "الاسم ي–أ",
@@ -34,6 +35,7 @@ const text = {
     search: "Search by store or business name", country: "Country code (e.g. TR or GB)",
     find: "Search", clear: "Clear", products: "available products", visit: "Visit store",
     emptyTitle: "No matching stores found", empty: "Try another name or remove the country filter.",
+    emptyDirectoryTitle: "Be among the first shops on WASLA", emptyDirectory: "The directory is getting ready to welcome independent brands. Create your shop and start building your business presence.", openShop: "Create your WASLA shop",
     loading: "Finding stores...", error: "Stores could not be loaded right now.",
     retry: "Try again", all: "Store directory", noDescription: "An independent store on WASLA.",
     market: "Market", count: "stores", verified: "Active store", back: "Home", sort: "Sort stores", mostProducts: "Most products", nameAZ: "Name A–Z", nameZA: "Name Z–A",
@@ -162,8 +164,9 @@ export default function StoreDirectoryPage() {
         ) : stores.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-[#d9d4c8] bg-white px-5 py-16 text-center">
             <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#f3eee3] text-2xl text-[#a47e37]">⌕</span>
-            <h3 className="mt-5 text-xl font-bold">{t.emptyTitle}</h3>
-            <p className="mt-2 text-sm text-slate-500">{t.empty}</p>
+            <h3 className="mt-5 text-xl font-bold">{!submittedQuery && !submittedCountry ? t.emptyDirectoryTitle : t.emptyTitle}</h3>
+            <p className="mt-2 text-sm text-slate-500">{!submittedQuery && !submittedCountry ? t.emptyDirectory : t.empty}</p>
+            {!submittedQuery && !submittedCountry && <Link href="/shops" className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-[#17263d] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#263e5e]">{t.openShop} <span className="ms-2">↗</span></Link>}
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
