@@ -551,7 +551,8 @@ it("notifies the buyer when a merchant accepts a pending request", async () => {
     expect(await response.json()).toEqual({ success: false, error: "Order not found" });
     expect(query).toHaveBeenCalledTimes(1);
     expect(String(query.mock.calls[0][0])).toContain("o.buyer_user_id = $3");
-    expect(String(query.mock.calls[0][0])).toContain("store.order.read");
+    expect(String(query.mock.calls[0][0])).toContain("p.permission_key = ANY(4::text[])");
+    expect(String(query.mock.calls[0][0])).toContain("sm.status = 'active'");
     expect(query.mock.calls[0][1]).toEqual([
       "22222222-2222-4222-8222-222222222222",
       "demo",
