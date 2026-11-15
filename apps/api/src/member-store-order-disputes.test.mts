@@ -71,6 +71,26 @@ describe("member store order complaints", () => {
     expect(await response.json()).toMatchObject({ success: true, disputes: [] });
     expect(authorizePlatformPermission).toHaveBeenCalledWith(expect.anything(), expect.anything(), "platform.reports.manage");
   });
+  it("denies an unauthorized user access to the moderator queue before reading disputes", async () => {
+    vi.mocked(authorizePlatformPermission).mockImplementationOnce(async (_request, response) => { response.writeHead(403, { "Content-Type": "application/json" }); response.end(JSON.stringify({ success: false, error: "Insufficient platform permissions" })); return null; });
+    const base = await start();
+    const response = await fetch(base + "/api/platform/order-disputes");
+    expect(response.status).toBe(403);
+    expect(query).not.toHaveBeenCalled();
+    expect(connect).not.toHaveBeenCalled();
+  });
+  it("denies an unauthorized user from resolving a complaint before opening a transaction", async () => {
+    vi.mocked(authorizePlatformPermission).mockImplementationOnce(async (_request, response) => { response.writeHead(403, { "Content-Type": "application/json" }); response.end(JSON.stringify({ success: false, error: "Insufficient platform permissions" })); return null; });
+    const base = await start();
+    const response = await fetch(base + "/api/platform/order-disputes/" + disputeId, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "resolved", note: "The evidence supports the buyer's complaint." }),
+    });
+    expect(response.status).toBe(403);
+    expect(query).not.toHaveBeenCalled();
+    expect(connect).not.toHaveBeenCalled();
+  });
   it("records a moderator resolution and audit entry atomically", async () => {
     clientQuery.mockResolvedValueOnce({ rowCount: null, rows: [] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: disputeId, status: "merchant_responded" }] })
