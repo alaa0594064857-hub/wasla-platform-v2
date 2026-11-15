@@ -174,6 +174,7 @@ describe("store product operation permissions", () => {
     expect(updateSql).toContain("'account.product.update'");
     expect(updateSql).toContain("'store.product.update'");
     expect(updateSql).toContain("p.id = $3");
+    expect(updateSql).toContain("p.status <> 'active'");
     expect(clientQuery.mock.calls[2][0]).toBe("ROLLBACK");
     expect(clientQuery.mock.calls.some(call => String(call[0]).includes("INSERT INTO audit_logs"))).toBe(false);
     expect(release).toHaveBeenCalledTimes(1);
