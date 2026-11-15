@@ -32,7 +32,7 @@ export default function PlatformOwnerPage() {
   const profile = (session?.user || {}) as OwnerProfile;
   const ownerName = profile.name || (ar ? "مالك المنصة" : "Platform Owner");
   const ownerEmail = profile.email || "";
-  const initials = ownerName.trim().split(/\\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase() || "W";
+  const initials = ownerName.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase() || "W";
 
   useEffect(() => {
     if (isPending) return;
