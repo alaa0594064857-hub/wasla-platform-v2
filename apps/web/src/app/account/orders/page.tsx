@@ -138,7 +138,7 @@ export default function OfficialStoreRequestsPage() {
     <section className="mx-auto max-w-5xl space-y-5 px-5 py-10 md:px-8">
       {quoteMessage && <p role="status" className="rounded-xl bg-white p-4 text-sm">{quoteMessage}</p>}
       {loading ? <p className="rounded-2xl bg-white p-8 text-center">{copy.loading}</p>
-        : signedOut ? <p className="rounded-2xl bg-white p-8 text-center">{copy.signIn} <Link className="font-bold underline" href="/login">Login</Link></p>
+        : signedOut ? <p className="rounded-2xl bg-white p-8 text-center">{copy.signIn} <Link className="font-bold underline" href="/login">{ar ? "تسجيل الدخول" : "Sign in"}</Link></p>
         : failed ? <p role="alert" className="rounded-2xl bg-white p-8 text-center text-red-800">{copy.error}</p>
         : requests.length === 0 ? <div className="rounded-2xl bg-white p-10 text-center"><p>{copy.empty}</p><Link href="/official-store" className="mt-4 inline-flex font-bold underline">{copy.store}</Link></div>
         : requests.map(item => <article key={item.id} className="rounded-2xl border border-[#e4ddcf] bg-white p-5 shadow-sm">
