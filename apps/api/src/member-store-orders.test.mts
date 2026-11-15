@@ -562,4 +562,30 @@ it("notifies the buyer when a merchant accepts a pending request", async () => {
     expect(String(query.mock.calls[0][0])).not.toContain("FROM member_store_order_events");
   });
 
+
+  it("rejects unauthenticated order creation and status changes before accessing the database", async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValue(null as never);
+    const baseUrl = await startServer();
+
+    const createResponse = await fetch(`${baseUrl}/api/stores/demo/orders`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [{ productId: "22222222-2222-4222-8222-222222222222", quantity: 1 }] }),
+    });
+    const updateResponse = await fetch(`${baseUrl}/api/stores/demo/orders/22222222-2222-4222-8222-222222222222`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "cancelled" }),
+    });
+
+    expect(createResponse.status).toBe(401);
+    expect(updateResponse.status).toBe(401);
+    expect(await createResponse.json()).toEqual({ success: false, error: "Authentication required" });
+    expect(await updateResponse.json()).toEqual({ success: false, error: "Authentication required" });
+    expect(auth.api.getSession).toHaveBeenCalledTimes(2);
+    expect(getDatabasePool).not.toHaveBeenCalled();
+    expect(query).not.toHaveBeenCalled();
+    expect(connect).not.toHaveBeenCalled();
+  });
+
 });
