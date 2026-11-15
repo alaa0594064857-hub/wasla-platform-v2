@@ -16,10 +16,15 @@ vi.mock("./database.js", () => ({
 }));
 
 let handleStoreProductsRequest: (request: IncomingMessage, response: ServerResponse, slug: string) => Promise<void>;
+let handleStoreProductDetailRequest: (request: IncomingMessage, response: ServerResponse, slug: string, productId: string) => Promise<void>;
 let server: Server | undefined;
 
 async function startServer(): Promise<string> {
   server = createServer((request, response) => {
+    if (request.method === "PATCH") {
+      void handleStoreProductDetailRequest(request, response, "sample-store", "product-1");
+      return;
+    }
     void handleStoreProductsRequest(request, response, "sample-store");
   });
   await new Promise<void>((resolve, reject) => {
@@ -32,7 +37,7 @@ async function startServer(): Promise<string> {
 }
 
 beforeEach(async () => {
-  ({ handleStoreProductsRequest } = await import("./store-products.mjs"));
+  ({ handleStoreProductsRequest, handleStoreProductDetailRequest } = await import("./store-products.mjs"));
   mocks.getSession.mockResolvedValue({ user: { id: "store-employee" } });
 });
 
@@ -117,5 +122,35 @@ describe("store product operation permissions", () => {
     expect(accessSql).toContain("'account.product.create'");
     expect(accessSql).toContain("'store.product.create'");
     expect(mocks.connect).not.toHaveBeenCalled();
+  });
+
+  it("does not allow a user without product-update permission to modify a store product", async () => {
+    const clientQuery = vi.fn()
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] })
+      .mockResolvedValueOnce({ rowCount: null, rows: [] });
+    const release = vi.fn();
+    mocks.connect.mockResolvedValueOnce({ query: clientQuery, release });
+
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/stores/sample-store/products/product-1`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "Unauthorized change" }),
+    });
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({
+      success: false,
+      error: "Product not found or access denied",
+    });
+    expect(clientQuery.mock.calls[0][0]).toBe("BEGIN");
+    const updateSql = String(clientQuery.mock.calls[1][0]);
+    expect(updateSql).toContain("'account.product.update'");
+    expect(updateSql).toContain("'store.product.update'");
+    expect(updateSql).toContain("p.id = $3");
+    expect(clientQuery.mock.calls[2][0]).toBe("ROLLBACK");
+    expect(clientQuery.mock.calls.some(call => String(call[0]).includes("INSERT INTO audit_logs"))).toBe(false);
+    expect(release).toHaveBeenCalledTimes(1);
   });
 });
