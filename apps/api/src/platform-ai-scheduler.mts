@@ -64,31 +64,86 @@ const WEEK_ONE_TASKS = [
 ] as const;
 
 async function ensureWorkerTables() {
-  const db=getDatabasePool();
-  await db.query(`CREATE TABLE IF NOT EXISTS platform_ai_team_tasks (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(), owner_user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    specialist_key varchar(40) NOT NULL, title varchar(180) NOT NULL, input_text text NOT NULL,
-    input_context jsonb NOT NULL DEFAULT '{}'::jsonb, status varchar(32) NOT NULL DEFAULT 'queued',
-    priority smallint NOT NULL DEFAULT 0, attempt_count smallint NOT NULL DEFAULT 0,
-    idempotency_key varchar(100), result_text text, error_code varchar(80), provider_model varchar(120),
-    input_characters integer, output_characters integer, duration_ms integer,
-    created_at timestamptz NOT NULL DEFAULT NOW(), updated_at timestamptz NOT NULL DEFAULT NOW(),
-    started_at timestamptz, finished_at timestamptz, next_attempt_at timestamptz, UNIQUE(owner_user_id,idempotency_key))`);
-  await db.query(`ALTER TABLE platform_ai_team_tasks ADD COLUMN IF NOT EXISTS next_attempt_at timestamptz`);
-  await db.query(`CREATE TABLE IF NOT EXISTS platform_ai_team_task_events (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(), task_id uuid NOT NULL REFERENCES platform_ai_team_tasks(id) ON DELETE CASCADE,
-    owner_user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE, actor_type varchar(20) NOT NULL,
-    actor_key varchar(40), event_type varchar(40) NOT NULL, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
-    created_at timestamptz NOT NULL DEFAULT NOW())`);
-  await db.query(`CREATE INDEX IF NOT EXISTS platform_ai_team_tasks_queue_idx
-    ON platform_ai_team_tasks(status,priority DESC,created_at ASC)`);
-  await db.query(`CREATE TABLE IF NOT EXISTS platform_ai_provider_state (
-    provider_key varchar(40) PRIMARY KEY, cooldown_until timestamptz,
-    last_error_code varchar(80), updated_at timestamptz NOT NULL DEFAULT NOW())`);
-  await db.query(`CREATE TABLE IF NOT EXISTS platform_ai_daily_reports (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(), owner_user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    report_date date NOT NULL, report_json jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT NOW(),
-    UNIQUE(owner_user_id,report_date))`);
+  const db = getDatabasePool();
+  const client = await db.connect();
+
+  try {
+    await client.query("BEGIN");
+    // Use the same transaction-scoped lock as the API task route. The scheduler
+    // is a separate process and can start while the API is creating these tables.
+    await client.query(
+      "SELECT pg_advisory_xact_lock(hashtext($1))",
+      ["wasla:platform-ai-team-tasks-schema"],
+    );
+
+    await client.query(`CREATE TABLE IF NOT EXISTS platform_ai_team_tasks (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      owner_user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      specialist_key varchar(40) NOT NULL CHECK (specialist_key IN (
+        'market_researcher','product_analyst','supplier_researcher','catalogue_manager',
+        'sales_support','logistics_analyst','translator','financial_analyst','quality_risk_reviewer'
+      )),
+      title varchar(180) NOT NULL,
+      input_text text NOT NULL,
+      input_context jsonb NOT NULL DEFAULT '{}'::jsonb,
+      status varchar(32) NOT NULL DEFAULT 'queued'
+        CHECK (status IN ('queued','running','needs_owner_review','completed','failed','cancelled')),
+      priority smallint NOT NULL DEFAULT 0 CHECK (priority BETWEEN 0 AND 5),
+      attempt_count smallint NOT NULL DEFAULT 0 CHECK (attempt_count BETWEEN 0 AND 3),
+      idempotency_key varchar(100),
+      result_text text,
+      error_code varchar(80),
+      provider_model varchar(120),
+      input_characters integer,
+      output_characters integer,
+      duration_ms integer,
+      created_at timestamptz NOT NULL DEFAULT NOW(),
+      updated_at timestamptz NOT NULL DEFAULT NOW(),
+      started_at timestamptz,
+      finished_at timestamptz,
+      next_attempt_at timestamptz,
+      UNIQUE(owner_user_id,idempotency_key)
+    )`);
+    await client.query(`CREATE INDEX IF NOT EXISTS platform_ai_team_tasks_owner_created_idx
+      ON platform_ai_team_tasks(owner_user_id,created_at DESC)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS platform_ai_team_tasks_queue_idx
+      ON platform_ai_team_tasks(status,priority DESC,created_at ASC)`);
+    await client.query(`CREATE TABLE IF NOT EXISTS platform_ai_team_task_events (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      task_id uuid NOT NULL REFERENCES platform_ai_team_tasks(id) ON DELETE CASCADE,
+      owner_user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      actor_type varchar(20) NOT NULL CHECK (actor_type IN ('owner','manager','specialist','system')),
+      actor_key varchar(40),
+      event_type varchar(40) NOT NULL,
+      metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+      created_at timestamptz NOT NULL DEFAULT NOW()
+    )`);
+    await client.query(`CREATE INDEX IF NOT EXISTS platform_ai_team_task_events_task_created_idx
+      ON platform_ai_team_task_events(task_id,created_at ASC)`);
+    await client.query(`ALTER TABLE platform_ai_team_tasks ADD COLUMN IF NOT EXISTS next_attempt_at timestamptz`);
+    await client.query(`CREATE TABLE IF NOT EXISTS platform_ai_provider_state (
+      provider_key varchar(40) PRIMARY KEY,
+      cooldown_until timestamptz,
+      last_error_code varchar(80),
+      updated_at timestamptz NOT NULL DEFAULT NOW()
+    )`);
+    // Retain the legacy report table for compatibility; no daily reports are sent.
+    await client.query(`CREATE TABLE IF NOT EXISTS platform_ai_daily_reports (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      owner_user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      report_date date NOT NULL,
+      report_json jsonb NOT NULL,
+      created_at timestamptz NOT NULL DEFAULT NOW(),
+      UNIQUE(owner_user_id,report_date)
+    )`);
+
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 async function addEvent(task:any, type:string, metadata:Record<string,unknown>={}) {
