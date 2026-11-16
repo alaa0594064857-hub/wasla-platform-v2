@@ -229,4 +229,26 @@ describe("member store returns and exchanges",()=>{
    expect(String(clientQuery.mock.calls[4][0])).toBe("ROLLBACK");
   });
 
+
+  it("allows an authorized merchant to respond to a submitted return request",async()=>{
+   const merchant="55555555-5555-4555-8555-555555555555";
+   vi.mocked(auth.api.getSession).mockResolvedValueOnce({user:{id:merchant}} as never);
+   clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]})
+    .mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"completed",buyerId:buyer,storeId:store}]})
+    .mockResolvedValueOnce({rowCount:1,rows:[{id:requestId,status:"submitted",buyerId:buyer,storeId:store,requestedResolution:"return"}]})
+    .mockResolvedValueOnce({rowCount:1,rows:[{}]})
+    .mockResolvedValueOnce({rowCount:1,rows:[{id:requestId,status:"approved",merchantResponse:"We have reviewed the evidence and approved the return."}]})
+    .mockResolvedValueOnce({rowCount:1,rows:[]})
+    .mockResolvedValueOnce({rowCount:null,rows:[]});
+   const base=await start();
+   const note="We have reviewed the evidence and approved the return.";
+   const response=await fetch(base+path+"/response",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({decision:"approved",note})});
+   expect(response.status).toBe(200);
+   expect(await response.json()).toMatchObject({success:true,returnRequest:{id:requestId,status:"approved"}});
+   expect(String(clientQuery.mock.calls[4][0])).toContain("merchant_response=$3");
+   expect(clientQuery.mock.calls[4][1]).toEqual([requestId,"approved",note,merchant]);
+   expect(String(clientQuery.mock.calls[5][0])).toContain("audit_logs");
+   expect(clientQuery.mock.calls[6][0]).toBe("COMMIT");
+  });
+
 });
