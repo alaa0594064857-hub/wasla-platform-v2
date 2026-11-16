@@ -251,4 +251,23 @@ describe("member store returns and exchanges",()=>{
    expect(clientQuery.mock.calls[6][0]).toBe("COMMIT");
   });
 
+
+ it("updates a support escalation and its audit event in one transaction",async()=>{
+  const escalationId="66666666-6666-4666-8666-666666666666";
+  clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]})
+   .mockResolvedValueOnce({rowCount:1,rows:[{id:escalationId,status:"open"}]})
+   .mockResolvedValueOnce({rowCount:1,rows:[{id:escalationId,status:"acknowledged",supportNote:"Support has begun reviewing this request."}]})
+   .mockResolvedValueOnce({rowCount:1,rows:[]})
+   .mockResolvedValueOnce({rowCount:null,rows:[]});
+  const base=await start();
+  const response=await fetch(base+"/api/platform/store-return-escalations/"+escalationId,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:"acknowledged",note:"Support has begun reviewing this request."})});
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({success:true,escalation:{id:escalationId,status:"acknowledged"}});
+  expect(String(clientQuery.mock.calls[1][0])).toContain("FOR UPDATE");
+  expect(String(clientQuery.mock.calls[2][0])).toContain("UPDATE member_store_return_escalations");
+  expect(String(clientQuery.mock.calls[3][0])).toContain("audit_logs");
+  expect(String(clientQuery.mock.calls[4][0])).toBe("COMMIT");
+  expect(release).toHaveBeenCalledOnce();
+ });
+
 });
