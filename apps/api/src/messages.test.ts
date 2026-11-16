@@ -200,6 +200,29 @@ describe("product-based private messaging", () => {
     expect(String(mocks.query.mock.calls[1][0])).toContain("participant_high_last_read_at");
   });
 
+  it("returns the newest 500 messages in chronological order", async () => {
+    mocks.query
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "conversation-id", participant_low: "buyer-user", participant_high: "seller-user" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 2, rows: [
+        { id: "newest", sender_id: "seller-user", body: "Latest message" },
+        { id: "older", sender_id: "buyer-user", body: "Previous message" },
+      ] });
+
+    const baseUrl = await startServer("11111111-1111-4111-8111-111111111111");
+    const response = await fetch(`${baseUrl}/api/messages/11111111-1111-4111-8111-111111111111`);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      success: true,
+      messages: [
+        { id: "older", sender_id: "buyer-user", body: "Previous message" },
+        { id: "newest", sender_id: "seller-user", body: "Latest message" },
+      ],
+    });
+    expect(String(mocks.query.mock.calls[2][0])).toContain("ORDER BY m.created_at DESC LIMIT 500");
+  });
+
   it("does not let a non-participant send messages into another user's conversation", async () => {
     mocks.query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
 

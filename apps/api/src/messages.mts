@@ -316,10 +316,10 @@ export async function handleMessagesRequest(
          JOIN users u ON u.id = m.sender_id
          LEFT JOIN profiles p ON p.user_id = u.id
          WHERE m.conversation_id = $1
-         ORDER BY m.created_at ASC LIMIT 500`,
+         ORDER BY m.created_at DESC LIMIT 500`,
         [conversationId],
       );
-      respond(response, 200, { success: true, messages: result.rows });
+      respond(response, 200, { success: true, messages: result.rows.reverse() });
       return;
     }
 
