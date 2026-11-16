@@ -22,7 +22,7 @@ jobs:
       - name: Checkout reviewed application source
         uses: actions/checkout@v4
         with:
-          ref: work/phase-1-foundation
+          ref: ${{ github.sha }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
