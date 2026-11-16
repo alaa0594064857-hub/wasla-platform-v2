@@ -8,7 +8,8 @@ for (let attempt = 1; attempt <= 4; attempt++) {
     const response = await fetch(`${apiUrl}/api/internal/ai/scheduler/run`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      signal: AbortSignal.timeout(9000),
+      // The API may need several seconds to wake from the free instance's idle state.
+      signal: AbortSignal.timeout(20000),
     });
     const body = await response.json().catch(() => ({}));
     if (response.ok && body.success === true) {
@@ -28,7 +29,8 @@ for (let attempt = 1; attempt <= 4; attempt++) {
     lastError = error;
     if (attempt === 4) break;
     if (error instanceof Error && error.message.startsWith("WASLA scheduler API returned ")) {
-      const status = Number(error.message.match(/\\d+$/)?.[0]);
+      const statusText = error.message.slice("WASLA scheduler API returned ".length);
+      const status = Number(statusText);
       if (![502, 503, 504].includes(status)) throw error;
     }
   }
