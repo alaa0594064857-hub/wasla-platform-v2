@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useLocale } from "../../../../components/locale-provider";
 
-type Message = { role: "user" | "assistant"; content: string };
+type Message = { role: "user" | "assistant"; content: string; dataContext?: { productsIncluded?: number; supplierOffersIncluded?: number; officialStoreOrdersIncluded?: number } };
 type AssistantStatus = {
   configured: boolean;
   managerEnabled: boolean;
@@ -76,7 +76,7 @@ export default function AiManagerChatPage() {
       if (!response.ok || !data.success) throw new Error(data.error || (response.status === 429
         ? (ar ? "وصلنا إلى حد الاستخدام المؤقت لمحرك الذكاء." : "The AI provider rate limit was reached.")
         : "The manager could not respond."));
-      setMessages((current) => [...current, { role: "assistant", content: String(data.answer || "") }]);
+      setMessages((current) => [...current, { role: "assistant", content: String(data.answer || ""), dataContext: data.dataContext && typeof data.dataContext === "object" ? data.dataContext : undefined }]);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : (ar ? "تعذر الاتصال بالمدير." : "Could not reach the manager."));
     } finally {
@@ -152,7 +152,30 @@ export default function AiManagerChatPage() {
               <div key={index} className={"flex " + (message.role === "user" ? "justify-start" : "justify-end")}>
                 <article className={"max-w-[92%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-7 sm:max-w-[80%] " + (message.role === "user" ? "bg-[#101d35] text-white" : "border border-[#e3d6b8] bg-white text-slate-800")}>
                   <p className="mb-1 text-[10px] font-bold opacity-70">{message.role === "user" ? (ar ? "أنت" : "You") : (ar ? "مدير WASLA" : "WASLA Manager")}</p>
-                  {message.content}
+                  <div className="space-y-2">
+                    {message.content.replace(/\\([*_\x60#-])/g, "$1").split("\\n").map((line, lineIndex) => {
+                      const trimmed = line.trim();
+                      if (!trimmed) return <div key={lineIndex} className="h-1" />;
+                      const parts = trimmed.split(/(\*\*[^*]+\*\*|\*[^*]+\*|\x60[^\x60]+\x60)/g);
+                      const rendered = parts.map((part, partIndex) => {
+                        if (part.startsWith("**") && part.endsWith("**")) return <strong key={partIndex}>{part.slice(2, -2)}</strong>;
+                        if (part.startsWith("*") && part.endsWith("*")) return <em key={partIndex}>{part.slice(1, -1)}</em>;
+                        if (part.startsWith("`") && part.endsWith("`")) return <code key={partIndex} className="rounded bg-slate-100 px-1 py-0.5 text-[.9em]">{part.slice(1, -1)}</code>;
+                        return part;
+                      });
+                      if (/^#{1,3}\\s/.test(trimmed)) return <p key={lineIndex} className="font-bold text-slate-950">{rendered}</p>;
+                      if (/^[-•]\\s/.test(trimmed)) return <p key={lineIndex} className="ps-3 before:me-2 before:content-['•']">{rendered.slice(1)}</p>;
+                      return <p key={lineIndex}>{rendered}</p>;
+                    })}
+                  </div>
+                  {message.dataContext && (
+                    <p className="mt-3 border-t border-slate-100 pt-2 text-[10px] leading-5 text-slate-500">
+                      {ar ? "بيانات هذه الإجابة: " : "Data used for this reply: "}
+                      {ar ? "منتجات " : "Products "}{message.dataContext.productsIncluded ?? "—"} ·
+                      {ar ? " عروض موردين " : " supplier offers "}{message.dataContext.supplierOffersIncluded ?? "—"} ·
+                      {ar ? " طلبات " : " orders "}{message.dataContext.officialStoreOrdersIncluded ?? "—"}
+                    </p>
+                  )}
                 </article>
               </div>
             ))}
