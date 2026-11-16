@@ -154,15 +154,15 @@ export default function AiManagerChatPage() {
                   <p className="mb-1 text-[10px] font-bold opacity-70">{message.role === "user" ? (ar ? "أنت" : "You") : (ar ? "مدير WASLA" : "WASLA Manager")}</p>
                   <div className="space-y-2">
                     {message.content
-                      .replace(/\\\\([*_\x60#-])/g, "$1")
-                      .replace(/\\*{1,3}/g, "")
+                      .replace(/\\([*_\x60#-])/g, "$1")
+                      .replace(/\*{1,3}/g, "")
                       .replace(/\x60/g, "")
-                      .split(/\\r?\\n/)
+                      .split(/\r?\n/)
                       .map((line, lineIndex) => {
-                        const trimmed = line.trim().replace(/^#{1,3}\\s*/, "");
+                        const trimmed = line.trim().replace(/^#{1,3}\s*/, "");
                         if (!trimmed) return <div key={lineIndex} className="h-1" />;
-                        const isBullet = /^[-•]\\s+/.test(trimmed);
-                        const cleanLine = isBullet ? trimmed.replace(/^[-•]\\s+/, "") : trimmed;
+                        const isBullet = /^[-•]\s+/.test(trimmed);
+                        const cleanLine = isBullet ? trimmed.replace(/^[-•]\s+/, "") : trimmed;
                         return (
                           <p key={lineIndex} className={isBullet ? "ps-3" : undefined}>
                             {isBullet ? "• " : ""}{cleanLine}
