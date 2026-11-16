@@ -183,4 +183,50 @@ describe("member store returns and exchanges",()=>{
  });
 
 
+
+  it("denies a merchant return decision without active order-management permission",async()=>{
+   clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]})
+    .mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"completed",buyerId:buyer,storeId:store}]})
+    .mockResolvedValueOnce({rowCount:1,rows:[{id:requestId,status:"submitted",buyerId:buyer,storeId:store,requestedResolution:"return"}]})
+    .mockResolvedValueOnce({rowCount:0,rows:[]})
+    .mockResolvedValueOnce({rowCount:null,rows:[]});
+   const base=await start();
+   const response=await fetch(base+path+"/response",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({decision:"approved",note:"We have reviewed the return request."})});
+   expect(response.status).toBe(403);
+   expect(await response.json()).toMatchObject({success:false,error:"Store order management permission required"});
+   expect(String(clientQuery.mock.calls[3][0])).toContain("store.order.manage");
+   expect(String(clientQuery.mock.calls[4][0])).toBe("ROLLBACK");
+   expect(clientQuery.mock.calls.some(call=>String(call[0]).startsWith("UPDATE member_store_return_requests"))).toBe(false);
+  });
+
+  it("allows only the buyer recorded on the return request to close it",async()=>{
+   const otherBuyer="77777777-7777-4777-8777-777777777777";
+   clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]})
+    .mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"completed",buyerId:buyer,storeId:store}]})
+    .mockResolvedValueOnce({rowCount:1,rows:[{id:requestId,status:"rejected",buyerId:otherBuyer,storeId:store,requestedResolution:"return"}]})
+    .mockResolvedValueOnce({rowCount:null,rows:[]});
+   const base=await start();
+   const response=await fetch(base+path+"/close",{method:"PATCH",headers:{"Content-Type":"application/json"},body:"{}"});
+   expect(response.status).toBe(403);
+   expect(await response.json()).toMatchObject({success:false,error:"Only the buyer can close this request"});
+   expect(String(clientQuery.mock.calls[3][0])).toBe("ROLLBACK");
+   expect(clientQuery.mock.calls.some(call=>String(call[0]).startsWith("UPDATE member_store_return_requests"))).toBe(false);
+  });
+
+  it("denies a merchant from confirming a returned item without order-management permission",async()=>{
+   const merchant="55555555-5555-4555-8555-555555555555";
+   vi.mocked(auth.api.getSession).mockResolvedValueOnce({user:{id:merchant}} as never);
+   clientQuery.mockResolvedValueOnce({rowCount:null,rows:[]})
+    .mockResolvedValueOnce({rowCount:1,rows:[{orderStatus:"completed",buyerId:buyer,storeId:store,inventoryCommittedAt:new Date()}]})
+    .mockResolvedValueOnce({rowCount:1,rows:[{id:requestId,status:"approved",buyerId:buyer,storeId:store,requestedResolution:"return",returnItems:[{productId:product,quantity:1}]}]})
+    .mockResolvedValueOnce({rowCount:0,rows:[]})
+    .mockResolvedValueOnce({rowCount:null,rows:[]});
+   const base=await start();
+   const response=await fetch(base+path+"/received",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({restock:true})});
+   expect(response.status).toBe(403);
+   expect(await response.json()).toMatchObject({success:false,error:"Store order management permission required"});
+   expect(clientQuery.mock.calls.some(call=>String(call[0]).includes("UPDATE store_products"))).toBe(false);
+   expect(String(clientQuery.mock.calls[4][0])).toBe("ROLLBACK");
+  });
+
 });
