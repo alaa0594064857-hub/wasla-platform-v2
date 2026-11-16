@@ -61,6 +61,27 @@ describe("member store order requests", () => {
     expect(query).not.toHaveBeenCalled();
   });
 
+  it("never exposes internal moderator notes in buyer or merchant order responses", async () => {
+    query.mockResolvedValueOnce({
+      rowCount: 1,
+      rows: [{
+        id: "22222222-2222-4222-8222-222222222222",
+        orderNumber: "WS-PRIVACY",
+        status: "accepted",
+        disputeStatus: "resolved",
+        merchantResponse: "We have reviewed your complaint",
+      }],
+    });
+    const baseUrl = await startServer();
+    const response = await fetch(`${baseUrl}/api/stores/demo/orders`);
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.orders[0]).not.toHaveProperty("moderatorNote");
+    const sql = String(query.mock.calls[0][0]);
+    expect(sql).not.toContain("moderator_note");
+    expect(sql).not.toContain("moderatorNote");
+  });
+
   it("validates order lines before opening a database transaction", async () => {
     const baseUrl = await startServer();
     const response = await fetch(`${baseUrl}/api/stores/demo/orders`, {
