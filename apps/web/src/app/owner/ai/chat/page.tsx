@@ -153,20 +153,22 @@ export default function AiManagerChatPage() {
                 <article className={"max-w-[92%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-7 sm:max-w-[80%] " + (message.role === "user" ? "bg-[#101d35] text-white" : "border border-[#e3d6b8] bg-white text-slate-800")}>
                   <p className="mb-1 text-[10px] font-bold opacity-70">{message.role === "user" ? (ar ? "أنت" : "You") : (ar ? "مدير WASLA" : "WASLA Manager")}</p>
                   <div className="space-y-2">
-                    {message.content.replace(/\\([*_\x60#-])/g, "$1").split("\\n").map((line, lineIndex) => {
-                      const trimmed = line.trim();
-                      if (!trimmed) return <div key={lineIndex} className="h-1" />;
-                      const parts = trimmed.split(/(\*\*[^*]+\*\*|\*[^*]+\*|\x60[^\x60]+\x60)/g);
-                      const rendered = parts.map((part, partIndex) => {
-                        if (part.startsWith("**") && part.endsWith("**")) return <strong key={partIndex}>{part.slice(2, -2)}</strong>;
-                        if (part.startsWith("*") && part.endsWith("*")) return <em key={partIndex}>{part.slice(1, -1)}</em>;
-                        if (part.startsWith("`") && part.endsWith("`")) return <code key={partIndex} className="rounded bg-slate-100 px-1 py-0.5 text-[.9em]">{part.slice(1, -1)}</code>;
-                        return part;
-                      });
-                      if (/^#{1,3}\\s/.test(trimmed)) return <p key={lineIndex} className="font-bold text-slate-950">{rendered}</p>;
-                      if (/^[-•]\\s/.test(trimmed)) return <p key={lineIndex} className="ps-3 before:me-2 before:content-['•']">{rendered.slice(1)}</p>;
-                      return <p key={lineIndex}>{rendered}</p>;
-                    })}
+                    {message.content
+                      .replace(/\\\\([*_\x60#-])/g, "$1")
+                      .replace(/\\*{1,3}/g, "")
+                      .replace(/\x60/g, "")
+                      .split(/\\r?\\n/)
+                      .map((line, lineIndex) => {
+                        const trimmed = line.trim().replace(/^#{1,3}\\s*/, "");
+                        if (!trimmed) return <div key={lineIndex} className="h-1" />;
+                        const isBullet = /^[-•]\\s+/.test(trimmed);
+                        const cleanLine = isBullet ? trimmed.replace(/^[-•]\\s+/, "") : trimmed;
+                        return (
+                          <p key={lineIndex} className={isBullet ? "ps-3" : undefined}>
+                            {isBullet ? "• " : ""}{cleanLine}
+                          </p>
+                        );
+                      })}
                   </div>
                   {message.dataContext && (
                     <p className="mt-3 border-t border-slate-100 pt-2 text-[10px] leading-5 text-slate-500">
