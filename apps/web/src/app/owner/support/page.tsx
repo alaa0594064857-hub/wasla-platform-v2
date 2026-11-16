@@ -49,6 +49,10 @@ export default function OwnerSupportPage() {
   const [allowed, setAllowed] = useState(false);
   const [canAssign, setCanAssign] = useState(false);
 
+  const categoryLabel = (value: string) => ({ account_access: ar ? "الدخول إلى الحساب" : "Account access", account_deletion: ar ? "حذف الحساب والبيانات" : "Account and data deletion", payments_billing: ar ? "المدفوعات والفواتير" : "Payments and billing", orders_delivery: ar ? "الطلبات والتوصيل" : "Orders and delivery", returns_refunds: ar ? "الإرجاع والاسترداد" : "Returns and refunds", store_seller: ar ? "المتجر والبائع" : "Store and seller", trade_business: ar ? "التجارة والأعمال" : "Trade and business", affiliate_commissions: ar ? "العمولات والتسويق بالعمولة" : "Affiliate commissions", technical_issue: ar ? "مشكلة تقنية" : "Technical issue", security_report: ar ? "بلاغ أمني" : "Security report", other: ar ? "موضوع آخر" : "Other" }[value] || value);
+  const statusLabel = (value: string) => ({ open: ar ? "جديدة" : "Open", in_progress: ar ? "قيد المعالجة" : "In progress", waiting_for_user: ar ? "بانتظار العميل" : "Waiting for user", resolved: ar ? "تم الحل" : "Resolved", closed: ar ? "مغلقة" : "Closed" }[value] || value);
+  const priorityLabel = (value: string) => ({ low: ar ? "منخفضة" : "Low", normal: ar ? "عادية" : "Normal", high: ar ? "عالية" : "High", urgent: ar ? "عاجلة" : "Urgent" }[value] || value);
+
   const copy = ar
     ? {
         title: "مكتب دعم وصلة",
@@ -248,7 +252,7 @@ export default function OwnerSupportPage() {
         {error ? <p role="alert" style={{ color: "#a22" }}>{error}</p> : null}
 
         {!allowed ? (
-          <p>{copy.loading}</p>
+          <p role="status">{error || copy.loading}</p>
         ) : (
           <div
             style={{
@@ -272,7 +276,7 @@ export default function OwnerSupportPage() {
                   >
                     <b>{ticket.ticketNumber}</b>
                     <div>{ticket.subject}</div>
-                    <small>{ticket.priority} · {ticket.status}</small>
+                    <small>{categoryLabel(ticket.category)} · {priorityLabel(ticket.priority)} · {statusLabel(ticket.status)}</small>
                   </button>
                 ))
               )}
@@ -293,13 +297,13 @@ export default function OwnerSupportPage() {
                   <label>
                     {copy.status}
                     <select value={status} onChange={(event) => setStatus(event.target.value)} style={field}>
-                      {statuses.map((value) => <option key={value} value={value}>{value}</option>)}
+                      {statuses.map((value) => <option key={value} value={value}>{statusLabel(value)}</option>)}
                     </select>
                   </label>
                   <label>
                     {copy.priority}
                     <select value={priority} onChange={(event) => setPriority(event.target.value)} style={field}>
-                      {priorities.map((value) => <option key={value} value={value}>{value}</option>)}
+                      {priorities.map((value) => <option key={value} value={value}>{priorityLabel(value)}</option>)}
                     </select>
                   </label>
                 </div>
