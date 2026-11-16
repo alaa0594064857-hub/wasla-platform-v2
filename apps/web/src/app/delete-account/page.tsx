@@ -22,12 +22,12 @@ export default function DeleteAccountPage(){
  <div style={{maxWidth:820,margin:"28px auto",background:"#fff",border:"1px solid #e5e0d5",borderRadius:18,padding:28}}>
  <span style={{color:"#9b7b3d",fontSize:12,letterSpacing:1}}>WASLA · PRIVACY</span>
  <h1 style={{margin:"12px 0"}}>{ar?"طلب حذف الحساب والبيانات":"Request account and data deletion"}</h1>
- <p style={{lineHeight:1.8}}>{ar?"يمكنك تقديم طلب حذف من خلال مركز الدعم. سجّل الدخول، وافتح تذكرة جديدة، واختر «حذف الحساب والبيانات»، واكتب أنك تطلب حذف حسابك.":"You can request deletion through WASLA Support. Sign in, create a new support ticket, choose “Account and data deletion”, and state that you are requesting deletion of your account."}</p>
+ <p style={{lineHeight:1.8}}>{ar?"يمكنك تقديم طلب حذف من خلال مركز الدعم. سجّل الدخول، وافتح نموذج الطلب المجهز لحذف الحساب، واكتب أنك تطلب حذف حسابك.":"You can request deletion through WASLA Support. Sign in, open the preselected account-deletion request form, and state that you are requesting deletion of your account."}</p>
  <h2 style={{fontSize:18,marginTop:24}}>{ar?"ماذا يحدث بعد تقديم الطلب؟":"What happens after you submit?"}</h2>
  <ul style={{lineHeight:1.9,paddingInlineStart:24}}>{items.map(item=><li key={item}>{item}</li>)}</ul>
  <p style={{lineHeight:1.8,background:"#f6f4ee",borderRadius:10,padding:14}}>{ar?"مهم: هذه الصفحة تشرح طريقة تقديم الطلب. لا يتم حذف الحساب تلقائياً من هنا، ولا نعدّ الطلب مكتملاً حتى تتم مراجعته وتأكيد النتيجة.":"Important: this page explains how to submit a request. It does not automatically delete your account, and a request is not complete until it has been reviewed and the outcome confirmed."}</p>
  <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:22}}>
- <Link href="/support" style={{display:"inline-block",padding:"12px 18px",borderRadius:9,background:"#17283d",color:"#e5cb91",textDecoration:"none"}}>{ar?"فتح مركز الدعم":"Open Support"}</Link>
+ <Link href="/support?category=account_deletion" style={{display:"inline-block",padding:"12px 18px",borderRadius:9,background:"#17283d",color:"#e5cb91",textDecoration:"none"}}>{ar?"فتح مركز الدعم":"Open Support"}</Link>
  <Link href="/login" style={{display:"inline-block",padding:"12px 18px",borderRadius:9,border:"1px solid #d8dee7",color:"#17283d",textDecoration:"none"}}>{ar?"تسجيل الدخول":"Sign in"}</Link>
  </div></div></main>;
 }
