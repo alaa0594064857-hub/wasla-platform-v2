@@ -192,14 +192,34 @@ export async function handlePlatformMemberStoreReturnEscalations(req: IncomingMe
  const status=String(input.status??"");
  const note=typeof input.note==="string"?input.note.trim():"";
  if(!["acknowledged","closed"].includes(status)||note.length<5||note.length>2000){send(res,400,{success:false,error:"Choose acknowledged or closed and provide a 5–2000 character support note"});return;}
- const result=await db.query(`UPDATE member_store_return_escalations
-  SET status=$2,support_note=$3,handled_by=$4,handled_at=NOW(),updated_at=NOW()
-  WHERE id=$1 AND status IN ('open','acknowledged')
-  RETURNING id,status,support_note AS "supportNote",handled_at AS "handledAt"`,
-  [id,status,note,access.userId]);
- if(!result.rowCount){send(res,404,{success:false,error:"Open escalation not found"});return;}
- await db.query(`INSERT INTO audit_logs(actor_user_id,action,resource_type,resource_id,metadata)
-  VALUES($1,$2,'member_store_return_escalation',$3,$4::jsonb)`,
-  [access.userId,"order_return.escalation."+status,id,JSON.stringify({status})]);
- send(res,200,{success:true,escalation:result.rows[0]});
+ const client=await db.connect();
+ try {
+  await client.query("BEGIN");
+  const selected=await client.query(`SELECT id,status FROM member_store_return_escalations WHERE id=$1 FOR UPDATE`,[id]);
+  if(!selected.rowCount||!["open","acknowledged"].includes(selected.rows[0].status)){
+   await client.query("ROLLBACK");
+   send(res,404,{success:false,error:"Open escalation not found"});
+   return;
+  }
+  const result=await client.query(`UPDATE member_store_return_escalations
+   SET status=$2,support_note=$3,handled_by=$4,handled_at=NOW(),updated_at=NOW()
+   WHERE id=$1 AND status IN ('open','acknowledged')
+   RETURNING id,status,support_note AS "supportNote",handled_at AS "handledAt"`,
+   [id,status,note,access.userId]);
+  if(!result.rowCount){
+   await client.query("ROLLBACK");
+   send(res,404,{success:false,error:"Open escalation not found"});
+   return;
+  }
+  await client.query(`INSERT INTO audit_logs(actor_user_id,action,resource_type,resource_id,metadata)
+   VALUES($1,$2,'member_store_return_escalation',$3,$4::jsonb)`,
+   [access.userId,"order_return.escalation."+status,id,JSON.stringify({status})]);
+  await client.query("COMMIT");
+  send(res,200,{success:true,escalation:result.rows[0]});
+ } catch(error) {
+  await client.query("ROLLBACK");
+  throw error;
+ } finally {
+  client.release();
+ }
 }
