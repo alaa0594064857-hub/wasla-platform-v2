@@ -194,7 +194,7 @@ describe("member store returns and exchanges",()=>{
    const response=await fetch(base+path+"/response",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({decision:"approved",note:"We have reviewed the return request."})});
    expect(response.status).toBe(403);
    expect(await response.json()).toMatchObject({success:false,error:"Store order management permission required"});
-   expect(String(clientQuery.mock.calls[3][0])).toContain("store.order.manage");
+   expect(clientQuery.mock.calls[3][1][2]).toEqual(["store.order.manage","account.order.manage"]);
    expect(String(clientQuery.mock.calls[4][0])).toBe("ROLLBACK");
    expect(clientQuery.mock.calls.some(call=>String(call[0]).startsWith("UPDATE member_store_return_requests"))).toBe(false);
   });
