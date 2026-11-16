@@ -147,7 +147,6 @@ export async function handleMemberStoreOrdersRequest(
               o.delivery_confirmed_at AS "deliveryConfirmedAt",
               d.id AS "disputeId", d.reason AS "disputeReason", d.details AS "disputeDetails",
               d.status AS "disputeStatus", d.merchant_response AS "merchantResponse",
-              d.moderator_note AS "moderatorNote",
               rr.id AS "returnRequestId", rr.items AS "returnItems", rr.requested_resolution AS "returnResolution",
               rr.reason AS "returnReason", rr.details AS "returnDetails",
               rr.status AS "returnStatus", rr.merchant_response AS "returnMerchantResponse",
@@ -156,7 +155,7 @@ export async function handleMemberStoreOrdersRequest(
        FROM member_store_orders o
        INNER JOIN stores s ON s.id = o.store_id
        LEFT JOIN LATERAL (
-         SELECT id, reason, details, status, merchant_response, moderator_note
+         SELECT id, reason, details, status, merchant_response
          FROM member_store_order_disputes d
          WHERE d.order_id = o.id AND d.status <> 'closed'
          ORDER BY d.created_at DESC LIMIT 1
