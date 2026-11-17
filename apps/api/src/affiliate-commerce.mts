@@ -31,16 +31,17 @@ function safeEditorialSourceUrl(value: unknown): string | null {
   try {
     const url = new URL(value);
     if (url.protocol !== "https:" || url.username || url.password) return null;
-    const host = url.hostname.toLowerCase().replace(/^www\\./, "");
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
     const blocked = [
       "amazon.com","amazon.ca","amazon.co.uk","amazon.de","amazon.fr","amazon.com.tr",
       "amazon.co.jp","amazon.com.au","amazon.in","amazon.sg","amazon.ae","amazon.sa",
-      "ebay.com","ebay.co.uk","ebay.de","walmart.com","target.com","bestbuy.com",
+      "amazon.es","amazon.it","amazon.nl","amazon.se","amazon.pl","amazon.com.mx","amazon.com.br","amazon.eg",
+      "ebay.com","ebay.co.uk","ebay.de","ebay.ca","walmart.com","walmart.ca","target.com","bestbuy.com",
       "aliexpress.com","temu.com","alibaba.com","shein.com"
     ];
     if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")
       || host.startsWith("127.") || host.startsWith("10.") || host.startsWith("192.168.")
-      || /^172\\.(1[6-9]|2[0-9]|3[01])\\./.test(host) || host.startsWith("169.254.")
+      || /^172\.(1[6-9]|2[0-9]|3[01])\./.test(host) || host.startsWith("169.254.")
       || host === "0.0.0.0" || host === "::1" || host === "[::1]" || !host.includes(".")
       || blocked.some(domain => host === domain || host.endsWith("." + domain))) return null;
     url.search = "";
