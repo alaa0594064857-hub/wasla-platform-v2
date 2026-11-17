@@ -13,8 +13,11 @@ export type AffiliateResearchCandidate = {
 const START_MARKER = "WASLA_CANDIDATE_PRODUCTS_JSON_START";
 const END_MARKER = "WASLA_CANDIDATE_PRODUCTS_JSON_END";
 const MARKETPLACE_DOMAINS = [
-  "amazon.com", "amazon.com.tr", "amazon.co.uk", "amazon.de", "amazon.fr",
-  "ebay.com", "walmart.com", "target.com", "bestbuy.com", "aliexpress.com",
+  "amazon.com", "amazon.com.tr", "amazon.co.uk", "amazon.de", "amazon.fr", "amazon.ca",
+  "amazon.co.jp", "amazon.com.au", "amazon.in", "amazon.sg", "amazon.ae", "amazon.sa",
+  "amazon.es", "amazon.it", "amazon.nl", "amazon.se", "amazon.pl", "amazon.com.mx",
+  "amazon.com.br", "amazon.eg", "ebay.com", "ebay.co.uk", "ebay.de", "ebay.ca",
+  "walmart.com", "walmart.ca", "target.com", "bestbuy.com", "aliexpress.com",
   "temu.com", "alibaba.com", "shein.com",
 ];
 
@@ -29,8 +32,12 @@ function normalizedHttpsUrl(value: unknown): string | null {
   try {
     const url = new URL(value);
     if (url.protocol !== "https:" || url.username || url.password) return null;
-    const host = url.hostname.toLowerCase();
-    if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.startsWith("127.") || host === "0.0.0.0" || host === "::1") return null;
+    const host = url.hostname.toLowerCase().replace(/^www\\./, "");
+    const privateHost = host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")
+      || host.startsWith("127.") || host.startsWith("10.") || host.startsWith("192.168.")
+      || /^172\\.(1[6-9]|2[0-9]|3[01])\\./.test(host) || host.startsWith("169.254.")
+      || host === "0.0.0.0" || host === "::1" || host === "[::1]" || !host.includes(".");
+    if (privateHost) return null;
     url.search = "";
     url.hash = "";
     url.pathname = url.pathname.replace(/\/+$/, "") || "/";
