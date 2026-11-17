@@ -234,9 +234,9 @@ async function processOne():Promise<boolean> {
   const cooldown=await db.query(`SELECT cooldown_until FROM platform_ai_provider_state WHERE provider_key='gemini' LIMIT 1`);
   if(cooldown.rows[0]?.cooldown_until && new Date(cooldown.rows[0].cooldown_until).getTime()>Date.now()) return false;
   const searchProviderConfigured=Boolean(process.env.TAVILY_API_KEY?.trim())
-    || process.env.GEMINI_USE_GOOGLE_SEARCH_GROUNDING==="true";
+    || process.env.GEMINI_ALLOW_PAID_SEARCH_GROUNDING==="true";
   if(!searchProviderConfigured) {
-    console.info("WASLA AI scheduler waiting for TAVILY_API_KEY or explicit Gemini Google Search grounding opt-in");
+    console.info("WASLA AI scheduler waiting for TAVILY_API_KEY or explicit paid Gemini Search grounding opt-in");
     return false;
   }
   const claim=await db.query(`WITH candidate AS (
@@ -258,7 +258,7 @@ async function processOne():Promise<boolean> {
   }
   const model=process.env.GEMINI_MODEL?.trim()||"gemini-3.5-flash-lite";
   const tavilyKey=process.env.TAVILY_API_KEY?.trim()||"";
-  const useGeminiGrounding=process.env.GEMINI_USE_GOOGLE_SEARCH_GROUNDING==="true";
+  const useGeminiGrounding=process.env.GEMINI_ALLOW_PAID_SEARCH_GROUNDING==="true";
   const searchQuery=buildTaskSearchQuery(task);
   const started=Date.now();
   let sources:{uri:string;title?:string;content?:string}[]=[];
@@ -470,7 +470,7 @@ export async function runScheduledAiTasks() {
   const seeded=weekOneSeeded+productDraftSeeded;
   const recovered=await recoverLegacyRateLimitedTasks();
   const waitingForSearchProvider=!process.env.TAVILY_API_KEY?.trim()
-    && process.env.GEMINI_USE_GOOGLE_SEARCH_GROUNDING!=="true";
+    && process.env.GEMINI_ALLOW_PAID_SEARCH_GROUNDING!=="true";
   let processed=0;
   // One provider request per scheduler run prevents bursts against free-tier quotas.
   if(await processOne()) processed=1;
