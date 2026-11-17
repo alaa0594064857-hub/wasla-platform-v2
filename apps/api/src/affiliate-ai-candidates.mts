@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import { getDatabasePool } from "./database.js";
-import { ensureAffiliateCommerceTables } from "./affiliate-commerce.mjs";
 
 export type AffiliateResearchCandidate = {
   title_en: string;
@@ -121,7 +120,7 @@ export async function saveAffiliateResearchCandidates(args: {
   const candidates = extractAffiliateResearchCandidates(args.answer, args.groundedSourceUrls);
   if (candidates.length === 0) return 0;
 
-  await ensureAffiliateCommerceTables();
+  // The API service creates the affiliate tables at startup; the cron worker stays auth-independent.
   const db = getDatabasePool();
   const program = await db.query(
     "SELECT id FROM affiliate_programs WHERE provider='amazon_associates' AND marketplace_domain='amazon.com' LIMIT 1",
