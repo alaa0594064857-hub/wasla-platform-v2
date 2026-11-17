@@ -137,3 +137,82 @@ describe("affiliate owner metrics", () => {
     expect(sql).toContain("COUNT(DISTINCT c.id)::int AS click_count");
   });
 });
+
+
+describe("owner review of AI research drafts", () => {
+  const validId = "22222222-2222-4222-8222-222222222222";
+  const candidate = {
+    id: validId,
+    title_en: "USB-C charger",
+    title_ar: "شاحن USB-C",
+    description_en: "A compact charger described on the manufacturer's product page.",
+    description_ar: "شاحن مدمج موصوف في صفحة المنتج لدى الشركة المصنّعة.",
+    source_url: "https://brand.example/products/charger?ref=grounding",
+    outbound_url: null,
+    content_source: "unverified",
+    publication_status: "draft",
+  };
+
+  it("requires an explicit owner confirmation before changing a candidate", async () => {
+    mocks.authorize.mockResolvedValueOnce({ user: { id: "owner-1" } });
+    const baseUrl = await startServer((req, res) => { void handleAffiliateCommerceRequest(req, res); });
+    const response = await fetch(baseUrl + "/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "approve_editorial", itemId: validId, ownerConfirmed: false }),
+    });
+    expect(response.status).toBe(400);
+    expect(mocks.query).not.toHaveBeenCalled();
+  });
+
+  it("publishes only a reviewed HTTPS editorial card with no affiliate link", async () => {
+    mocks.authorize.mockResolvedValueOnce({ user: { id: "owner-1" } });
+    mocks.query
+      .mockResolvedValueOnce({ rows: [candidate] })
+      .mockResolvedValueOnce({ rows: [{ id: validId }] });
+    const baseUrl = await startServer((req, res) => { void handleAffiliateCommerceRequest(req, res); });
+    const response = await fetch(baseUrl + "/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "approve_editorial", itemId: validId, ownerConfirmed: true }),
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      success: true, action: "published_editorial", itemId: validId, commission: false,
+    });
+    const updateSql = String(mocks.query.mock.calls[1][0]);
+    expect(updateSql).toContain("content_source='editorial'");
+    expect(updateSql).toContain("publication_status='published'");
+    expect(updateSql).toContain("outbound_url IS NULL");
+    expect(mocks.query.mock.calls[1][1]).toEqual([validId, "https://brand.example/products/charger"]);
+  });
+
+  it("rejects retailer marketplace sources from editorial publication", async () => {
+    mocks.authorize.mockResolvedValueOnce({ user: { id: "owner-1" } });
+    mocks.query.mockResolvedValueOnce({ rows: [{ ...candidate, source_url: "https://www.amazon.com/dp/B000000000" }] });
+    const baseUrl = await startServer((req, res) => { void handleAffiliateCommerceRequest(req, res); });
+    const response = await fetch(baseUrl + "/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "approve_editorial", itemId: validId, ownerConfirmed: true }),
+    });
+    expect(response.status).toBe(422);
+    expect(mocks.query).toHaveBeenCalledTimes(1);
+  });
+
+  it("archives an unverified draft without publishing it", async () => {
+    mocks.authorize.mockResolvedValueOnce({ user: { id: "owner-1" } });
+    mocks.query
+      .mockResolvedValueOnce({ rows: [candidate] })
+      .mockResolvedValueOnce({ rows: [{ id: validId }] });
+    const baseUrl = await startServer((req, res) => { void handleAffiliateCommerceRequest(req, res); });
+    const response = await fetch(baseUrl + "/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "archive", itemId: validId, ownerConfirmed: true }),
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ success: true, action: "archived", itemId: validId });
+    expect(String(mocks.query.mock.calls[1][0])).toContain("publication_status='archived'");
+  });
+});
