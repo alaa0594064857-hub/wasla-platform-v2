@@ -283,7 +283,7 @@ export async function handleAffiliateCommerceRequest(req: IncomingMessage, res: 
         amazonLinksEnabled: false,
         turkeyAffiliateProgramConfigured: false
       },
-      note: "Affiliate setup is intentionally paused. No products, prices, images or outbound links are published."
+      note: "Affiliate links, Amazon product data, prices and stock claims are not live. Public editorial recommendations link only to reviewed HTTPS source pages and earn no commission. Unverified AI research drafts remain private until owner review."
     });
   } catch (error) {
     console.error("WASLA affiliate commerce registry error:", error);
@@ -334,8 +334,8 @@ export async function handleAffiliatePublicCatalogRequest(req: IncomingMessage, 
         outbound_path: `/api/affiliate/out/${row.id}`
       }];
     });
-    // Editorial discovery cards are not affiliate offers and never imply local stock,
-    // pricing, checkout, or commission. Only allow the three verified manufacturer hosts.
+    // Editorial cards are owner-reviewed source recommendations, not affiliate offers.
+    // They never imply local stock, pricing, checkout or commission.
     const editorialResult = await db.query(
       `SELECT id,provider_item_id,title_en,title_ar,description_en,description_ar,source_url,last_verified_at
        FROM affiliate_items
