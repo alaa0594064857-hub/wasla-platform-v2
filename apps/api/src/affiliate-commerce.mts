@@ -7,6 +7,50 @@ function reply(res: ServerResponse, status: number, data: Record<string, unknown
   res.end(JSON.stringify(data));
 }
 
+async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown> | null> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of req) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    size += buffer.length;
+    if (size > 16 * 1024) return null;
+    chunks.push(buffer);
+  }
+  try {
+    const parsed: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function safeEditorialSourceUrl(value: unknown): string | null {
+  if (typeof value !== "string" || value.length > 2000) return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || url.username || url.password) return null;
+    const host = url.hostname.toLowerCase().replace(/^www\\./, "");
+    const blocked = [
+      "amazon.com","amazon.ca","amazon.co.uk","amazon.de","amazon.fr","amazon.com.tr",
+      "amazon.co.jp","amazon.com.au","amazon.in","amazon.sg","amazon.ae","amazon.sa",
+      "ebay.com","ebay.co.uk","ebay.de","walmart.com","target.com","bestbuy.com",
+      "aliexpress.com","temu.com","alibaba.com","shein.com"
+    ];
+    if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")
+      || host.startsWith("127.") || host.startsWith("10.") || host.startsWith("192.168.")
+      || /^172\\.(1[6-9]|2[0-9]|3[01])\\./.test(host) || host.startsWith("169.254.")
+      || host === "0.0.0.0" || host === "::1" || host === "[::1]" || !host.includes(".")
+      || blocked.some(domain => host === domain || host.endsWith("." + domain))) return null;
+    url.search = "";
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
 export function approvedOutboundUrl(value: unknown, marketplaceDomain: unknown): string | null {
   if (typeof value !== "string" || typeof marketplaceDomain !== "string") return null;
   try {
@@ -137,11 +181,20 @@ export async function ensureAffiliateCommerceTables(): Promise<void> {
         `INSERT INTO affiliate_items
           (program_id, provider_item_id, title_en, title_ar, description_en, description_ar,
            source_url, content_source, destination_countries, publication_status, last_verified_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,'editorial','[]'::jsonb,'draft',NOW())
+         VALUES ($1,$2,$3,$4,$5,$6,$7,'editorial','[]'::jsonb,'published',NOW())
          ON CONFLICT (program_id, provider_item_id) DO NOTHING`,
         [programId, item.id, item.titleEn, item.titleAr, item.descriptionEn, item.descriptionAr, item.sourceUrl]
       );
     }
+    await db.query(`UPDATE affiliate_items SET publication_status='published',updated_at=NOW()
+      WHERE content_source='editorial' AND publication_status='draft'
+        AND provider_item_id IN (
+          'editorial:owala-freesip-stainless-24oz',
+          'editorial:stanley-quencher-h2o-flowstate-40oz',
+          'retail:vatan-anker-312-25w',
+          'retail:vatan-anker-nano-45w-black',
+          'editorial:anker-735-nano-ii-65w'
+        )`);
   }
 }
 
@@ -150,6 +203,59 @@ export async function handleAffiliateCommerceRequest(req: IncomingMessage, res: 
     const access = await authorizePlatformPermission(req, res, "platform.manage");
     if (!access) return;
     const db = getDatabasePool();
+    if (req.method === "POST") {
+      const body = await readJsonBody(req);
+      const itemId = typeof body?.itemId === "string" ? body.itemId : "";
+      if (!body || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(itemId)
+        || body.ownerConfirmed !== true) {
+        reply(res, 400, { success: false, error: "A valid item ID and owner confirmation are required" });
+        return;
+      }
+      const candidateResult = await db.query(
+        `SELECT id,title_en,title_ar,description_en,description_ar,source_url,outbound_url,content_source,publication_status
+         FROM affiliate_items WHERE id=$1 LIMIT 1`,
+        [itemId]
+      );
+      const candidate = candidateResult.rows[0] as Record<string, unknown> | undefined;
+      if (!candidate) { reply(res, 404, { success: false, error: "Research candidate not found" }); return; }
+      if (candidate.content_source !== "unverified" || candidate.publication_status !== "draft" || candidate.outbound_url != null) {
+        reply(res, 409, { success: false, error: "Only private, unverified research drafts can be reviewed here" });
+        return;
+      }
+      if (body.action === "archive") {
+        const archived = await db.query(
+          `UPDATE affiliate_items SET publication_status='archived',updated_at=NOW()
+           WHERE id=$1 AND content_source='unverified' AND publication_status='draft' AND outbound_url IS NULL
+           RETURNING id`,
+          [itemId]
+        );
+        if (!archived.rows[0]) { reply(res, 409, { success: false, error: "Candidate state changed; refresh and try again" }); return; }
+        reply(res, 200, { success: true, action: "archived", itemId });
+        return;
+      }
+      if (body.action === "approve_editorial") {
+        const sourceUrl = safeEditorialSourceUrl(candidate.source_url);
+        const complete = ["title_en","title_ar","description_en","description_ar"].every(
+          key => typeof candidate[key] === "string" && String(candidate[key]).trim().length > 0
+        );
+        if (!sourceUrl || !complete) {
+          reply(res, 422, { success: false, error: "A safe HTTPS source and complete bilingual copy are required" });
+          return;
+        }
+        const approved = await db.query(
+          `UPDATE affiliate_items
+           SET content_source='editorial',publication_status='published',source_url=$2,last_verified_at=NOW(),updated_at=NOW()
+           WHERE id=$1 AND content_source='unverified' AND publication_status='draft' AND outbound_url IS NULL
+           RETURNING id`,
+          [itemId, sourceUrl]
+        );
+        if (!approved.rows[0]) { reply(res, 409, { success: false, error: "Candidate state changed; refresh and try again" }); return; }
+        reply(res, 200, { success: true, action: "published_editorial", itemId, commission: false });
+        return;
+      }
+      reply(res, 400, { success: false, error: "Unsupported review action" });
+      return;
+    }
     if (req.method !== "GET") { reply(res, 405, { success: false, error: "Method not allowed" }); return; }
     const programs = await db.query(
       `SELECT p.id,p.provider,p.marketplace,p.marketplace_domain,p.destination_country,p.currency,
@@ -232,13 +338,15 @@ export async function handleAffiliatePublicCatalogRequest(req: IncomingMessage, 
     const editorialResult = await db.query(
       `SELECT id,provider_item_id,title_en,title_ar,description_en,description_ar,source_url,last_verified_at
        FROM affiliate_items
-       WHERE content_source='editorial' AND publication_status='draft'
+       WHERE content_source='editorial' AND publication_status='published'
          AND last_verified_at >= NOW() - INTERVAL '30 days'
+         AND (destination_countries ? $1 OR destination_countries='[]'::jsonb)
          AND (provider_item_id NOT LIKE 'retail:vatan-%' OR $1 = 'TR')
        ORDER BY created_at ASC LIMIT 20`,
       [country]
     );
-    const allowedEditorialHosts = new Set(["owalalife.com", "www.stanley1913.com", "www.anker.com", "www.vatanbilgisayar.com"]);
+    // Editorial cards can only become public through an explicit owner review action.
+    // Source URLs remain HTTPS-only and retailer marketplaces are excluded.
     // Official product-page imagery; Vatan thumbnails are served by its product CDN.
     const editorialImages: Record<string, string> = {
       "editorial:owala-freesip-stainless-24oz": "https://cdn.shopify.com/s/files/1/0439/2537/3087/files/OW_24oz_Free_Sip_Plaid_and_Simple_fall_stock_2026_SC_copy_dddd98b0-02e0-4909-adc3-6545e0096ded.png?crop=center&height=500&v=1788969809&width=500",
@@ -250,8 +358,9 @@ export async function handleAffiliatePublicCatalogRequest(req: IncomingMessage, 
     const editorialItems = editorialResult.rows.flatMap((row: Record<string, unknown>) => {
       if (typeof row.id !== "string" || typeof row.source_url !== "string") return [];
       try {
-        const url = new URL(row.source_url);
-        if (url.protocol !== "https:" || !allowedEditorialHosts.has(url.hostname)) return [];
+        const sourceUrl = safeEditorialSourceUrl(row.source_url);
+        if (!sourceUrl) return [];
+        const url = new URL(sourceUrl);
         return [{
           id: row.id,
           kind: "editorial",
@@ -264,7 +373,7 @@ export async function handleAffiliatePublicCatalogRequest(req: IncomingMessage, 
           destination_country: country,
           disclosure_en: "",
           disclosure_ar: "",
-          outbound_path: url.toString()
+          outbound_path: sourceUrl
         }];
       } catch { return []; }
     });
