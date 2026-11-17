@@ -75,6 +75,7 @@ describe("AI affiliate product research candidates", () => {
     expect(String(insert?.[0])).toContain("'draft'");
     expect(String(insert?.[0])).toContain("last_verified_at");
     expect(String(insert?.[0])).toContain("'draft',NULL");
+    expect(String(insert?.[0])).toContain(`'["US"]'::jsonb`);
     expect(String(insert?.[0])).not.toContain("outbound_url");
     expect(insert?.[1]?.[0]).toBe("program-1");
   });
