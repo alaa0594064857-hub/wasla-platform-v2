@@ -66,7 +66,7 @@ export default function AffiliateCommercePage() {
     pending: "بانتظار موافقة الشبكة", paused: "متوقف عن النشر", active: "مقبول ومفعّل", rejected: "مرفوض", terms: "مراجعة الشروط", termsDone: "تمت مراجعة الشروط", termsMissing: "لم تتم مراجعة الشروط", approval: "حالة الموافقة",
     country: "السوق", currency: "العملة", tracking: "معرّف الشريك",
     products: "المنتجات", publishedCount: "المنشور", clicks: "النقرات المسجلة", disclosure: "إفصاح العمولة",
-    safety: "حواجز الحماية", publicPublishing: "النشر العام", amazonApi: "واجهة Amazon Product API", amazonLinks: "روابط Amazon", turkeyProgram: "برنامج العمولة في تركيا", enabled: "مفعّل", disabled: "معطّل", connected: "متصل", notConnected: "غير متصل", configured: "مهيأ", notConfigured: "غير مهيأ", note: "لا توجد روابط عمولة أو أسعار أو بيانات منتجات من Amazon منشورة. تظهر بعض بطاقات التوصية التحريرية للزوار بروابط إلى مصادر العلامات الرسمية فقط، دون عمولة أو ادعاء بتوفر المخزون. تبقى مرشحات بحث Gemini غير الموثقة خاصة حتى مراجعتها.",
+    safety: "حواجز الحماية", publicPublishing: "نشر عروض العمولة", amazonApi: "واجهة Amazon Product API", amazonLinks: "روابط Amazon", turkeyProgram: "برنامج العمولة في تركيا", enabled: "مفعّل", disabled: "معطّل", connected: "متصل", notConnected: "غير متصل", configured: "مهيأ", notConfigured: "غير مهيأ", note: "لا توجد روابط عمولة أو أسعار أو بيانات منتجات من Amazon منشورة. تظهر بعض بطاقات التوصية التحريرية للزوار بروابط إلى مصادر العلامات الرسمية فقط، دون عمولة أو ادعاء بتوفر المخزون. تبقى مرشحات بحث Gemini غير الموثقة خاصة حتى مراجعتها.",
     owner: "هذه الصفحة مخصصة لمالك المنصة.", loading: "جارٍ تحميل إعدادات التسويق بالعمولة...",
     error: "تعذر تحميل بيانات التسويق بالعمولة.", candidates: "مرشحات المنتجات والمحتوى التحريري", draft: "مسودة بحث بالذكاء — خاصة", editorial: "توصية تحريرية ظاهرة للزوار · دون عمولة", published: "منشور", archived: "مؤرشف",
     source: "المصدر الرسمي", researchSource: "رابط بحث يحتاج تحققًا", noCandidates: "لا توجد منتجات مرشحة بعد.", reviewed: "آخر تحقق",
@@ -80,7 +80,7 @@ export default function AffiliateCommercePage() {
     pending: "Awaiting network approval", paused: "Publishing paused", active: "Approved and active", rejected: "Rejected", terms: "Terms review", termsDone: "Terms reviewed", termsMissing: "Terms not reviewed", approval: "Approval status",
     country: "Market", currency: "Currency", tracking: "Associate ID",
     products: "Items", publishedCount: "Published", clicks: "Recorded clicks", disclosure: "Affiliate disclosure",
-    safety: "Safety gates", publicPublishing: "Public publishing", amazonApi: "Amazon Product API", amazonLinks: "Amazon links", turkeyProgram: "Turkey affiliate program", enabled: "Enabled", disabled: "Disabled", connected: "Connected", notConnected: "Not connected", configured: "Configured", notConfigured: "Not configured", note: "No affiliate links, prices or Amazon product data are live. A small set of editorial discovery cards is visible to visitors and links only to official brand sources, without commission or stock claims. Unverified Gemini research candidates remain private until reviewed.",
+    safety: "Safety gates", publicPublishing: "Affiliate offer publishing", amazonApi: "Amazon Product API", amazonLinks: "Amazon links", turkeyProgram: "Turkey affiliate program", enabled: "Enabled", disabled: "Disabled", connected: "Connected", notConnected: "Not connected", configured: "Configured", notConfigured: "Not configured", note: "No affiliate links, prices or Amazon product data are live. A small set of editorial discovery cards is visible to visitors and links only to official brand sources, without commission or stock claims. Unverified Gemini research candidates remain private until reviewed.",
     owner: "This page is restricted to the platform owner.", loading: "Loading affiliate settings...",
     error: "Could not load affiliate commerce data.", candidates: "Product research and editorial candidates", draft: "AI research draft — private", editorial: "Public editorial recommendation · no commission", published: "Published", archived: "Archived",
     source: "Official source", researchSource: "Research source — verify", noCandidates: "No product candidates yet.", reviewed: "Last checked",
@@ -92,9 +92,7 @@ export default function AffiliateCommercePage() {
 
 
   async function reviewCandidate(itemId: string, action: "approve_editorial" | "archive") {
-    const confirmation = action === "approve_editorial"
-      ? (ar ? t.reviewConfirm : t.reviewConfirm)
-      : t.archiveConfirm;
+    const confirmation = action === "approve_editorial" ? t.reviewConfirm : t.archiveConfirm;
     if (!window.confirm(confirmation)) return;
     setSavingItemId(itemId);
     setActionError(false);
