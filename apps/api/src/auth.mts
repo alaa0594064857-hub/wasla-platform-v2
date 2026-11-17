@@ -5,6 +5,7 @@ import { expo } from "@better-auth/expo";
 
 import { getDrizzleDatabase, getDatabasePool } from "./database.js";
 import * as schema from "./db/schema.js";
+import { buildBetterAuthTrustedOrigins } from "./trusted-origins.mjs";
 
 const secret = process.env.BETTER_AUTH_SECRET;
 const resendApiKey = process.env.RESEND_API_KEY;
@@ -17,13 +18,10 @@ if (process.env.NODE_ENV === "production" && !secret) {
   throw new Error("BETTER_AUTH_SECRET is required in production");
 }
 
-const trustedOrigins = [...new Set([
-  "https://wasla-web-4a64.onrender.com",
-  "https://wasla.trade",
-  "http://localhost:3000",
-  "wasla://",
-  ...(process.env.BETTER_AUTH_TRUSTED_ORIGINS ?? "").split(","),
-].map((origin) => origin.trim()).filter(Boolean))];
+const trustedOrigins = buildBetterAuthTrustedOrigins(
+  process.env.NODE_ENV,
+  process.env.BETTER_AUTH_TRUSTED_ORIGINS,
+);
 
 async function sendWASLAEmail(
   recipient: string,
