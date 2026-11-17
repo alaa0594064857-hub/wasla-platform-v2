@@ -296,7 +296,7 @@ export async function handleAffiliateCommerceRequest(req: IncomingMessage, res: 
   }
 }
 
-/** Public catalog only exposes recently verified items from approved, terms-reviewed programs. */
+/** Public catalog exposes approved affiliate offers and owner-reviewed editorial source recommendations. */
 export async function handleAffiliatePublicCatalogRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method !== "GET") { reply(res, 405, { success: false, error: "Method not allowed" }); return; }
   const country = new URL(req.url || "/", "http://localhost").searchParams.get("country")?.toUpperCase();
