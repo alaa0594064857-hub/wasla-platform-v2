@@ -88,6 +88,8 @@ describe("public affiliate catalog", () => {
     const response = await fetch(baseUrl + "/?country=US");
     expect(response.status).toBe(200);
     const editorialSql = String(mocks.query.mock.calls[1][0]);
+    expect(editorialSql).toContain("publication_status='published'");
+    expect(editorialSql).toContain("destination_countries ? $1");
     expect(editorialSql).toContain("provider_item_id NOT LIKE 'retail:vatan-%' OR $1 = 'TR'");
   });
 });
