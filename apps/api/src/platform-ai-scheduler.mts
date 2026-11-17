@@ -469,12 +469,14 @@ export async function runScheduledAiTasks() {
   const productDraftSeeded=await seedAffiliateProductDraftTask();
   const seeded=weekOneSeeded+productDraftSeeded;
   const recovered=await recoverLegacyRateLimitedTasks();
+  const waitingForSearchProvider=!process.env.TAVILY_API_KEY?.trim()
+    && process.env.GEMINI_USE_GOOGLE_SEARCH_GROUNDING!=="true";
   let processed=0;
   // One provider request per scheduler run prevents bursts against free-tier quotas.
   if(await processOne()) processed=1;
   // Owner preference: no daily reports or notifications. Weekly summaries are reviewed manually.
-  console.info("WASLA scheduler finished",{seeded,processed});
-  return { paused:false, seeded, recovered, processed };
+  console.info("WASLA scheduler finished",{seeded,processed,waitingForSearchProvider});
+  return { paused:false, seeded, recovered, processed, waitingForSearchProvider };
 }
 
 async function main() {
