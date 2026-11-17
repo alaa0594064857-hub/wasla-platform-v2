@@ -32,10 +32,10 @@ function normalizedHttpsUrl(value: unknown): string | null {
   try {
     const url = new URL(value);
     if (url.protocol !== "https:" || url.username || url.password) return null;
-    const host = url.hostname.toLowerCase().replace(/^www\\./, "");
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
     const privateHost = host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")
       || host.startsWith("127.") || host.startsWith("10.") || host.startsWith("192.168.")
-      || /^172\\.(1[6-9]|2[0-9]|3[01])\\./.test(host) || host.startsWith("169.254.")
+      || /^172\.(1[6-9]|2[0-9]|3[01])\./.test(host) || host.startsWith("169.254.")
       || host === "0.0.0.0" || host === "::1" || host === "[::1]" || !host.includes(".");
     if (privateHost) return null;
     url.search = "";
