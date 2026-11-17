@@ -242,7 +242,7 @@ async function processOne():Promise<boolean> {
   const claim=await db.query(`WITH candidate AS (
     SELECT id FROM platform_ai_team_tasks WHERE status='queued' AND attempt_count<3
       AND (next_attempt_at IS NULL OR next_attempt_at<=NOW())
-    ORDER BY priority DESC,created_at ASC FOR UPDATE SKIP LOCKED LIMIT 1
+    ORDER BY priority DESC,CASE WHEN idempotency_key='affiliate-product-drafts-v1' THEN 0 ELSE 1 END,created_at ASC FOR UPDATE SKIP LOCKED LIMIT 1
   ) UPDATE platform_ai_team_tasks t SET status='running',attempt_count=attempt_count+1,
     started_at=NOW(),updated_at=NOW() FROM candidate c WHERE t.id=c.id
     RETURNING t.id,t.owner_user_id,t.specialist_key,t.title,t.input_text,t.input_context,t.attempt_count`);
