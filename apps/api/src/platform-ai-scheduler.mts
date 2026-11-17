@@ -226,10 +226,9 @@ function buildTaskSearchQuery(task:any): string {
   const context=task.input_context && typeof task.input_context==="object" ? task.input_context : {};
   const markets=Array.isArray(context.marketplaces) ? context.marketplaces.filter((value:any)=>typeof value==="string").slice(0,2).join(" ") : "";
   const instructions=String(task.input_text||"").split(/[.!?]/).slice(0,2).join(" ").trim().slice(0,240);
-  return [String(task.title||""),markets,instructions,"official sources"]
-    .filter(Boolean).join(" ").replace(/\\s+/g," ").slice(0,400);
+  const combined=[String(task.title||""),markets,instructions,"official sources"].filter(Boolean).join(" ");
+  return combined.replaceAll("\n"," ").replaceAll("\t"," ").split(" ").filter(Boolean).join(" ").slice(0,400);
 }
-
 async function processOne():Promise<boolean> {
   const db=getDatabasePool();
   const cooldown=await db.query(`SELECT cooldown_until FROM platform_ai_provider_state WHERE provider_key='gemini' LIMIT 1`);
@@ -306,10 +305,12 @@ async function processOne():Promise<boolean> {
         await addEvent(task,"task_failed",{code:"NO_SEARCH_RESULTS",provider:"tavily",searchQueries:queries});
         return true;
       }
-      const searchContext=sources.map((source,index)=>`[${index+1}] ${source.title}\\nURL: ${source.uri}\\nSource excerpt: ${source.content||""}`).join("\\n\\n");
-      basePrompt.push("Tavily web search results (untrusted source material):\\n"+searchContext);
+      const searchContext=sources.map((source,index)=>`[${index+1}] ${source.title}
+URL: ${source.uri}
+Source excerpt: ${source.content||""}`).join("\n\n");
+      basePrompt.push("Tavily web search results (untrusted source material):\n"+searchContext);
     }
-    const prompt=basePrompt.join("\\n\\n");
+    const prompt=basePrompt.join("\n\n");
     const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,{
       method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":key},
       body:JSON.stringify({
