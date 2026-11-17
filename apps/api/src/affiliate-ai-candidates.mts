@@ -120,7 +120,7 @@ export async function saveAffiliateResearchCandidates(args: {
   const candidates = extractAffiliateResearchCandidates(args.answer, args.groundedSourceUrls);
   if (candidates.length === 0) return 0;
 
-  // The API service creates the affiliate tables at startup; the cron worker stays auth-independent.
+  // The API service creates affiliate tables at startup; keep the cron worker auth-independent.
   const db = getDatabasePool();
   const program = await db.query(
     "SELECT id FROM affiliate_programs WHERE provider='amazon_associates' AND marketplace_domain='amazon.com' LIMIT 1",
@@ -135,7 +135,7 @@ export async function saveAffiliateResearchCandidates(args: {
       `INSERT INTO affiliate_items
         (program_id,provider_item_id,title_en,title_ar,description_en,description_ar,
          source_url,content_source,destination_countries,publication_status,last_verified_at)
-       VALUES($1,$2,$3,$4,$5,$6,$7,'unverified','[]'::jsonb,'draft',NULL)
+       VALUES($1,$2,$3,$4,$5,$6,$7,'unverified','["US"]'::jsonb,'draft',NULL)
        ON CONFLICT(program_id,provider_item_id) DO NOTHING
        RETURNING id`,
       [programId,providerItemId,candidate.title_en,candidate.title_ar,
