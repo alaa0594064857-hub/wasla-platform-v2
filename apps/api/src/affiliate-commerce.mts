@@ -108,6 +108,7 @@ export async function ensureAffiliateCommerceTables(): Promise<void> {
       publication_status varchar(16) NOT NULL DEFAULT 'draft'
         CHECK (publication_status IN ('draft','published','archived')),
       last_verified_at timestamptz,
+      owner_reviewed_at timestamptz,
       source_url text,
       created_at timestamptz NOT NULL DEFAULT NOW(),
       updated_at timestamptz NOT NULL DEFAULT NOW(),
@@ -115,6 +116,7 @@ export async function ensureAffiliateCommerceTables(): Promise<void> {
     )
   `);
   await db.query(`ALTER TABLE affiliate_items ADD COLUMN IF NOT EXISTS source_url text`);
+  await db.query(`ALTER TABLE affiliate_items ADD COLUMN IF NOT EXISTS owner_reviewed_at timestamptz`);
   await db.query(`CREATE INDEX IF NOT EXISTS affiliate_items_public_idx ON affiliate_items(program_id, publication_status, updated_at DESC)`);
   await db.query(`
     CREATE TABLE IF NOT EXISTS affiliate_clicks (
@@ -186,13 +188,14 @@ export async function ensureAffiliateCommerceTables(): Promise<void> {
         `INSERT INTO affiliate_items
           (program_id, provider_item_id, title_en, title_ar, description_en, description_ar,
            source_url, content_source, destination_countries, publication_status, last_verified_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,'editorial','[]'::jsonb,'published',NOW())
+         VALUES ($1,$2,$3,$4,$5,$6,$7,'editorial','[]'::jsonb,'draft',NOW())
          ON CONFLICT (program_id, provider_item_id) DO NOTHING`,
         [programId, item.id, item.titleEn, item.titleAr, item.descriptionEn, item.descriptionAr, item.sourceUrl]
       );
     }
-    await db.query(`UPDATE affiliate_items SET publication_status='published',updated_at=NOW()
-      WHERE content_source='editorial' AND publication_status='draft'
+    // Seeded editorial recommendations remain private until the owner explicitly reviews them.
+    await db.query(`UPDATE affiliate_items SET publication_status='draft',owner_reviewed_at=NULL,updated_at=NOW()
+      WHERE content_source='editorial' AND publication_status='published' AND owner_reviewed_at IS NULL
         AND provider_item_id IN (
           'editorial:owala-freesip-stainless-24oz',
           'editorial:stanley-quencher-h2o-flowstate-40oz',
@@ -223,14 +226,14 @@ export async function handleAffiliateCommerceRequest(req: IncomingMessage, res: 
       );
       const candidate = candidateResult.rows[0] as Record<string, unknown> | undefined;
       if (!candidate) { reply(res, 404, { success: false, error: "Research candidate not found" }); return; }
-      if (candidate.content_source !== "unverified" || candidate.publication_status !== "draft" || candidate.outbound_url != null) {
+      if (!["unverified","editorial"].includes(String(candidate.content_source)) || candidate.publication_status !== "draft" || candidate.outbound_url != null) {
         reply(res, 409, { success: false, error: "Only private, unverified research drafts can be reviewed here" });
         return;
       }
       if (body.action === "archive") {
         const archived = await db.query(
           `UPDATE affiliate_items SET publication_status='archived',updated_at=NOW()
-           WHERE id=$1 AND content_source='unverified' AND publication_status='draft' AND outbound_url IS NULL
+           WHERE id=$1 AND content_source IN ('unverified','editorial') AND publication_status='draft' AND outbound_url IS NULL
            RETURNING id`,
           [itemId]
         );
@@ -249,8 +252,8 @@ export async function handleAffiliateCommerceRequest(req: IncomingMessage, res: 
         }
         const approved = await db.query(
           `UPDATE affiliate_items
-           SET content_source='editorial',publication_status='published',source_url=$2,last_verified_at=NOW(),updated_at=NOW()
-           WHERE id=$1 AND content_source='unverified' AND publication_status='draft' AND outbound_url IS NULL
+           SET content_source='editorial',publication_status='published',source_url=$2,last_verified_at=NOW(),owner_reviewed_at=NOW(),updated_at=NOW()
+           WHERE id=$1 AND content_source IN ('unverified','editorial') AND publication_status='draft' AND outbound_url IS NULL
            RETURNING id`,
           [itemId, sourceUrl]
         );
@@ -274,7 +277,7 @@ export async function handleAffiliateCommerceRequest(req: IncomingMessage, res: 
     );
     const items = await db.query(
       `SELECT id, provider_item_id, title_en, title_ar, description_en, description_ar,
-              source_url, content_source, publication_status, last_verified_at
+              source_url, content_source, publication_status, last_verified_at, owner_reviewed_at
        FROM affiliate_items ORDER BY created_at DESC LIMIT 100`
     );
     reply(res, 200, {
@@ -345,6 +348,7 @@ export async function handleAffiliatePublicCatalogRequest(req: IncomingMessage, 
        FROM affiliate_items
        WHERE content_source='editorial' AND publication_status='published'
          AND last_verified_at >= NOW() - INTERVAL '30 days'
+         AND owner_reviewed_at IS NOT NULL
          AND (destination_countries ? $1 OR destination_countries='[]'::jsonb)
          AND (provider_item_id NOT LIKE 'retail:vatan-%' OR $1 = 'TR')
        ORDER BY created_at ASC LIMIT 20`,
