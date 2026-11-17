@@ -32,6 +32,9 @@ export default function AffiliateCommercePage() {
   const [denied, setDenied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [savingItemId, setSavingItemId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState(false);
+  const [actionMessage, setActionMessage] = useState("");
 
   useEffect(() => {
     if (isPending) return;
@@ -63,21 +66,58 @@ export default function AffiliateCommercePage() {
     pending: "بانتظار موافقة الشبكة", paused: "متوقف عن النشر", active: "مقبول ومفعّل", rejected: "مرفوض", terms: "مراجعة الشروط", termsDone: "تمت مراجعة الشروط", termsMissing: "لم تتم مراجعة الشروط", approval: "حالة الموافقة",
     country: "السوق", currency: "العملة", tracking: "معرّف الشريك",
     products: "المنتجات", publishedCount: "المنشور", clicks: "النقرات المسجلة", disclosure: "إفصاح العمولة",
-    safety: "حواجز الحماية", publicPublishing: "النشر العام", amazonApi: "واجهة Amazon Product API", amazonLinks: "روابط Amazon", turkeyProgram: "برنامج العمولة في تركيا", enabled: "مفعّل", disabled: "معطّل", connected: "متصل", notConnected: "غير متصل", configured: "مهيأ", notConfigured: "غير مهيأ", note: "لا توجد روابط عمولة أو أسعار أو بيانات منتجات من Amazon منشورة. تظهر بعض بطاقات التوصية التحريرية للزوار بروابط إلى مصادر العلامات الرسمية فقط، دون عمولة أو ادعاء بتوفر المخزون. تبقى مرشحات بحث Gemini غير الموثقة خاصة حتى مراجعتها.",
+    safety: "حواجز الحماية", publicPublishing: "نشر عروض العمولة", amazonApi: "واجهة Amazon Product API", amazonLinks: "روابط Amazon", turkeyProgram: "برنامج العمولة في تركيا", enabled: "مفعّل", disabled: "معطّل", connected: "متصل", notConnected: "غير متصل", configured: "مهيأ", notConfigured: "غير مهيأ", note: "لا توجد روابط عمولة أو أسعار أو بيانات منتجات من Amazon منشورة. تظهر بعض بطاقات التوصية التحريرية للزوار بروابط إلى مصادر العلامات الرسمية فقط، دون عمولة أو ادعاء بتوفر المخزون. تبقى مرشحات بحث Gemini غير الموثقة خاصة حتى مراجعتها.",
     owner: "هذه الصفحة مخصصة لمالك المنصة.", loading: "جارٍ تحميل إعدادات التسويق بالعمولة...",
     error: "تعذر تحميل بيانات التسويق بالعمولة.", candidates: "مرشحات المنتجات والمحتوى التحريري", draft: "مسودة بحث بالذكاء — خاصة", editorial: "توصية تحريرية ظاهرة للزوار · دون عمولة", published: "منشور", archived: "مؤرشف",
-    source: "المصدر الرسمي", researchSource: "رابط بحث يحتاج تحققًا", noCandidates: "لا توجد منتجات مرشحة بعد.", reviewed: "آخر تحقق"
+    source: "المصدر الرسمي", researchSource: "رابط بحث يحتاج تحققًا", noCandidates: "لا توجد منتجات مرشحة بعد.", reviewed: "آخر تحقق",
+    approve: "اعتماد ونشر كتوصية تحريرية دون عمولة", archive: "أرشفة المرشح", processing: "جارٍ التنفيذ...",
+    reviewConfirm: "هل راجعت المصدر وتأكدت من صحة المعلومات وأن النص أصلي؟ سيظهر هذا العنصر كتوصية تحريرية عامة دون سعر أو مخزون أو رابط عمولة.",
+    archiveConfirm: "هل تريد أرشفة هذا المرشح؟ لن يظهر للزوار.", approved: "تم اعتماد التوصية ونشرها دون عمولة.",
+    archivedSuccess: "تمت أرشفة المرشح.", actionError: "تعذر تنفيذ المراجعة. حدّث الصفحة وحاول مجدداً."
   } : {
     title: "Affiliate commerce", back: "Back to official store",
     subtitle: "Manage referral programs separately from WASLA-owned products, inventory and orders.",
     pending: "Awaiting network approval", paused: "Publishing paused", active: "Approved and active", rejected: "Rejected", terms: "Terms review", termsDone: "Terms reviewed", termsMissing: "Terms not reviewed", approval: "Approval status",
     country: "Market", currency: "Currency", tracking: "Associate ID",
     products: "Items", publishedCount: "Published", clicks: "Recorded clicks", disclosure: "Affiliate disclosure",
-    safety: "Safety gates", publicPublishing: "Public publishing", amazonApi: "Amazon Product API", amazonLinks: "Amazon links", turkeyProgram: "Turkey affiliate program", enabled: "Enabled", disabled: "Disabled", connected: "Connected", notConnected: "Not connected", configured: "Configured", notConfigured: "Not configured", note: "No affiliate links, prices or Amazon product data are live. A small set of editorial discovery cards is visible to visitors and links only to official brand sources, without commission or stock claims. Unverified Gemini research candidates remain private until reviewed.",
+    safety: "Safety gates", publicPublishing: "Affiliate offer publishing", amazonApi: "Amazon Product API", amazonLinks: "Amazon links", turkeyProgram: "Turkey affiliate program", enabled: "Enabled", disabled: "Disabled", connected: "Connected", notConnected: "Not connected", configured: "Configured", notConfigured: "Not configured", note: "No affiliate links, prices or Amazon product data are live. A small set of editorial discovery cards is visible to visitors and links only to official brand sources, without commission or stock claims. Unverified Gemini research candidates remain private until reviewed.",
     owner: "This page is restricted to the platform owner.", loading: "Loading affiliate settings...",
     error: "Could not load affiliate commerce data.", candidates: "Product research and editorial candidates", draft: "AI research draft — private", editorial: "Public editorial recommendation · no commission", published: "Published", archived: "Archived",
-    source: "Official source", researchSource: "Research source — verify", noCandidates: "No product candidates yet.", reviewed: "Last checked"
+    source: "Official source", researchSource: "Research source — verify", noCandidates: "No product candidates yet.", reviewed: "Last checked",
+    approve: "Approve and publish as editorial · no commission", archive: "Archive candidate", processing: "Working...",
+    reviewConfirm: "Have you reviewed the source and confirmed the facts and original wording? This will publish a public editorial recommendation with no price, stock claim or affiliate link.",
+    archiveConfirm: "Archive this candidate? It will not be shown to visitors.", approved: "Editorial recommendation published without commission.",
+    archivedSuccess: "Candidate archived.", actionError: "Review action failed. Refresh the page and try again."
   };
+
+
+  async function reviewCandidate(itemId: string, action: "approve_editorial" | "archive") {
+    const confirmation = action === "approve_editorial" ? t.reviewConfirm : t.archiveConfirm;
+    if (!window.confirm(confirmation)) return;
+    setSavingItemId(itemId);
+    setActionError(false);
+    setActionMessage("");
+    try {
+      const response = await fetch("/api/platform/affiliate-commerce", {
+        method: "POST",
+        credentials: "include",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, itemId, ownerConfirmed: true }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error("review");
+      const refreshed = await fetch("/api/platform/affiliate-commerce", { credentials: "include", cache: "no-store" });
+      const dashboard = await refreshed.json();
+      if (!refreshed.ok || !dashboard.success) throw new Error("refresh");
+      setData(dashboard);
+      setActionMessage(action === "approve_editorial" ? t.approved : t.archivedSuccess);
+    } catch {
+      setActionError(true);
+    } finally {
+      setSavingItemId(null);
+    }
+  }
 
   if (isPending || loading) return <main className="mx-auto max-w-5xl p-6">{t.loading}</main>;
   if (denied) return <main className="mx-auto max-w-5xl p-6"><h1>{t.owner}</h1><Link href="/owner">{t.back}</Link></main>;
@@ -88,6 +128,8 @@ export default function AffiliateCommercePage() {
       <p className="text-sm text-slate-600">{t.subtitle}</p>
     </header>
     {error ? <p role="alert" className="rounded-xl border border-red-200 p-4 text-red-700">{t.error}</p> : null}
+    {actionError ? <p role="alert" className="rounded-xl border border-red-200 p-4 text-red-700">{t.actionError}</p> : null}
+    {actionMessage ? <p role="status" className="rounded-xl border border-emerald-200 p-4 text-emerald-800">{actionMessage}</p> : null}
     <section className="rounded-2xl border p-4 md:p-6">
       <h2 className="font-bold">{t.safety}</h2>
       <ul className="mt-3 grid gap-2 text-sm">
@@ -134,6 +176,10 @@ export default function AffiliateCommercePage() {
           {item.last_verified_at ? <span>{t.reviewed}: {new Date(item.last_verified_at).toLocaleDateString(ar ? "ar" : "en-US")}</span> : null}
           {item.source_url ? <a className="font-semibold text-amber-800 underline" href={item.source_url} target="_blank" rel="noreferrer">{item.content_source === "editorial" ? t.source : t.researchSource} ↗</a> : null}
         </div>
+        {item.content_source === "unverified" && item.publication_status === "draft" ? <div className="flex flex-wrap gap-2 pt-2">
+          <button type="button" disabled={savingItemId !== null} onClick={() => void reviewCandidate(item.id, "approve_editorial")} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{savingItemId === item.id ? t.processing : t.approve}</button>
+          <button type="button" disabled={savingItemId !== null} onClick={() => void reviewCandidate(item.id, "archive")} className="rounded-xl border px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">{t.archive}</button>
+        </div> : null}
       </article>)}
       {!error && (data?.items.length ?? 0) === 0 ? <p className="rounded-xl border p-4 text-sm text-slate-500">{t.noCandidates}</p> : null}
     </section>
