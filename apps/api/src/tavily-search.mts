@@ -18,7 +18,7 @@ export async function searchTavily(
   apiKey: string,
   fetcher: typeof fetch = fetch,
 ): Promise<TavilySource[]> {
-  const normalizedQuery = query.replace(/\\s+/g, " ").trim().slice(0, 400);
+  const normalizedQuery = query.replace(/\s+/g, " ").trim().slice(0, 400);
   const key = apiKey.trim();
   if (!normalizedQuery) throw new Error("TAVILY_QUERY_REQUIRED");
   if (!key) throw new Error("TAVILY_API_KEY_REQUIRED");
