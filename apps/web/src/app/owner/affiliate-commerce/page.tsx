@@ -16,6 +16,7 @@ type AffiliateItem = {
   id: string; provider_item_id: string; title_en: string | null; title_ar: string | null;
   description_en: string | null; description_ar: string | null; source_url: string | null;
   content_source: string; publication_status: string; last_verified_at: string | null;
+  owner_reviewed_at?: string | null;
 };
 type Dashboard = {
   success: boolean; programs: Program[]; items: AffiliateItem[];
@@ -66,9 +67,9 @@ export default function AffiliateCommercePage() {
     pending: "بانتظار موافقة الشبكة", paused: "متوقف عن النشر", active: "مقبول ومفعّل", rejected: "مرفوض", terms: "مراجعة الشروط", termsDone: "تمت مراجعة الشروط", termsMissing: "لم تتم مراجعة الشروط", approval: "حالة الموافقة",
     country: "السوق", currency: "العملة", tracking: "معرّف الشريك",
     products: "المنتجات", publishedCount: "المنشور", clicks: "النقرات المسجلة", disclosure: "إفصاح العمولة",
-    safety: "حواجز الحماية", publicPublishing: "نشر عروض العمولة", amazonApi: "واجهة Amazon Product API", amazonLinks: "روابط Amazon", turkeyProgram: "برنامج العمولة في تركيا", enabled: "مفعّل", disabled: "معطّل", connected: "متصل", notConnected: "غير متصل", configured: "مهيأ", notConfigured: "غير مهيأ", note: "لا توجد روابط عمولة أو أسعار أو بيانات منتجات من Amazon منشورة. تظهر بعض بطاقات التوصية التحريرية للزوار بروابط إلى مصادر العلامات الرسمية فقط، دون عمولة أو ادعاء بتوفر المخزون. تبقى مرشحات بحث Gemini غير الموثقة خاصة حتى مراجعتها.",
+    safety: "حواجز الحماية", publicPublishing: "نشر عروض العمولة", amazonApi: "واجهة Amazon Product API", amazonLinks: "روابط Amazon", turkeyProgram: "برنامج العمولة في تركيا", enabled: "مفعّل", disabled: "معطّل", connected: "متصل", notConnected: "غير متصل", configured: "مهيأ", notConfigured: "غير مهيأ", note: "لا توجد روابط عمولة أو أسعار أو بيانات منتجات من Amazon منشورة. تبقى التوصيات التحريرية ومسودات بحث الذكاء خاصة حتى مراجعتك واعتمادك لها.",
     owner: "هذه الصفحة مخصصة لمالك المنصة.", loading: "جارٍ تحميل إعدادات التسويق بالعمولة...",
-    error: "تعذر تحميل بيانات التسويق بالعمولة.", candidates: "مرشحات المنتجات والمحتوى التحريري", draft: "مسودة بحث بالذكاء — خاصة", editorial: "توصية تحريرية ظاهرة للزوار · دون عمولة", published: "منشور", archived: "مؤرشف",
+    error: "تعذر تحميل بيانات التسويق بالعمولة.", candidates: "مرشحات المنتجات والمحتوى التحريري", draft: "مسودة بحث بالذكاء — خاصة", editorial: "توصية تحريرية منشورة · دون عمولة", editorialDraft: "توصية تحريرية بانتظار اعتمادك", published: "منشور", archived: "مؤرشف",
     source: "المصدر الرسمي", researchSource: "رابط بحث يحتاج تحققًا", noCandidates: "لا توجد منتجات مرشحة بعد.", reviewed: "آخر تحقق",
     approve: "اعتماد ونشر كتوصية تحريرية دون عمولة", archive: "أرشفة المرشح", processing: "جارٍ التنفيذ...",
     reviewConfirm: "هل راجعت المصدر وتأكدت من صحة المعلومات وأن النص أصلي؟ سيظهر هذا العنصر كتوصية تحريرية عامة دون سعر أو مخزون أو رابط عمولة.",
@@ -80,9 +81,9 @@ export default function AffiliateCommercePage() {
     pending: "Awaiting network approval", paused: "Publishing paused", active: "Approved and active", rejected: "Rejected", terms: "Terms review", termsDone: "Terms reviewed", termsMissing: "Terms not reviewed", approval: "Approval status",
     country: "Market", currency: "Currency", tracking: "Associate ID",
     products: "Items", publishedCount: "Published", clicks: "Recorded clicks", disclosure: "Affiliate disclosure",
-    safety: "Safety gates", publicPublishing: "Affiliate offer publishing", amazonApi: "Amazon Product API", amazonLinks: "Amazon links", turkeyProgram: "Turkey affiliate program", enabled: "Enabled", disabled: "Disabled", connected: "Connected", notConnected: "Not connected", configured: "Configured", notConfigured: "Not configured", note: "No affiliate links, prices or Amazon product data are live. A small set of editorial discovery cards is visible to visitors and links only to official brand sources, without commission or stock claims. Unverified Gemini research candidates remain private until reviewed.",
+    safety: "Safety gates", publicPublishing: "Affiliate offer publishing", amazonApi: "Amazon Product API", amazonLinks: "Amazon links", turkeyProgram: "Turkey affiliate program", enabled: "Enabled", disabled: "Disabled", connected: "Connected", notConnected: "Not connected", configured: "Configured", notConfigured: "Not configured", note: "No affiliate links, prices or Amazon product data are live. Editorial recommendations and AI research drafts remain private until you review and approve them.",
     owner: "This page is restricted to the platform owner.", loading: "Loading affiliate settings...",
-    error: "Could not load affiliate commerce data.", candidates: "Product research and editorial candidates", draft: "AI research draft — private", editorial: "Public editorial recommendation · no commission", published: "Published", archived: "Archived",
+    error: "Could not load affiliate commerce data.", candidates: "Product research and editorial candidates", draft: "AI research draft — private", editorial: "Published editorial recommendation · no commission", editorialDraft: "Editorial recommendation awaiting your approval", published: "Published", archived: "Archived",
     source: "Official source", researchSource: "Research source — verify", noCandidates: "No product candidates yet.", reviewed: "Last checked",
     approve: "Approve and publish as editorial · no commission", archive: "Archive candidate", processing: "Working...",
     reviewConfirm: "Have you reviewed the source and confirmed the facts and original wording? This will publish a public editorial recommendation with no price, stock claim or affiliate link.",
@@ -168,7 +169,7 @@ export default function AffiliateCommercePage() {
       {(data?.items || []).map(item => <article key={item.id} className="space-y-2 rounded-2xl border bg-white p-4 md:p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-bold">{ar ? item.title_ar || item.title_en : item.title_en || item.title_ar}</h3>
-          <span className={`rounded-full px-3 py-1 text-xs ${item.content_source === "editorial" ? "bg-sky-50 text-sky-800" : item.publication_status === "published" ? "bg-emerald-50 text-emerald-800" : item.publication_status === "archived" ? "bg-slate-100 text-slate-700" : "bg-amber-50 text-amber-900"}`}>{item.content_source === "editorial" ? t.editorial : item.publication_status === "published" ? t.published : item.publication_status === "archived" ? t.archived : t.draft}</span>
+          <span className={`rounded-full px-3 py-1 text-xs ${item.content_source === "editorial" ? "bg-sky-50 text-sky-800" : item.publication_status === "published" ? "bg-emerald-50 text-emerald-800" : item.publication_status === "archived" ? "bg-slate-100 text-slate-700" : "bg-amber-50 text-amber-900"}`}>{item.content_source === "editorial" ? (item.publication_status === "published" ? t.editorial : item.publication_status === "archived" ? t.archived : t.editorialDraft) : item.publication_status === "published" ? t.published : item.publication_status === "archived" ? t.archived : t.draft}</span>
         </div>
         <p className="text-sm leading-7 text-slate-600">{ar ? item.description_ar : item.description_en}</p>
         <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
@@ -176,7 +177,7 @@ export default function AffiliateCommercePage() {
           {item.last_verified_at ? <span>{t.reviewed}: {new Date(item.last_verified_at).toLocaleDateString(ar ? "ar" : "en-US")}</span> : null}
           {item.source_url ? <a className="font-semibold text-amber-800 underline" href={item.source_url} target="_blank" rel="noreferrer">{item.content_source === "editorial" ? t.source : t.researchSource} ↗</a> : null}
         </div>
-        {item.content_source === "unverified" && item.publication_status === "draft" ? <div className="flex flex-wrap gap-2 pt-2">
+        {(item.content_source === "unverified" || item.content_source === "editorial") && item.publication_status === "draft" && !item.owner_reviewed_at ? <div className="flex flex-wrap gap-2 pt-2">
           <button type="button" disabled={savingItemId !== null} onClick={() => void reviewCandidate(item.id, "approve_editorial")} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{savingItemId === item.id ? t.processing : t.approve}</button>
           <button type="button" disabled={savingItemId !== null} onClick={() => void reviewCandidate(item.id, "archive")} className="rounded-xl border px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">{t.archive}</button>
         </div> : null}
