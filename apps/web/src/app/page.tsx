@@ -225,7 +225,7 @@ export default function HomePage() {
                   {world.href ? (
                     <>
                       <a className="world-enter" href={world.href}>{world.theme === "store" ? (locale === "ar" ? "استكشف المتجر الرسمي" : "Explore official store") : world.theme === "trade" ? (locale === "ar" ? "افتح مساحة الصفقات" : "Open trade workspace") : world.theme === "messages" ? (locale === "ar" ? "افتح الرسائل" : "Open messages") : world.theme === "ai" ? (locale === "ar" ? "غرفة الذكاء للمالك" : "Owner AI room") : t.enter}<span>↗</span></a>
-                      {world.theme === "store" ? <a className="mt-3 inline-flex text-sm font-semibold text-[#8b6828] underline underline-offset-4" href="/affiliate-store">{locale === "ar" ? "تسوّق عبر برامج الشراكة" : "Shop through partner programs"} ↗</a> : null}
+                      {world.theme === "store" ? <a className="mt-3 inline-flex text-sm font-semibold text-[#8b6828] underline underline-offset-4" href="/affiliate-store">{locale === "ar" ? "استكشف توصيات المنتجات" : "Explore product recommendations"} ↗</a> : null}
                     </>
                   ) : (
                     <span className="world-enter world-enter-disabled" aria-disabled="true">{status}<span>◌</span></span>
