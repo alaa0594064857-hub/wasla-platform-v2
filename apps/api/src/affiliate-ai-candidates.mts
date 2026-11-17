@@ -29,6 +29,8 @@ function normalizedHttpsUrl(value: unknown): string | null {
   try {
     const url = new URL(value);
     if (url.protocol !== "https:" || url.username || url.password) return null;
+    const host = url.hostname.toLowerCase();
+    if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.startsWith("127.") || host === "0.0.0.0" || host === "::1") return null;
     url.search = "";
     url.hash = "";
     url.pathname = url.pathname.replace(/\/+$/, "") || "/";
