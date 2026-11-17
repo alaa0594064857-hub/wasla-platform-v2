@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ query: vi.fn(), ensure: vi.fn() }));
+const mocks = vi.hoisted(() => ({ query: vi.fn() }));
 vi.mock("./database.js", () => ({ getDatabasePool: () => ({ query: mocks.query }) }));
-vi.mock("./affiliate-commerce.mjs", () => ({ ensureAffiliateCommerceTables: mocks.ensure }));
 
 import { extractAffiliateResearchCandidates, saveAffiliateResearchCandidates } from "./affiliate-ai-candidates.mjs";
 
@@ -71,7 +70,6 @@ describe("AI affiliate product research candidates", () => {
     });
 
     expect(created).toBe(1);
-    expect(mocks.ensure).toHaveBeenCalledOnce();
     const insert = mocks.query.mock.calls.find(call => String(call[0]).includes("INSERT INTO affiliate_items"));
     expect(String(insert?.[0])).toContain("'unverified'");
     expect(String(insert?.[0])).toContain("'draft'");
@@ -98,6 +96,5 @@ describe("AI affiliate product research candidates", () => {
     });
     expect(otherSpecialist).toBe(0);
     expect(otherScope).toBe(0);
-    expect(mocks.ensure).not.toHaveBeenCalled();
   });
 });
