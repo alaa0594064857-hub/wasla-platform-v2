@@ -37,6 +37,8 @@ describe("AI affiliate product research candidates", () => {
     const rows = extractAffiliateResearchCandidates(answer([
       valid,
       { ...valid, source_url: "https://amazon.com/dp/B000000000" },
+      { ...valid, source_url: "https://www.amazon.ca/dp/B000000000" },
+      { ...valid, source_url: "https://localhost/product" },
       { ...valid, source_url: "https://unrelated.example/product" },
       { ...valid, title_ar: "" },
     ]), grounded);
