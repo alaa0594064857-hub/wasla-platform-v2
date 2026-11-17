@@ -6,7 +6,7 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const roles: Record<string,string> = {
-  market_researcher:"Research the live public web using Google Search grounding. Find current market evidence and cite source URLs and access date. Distinguish evidence from estimates.",
+  market_researcher:"Research the live public web using the configured search provider. Find current market evidence and cite source URLs and access date. Distinguish evidence from estimates.",
   product_analyst:"Research product identity and specifications from reliable public sources. Separate sourced facts, inference and unknowns. Never invent price, rating, availability or demand.",
   supplier_researcher:"Research official affiliate-program and merchant documentation only. Verify country eligibility, approval requirements, commission terms and API/data rights from primary sources.",
   catalogue_manager:"Prepare private bilingual catalogue copy only from cited, source-backed product facts. Never publish or invent facts.",
@@ -502,6 +502,7 @@ async function main() {
           paused: body.paused === true,
           seeded: Number(body.seeded || 0),
           processed: Number(body.processed || 0),
+          waitingForSearchProvider: body.waitingForSearchProvider === true,
           attempt,
         });
         return;
