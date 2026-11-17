@@ -25,9 +25,8 @@ export async function searchTavily(
 
   const response = await fetcher("https://api.tavily.com/search", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      api_key: key,
       query: normalizedQuery,
       search_depth: "basic",
       max_results: 8,
