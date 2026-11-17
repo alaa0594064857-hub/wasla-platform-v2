@@ -206,7 +206,7 @@ async function seedAffiliateProductDraftTask(): Promise<number> {
   for(const owner of owners.rows) {
     const inserted=await db.query(`INSERT INTO platform_ai_team_tasks
       (owner_user_id,specialist_key,title,input_text,input_context,priority,idempotency_key,input_characters)
-      VALUES($1,'product_analyst',$2,$3,$4::jsonb,5,'affiliate-product-drafts-v1',$6)
+      VALUES($1,'product_analyst',$2,$3,$4::jsonb,5,'affiliate-product-drafts-v1',$5)
       ON CONFLICT(owner_user_id,idempotency_key) DO NOTHING
       RETURNING id,owner_user_id,specialist_key,title`,
       [owner.id,"US affiliate product discovery — grounded catalogue drafts",inputText,
