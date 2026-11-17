@@ -90,6 +90,7 @@ describe("public affiliate catalog", () => {
     const editorialSql = String(mocks.query.mock.calls[1][0]);
     expect(editorialSql).toContain("content_source='editorial'");
     expect(editorialSql).toContain("publication_status='published'");
+    expect(editorialSql).toContain("owner_reviewed_at IS NOT NULL");
     expect(editorialSql).toContain("last_verified_at >= NOW() - INTERVAL '30 days'");
     expect(editorialSql).toContain("destination_countries ? $1");
     expect(editorialSql).toContain("provider_item_id NOT LIKE 'retail:vatan-%' OR $1 = 'TR'");
@@ -189,6 +190,23 @@ describe("owner review of AI research drafts", () => {
     expect(updateSql).toContain("publication_status='published'");
     expect(updateSql).toContain("outbound_url IS NULL");
     expect(mocks.query.mock.calls[1][1]).toEqual([validId, "https://brand.example/products/charger"]);
+  });
+
+  it("allows the owner to explicitly approve a seeded editorial draft", async () => {
+    mocks.authorize.mockResolvedValueOnce({ user: { id: "owner-1" } });
+    mocks.query
+      .mockResolvedValueOnce({ rows: [{ ...candidate, content_source: "editorial" }] })
+      .mockResolvedValueOnce({ rows: [{ id: validId }] });
+    const baseUrl = await startServer((req, res) => { void handleAffiliateCommerceRequest(req, res); });
+    const response = await fetch(baseUrl + "/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "approve_editorial", itemId: validId, ownerConfirmed: true }),
+    });
+    expect(response.status).toBe(200);
+    const updateSql = String(mocks.query.mock.calls[1][0]);
+    expect(updateSql).toContain("owner_reviewed_at=NOW()");
+    expect(updateSql).toContain("content_source IN ('unverified','editorial')");
   });
 
   it("rejects retailer marketplace sources from editorial publication", async () => {
