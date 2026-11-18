@@ -355,23 +355,37 @@ export async function handlePlatformAiTeamTasksRequest(req: IncomingMessage, res
       }
       const approved = action === "approve";
       const nextStatus = approved ? "completed" : "rejected";
-      const updated = await db.query(
-        `UPDATE platform_ai_team_tasks
-         SET status = $3, updated_at = NOW(), finished_at = NOW()
-         WHERE id = $1 AND owner_user_id = $2 AND status = 'needs_owner_review'
-         RETURNING id, specialist_key AS "specialistKey", title, status,
-                   result_text AS "resultText", updated_at AS "updatedAt", finished_at AS "finishedAt"`,
-        [taskId, access.userId, nextStatus],
-      );
-      if (!updated.rows[0]) {
-        reply(res, 409, { success: false, error: "Only a saved result awaiting owner review can be approved or rejected." });
-        return;
+      const client = await db.connect();
+      try {
+        await client.query("BEGIN");
+        const updated = await client.query(
+          `UPDATE platform_ai_team_tasks
+           SET status = $3, updated_at = NOW(), finished_at = NOW()
+           WHERE id = $1 AND owner_user_id = $2 AND status = 'needs_owner_review'
+           RETURNING id, specialist_key AS "specialistKey", title, status,
+                     result_text AS "resultText", updated_at AS "updatedAt", finished_at AS "finishedAt"`,
+          [taskId, access.userId, nextStatus],
+        );
+        if (!updated.rows[0]) {
+          await client.query("ROLLBACK");
+          reply(res, 409, { success: false, error: "Only a saved result awaiting owner review can be approved or rejected." });
+          return;
+        }
+        await client.query(
+          `INSERT INTO platform_ai_team_task_events
+            (task_id, owner_user_id, actor_type, actor_key, event_type, metadata)
+           VALUES ($1,$2,'owner',NULL,$3,$4::jsonb)`,
+          [taskId, access.userId, approved ? "task_result_approved" : "task_result_rejected",
+            JSON.stringify({ note, decision: approved ? "approved" : "rejected" })],
+        );
+        await client.query("COMMIT");
+        reply(res, 200, { success: true, task: updated.rows[0], decision: approved ? "approved" : "rejected" });
+      } catch (error) {
+        await client.query("ROLLBACK").catch(() => undefined);
+        throw error;
+      } finally {
+        client.release();
       }
-      await addEvent(taskId, access.userId, "owner", null, approved ? "task_result_approved" : "task_result_rejected", {
-        note,
-        decision: approved ? "approved" : "rejected",
-      });
-      reply(res, 200, { success: true, task: updated.rows[0], decision: approved ? "approved" : "rejected" });
       return;
     }
 
