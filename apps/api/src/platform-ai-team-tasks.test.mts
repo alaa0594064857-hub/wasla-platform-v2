@@ -176,6 +176,52 @@ describe("WASLA owner digital team task API", () => {
     expect(response.status).toBe(429);
     expect(mocks.query.mock.calls.some(call => String(call[0]).includes("SET status='queued', attempt_count=0"))).toBe(false);
   });
+
+  it("allows the owner to approve only a saved result awaiting review", async () => {
+    mocks.query.mockImplementation(async (sql: string) => {
+      if (String(sql).includes("FROM platform_ai_manager_control WHERE")) {
+        return { rows: [{ enabled: false, pausedReason: "maintenance" }] };
+      }
+      if (String(sql).includes("SET status = $3") && String(sql).includes("needs_owner_review")) {
+        return { rows: [{ id: "11111111-1111-4111-8111-111111111111", specialistKey: "translator", title: "Translate", status: "completed", resultText: "Saved translation" }] };
+      }
+      return { rows: [], rowCount: 0 };
+    });
+    const base = await startServer();
+    const response = await fetch(base + "/api/platform/ai/tasks/11111111-1111-4111-8111-111111111111/approve", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}),
+    });
+    const data = await response.json();
+    expect(response.status).toBe(200);
+    expect(data.decision).toBe("approved");
+    expect(data.task.status).toBe("completed");
+    const update = mocks.query.mock.calls.find(call => String(call[0]).includes("SET status = $3"));
+    expect(update?.[1]).toEqual(["11111111-1111-4111-8111-111111111111", "owner-1", "completed"]);
+    expect(String(update?.[0])).toContain("status = 'needs_owner_review'");
+    expect(mocks.query.mock.calls.some(call => String(call[0]).includes("task_result_approved"))).toBe(true);
+  });
+
+  it("rejects a saved result with an auditable owner decision", async () => {
+    mocks.query.mockImplementation(async (sql: string) => {
+      if (String(sql).includes("FROM platform_ai_manager_control WHERE")) return { rows: [{ enabled: true, pausedReason: null }] };
+      if (String(sql).includes("SET status = $3") && String(sql).includes("needs_owner_review")) {
+        return { rows: [{ id: "11111111-1111-4111-8111-111111111111", specialistKey: "translator", title: "Translate", status: "rejected", resultText: "Saved translation" }] };
+      }
+      return { rows: [], rowCount: 0 };
+    });
+    const base = await startServer();
+    const response = await fetch(base + "/api/platform/ai/tasks/11111111-1111-4111-8111-111111111111/reject", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ note: "Evidence is insufficient." }),
+    });
+    const data = await response.json();
+    expect(response.status).toBe(200);
+    expect(data.decision).toBe("rejected");
+    expect(data.task.status).toBe("rejected");
+    const update = mocks.query.mock.calls.find(call => String(call[0]).includes("SET status = $3"));
+    expect(update?.[1]).toEqual(["11111111-1111-4111-8111-111111111111", "owner-1", "rejected"]);
+    expect(mocks.query.mock.calls.some(call => String(call[0]).includes("task_result_rejected"))).toBe(true);
+  });
+
   it("creates a queued task without executing it and marks owner review as required", async () => {
     const base = await startServer();
     const response = await fetch(base + "/api/platform/ai/tasks", {
