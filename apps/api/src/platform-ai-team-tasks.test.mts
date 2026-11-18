@@ -198,7 +198,7 @@ describe("WASLA owner digital team task API", () => {
     const update = mocks.query.mock.calls.find(call => String(call[0]).includes("SET status = $3"));
     expect(update?.[1]).toEqual(["11111111-1111-4111-8111-111111111111", "owner-1", "completed"]);
     expect(String(update?.[0])).toContain("status = 'needs_owner_review'");
-    expect(mocks.query.mock.calls.some(call => String(call[0]).includes("task_result_approved"))).toBe(true);
+    expect(mocks.query.mock.calls.some(call => String(call[0]).includes("INSERT INTO platform_ai_team_task_events") && call[1]?.[4] === "task_result_approved")).toBe(true);
   });
 
   it("rejects a saved result with an auditable owner decision", async () => {
@@ -219,7 +219,7 @@ describe("WASLA owner digital team task API", () => {
     expect(data.task.status).toBe("rejected");
     const update = mocks.query.mock.calls.find(call => String(call[0]).includes("SET status = $3"));
     expect(update?.[1]).toEqual(["11111111-1111-4111-8111-111111111111", "owner-1", "rejected"]);
-    expect(mocks.query.mock.calls.some(call => String(call[0]).includes("task_result_rejected"))).toBe(true);
+    expect(mocks.query.mock.calls.some(call => String(call[0]).includes("INSERT INTO platform_ai_team_task_events") && call[1]?.[4] === "task_result_rejected")).toBe(true);
   });
 
   it("creates a queued task without executing it and marks owner review as required", async () => {
