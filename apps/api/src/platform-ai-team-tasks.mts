@@ -70,7 +70,7 @@ async function ensureTaskTables(): Promise<void> {
             input_text text NOT NULL,
             input_context jsonb NOT NULL DEFAULT '{}'::jsonb,
             status varchar(32) NOT NULL DEFAULT 'queued'
-              CHECK (status IN ('queued','running','needs_owner_review','completed','failed','cancelled')),
+              CHECK (status IN ('queued','running','needs_owner_review','completed','failed','cancelled','rejected')),
             priority smallint NOT NULL DEFAULT 0 CHECK (priority BETWEEN 0 AND 5),
             attempt_count smallint NOT NULL DEFAULT 0 CHECK (attempt_count BETWEEN 0 AND 3),
             idempotency_key varchar(100),
@@ -86,6 +86,11 @@ async function ensureTaskTables(): Promise<void> {
             finished_at timestamptz,
             UNIQUE(owner_user_id, idempotency_key)
           )
+        `);
+        await client.query(`
+          ALTER TABLE platform_ai_team_tasks DROP CONSTRAINT IF EXISTS platform_ai_team_tasks_status_check;
+          ALTER TABLE platform_ai_team_tasks ADD CONSTRAINT platform_ai_team_tasks_status_check
+            CHECK (status IN ('queued','running','needs_owner_review','completed','failed','cancelled','rejected'));
         `);
         await client.query(`
           CREATE INDEX IF NOT EXISTS platform_ai_team_tasks_owner_created_idx
@@ -151,7 +156,7 @@ export async function handlePlatformAiTeamTasksRequest(req: IncomingMessage, res
   try {
     await ensureTaskTables();
     const url = new URL(req.url || "/", "http://localhost");
-    const match = url.pathname.match(/^\/api\/platform\/ai\/tasks(?:\/(dispatch|[0-9a-f-]{36})(?:\/(execute|cancel|retry))?)?$/i);
+    const match = url.pathname.match(/^\/api\/platform\/ai\/tasks(?:\/(dispatch|[0-9a-f-]{36})(?:\/(execute|cancel|retry|approve|reject))?)?$/i);
     if (!match) { reply(res, 404, { success: false, error: "Task route not found" }); return; }
     const routeToken = match[1];
     const taskId = routeToken && routeToken !== "dispatch" ? routeToken : undefined;
@@ -225,7 +230,7 @@ export async function handlePlatformAiTeamTasksRequest(req: IncomingMessage, res
     }
 
     const control = await getPlatformAiManagerControl();
-    if (!control.enabled && req.method === "POST" && action !== "cancel") {
+    if (!control.enabled && req.method === "POST" && !["cancel", "approve", "reject"].includes(action || "")) {
       reply(res, 423, { success: false, code: "AI_MANAGER_PAUSED", error: "The WASLA AI Manager is paused by the owner." });
       return;
     }
@@ -335,6 +340,38 @@ export async function handlePlatformAiTeamTasksRequest(req: IncomingMessage, res
       if (!task) { reply(res, 500, { success: false, error: "Task could not be created" }); return; }
       if (created) await addEvent(task.id, access.userId, "owner", null, "task_created", { specialistKey: specialist });
       reply(res, created ? 201 : 200, { success: true, task, reusedExistingTask: !created, requiresOwnerReview: true });
+      return;
+    }
+
+    if (req.method === "POST" && taskId && (action === "approve" || action === "reject")) {
+      if (!UUID.test(taskId)) { reply(res, 400, { success: false, error: "Invalid task ID" }); return; }
+      let body: Record<string, unknown> | null;
+      try { body = await readBody(req); }
+      catch (error) { reply(res, error instanceof Error && error.message === "BODY_TOO_LARGE" ? 413 : 400, { success: false, error: "Invalid JSON body" }); return; }
+      const note = body?.note === undefined ? null : safeText(body.note, 1000);
+      if (body?.note !== undefined && !note) {
+        reply(res, 400, { success: false, error: "Review note must be between 1 and 1000 characters." });
+        return;
+      }
+      const approved = action === "approve";
+      const nextStatus = approved ? "completed" : "rejected";
+      const updated = await db.query(
+        `UPDATE platform_ai_team_tasks
+         SET status = $3, updated_at = NOW(), finished_at = NOW()
+         WHERE id = $1 AND owner_user_id = $2 AND status = 'needs_owner_review'
+         RETURNING id, specialist_key AS "specialistKey", title, status,
+                   result_text AS "resultText", updated_at AS "updatedAt", finished_at AS "finishedAt"`,
+        [taskId, access.userId, nextStatus],
+      );
+      if (!updated.rows[0]) {
+        reply(res, 409, { success: false, error: "Only a saved result awaiting owner review can be approved or rejected." });
+        return;
+      }
+      await addEvent(taskId, access.userId, "owner", null, approved ? "task_result_approved" : "task_result_rejected", {
+        note,
+        decision: approved ? "approved" : "rejected",
+      });
+      reply(res, 200, { success: true, task: updated.rows[0], decision: approved ? "approved" : "rejected" });
       return;
     }
 
