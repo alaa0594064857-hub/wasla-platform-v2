@@ -413,6 +413,7 @@ it("notifies the buyer when a merchant accepts a pending request", async () => {
     clientQuery
       .mockResolvedValueOnce({ rowCount: null, rows: [] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "33333333-3333-4333-8333-333333333333", accountId: "44444444-4444-4444-8444-444444444444" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ delivery_enabled: false, pickup_enabled: true, service_areas: [], delivery_fee: null, fee_currency: "USD", preparation_days: null, delivery_note_ar: null, delivery_note_en: null, updated_at: "2026-11-19T00:00:00.000Z" }] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "55555555-5555-4555-8555-555555555555", title: "JPY precision test", sku: null, price: "120.50", currency: "JPY", stockQuantity: 10 }] })
       .mockResolvedValueOnce({ rowCount: null, rows: [] });
 
