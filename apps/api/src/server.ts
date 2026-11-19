@@ -866,6 +866,19 @@ async function handleRequest(
     return;
   }
 
+  const storeDeliverySettingsMatch = requestUrl.pathname.match(/^\\/api\\/stores\\/([^/]+)\\/delivery-settings$/i);
+  if (storeDeliverySettingsMatch) {
+    try {
+      const { handleStoreDeliverySettingsRequest } = await import("./member-store-delivery-settings.mjs");
+      await handleStoreDeliverySettingsRequest(request, response, decodeURIComponent(storeDeliverySettingsMatch[1]));
+    } catch (error) {
+      console.error("WASLA store delivery settings route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Store delivery settings service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const memberStoreOrderMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/orders(?:\/([0-9a-f-]{36}))?$/i);
   if (memberStoreOrderMatch) {
     try {
