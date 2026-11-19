@@ -1,6 +1,6 @@
 # WASLA Low-Cost Revenue Readiness Plan
 
-Status: proposed operating plan; not a claim that these capabilities are already implemented.
+Status: proposed operating plan; existing code surfaces are identified below, but this is not a claim that the complete service is live or commercially ready.
 
 ## Objective
 
@@ -13,6 +13,19 @@ Prepare WASLA to earn its first small, legitimate revenue without waiting for an
 3. **Official WASLA Store margin** — sell only products WASLA is authorized to offer, with a clearly disclosed price and margin.
 4. **Optional promotion services** — offer paid product/store promotion only after the service, duration, price, deliverables, and refund terms are defined and visible.
 
+## Existing code surfaces (not a live-service guarantee)
+
+The repository already contains a substantial first version of the manual brokerage workflow:
+
+- **Buyer/supplier opportunity intake:** `/trade` (`apps/web/src/app/trade/page.tsx`).
+- **Owner opportunity review:** `/owner/trade/opportunities`.
+- **Indicative opportunity matching:** `/owner/trade/matches`.
+- **Bilateral brokerage terms:** `/owner/trade/agreements` and the party-facing `/trade/agreements`.
+- **Commission ledger:** `/owner/trade/commission-ledger`.
+- **Manual commission invoice workspace:** backed by the commission-invoice API and its lifecycle records.
+
+The API contains account-scoped trade negotiation, private opportunity submission/review, separate buyer and supplier acceptance of brokerage terms, commission calculation/duplicate-reference safeguards, and manual invoice status/evidence recording. Automated payment collection, escrow, payout splitting, and tax-certified invoice delivery are not provided by these foundations.
+
 ## No-gateway operating flow
 
 1. Buyer submits a product inquiry or sourcing request through the platform.
@@ -20,7 +33,7 @@ Prepare WASLA to earn its first small, legitimate revenue without waiting for an
 3. The supplier provides a written quote and confirms availability, shipping responsibility, and lead time.
 4. Before an introduction or brokerage service begins, both sides receive the brokerage fee, payer, trigger for earning the fee, and cancellation/refund terms in writing.
 5. Buyer and supplier contract and settle the goods transaction directly using a lawful payment method they independently select. WASLA does not receive or hold the goods payment.
-6. WASLA invoices/collects only its separately agreed service or brokerage fee using a lawful, documented method available to the business. If no compliant collection method is available, record the fee as pending and do not claim it has been collected.
+6. WASLA records its separately agreed service/brokerage fee. An invoice draft or a manually recorded payment-evidence status is not proof that a compliant payment was collected or that a tax-valid invoice was delivered.
 7. Record the order outcome, evidence of delivery/completion, fee status, disputes, and any refund.
 
 ## Required records
@@ -48,15 +61,16 @@ Prepare WASLA to earn its first small, legitimate revenue without waiting for an
 ## Launch gates
 
 A channel is ready to accept money only when:
-- Its service is actually available in the product.
+- Its service is actually available in the product and verified on the hosted deployment.
 - Price, payer, deliverables, fee trigger, cancellation, and refund rules are visible.
 - The legal entity/person is permitted to provide the service and issue the appropriate invoice/receipt.
 - A compliant collection method is confirmed.
+- A manual test with separate buyer and supplier accounts has passed, including authorization/isolation and complete audit records.
 - A manual test has been completed and the resulting records can be reconciled.
 
 ## First practical priority
 
-Prioritize supplier introductions and buyer sourcing requests as a manually supervised service. Do not advertise automated marketplace commissions, payment escrow, or completed online checkout until those features and legal/payment arrangements are verified.
+Prioritize validating the existing buyer/supplier opportunity-to-agreement workflow with two separate accounts, then verify the owner commission ledger and invoice lifecycle. Do not advertise automated marketplace commissions, payment escrow, or completed online checkout until those features and legal/payment arrangements are verified.
 
 ## Explicitly out of scope for this plan
 
