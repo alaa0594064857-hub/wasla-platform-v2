@@ -489,12 +489,13 @@ async function main() {
   const token = process.env.WASLA_SCHEDULER_TOKEN?.trim();
   if (!apiUrl || !token) throw new Error("Scheduler requires database access or secure API trigger configuration");
   let lastError: unknown;
-  for (let attempt = 1; attempt <= 4; attempt++) {
+  for (let attempt = 1; attempt <= 5; attempt++) {
     try {
       const response = await fetch(`${apiUrl}/api/internal/ai/scheduler/run`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        signal: AbortSignal.timeout(15000),
+        // Free Render web instances can need extra time to wake from idle before the scheduler route is ready.
+        signal: AbortSignal.timeout(30000),
       });
       const body = await response.json().catch(() => ({}));
       if (response.ok && body.success === true) {
@@ -509,20 +510,20 @@ async function main() {
       }
 
       const retryable = [502, 503, 504].includes(response.status);
-      if (!retryable || attempt === 4) {
+      if (!retryable || attempt === 5) {
         throw new Error(`Scheduler API returned ${response.status}`);
       }
       lastError = new Error(`Scheduler API returned ${response.status}`);
     } catch (error) {
       lastError = error;
-      if (attempt === 4) break;
+      if (attempt === 5) break;
       if (error instanceof Error && error.message.startsWith("Scheduler API returned ")) {
         const status = Number(error.message.match(/\d+$/)?.[0]);
         if (![502, 503, 504].includes(status)) throw error;
       }
     }
 
-    const delayMs = [5000, 10000, 20000][attempt - 1];
+    const delayMs = [10000, 20000, 30000, 30000][attempt - 1];
     console.warn("WASLA scheduler API temporarily unavailable; retrying", {
       attempt,
       nextAttempt: attempt + 1,
