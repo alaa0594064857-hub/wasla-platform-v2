@@ -7,7 +7,8 @@ import { authClient } from "@/lib/auth-client";
 import { useLocale } from "@/components/locale-provider";
 
 type Product = { id: string; title: string; description?: string; price: string; currency: string; imageUrl?: string; videoUrl?: string; sellerCheckoutUrl?: string | null; storeName: string; storeSlug: string };
-type DeliveryOptions = { deliveryEnabled: boolean; pickupEnabled: boolean; serviceAreas: string[]; deliveryFee: string | null; feeCurrency: string; preparationDays: number; deliveryNoteAr: string | null; deliveryNoteEn: string | null };\ntype ProductReview = { id: string; rating: number; title: string | null; body: string; createdAt: string; buyerLabel: string; storeResponse?: string | null; storeResponseCreatedAt?: string | null };
+type DeliveryOptions = { deliveryEnabled: boolean; pickupEnabled: boolean; serviceAreas: string[]; deliveryFee: string | null; feeCurrency: string; preparationDays: number; deliveryNoteAr: string | null; deliveryNoteEn: string | null };
+type ProductReview = { id: string; rating: number; title: string | null; body: string; createdAt: string; buyerLabel: string; storeResponse?: string | null; storeResponseCreatedAt?: string | null };
 
 function formatProductPrice(value: string, currency: string, locale: "ar" | "en") {
   const amount = Number(value);
