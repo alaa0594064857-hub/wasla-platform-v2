@@ -866,7 +866,7 @@ async function handleRequest(
     return;
   }
 
-  const publicStoreDeliverySettingsMatch = requestUrl.pathname.match(/^\\/api\\/public\\/stores\\/([^/]+)\\/delivery-settings$/i);
+  const publicStoreDeliverySettingsMatch = requestUrl.pathname.match(/^\/api\/public\/stores\/([^/]+)\/delivery-settings$/i);
   if (publicStoreDeliverySettingsMatch) {
     try {
       const { handlePublicStoreDeliverySettingsRequest } = await import("./member-store-delivery-settings.mjs");
