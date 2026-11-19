@@ -37,7 +37,11 @@ export default function PublicProductPage() {
   const [orderSubmitted, setOrderSubmitted] = useState(false);
   const [inquiryOpen, setInquiryOpen] = useState(false);
   const [inquiryText, setInquiryText] = useState("");
-  const [quantity, setQuantity] = useState("1");\n  const [deliveryOptions, setDeliveryOptions] = useState<DeliveryOptions | null>(null);\n  const [fulfilmentMethod, setFulfilmentMethod] = useState<"delivery" | "pickup">("delivery");\n  const [serviceArea, setServiceArea] = useState("");\n  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [quantity, setQuantity] = useState("1");
+  const [deliveryOptions, setDeliveryOptions] = useState<DeliveryOptions | null>(null);
+  const [fulfilmentMethod, setFulfilmentMethod] = useState<"delivery" | "pickup">("delivery");
+  const [serviceArea, setServiceArea] = useState("");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
   const [reviews, setReviews] = useState<ProductReview[]>([]);
   const [reviewSummary, setReviewSummary] = useState<{ count: number; average: string } | null>(null);
   const [reviewRating, setReviewRating] = useState("5");
