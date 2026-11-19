@@ -229,7 +229,6 @@ export async function handleMemberStoreOrdersRequest(
 
     const client = await pool.connect();
     try {
-      await client.query(`ALTER TABLE member_store_orders ADD COLUMN IF NOT EXISTS fulfilment_snapshot jsonb`);
       await client.query("BEGIN");
       const store = await client.query(
         "SELECT id, account_id AS \"accountId\", return_policy AS \"returnPolicy\", return_policy_version AS \"returnPolicyVersion\" FROM stores WHERE slug = $1 AND status = 'active' FOR SHARE",
