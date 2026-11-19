@@ -7,7 +7,7 @@ import { authClient } from "@/lib/auth-client";
 import { useLocale } from "@/components/locale-provider";
 
 type Product = { id: string; title: string; description?: string; price: string; currency: string; imageUrl?: string; videoUrl?: string; sellerCheckoutUrl?: string | null; storeName: string; storeSlug: string };
-type ProductReview = { id: string; rating: number; title: string | null; body: string; createdAt: string; buyerLabel: string; storeResponse?: string | null; storeResponseCreatedAt?: string | null };
+type DeliveryOptions = { deliveryEnabled: boolean; pickupEnabled: boolean; serviceAreas: string[]; deliveryFee: string | null; feeCurrency: string; preparationDays: number; deliveryNoteAr: string | null; deliveryNoteEn: string | null };\ntype ProductReview = { id: string; rating: number; title: string | null; body: string; createdAt: string; buyerLabel: string; storeResponse?: string | null; storeResponseCreatedAt?: string | null };
 
 function formatProductPrice(value: string, currency: string, locale: "ar" | "en") {
   const amount = Number(value);
@@ -36,7 +36,7 @@ export default function PublicProductPage() {
   const [orderSubmitted, setOrderSubmitted] = useState(false);
   const [inquiryOpen, setInquiryOpen] = useState(false);
   const [inquiryText, setInquiryText] = useState("");
-  const [quantity, setQuantity] = useState("1");
+  const [quantity, setQuantity] = useState("1");\n  const [deliveryOptions, setDeliveryOptions] = useState<DeliveryOptions | null>(null);\n  const [fulfilmentMethod, setFulfilmentMethod] = useState<"delivery" | "pickup">("delivery");\n  const [serviceArea, setServiceArea] = useState("");\n  const [deliveryAddress, setDeliveryAddress] = useState("");
   const [reviews, setReviews] = useState<ProductReview[]>([]);
   const [reviewSummary, setReviewSummary] = useState<{ count: number; average: string } | null>(null);
   const [reviewRating, setReviewRating] = useState("5");
@@ -57,6 +57,16 @@ export default function PublicProductPage() {
   }, [params.id, ar]);
 
   useEffect(() => {
+  useEffect(() => {
+    if (!product?.storeSlug) return;
+    let active = true;
+    fetch(`/api/public/stores/${encodeURIComponent(product.storeSlug)}/delivery-settings`, { cache: "no-store" })
+      .then(async response => { const data = await response.json(); if (!response.ok || !data.success) throw new Error("delivery"); return data.settings as DeliveryOptions | null; })
+      .then(settings => { if (active) { setDeliveryOptions(settings); setFulfilmentMethod(settings?.deliveryEnabled ? "delivery" : "pickup"); setServiceArea(settings?.serviceAreas?.[0] ?? ""); } })
+      .catch(() => { if (active) setDeliveryOptions(null); });
+    return () => { active = false; };
+  }, [product?.storeSlug]);
+
     if (!product?.id) return;
     let active = true;
     fetch(`/api/products/${encodeURIComponent(product.id)}/reviews`, { cache: "no-store" })
@@ -111,7 +121,7 @@ export default function PublicProductPage() {
       const response = await fetch(`/api/stores/${encodeURIComponent(product.storeSlug)}/orders`, {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() },
-        body: JSON.stringify({ items: [{ productId: product.id, quantity: count }] })
+        body: JSON.stringify({ items: [{ productId: product.id, quantity: count }], fulfilmentMethod, serviceArea: fulfilmentMethod === "delivery" ? serviceArea : null, deliveryAddress: fulfilmentMethod === "delivery" ? deliveryAddress : null })
       });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(typeof data.error === "string" ? data.error : "order");
@@ -164,7 +174,28 @@ export default function PublicProductPage() {
           </video>}
         </div>
         <div className="flex flex-col"><Link href={`/store/${product.storeSlug}`} className="text-sm text-[#9b792f] underline">{product.storeName}</Link><h1 className="mt-3 text-3xl font-bold">{product.title}</h1><p className="mt-4 whitespace-pre-wrap text-sm leading-8 text-slate-600">{product.description}</p><p className="mt-6 text-2xl font-bold text-[#9b792f]">{formatProductPrice(product.price, product.currency, ar ? "ar" : "en")}</p>
-          <div className="mt-8 rounded-xl border border-[#d8bd7c] bg-[#fffaf0] p-4 text-sm leading-7 text-slate-700"><strong className="block text-[#14233b]">{ar ? "طلب وليس شراءً مدفوعاً" : "Request, not a paid purchase"}</strong><p className="mt-1">{ar ? "إرسال الطلب يبلّغ المتجر برغبتك فقط. سيؤكد البائع التوفر والسعر النهائي والشحن أولاً؛ لا يتم تحصيل المال أو حجز المخزون أو إنشاء شحنة عند إرسال الطلب." : "Submitting tells the store you are interested. The seller must confirm availability, final pricing and shipping first; no payment is collected, stock reserved or shipment created when you submit this request."}</p></div><div className="mt-5 space-y-3"><label className="block text-sm font-semibold">{ar ? "الكمية المطلوبة" : "Quantity"}<input type="number" min="1" max="10000" step="1" value={quantity} onChange={event => setQuantity(event.target.value)} className="mt-2 block w-28 rounded-lg border border-[#e5dfd1] px-3 py-2" /></label><button disabled={busy} onClick={() => void requestOrder()} className="rounded-xl bg-[#b89545] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">{ar ? "إرسال طلب للمتجر" : "Request from store"}</button>{orderSubmitted && <Link href={`/store/${encodeURIComponent(product.storeSlug)}/orders`} className="inline-flex items-center rounded-xl border border-[#b89545] px-5 py-3 text-sm font-semibold text-[#14233b]">{ar ? "متابعة طلباتي" : "Track my requests"} ↗</Link>}</div><div className="mt-4 flex flex-wrap gap-3"><button disabled={busy} onClick={() => void contactSeller()} className="rounded-xl bg-[#14233b] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">{ar ? "مراسلة البائع" : "Message seller"}</button><button type="button" disabled={busy} onClick={() => { if (!session?.user) { router.push("/login"); return; } setInquiryOpen(value => !value); setMessage(""); }} className="rounded-xl border border-[#b89545] px-5 py-3 text-sm font-semibold text-[#14233b] disabled:opacity-50">{ar ? "استفسار عن المنتج" : "Ask about product"}</button></div>
+          <div className="mt-8 rounded-xl border border-[#d8bd7c] bg-[#fffaf0] p-4 text-sm leading-7 text-slate-700"><strong className="block text-[#14233b]">{ar ? "طلب وليس شراءً مدفوعاً" : "Request, not a paid purchase"}</strong><p className="mt-1">{ar ? "إرسال الطلب يبلّغ المتجر برغبتك فقط. سيؤكد البائع التوفر والسعر النهائي والشحن أولاً؛ لا يتم تحصيل المال أو حجز المخزون أو إنشاء شحنة عند إرسال الطلب." : "Submitting tells the store you are interested. The seller must confirm availability, final pricing and shipping first; no payment is collected, stock reserved or shipment created when you submit this request."}</p></div>{deliveryOptions && <section className="mt-5 space-y-3 rounded-xl border border-[#e5dfd1] bg-[#fbfaf6] p-4">
+            <h2 className="font-semibold">{ar ? "طريقة الاستلام" : "Fulfilment method"}</h2>
+            <div className="flex flex-wrap gap-4 text-sm">
+              {deliveryOptions.deliveryEnabled && <label className="flex items-center gap-2"><input type="radio" name="fulfilment" checked={fulfilmentMethod==="delivery"} onChange={()=>setFulfilmentMethod("delivery")}/>{ar?"التوصيل إلى العنوان":"Delivery to address"}</label>}
+              {deliveryOptions.pickupEnabled && <label className="flex items-center gap-2"><input type="radio" name="fulfilment" checked={fulfilmentMethod==="pickup"} onChange={()=>setFulfilmentMethod("pickup")}/>{ar?"الاستلام من المتجر":"Store pickup"}</label>}
+            </div>
+            {fulfilmentMethod==="delivery" && <>
+              <label className="block text-sm font-semibold">{ar?"المدينة أو المنطقة":"City or service area"}
+                <select value={serviceArea} onChange={event=>setServiceArea(event.target.value)} className="mt-2 block w-full rounded-lg border border-[#e5dfd1] bg-white px-3 py-2">{deliveryOptions.serviceAreas.map(area=><option key={area} value={area}>{area}</option>)}</select>
+              </label>
+              <label className="block text-sm font-semibold">{ar?"عنوان التوصيل بالتفصيل":"Delivery address"}
+                <textarea value={deliveryAddress} onChange={event=>setDeliveryAddress(event.target.value)} minLength={10} maxLength={1000} rows={3} className="mt-2 block w-full rounded-lg border border-[#e5dfd1] bg-white px-3 py-2" placeholder={ar?"الشارع، الحي، تفاصيل الوصول...":"Street, district, and delivery details..."}/>
+              </label>
+              <p className="text-xs leading-6 text-slate-600">{deliveryOptions.deliveryFee===null
+                ? (ar?"رسوم التوصيل غير محددة وستُؤكد معك قبل قبول الطلب.":"Delivery fee is not set and will be confirmed before the order is accepted.")
+                : (ar?`رسوم التوصيل المعلنة: ${formatProductPrice(deliveryOptions.deliveryFee,deliveryOptions.feeCurrency,"ar")}`:`Listed delivery fee: ${formatProductPrice(deliveryOptions.deliveryFee,deliveryOptions.feeCurrency,"en")}`)}
+                {" "}{ar?`مدة التجهيز التقديرية: ${deliveryOptions.preparationDays} يوم.`:`Estimated preparation: ${deliveryOptions.preparationDays} day(s).`}</p>
+              {(ar?deliveryOptions.deliveryNoteAr:deliveryOptions.deliveryNoteEn) && <p className="text-xs leading-6 text-slate-600">{ar?deliveryOptions.deliveryNoteAr:deliveryOptions.deliveryNoteEn}</p>}
+            </>}
+          </section>}
+          {!deliveryOptions && <p className="mt-4 rounded-lg bg-slate-50 p-3 text-xs leading-6 text-slate-500">{ar?"لم يحدد المتجر خيارات التوصيل أو الاستلام بعد؛ تواصل مع البائع للاستفسار.":"The store has not configured delivery or pickup yet; contact the seller for details."}</p>}
+          <div className="mt-5 space-y-3"><label className="block text-sm font-semibold">{ar ? "الكمية المطلوبة" : "Quantity"}<input type="number" min="1" max="10000" step="1" value={quantity} onChange={event => setQuantity(event.target.value)} className="mt-2 block w-28 rounded-lg border border-[#e5dfd1] px-3 py-2" /></label><button disabled={busy || !deliveryOptions || (fulfilmentMethod==="delivery" && (serviceArea.length<2 || deliveryAddress.trim().length<10)) || (fulfilmentMethod==="pickup" && !deliveryOptions?.pickupEnabled)} onClick={() => void requestOrder()} className="rounded-xl bg-[#b89545] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">{ar ? "إرسال طلب للمتجر" : "Request from store"}</button>{orderSubmitted && <Link href={`/store/${encodeURIComponent(product.storeSlug)}/orders`} className="inline-flex items-center rounded-xl border border-[#b89545] px-5 py-3 text-sm font-semibold text-[#14233b]">{ar ? "متابعة طلباتي" : "Track my requests"} ↗</Link>}</div><div className="mt-4 flex flex-wrap gap-3"><button disabled={busy} onClick={() => void contactSeller()} className="rounded-xl bg-[#14233b] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">{ar ? "مراسلة البائع" : "Message seller"}</button><button type="button" disabled={busy} onClick={() => { if (!session?.user) { router.push("/login"); return; } setInquiryOpen(value => !value); setMessage(""); }} className="rounded-xl border border-[#b89545] px-5 py-3 text-sm font-semibold text-[#14233b] disabled:opacity-50">{ar ? "استفسار عن المنتج" : "Ask about product"}</button></div>
           {inquiryOpen && <form onSubmit={event => { event.preventDefault(); void submitInquiry(); }} className="mt-4 grid gap-3 rounded-xl border border-[#e5dfd1] bg-[#fbfaf6] p-4">
             <label htmlFor="product-inquiry" className="text-sm font-semibold">{ar ? "اكتب سؤالك للبائع" : "Write your question to the seller"}</label>
             <textarea id="product-inquiry" value={inquiryText} onChange={event => setInquiryText(event.target.value)} minLength={5} maxLength={2000} required rows={4} className="w-full rounded-lg border border-[#e5dfd1] bg-white px-3 py-2 text-sm" placeholder={ar ? "اسأل عن المقاس أو المواصفات أو التوفر..." : "Ask about size, specifications, or availability..."}/>
