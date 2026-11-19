@@ -146,3 +146,30 @@ export async function handleStoreDeliverySettingsRequest(req: IncomingMessage, r
     send(res, 500, { success: false, error: "Could not save delivery settings" });
   } finally { client.release(); }
 }
+
+/** Public storefront projection: exposes only merchant-published fulfilment options. */
+export async function handlePublicStoreDeliverySettingsRequest(_req: IncomingMessage, res: ServerResponse, slug: string): Promise<void> {
+  const pool = getDatabasePool();
+  try {
+    const result = await pool.query(
+      `SELECT d.delivery_enabled AS "deliveryEnabled", d.pickup_enabled AS "pickupEnabled",
+        d.service_areas AS "serviceAreas", d.delivery_fee::text AS "deliveryFee",
+        d.fee_currency AS "feeCurrency", d.preparation_days AS "preparationDays",
+        d.delivery_note_ar AS "deliveryNoteAr", d.delivery_note_en AS "deliveryNoteEn"
+       FROM stores s JOIN member_store_delivery_settings d ON d.store_id=s.id
+       WHERE s.slug=$1 AND s.status='active' AND (d.delivery_enabled OR d.pickup_enabled)
+       LIMIT 1`, [slug],
+    );
+    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" });
+    res.end(JSON.stringify({ success: true, settings: result.rows[0] ?? null }));
+  } catch (error) {
+    if ((error as { code?: string })?.code === "42P01") {
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+      res.end(JSON.stringify({ success: true, settings: null }));
+      return;
+    }
+    console.error("WASLA public store delivery settings error:", error);
+    res.writeHead(500, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+    res.end(JSON.stringify({ success: false, error: "Could not load delivery options" }));
+  }
+}
