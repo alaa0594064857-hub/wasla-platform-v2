@@ -349,7 +349,6 @@ it("notifies the buyer when a merchant accepts a pending request", async () => {
       .mockResolvedValueOnce({ rowCount: null, rows: [] }) // begin
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "33333333-3333-4333-8333-333333333333", accountId: "44444444-4444-4444-8444-444444444444" }] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ delivery_enabled: false, pickup_enabled: true, service_areas: [], delivery_fee: null, fee_currency: "USD", preparation_days: null, delivery_note_ar: null, delivery_note_en: null, updated_at: "2026-11-19T00:00:00.000Z" }] })
-      .mockResolvedValueOnce({ rowCount: 1, rows: [{ delivery_enabled: false, pickup_enabled: true, service_areas: [], delivery_fee: null, fee_currency: "USD", preparation_days: null, delivery_note_ar: null, delivery_note_en: null, updated_at: "2026-11-19T00:00:00.000Z" }] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "55555555-5555-4555-8555-555555555555", title: "Test item", sku: "SKU-1", price: "12.50", currency: "USD", stockQuantity: 4 }] })
       .mockResolvedValueOnce({ rowCount: 0, rows: [] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "66666666-6666-4666-8666-666666666666", orderNumber: "WS-TEST-1", status: "pending_merchant_review" }] })
@@ -389,6 +388,7 @@ it("notifies the buyer when a merchant accepts a pending request", async () => {
     clientQuery
       .mockResolvedValueOnce({ rowCount: null, rows: [] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "33333333-3333-4333-8333-333333333333", accountId: "44444444-4444-4444-8444-444444444444" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ delivery_enabled: false, pickup_enabled: true, service_areas: [], delivery_fee: null, fee_currency: "USD", preparation_days: null, delivery_note_ar: null, delivery_note_en: null, updated_at: "2026-11-19T00:00:00.000Z" }] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "55555555-5555-4555-8555-555555555555", title: "Currency test", sku: null, price, currency, stockQuantity: 10 }] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "66666666-6666-4666-8666-666666666666", orderNumber: "WS-CURRENCY", status: "pending_merchant_review" }] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [] })
@@ -425,7 +425,7 @@ it("notifies the buyer when a merchant accepts a pending request", async () => {
     });
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({ success: false, error: "Order total or currency precision is invalid" });
-    expect(clientQuery).toHaveBeenCalledTimes(4);
+    expect(clientQuery).toHaveBeenCalledTimes(5);
   });
 
   it("allows an authorized merchant to ship an accepted order with secure tracking details", async () => {
