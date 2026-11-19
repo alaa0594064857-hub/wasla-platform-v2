@@ -600,6 +600,7 @@ export async function ensureMemberStoreOrderTables(): Promise<void> {
         UNIQUE (store_id, buyer_user_id, idempotency_key)
       )
     `);
+    await client.query(`ALTER TABLE member_store_orders ADD COLUMN IF NOT EXISTS fulfilment_snapshot jsonb`);
     await client.query(`
       ALTER TABLE member_store_orders
         ADD COLUMN IF NOT EXISTS carrier_name varchar(100),
