@@ -139,7 +139,7 @@ export async function handleMemberStoreOrdersRequest(
     const result = await pool.query(
       `SELECT o.id, o.order_number AS "orderNumber", o.store_id AS "storeId",
               o.buyer_user_id AS "buyerUserId", o.status, o.currency, o.items,
-              o.subtotal::text AS subtotal, o.buyer_note AS "buyerNote",
+              o.subtotal::text AS subtotal, o.buyer_note AS "buyerNote",\n              o.fulfilment_snapshot AS "fulfilmentSnapshot",
               o.return_policy_snapshot AS "returnPolicySnapshot", o.return_policy_version AS "returnPolicyVersion",
               o.merchant_note AS "merchantNote",
               o.carrier_name AS "carrierName", o.tracking_number AS "trackingNumber",
