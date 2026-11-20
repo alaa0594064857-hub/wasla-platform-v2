@@ -600,6 +600,22 @@ export async function ensureMemberStoreOrderTables(): Promise<void> {
         UNIQUE (store_id, buyer_user_id, idempotency_key)
       )
     `);
+    await client.query(`ALTER TABLE member_store_orders ADD COLUMN IF NOT EXISTS fulfilment_snapshot jsonb`);
+    await client.query(`CREATE TABLE IF NOT EXISTS member_store_delivery_settings (
+      store_id uuid PRIMARY KEY REFERENCES stores(id) ON DELETE CASCADE,
+      delivery_enabled boolean NOT NULL DEFAULT false,
+      pickup_enabled boolean NOT NULL DEFAULT false,
+      service_areas jsonb NOT NULL DEFAULT '[]'::jsonb,
+      delivery_fee numeric(12,2),
+      fee_currency varchar(3) NOT NULL DEFAULT 'USD',
+      preparation_days integer NOT NULL DEFAULT 0 CHECK (preparation_days BETWEEN 0 AND 90),
+      delivery_note_ar varchar(1000),
+      delivery_note_en varchar(1000),
+      updated_by uuid REFERENCES users(id) ON DELETE SET NULL,
+      updated_at timestamptz NOT NULL DEFAULT NOW(),
+      CHECK (delivery_fee IS NULL OR delivery_fee >= 0),
+      CHECK (delivery_enabled OR pickup_enabled)
+    )`);
     await client.query(`
       ALTER TABLE member_store_orders
         ADD COLUMN IF NOT EXISTS carrier_name varchar(100),

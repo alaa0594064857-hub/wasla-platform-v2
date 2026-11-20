@@ -348,6 +348,7 @@ it("notifies the buyer when a merchant accepts a pending request", async () => {
     clientQuery
       .mockResolvedValueOnce({ rowCount: null, rows: [] }) // begin
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "33333333-3333-4333-8333-333333333333", accountId: "44444444-4444-4444-8444-444444444444" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ delivery_enabled: false, pickup_enabled: true, service_areas: [], delivery_fee: null, fee_currency: "USD", preparation_days: null, delivery_note_ar: null, delivery_note_en: null, updated_at: "2026-11-19T00:00:00.000Z" }] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "55555555-5555-4555-8555-555555555555", title: "Test item", sku: "SKU-1", price: "12.50", currency: "USD", stockQuantity: 4 }] })
       .mockResolvedValueOnce({ rowCount: 0, rows: [] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "66666666-6666-4666-8666-666666666666", orderNumber: "WS-TEST-1", status: "pending_merchant_review" }] })
@@ -359,13 +360,13 @@ it("notifies the buyer when a merchant accepts a pending request", async () => {
     const response = await fetch(`${baseUrl}/api/stores/demo/orders`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Idempotency-Key": "buyer-order-001" },
-      body: JSON.stringify({ items: [{ productId: "55555555-5555-4555-8555-555555555555", quantity: 2 }] }),
+      body: JSON.stringify({ fulfilmentMethod: "pickup", items: [{ productId: "55555555-5555-4555-8555-555555555555", quantity: 2 }] }),
     });
 
     expect(response.status).toBe(201);
     const responseBody = await response.json();
     expect(responseBody).toMatchObject({ success: true, order: { orderNumber: expect.any(String) } });
-    const notificationCall = clientQuery.mock.calls[6];
+    const notificationCall = clientQuery.mock.calls[7];
     expect(String(notificationCall[0])).toContain("INSERT INTO notifications");
     expect(String(notificationCall[0])).toContain("store_members");
     expect(String(notificationCall[0])).toContain("account_members");
@@ -387,6 +388,7 @@ it("notifies the buyer when a merchant accepts a pending request", async () => {
     clientQuery
       .mockResolvedValueOnce({ rowCount: null, rows: [] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "33333333-3333-4333-8333-333333333333", accountId: "44444444-4444-4444-8444-444444444444" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ delivery_enabled: false, pickup_enabled: true, service_areas: [], delivery_fee: null, fee_currency: "USD", preparation_days: null, delivery_note_ar: null, delivery_note_en: null, updated_at: "2026-11-19T00:00:00.000Z" }] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "55555555-5555-4555-8555-555555555555", title: "Currency test", sku: null, price, currency, stockQuantity: 10 }] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "66666666-6666-4666-8666-666666666666", orderNumber: "WS-CURRENCY", status: "pending_merchant_review" }] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [] })
@@ -397,20 +399,21 @@ it("notifies the buyer when a merchant accepts a pending request", async () => {
     const response = await fetch(`${baseUrl}/api/stores/demo/orders`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{ productId: "55555555-5555-4555-8555-555555555555", quantity }] }),
+      body: JSON.stringify({ fulfilmentMethod: "pickup", items: [{ productId: "55555555-5555-4555-8555-555555555555", quantity }] }),
     });
 
     expect(response.status).toBe(201);
-    const insertValues = clientQuery.mock.calls[3][1] as unknown[];
+    const insertValues = clientQuery.mock.calls[4][1] as unknown[];
     expect(insertValues[3]).toBe(currency);
     expect(insertValues[5]).toBe(expectedSubtotal);
-    expect(String(clientQuery.mock.calls[3][0])).toContain("subtotal");
+    expect(String(clientQuery.mock.calls[4][0])).toContain("subtotal");
   });
 
   it("rejects prices with more fractional digits than the currency allows", async () => {
     clientQuery
       .mockResolvedValueOnce({ rowCount: null, rows: [] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "33333333-3333-4333-8333-333333333333", accountId: "44444444-4444-4444-8444-444444444444" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ delivery_enabled: false, pickup_enabled: true, service_areas: [], delivery_fee: null, fee_currency: "USD", preparation_days: null, delivery_note_ar: null, delivery_note_en: null, updated_at: "2026-11-19T00:00:00.000Z" }] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "55555555-5555-4555-8555-555555555555", title: "JPY precision test", sku: null, price: "120.50", currency: "JPY", stockQuantity: 10 }] })
       .mockResolvedValueOnce({ rowCount: null, rows: [] });
 
@@ -418,11 +421,11 @@ it("notifies the buyer when a merchant accepts a pending request", async () => {
     const response = await fetch(`${baseUrl}/api/stores/demo/orders`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [{ productId: "55555555-5555-4555-8555-555555555555", quantity: 1 }] }),
+      body: JSON.stringify({ fulfilmentMethod: "pickup", items: [{ productId: "55555555-5555-4555-8555-555555555555", quantity: 1 }] }),
     });
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({ success: false, error: "Order total or currency precision is invalid" });
-    expect(clientQuery).toHaveBeenCalledTimes(4);
+    expect(clientQuery).toHaveBeenCalledTimes(5);
   });
 
   it("allows an authorized merchant to ship an accepted order with secure tracking details", async () => {

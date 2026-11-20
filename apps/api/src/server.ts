@@ -866,6 +866,32 @@ async function handleRequest(
     return;
   }
 
+  const publicStoreDeliverySettingsMatch = requestUrl.pathname.match(/^\/api\/public\/stores\/([^/]+)\/delivery-settings$/i);
+  if (publicStoreDeliverySettingsMatch) {
+    try {
+      const { handlePublicStoreDeliverySettingsRequest } = await import("./member-store-delivery-settings.mjs");
+      await handlePublicStoreDeliverySettingsRequest(request, response, decodeURIComponent(publicStoreDeliverySettingsMatch[1]));
+    } catch (error) {
+      console.error("WASLA public store delivery settings route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Public delivery settings service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
+  const storeDeliverySettingsMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/delivery-settings$/i);
+  if (storeDeliverySettingsMatch) {
+    try {
+      const { handleStoreDeliverySettingsRequest } = await import("./member-store-delivery-settings.mjs");
+      await handleStoreDeliverySettingsRequest(request, response, decodeURIComponent(storeDeliverySettingsMatch[1]));
+    } catch (error) {
+      console.error("WASLA store delivery settings route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Store delivery settings service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   const memberStoreOrderMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/orders(?:\/([0-9a-f-]{36}))?$/i);
   if (memberStoreOrderMatch) {
     try {

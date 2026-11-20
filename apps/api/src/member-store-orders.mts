@@ -140,6 +140,7 @@ export async function handleMemberStoreOrdersRequest(
       `SELECT o.id, o.order_number AS "orderNumber", o.store_id AS "storeId",
               o.buyer_user_id AS "buyerUserId", o.status, o.currency, o.items,
               o.subtotal::text AS subtotal, o.buyer_note AS "buyerNote",
+              o.fulfilment_snapshot AS "fulfilmentSnapshot",
               o.return_policy_snapshot AS "returnPolicySnapshot", o.return_policy_version AS "returnPolicyVersion",
               o.merchant_note AS "merchantNote",
               o.carrier_name AS "carrierName", o.tracking_number AS "trackingNumber",
@@ -214,6 +215,19 @@ export async function handleMemberStoreOrdersRequest(
       return;
     }
 
+    const fulfilmentMethod = body.fulfilmentMethod;
+    const serviceArea = typeof body.serviceArea === "string" ? body.serviceArea.trim() : "";
+    const deliveryAddress = typeof body.deliveryAddress === "string" ? body.deliveryAddress.trim() : "";
+    if (fulfilmentMethod !== "delivery" && fulfilmentMethod !== "pickup") {
+      respond(response, 400, { success: false, error: "Choose delivery or store pickup" });
+      return;
+    }
+    if (serviceArea.length > 100 || deliveryAddress.length > 1000 ||
+        (fulfilmentMethod === "delivery" && (serviceArea.length < 2 || deliveryAddress.length < 10))) {
+      respond(response, 400, { success: false, error: "Enter a valid service area and delivery address" });
+      return;
+    }
+
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
@@ -226,6 +240,42 @@ export async function handleMemberStoreOrdersRequest(
         respond(response, 404, { success: false, error: "Store not found" });
         return;
       }
+      const fulfilmentResult = await client.query(
+        `SELECT delivery_enabled, pickup_enabled, service_areas, delivery_fee::text AS delivery_fee,
+          fee_currency, preparation_days, delivery_note_ar, delivery_note_en, updated_at
+         FROM member_store_delivery_settings WHERE store_id=$1 FOR SHARE`,
+        [store.rows[0].id],
+      );
+      if (!fulfilmentResult.rowCount) {
+        await client.query("ROLLBACK");
+        respond(response, 409, { success: false, error: "This store has not configured delivery or pickup yet" });
+        return;
+      }
+      const fulfilment = fulfilmentResult.rows[0];
+      const areas = Array.isArray(fulfilment.service_areas) ? fulfilment.service_areas : [];
+      if (fulfilmentMethod === "delivery" && (!fulfilment.delivery_enabled || !areas.includes(serviceArea))) {
+        await client.query("ROLLBACK");
+        respond(response, 409, { success: false, error: "Delivery is unavailable for the selected area" });
+        return;
+      }
+      if (fulfilmentMethod === "pickup" && !fulfilment.pickup_enabled) {
+        await client.query("ROLLBACK");
+        respond(response, 409, { success: false, error: "Store pickup is not available" });
+        return;
+      }
+      const fulfilmentSnapshot = {
+        method: fulfilmentMethod,
+        serviceArea: fulfilmentMethod === "delivery" ? serviceArea : null,
+        deliveryAddress: fulfilmentMethod === "delivery" ? deliveryAddress : null,
+        deliveryFee: fulfilmentMethod === "delivery" ? fulfilment.delivery_fee : null,
+        feeCurrency: fulfilment.fee_currency,
+        feeRequiresConfirmation: fulfilmentMethod === "delivery" && fulfilment.delivery_fee === null,
+        preparationDays: fulfilment.preparation_days,
+        deliveryNoteAr: fulfilment.delivery_note_ar,
+        deliveryNoteEn: fulfilment.delivery_note_en,
+        settingsUpdatedAt: fulfilment.updated_at,
+        capturedAt: new Date().toISOString(),
+      };
       const products = await client.query(
         `SELECT id, title, sku, price::text AS price, currency, stock_quantity AS "stockQuantity"
          FROM store_products
@@ -292,15 +342,15 @@ export async function handleMemberStoreOrdersRequest(
         `WITH actor_context AS MATERIALIZED (SELECT set_config('wasla.actor_user_id', $11, true))
          INSERT INTO member_store_orders
           (order_number, store_id, buyer_user_id, currency, items, subtotal, buyer_note, idempotency_key,
-           return_policy_snapshot, return_policy_version)
-         SELECT $1,$2,$3,$4,$5::jsonb,$6,$7,$8,$9::jsonb,$10 FROM actor_context
+           return_policy_snapshot, return_policy_version, fulfilment_snapshot)
+         SELECT $1,$2,$3,$4,$5::jsonb,$6,$7,$8,$9::jsonb,$10,$12::jsonb FROM actor_context
          RETURNING id, order_number AS "orderNumber", status, currency,
                    items, subtotal::text AS subtotal, created_at AS "createdAt"`,
         [orderNumber, store.rows[0].id, session.user.id, snapshots[0].currency,
           JSON.stringify(snapshots), subtotal, note || null, idempotencyKey ?? null,
           JSON.stringify(store.rows[0].returnPolicy && typeof store.rows[0].returnPolicy === "object" ? store.rows[0].returnPolicy : { status: "not_provided" }),
           Number(store.rows[0].returnPolicyVersion) > 0 ? store.rows[0].returnPolicyVersion : null,
-          session.user.id],
+          session.user.id, JSON.stringify(fulfilmentSnapshot)],
       );
       await client.query(
         `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, store_id, metadata)
