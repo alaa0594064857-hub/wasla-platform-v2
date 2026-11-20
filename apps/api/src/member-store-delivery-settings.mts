@@ -91,7 +91,7 @@ export async function handleStoreDeliverySettingsRequest(req: IncomingMessage, r
       send(res, 400, { success: false, error: "Add at least one valid service area when delivery is enabled" }); return;
     }
     if (deliveryFee !== null && deliveryFee !== "" &&
-        (typeof deliveryFee !== "string" || !/^\\d{1,10}(?:\\.\\d{1,2})?$/.test(deliveryFee))) {
+        (typeof deliveryFee !== "string" || !/^\d{1,10}(?:\.\d{1,2})?$/.test(deliveryFee))) {
       send(res, 400, { success: false, error: "Enter a valid delivery fee or leave it blank for confirmation" }); return;
     }
     if (typeof feeCurrency !== "string" || !/^[A-Z]{3}$/.test(feeCurrency) ||
