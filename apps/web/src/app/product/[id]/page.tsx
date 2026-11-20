@@ -62,7 +62,6 @@ export default function PublicProductPage() {
   }, [params.id, ar]);
 
   useEffect(() => {
-  useEffect(() => {
     if (!product?.storeSlug) return;
     let active = true;
     fetch(`/api/public/stores/${encodeURIComponent(product.storeSlug)}/delivery-settings`, { cache: "no-store" })
@@ -72,6 +71,7 @@ export default function PublicProductPage() {
     return () => { active = false; };
   }, [product?.storeSlug]);
 
+  useEffect(() => {
     if (!product?.id) return;
     let active = true;
     fetch(`/api/products/${encodeURIComponent(product.id)}/reviews`, { cache: "no-store" })
