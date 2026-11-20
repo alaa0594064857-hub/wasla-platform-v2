@@ -21,21 +21,6 @@ export async function handleStoreDeliverySettingsRequest(req: IncomingMessage, r
   const pool = getDatabasePool();
   const client = await pool.connect();
   try {
-    await client.query(`CREATE TABLE IF NOT EXISTS member_store_delivery_settings (
-      store_id uuid PRIMARY KEY REFERENCES stores(id) ON DELETE CASCADE,
-      delivery_enabled boolean NOT NULL DEFAULT false,
-      pickup_enabled boolean NOT NULL DEFAULT false,
-      service_areas jsonb NOT NULL DEFAULT '[]'::jsonb,
-      delivery_fee numeric(12,2),
-      fee_currency varchar(3) NOT NULL DEFAULT 'USD',
-      preparation_days integer NOT NULL DEFAULT 0 CHECK (preparation_days BETWEEN 0 AND 90),
-      delivery_note_ar varchar(1000),
-      delivery_note_en varchar(1000),
-      updated_by uuid REFERENCES users(id) ON DELETE SET NULL,
-      updated_at timestamptz NOT NULL DEFAULT NOW(),
-      CHECK (delivery_fee IS NULL OR delivery_fee >= 0),
-      CHECK (delivery_enabled OR pickup_enabled)
-    )`);
     const store = await client.query<{ id: string; account_id: string }>(
       "SELECT id, account_id FROM stores WHERE slug = $1 AND status = 'active' LIMIT 1", [slug],
     );
