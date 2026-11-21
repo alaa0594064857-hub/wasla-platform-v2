@@ -129,6 +129,7 @@ export default function PlatformOwnerPage() {
   const nav = [
     { id: "overview", label: copy.overview, icon: "⌂", href: "#overview" },
     { id: "users", label: copy.users, icon: "♙", href: "#users" },
+    { id: "business-accounts", label: ar ? "مراجعة حسابات الأعمال" : "Business account review", icon: "▦", href: "/owner/business-accounts" },
     { id: "roles", label: copy.roles, icon: "◇", href: "#roles" },
     { id: "security", label: copy.security, icon: "◈", href: "#security" },
     { id: "settings", label: copy.settings, icon: "⚙", href: "#settings" },
