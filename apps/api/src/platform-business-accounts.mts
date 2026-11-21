@@ -50,7 +50,7 @@ export async function handlePlatformBusinessAccountsRequest(
                 a.country_code, a.created_at,
                 bp.verification_status,
                 COUNT(DISTINCT s.id)::int AS store_count,
-                COUNT(DISTINCT CASE WHEN am.status = 'active' AND r.name = 'account_owner' THEN am.user_id END)::int AS active_owner_count
+                COUNT(DISTINCT CASE WHEN am.status = 'active' AND r.name = 'account_owner' AND u.status = 'active' AND u.email_verified = TRUE THEN am.user_id END)::int AS active_owner_count
          FROM accounts a
          LEFT JOIN business_profiles bp ON bp.account_id = a.id
          LEFT JOIN stores s ON s.account_id = a.id AND s.status <> 'deactivated'
