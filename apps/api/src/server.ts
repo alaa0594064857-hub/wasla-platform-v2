@@ -462,6 +462,18 @@ async function handleRequest(
     return;
   }
 
+  if (requestUrl.pathname === "/api/platform/business-accounts") {
+    try {
+      const { handlePlatformBusinessAccountsRequest } = await import("./platform-business-accounts.mjs");
+      await handlePlatformBusinessAccountsRequest(request, response);
+    } catch (error) {
+      console.error("WASLA platform business accounts route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Business account review service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/platform/users") {
     try {
       const { handlePlatformUsersRequest } = await import("./platform-users.mjs");
