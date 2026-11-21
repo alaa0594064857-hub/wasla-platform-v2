@@ -13,6 +13,20 @@ afterAll(async () => {
   await closeDatabaseConnection();
 });
 
+describe("WASLA support ticket category schema", () => {
+  it("allows account deletion requests in the support category constraint", async () => {
+    const result = await pool.query(
+      `SELECT pg_get_constraintdef(oid) AS definition
+       FROM pg_constraint
+       WHERE conrelid = 'public.support_tickets'::regclass
+         AND conname = 'support_tickets_category_check'`,
+    );
+
+    expect(result.rowCount).toBe(1);
+    expect(result.rows[0].definition).toContain("account_deletion");
+  });
+});
+
 describe("WASLA database role permission scope integrity", () => {
   it("allows a role and permission with the same scope", async () => {
     const roleId = randomUUID();

@@ -19,7 +19,15 @@ Every support request becomes a durable, private, traceable case with a public c
 
 ## Case categories
 
-`account_access`, `payments_billing`, `orders_delivery`, `returns_refunds`, `store_seller`, `trade_business`, `affiliate_commissions`, `technical_issue`, `security_report`, `other`.
+`account_access`, `account_deletion`, `payments_billing`, `orders_delivery`, `returns_refunds`, `store_seller`, `trade_business`, `affiliate_commissions`, `technical_issue`, `security_report`, `other`.
+
+## Support v1 implementation boundary (verified 2026-11-21)
+
+Implemented in the current web/API flow: verified signed-in users can create cases, list only their own cases, open a case, and exchange public replies; case numbers and in-app notifications are generated. Authorized platform support roles can read the queue, inspect case history, add public replies or internal notes, assign cases, and change supported status/priority values with audit events.
+
+The `account_deletion` category is accepted by the API and is included in the database category constraint by migration `0010_support_account_deletion_category`. The public deletion page routes signed-in users to this preselected category. A deletion request is a support case, not an automated account-deletion operation.
+
+Not yet part of the verified v1 flow: requester-selected priority, evidence attachments, customer-facing SLA timers, email delivery of support replies, automated deletion processing, and automated support-specific authorization/lifecycle tests. Do not advertise these as available. Operational response targets below are planning targets only, not service guarantees.
 
 ## Status lifecycle
 
