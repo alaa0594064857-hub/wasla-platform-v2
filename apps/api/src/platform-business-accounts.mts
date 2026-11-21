@@ -56,6 +56,7 @@ export async function handlePlatformBusinessAccountsRequest(
          LEFT JOIN stores s ON s.account_id = a.id AND s.status <> 'deactivated'
          LEFT JOIN account_members am ON am.account_id = a.id
          LEFT JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
+         LEFT JOIN users u ON u.id = am.user_id
          WHERE a.status IN ('pending_verification', 'active', 'suspended')
          GROUP BY a.id, bp.verification_status
          ORDER BY CASE a.status WHEN 'pending_verification' THEN 0 WHEN 'suspended' THEN 1 ELSE 2 END,
@@ -95,6 +96,7 @@ export async function handlePlatformBusinessAccountsRequest(
                 (SELECT COUNT(DISTINCT am.user_id)::int
                  FROM account_members am
                  INNER JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
+                 INNER JOIN users u ON u.id = am.user_id AND u.status = 'active' AND u.email_verified = TRUE
                  WHERE am.account_id = a.id AND am.status = 'active' AND r.name = 'account_owner') AS owner_count
          FROM accounts a
          LEFT JOIN business_profiles bp ON bp.account_id = a.id
