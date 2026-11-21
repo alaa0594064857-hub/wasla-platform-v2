@@ -280,6 +280,10 @@ export default function HomePage() {
         <a className="worlds-footer-brand" href="/">{locale === "ar" ? "وصلة" : "WASLA"}<span>®</span></a>
         <p>{t.footer}</p>
         <a href="/register">{t.join} ↗</a>
+        <nav aria-label={locale === "ar" ? "روابط المساعدة" : "Help links"} style={{ display: "flex", gap: 16, flexWrap: "wrap", justifyContent: "center", marginTop: 12 }}>
+          <a href="/support" style={{ color: "inherit", textDecoration: "underline" }}>{locale === "ar" ? "المساعدة والدعم" : "Help & support"}</a>
+          <a href="/delete-account" style={{ color: "inherit", textDecoration: "underline" }}>{locale === "ar" ? "طلب حذف الحساب" : "Account deletion request"}</a>
+        </nav>
       </footer>
     </main>
   );
