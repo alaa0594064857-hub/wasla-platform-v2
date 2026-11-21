@@ -231,9 +231,12 @@ function buildTaskSearchQuery(task:any): string {
 }
 async function processOne():Promise<boolean> {
   const db=getDatabasePool();
+  const tavilyKey=process.env.TAVILY_API_KEY?.trim()||"";
+  // Gemini is still the text-generation provider when Tavily supplies web search,
+  // so a Gemini generation cooldown must pause the task regardless of search provider.
   const cooldown=await db.query(`SELECT cooldown_until FROM platform_ai_provider_state WHERE provider_key='gemini' LIMIT 1`);
   if(cooldown.rows[0]?.cooldown_until && new Date(cooldown.rows[0].cooldown_until).getTime()>Date.now()) return false;
-  const searchProviderConfigured=Boolean(process.env.TAVILY_API_KEY?.trim())
+  const searchProviderConfigured=Boolean(tavilyKey)
     || process.env.GEMINI_ALLOW_PAID_SEARCH_GROUNDING==="true";
   if(!searchProviderConfigured) {
     console.info("WASLA AI scheduler waiting for TAVILY_API_KEY or explicit paid Gemini Search grounding opt-in");
@@ -257,7 +260,6 @@ async function processOne():Promise<boolean> {
     return true;
   }
   const model=process.env.GEMINI_MODEL?.trim()||"gemini-3.5-flash-lite";
-  const tavilyKey=process.env.TAVILY_API_KEY?.trim()||"";
   const useGeminiGrounding=process.env.GEMINI_ALLOW_PAID_SEARCH_GROUNDING==="true";
   const searchQuery=buildTaskSearchQuery(task);
   const started=Date.now();
@@ -424,7 +426,8 @@ Source excerpt: ${source.content||""}`).join("\n\n");
       : "";
     const resultText=`${answer}${candidateDraftNotice}\n\nResearch metadata\nSearch provider: ${searchProvider}\nAccessed: ${new Date().toISOString()}\nSearch queries: ${queryList}\nSource links:\n${sourceList}${suggestionBlock}`;
     await db.query(`UPDATE platform_ai_team_tasks SET status='needs_owner_review',result_text=$2,
-      provider_model=$3,output_characters=$4,duration_ms=$5,updated_at=NOW(),finished_at=NOW()
+      provider_model=$3,output_characters=$4,duration_ms=$5,error_code=NULL,next_attempt_at=NULL,
+      updated_at=NOW(),finished_at=NOW()
       WHERE id=$1 AND status='running'`,[task.id,resultText,model,resultText.length,Date.now()-started]);
     await addEvent(task,"task_result_ready",{outputCharacters:resultText.length,model,groundedSourceCount:sources.length,searchQueries:queries,candidateDraftsCreated,searchProvider});
   } catch(error) {
@@ -489,12 +492,13 @@ async function main() {
   const token = process.env.WASLA_SCHEDULER_TOKEN?.trim();
   if (!apiUrl || !token) throw new Error("Scheduler requires database access or secure API trigger configuration");
   let lastError: unknown;
-  for (let attempt = 1; attempt <= 4; attempt++) {
+  for (let attempt = 1; attempt <= 5; attempt++) {
     try {
       const response = await fetch(`${apiUrl}/api/internal/ai/scheduler/run`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        signal: AbortSignal.timeout(15000),
+        // Free Render web instances can need extra time to wake from idle before the scheduler route is ready.
+        signal: AbortSignal.timeout(30000),
       });
       const body = await response.json().catch(() => ({}));
       if (response.ok && body.success === true) {
@@ -509,20 +513,20 @@ async function main() {
       }
 
       const retryable = [502, 503, 504].includes(response.status);
-      if (!retryable || attempt === 4) {
+      if (!retryable || attempt === 5) {
         throw new Error(`Scheduler API returned ${response.status}`);
       }
       lastError = new Error(`Scheduler API returned ${response.status}`);
     } catch (error) {
       lastError = error;
-      if (attempt === 4) break;
+      if (attempt === 5) break;
       if (error instanceof Error && error.message.startsWith("Scheduler API returned ")) {
         const status = Number(error.message.match(/\d+$/)?.[0]);
         if (![502, 503, 504].includes(status)) throw error;
       }
     }
 
-    const delayMs = [5000, 10000, 20000][attempt - 1];
+    const delayMs = [10000, 20000, 30000, 30000][attempt - 1];
     console.warn("WASLA scheduler API temporarily unavailable; retrying", {
       attempt,
       nextAttempt: attempt + 1,
