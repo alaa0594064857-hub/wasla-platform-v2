@@ -100,7 +100,7 @@ export default function BusinessAccountReviewPage() {
       <div style={styles.kicker}>WASLA · OWNER REVIEW</div>
       <h1 style={styles.heading}>{ar ? "مراجعة حسابات الأعمال" : "Business account verification"}</h1>
       <p style={styles.intro}>{ar ? "راجع مستندات وهوية النشاط التجاري خارج المنصة أولاً. لا تعتمد حساباً إلا بعد التحقق الفعلي من البيانات والأدلة. كل قرار يُسجّل في سجل التدقيق." : "Review the business identity and supporting evidence outside the platform first. Approve only after validating the evidence. Every decision is recorded in the audit log."}</p>
-      <div style={styles.stats}><div><strong>{pending.length}</strong><span>{ar ? "بانتظار المراجعة" : "Awaiting review"}</span></div><div><strong>{active.length}</strong><span>{ar ? "حسابات نشطة" : "Active accounts"}</span></div><div><strong>{accounts.length}</strong><span>{ar ? "إجمالي الحسابات" : "Total accounts"}</span></div></div>
+      <div style={styles.stats}><div style={styles.stat}><strong>{pending.length}</strong><span>{ar ? "بانتظار المراجعة" : "Awaiting review"}</span></div><div style={styles.stat}><strong>{active.length}</strong><span>{ar ? "حسابات نشطة" : "Active accounts"}</span></div><div style={styles.stat}><strong>{accounts.length}</strong><span>{ar ? "إجمالي الحسابات" : "Total accounts"}</span></div></div>
       {error && <p role="alert" style={styles.error}>{error}</p>}
       {message && <p role="status" style={styles.success}>{message}</p>}
       <div style={styles.sectionHead}><h2>{ar ? "طلبات التحقق" : "Verification queue"}</h2><button style={styles.reload} onClick={() => void load()}>{ar ? "تحديث" : "Refresh"}</button></div>
@@ -129,7 +129,7 @@ const styles: Record<string, React.CSSProperties> = {
   intro:{lineHeight:1.8,maxWidth:800,color:"#586477"},
   stats:{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:12,margin:"24px 0"},
   sectionHead:{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:28},
-  sectionHeadH2:{},
+  stat:{background:"#fff",border:"1px solid #e8e0d2",borderRadius:14,padding:16,display:"grid",gap:5},
   reload:{border:"1px solid #c6a15b",borderRadius:9,padding:"8px 12px",background:"#fff",color:"#14243a",fontWeight:700},
   card:{background:"#fff",border:"1px solid #e8e0d2",borderRadius:16,padding:18,marginTop:14,boxShadow:"0 8px 24px rgba(20,36,58,.05)"},
   cardTop:{display:"flex",justifyContent:"space-between",gap:12,alignItems:"start"},
