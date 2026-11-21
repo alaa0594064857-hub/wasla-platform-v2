@@ -232,11 +232,10 @@ function buildTaskSearchQuery(task:any): string {
 async function processOne():Promise<boolean> {
   const db=getDatabasePool();
   const tavilyKey=process.env.TAVILY_API_KEY?.trim()||"";
-  // Gemini cooldown must not block the independent Tavily search provider.
-  if(!tavilyKey) {
-    const cooldown=await db.query(`SELECT cooldown_until FROM platform_ai_provider_state WHERE provider_key='gemini' LIMIT 1`);
-    if(cooldown.rows[0]?.cooldown_until && new Date(cooldown.rows[0].cooldown_until).getTime()>Date.now()) return false;
-  }
+  // Gemini is still the text-generation provider when Tavily supplies web search,
+  // so a Gemini generation cooldown must pause the task regardless of search provider.
+  const cooldown=await db.query(`SELECT cooldown_until FROM platform_ai_provider_state WHERE provider_key='gemini' LIMIT 1`);
+  if(cooldown.rows[0]?.cooldown_until && new Date(cooldown.rows[0].cooldown_until).getTime()>Date.now()) return false;
   const searchProviderConfigured=Boolean(tavilyKey)
     || process.env.GEMINI_ALLOW_PAID_SEARCH_GROUNDING==="true";
   if(!searchProviderConfigured) {
