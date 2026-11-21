@@ -548,7 +548,7 @@ async function handleRequest(
     return;
   }
 
-  if (requestUrl.pathname === "/api/platform/ai/tasks" || /^\/api\/platform\/ai\/(?:tasks\/dispatch|tasks\/[0-9a-f-]{36}(?:\/(?:execute|cancel|retry))?)$/i.test(requestUrl.pathname)) {
+  if (requestUrl.pathname === "/api/platform/ai/tasks" || /^\/api\/platform\/ai\/(?:tasks\/dispatch|tasks\/[0-9a-f-]{36}(?:\/(?:execute|cancel|retry|approve|reject))?)$/i.test(requestUrl.pathname)) {
     try {
       const { handlePlatformAiTeamTasksRequest } = await import("./platform-ai-team-tasks.mjs");
       await handlePlatformAiTeamTasksRequest(request, response);
@@ -861,32 +861,6 @@ async function handleRequest(
     } catch (error) {
       console.error("WASLA platform store returns error:", error);
       if (!response.headersSent) sendJson(response, 500, { success: false, error: "Platform returns service error" });
-      else response.destroy(error instanceof Error ? error : undefined);
-    }
-    return;
-  }
-
-  const publicStoreDeliverySettingsMatch = requestUrl.pathname.match(/^\/api\/public\/stores\/([^/]+)\/delivery-settings$/i);
-  if (publicStoreDeliverySettingsMatch) {
-    try {
-      const { handlePublicStoreDeliverySettingsRequest } = await import("./member-store-delivery-settings.mjs");
-      await handlePublicStoreDeliverySettingsRequest(request, response, decodeURIComponent(publicStoreDeliverySettingsMatch[1]));
-    } catch (error) {
-      console.error("WASLA public store delivery settings route error:", error);
-      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Public delivery settings service error" });
-      else response.destroy(error instanceof Error ? error : undefined);
-    }
-    return;
-  }
-
-  const storeDeliverySettingsMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/delivery-settings$/i);
-  if (storeDeliverySettingsMatch) {
-    try {
-      const { handleStoreDeliverySettingsRequest } = await import("./member-store-delivery-settings.mjs");
-      await handleStoreDeliverySettingsRequest(request, response, decodeURIComponent(storeDeliverySettingsMatch[1]));
-    } catch (error) {
-      console.error("WASLA store delivery settings route error:", error);
-      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Store delivery settings service error" });
       else response.destroy(error instanceof Error ? error : undefined);
     }
     return;
