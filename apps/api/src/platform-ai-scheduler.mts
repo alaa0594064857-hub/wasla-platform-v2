@@ -231,9 +231,13 @@ function buildTaskSearchQuery(task:any): string {
 }
 async function processOne():Promise<boolean> {
   const db=getDatabasePool();
-  const cooldown=await db.query(`SELECT cooldown_until FROM platform_ai_provider_state WHERE provider_key='gemini' LIMIT 1`);
-  if(cooldown.rows[0]?.cooldown_until && new Date(cooldown.rows[0].cooldown_until).getTime()>Date.now()) return false;
-  const searchProviderConfigured=Boolean(process.env.TAVILY_API_KEY?.trim())
+  const tavilyKey=process.env.TAVILY_API_KEY?.trim()||"";
+  // Gemini cooldown must not block the independent Tavily search provider.
+  if(!tavilyKey) {
+    const cooldown=await db.query(`SELECT cooldown_until FROM platform_ai_provider_state WHERE provider_key='gemini' LIMIT 1`);
+    if(cooldown.rows[0]?.cooldown_until && new Date(cooldown.rows[0].cooldown_until).getTime()>Date.now()) return false;
+  }
+  const searchProviderConfigured=Boolean(tavilyKey)
     || process.env.GEMINI_ALLOW_PAID_SEARCH_GROUNDING==="true";
   if(!searchProviderConfigured) {
     console.info("WASLA AI scheduler waiting for TAVILY_API_KEY or explicit paid Gemini Search grounding opt-in");
@@ -257,7 +261,6 @@ async function processOne():Promise<boolean> {
     return true;
   }
   const model=process.env.GEMINI_MODEL?.trim()||"gemini-3.5-flash-lite";
-  const tavilyKey=process.env.TAVILY_API_KEY?.trim()||"";
   const useGeminiGrounding=process.env.GEMINI_ALLOW_PAID_SEARCH_GROUNDING==="true";
   const searchQuery=buildTaskSearchQuery(task);
   const started=Date.now();
@@ -424,7 +427,8 @@ Source excerpt: ${source.content||""}`).join("\n\n");
       : "";
     const resultText=`${answer}${candidateDraftNotice}\n\nResearch metadata\nSearch provider: ${searchProvider}\nAccessed: ${new Date().toISOString()}\nSearch queries: ${queryList}\nSource links:\n${sourceList}${suggestionBlock}`;
     await db.query(`UPDATE platform_ai_team_tasks SET status='needs_owner_review',result_text=$2,
-      provider_model=$3,output_characters=$4,duration_ms=$5,updated_at=NOW(),finished_at=NOW()
+      provider_model=$3,output_characters=$4,duration_ms=$5,error_code=NULL,next_attempt_at=NULL,
+      updated_at=NOW(),finished_at=NOW()
       WHERE id=$1 AND status='running'`,[task.id,resultText,model,resultText.length,Date.now()-started]);
     await addEvent(task,"task_result_ready",{outputCharacters:resultText.length,model,groundedSourceCount:sources.length,searchQueries:queries,candidateDraftsCreated,searchProvider});
   } catch(error) {
