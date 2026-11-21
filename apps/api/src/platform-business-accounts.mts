@@ -92,13 +92,13 @@ export async function handlePlatformBusinessAccountsRequest(
       }>(
         `SELECT a.id, a.status, a.account_type::text AS account_type,
                 bp.verification_status::text AS verification_status,
-                COUNT(DISTINCT am.user_id) FILTER (WHERE am.status = 'active' AND r.name = 'account_owner')::int AS owner_count
+                (SELECT COUNT(DISTINCT am.user_id)::int
+                 FROM account_members am
+                 INNER JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
+                 WHERE am.account_id = a.id AND am.status = 'active' AND r.name = 'account_owner') AS owner_count
          FROM accounts a
          LEFT JOIN business_profiles bp ON bp.account_id = a.id
-         LEFT JOIN account_members am ON am.account_id = a.id
-         LEFT JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
          WHERE a.id = $1
-         GROUP BY a.id, bp.verification_status
          FOR UPDATE OF a`,
         [accountId],
       );
