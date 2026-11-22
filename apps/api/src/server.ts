@@ -1169,6 +1169,8 @@ if (process.env.NODE_ENV !== "test") {
       await getDatabasePool().query('ALTER TABLE "business_profiles" ADD COLUMN IF NOT EXISTS "logo_reference" text');
       const { ensureNotificationsTable } = await import("./notifications.mjs");
       await ensureNotificationsTable();
+      const { ensureSupportTables } = await import("./support.mjs");
+      await ensureSupportTables();
       const { ensureTradeTables } = await import("./trade.mjs");
       await ensureTradeTables();
       const { ensureTradeOpportunityTables } = await import("./trade-opportunities.mjs");
