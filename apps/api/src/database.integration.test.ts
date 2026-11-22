@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Pool } from "pg";
-import { closeDatabaseConnection, ensureMemberStoreOrderTables, ensureStoreProductsTable, ensureVerifiedReviewTables } from "./database.js";
+import { closeDatabaseConnection, ensureSupportTables, ensureMemberStoreOrderTables, ensureStoreProductsTable, ensureVerifiedReviewTables } from "./database.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL is required for integration tests");
@@ -11,6 +11,22 @@ const pool = new Pool({ connectionString: databaseUrl, max: 2 });
 afterAll(async () => {
   await pool.end();
   await closeDatabaseConnection();
+});
+
+describe("WASLA support ticket category schema", () => {
+  it("creates the support schema idempotently and allows account deletion requests", async () => {
+    await ensureSupportTables();
+    await ensureSupportTables();
+    const result = await pool.query(
+      "SELECT pg_get_constraintdef(oid) AS definition FROM pg_constraint WHERE conrelid = 'public.support_tickets'::regclass AND conname = 'support_tickets_category_check'",
+    );
+    expect(result.rowCount).toBe(1);
+    expect(result.rows[0].definition).toContain("account_deletion");
+    const tables = await pool.query(
+      "SELECT to_regclass('public.support_messages') IS NOT NULL AS messages, to_regclass('public.support_ticket_events') IS NOT NULL AS events",
+    );
+    expect(tables.rows[0]).toMatchObject({ messages: true, events: true });
+  });
 });
 
 describe("WASLA database role permission scope integrity", () => {
