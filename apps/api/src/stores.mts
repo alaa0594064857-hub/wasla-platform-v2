@@ -61,7 +61,8 @@ export async function handleStoresRequest(
       const result = await pool.query(
         `SELECT
            s.id, s.account_id, s.name, s.slug, s.status, s.created_at,
-           a.display_name AS account_name,
+           a.display_name AS account_name, a.status AS account_status,
+           bp.verification_status AS verification_status,
            r.name AS account_role,
            smr.name AS store_role
          FROM stores s
@@ -214,7 +215,8 @@ export async function handleStoreDetailRequest(
     if (request.method === "GET") {
       const result = await pool.query(
         `SELECT s.id, s.account_id, s.name, s.slug, s.status, s.created_at,
-                a.display_name AS account_name, a.country_code,
+                a.display_name AS account_name, a.country_code, a.status AS account_status,
+                bp.verification_status AS verification_status,
                 bp.description AS business_description, bp.website,
                 r.name AS account_role, sr.name AS store_role
          FROM stores s
