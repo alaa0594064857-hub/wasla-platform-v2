@@ -67,6 +67,7 @@ export async function handleStoresRequest(
            smr.name AS store_role
          FROM stores s
          INNER JOIN accounts a ON a.id = s.account_id
+         LEFT JOIN business_profiles bp ON bp.account_id = a.id
          LEFT JOIN account_members am
            ON am.account_id = a.id AND am.user_id = $1 AND am.status = 'active'
          LEFT JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
