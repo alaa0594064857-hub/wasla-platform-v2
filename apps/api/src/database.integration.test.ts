@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Pool } from "pg";
-import { closeDatabaseConnection, ensureMemberStoreOrderTables, ensureStoreProductsTable, ensureVerifiedReviewTables } from "./database.js";
+import { closeDatabaseConnection, ensureSupportTables, ensureMemberStoreOrderTables, ensureStoreProductsTable, ensureVerifiedReviewTables } from "./database.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL is required for integration tests");
@@ -14,7 +14,9 @@ afterAll(async () => {
 });
 
 describe("WASLA support ticket category schema", () => {
-  it("allows account deletion requests in the support category constraint", async () => {
+  it("creates the support schema idempotently and allows account deletion requests", async () => {
+    await ensureSupportTables();
+    await ensureSupportTables();
     const result = await pool.query(
       `SELECT pg_get_constraintdef(oid) AS definition
        FROM pg_constraint
