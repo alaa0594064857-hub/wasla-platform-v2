@@ -5,10 +5,11 @@ import Link from "next/link";
 import { useLocale } from "../../components/locale-provider";
 import WorkspaceHeader from "../../components/workspace-header";
 
-type Account = { id: string; display_name: string; legal_name: string; role: string };
+type Account = { id: string; display_name: string; legal_name: string; role: string; status: string; verification_status: string | null };
 type Store = {
   id: string; account_id: string; name: string; slug: string; status: string;
   account_name: string; account_role: string; store_role: string | null;
+  account_status: string; verification_status: string | null;
 };
 
 const copy = {
@@ -21,6 +22,8 @@ const copy = {
     retry: "إعادة المحاولة", error: "تعذر إكمال الطلب. تحقق من تسجيل الدخول وصلاحيات الحساب.",
     active: "نشط", suspended: "موقوف", slug: "رابط المتجر", owner: "حساب النشاط",
     success: "تم إنشاء المتجر بنجاح.", intro: "مساحة عمل التاجر", viewPublic: "معاينة المتجر العام",
+    verificationPending: "حساب النشاط بانتظار التحقق. يمكنك تجهيز المتجر وإدارته، لكنه لن يظهر للزوار حتى اعتماد الحساب.",
+    publicUnavailable: "المتجر غير متاح للعامة حتى يكتمل توثيق حساب النشاط.", verified: "موثّق", unverified: "غير موثّق",
   },
   en: {
     title: "My private shops", subtitle: "Create and manage the shops connected to your business accounts in one place.",
@@ -31,6 +34,8 @@ const copy = {
     retry: "Try again", error: "Could not complete the request. Check your sign-in and account permissions.",
     active: "Active", suspended: "Suspended", slug: "Shop address", owner: "Business account",
     success: "Your shop was created successfully.", intro: "Seller workspace", viewPublic: "View public shop",
+    verificationPending: "Business verification is pending. You can prepare and manage this shop, but visitors will not see it until the account is approved.",
+    publicUnavailable: "This shop is not public until its business account is verified.", verified: "Verified", unverified: "Unverified",
   },
 };
 
@@ -124,7 +129,7 @@ export default function ShopsPage() {
                   <article className="shops-card" key={store.id}>
                     <div className="shops-card-top"><span className="shops-card-mark">W</span><span className={`shops-status ${store.status === "active" ? "is-active" : ""}`}>{store.status === "active" ? t.active : t.suspended}</span></div>
                     <h3><Link href={`/shops/${encodeURIComponent(store.slug)}`}>{store.name}</Link></h3><p>{t.owner}: {store.account_name}</p>
-                    <div className="shops-slug"><small>{t.slug}</small><strong dir="ltr">/store/{store.slug}</strong></div><Link href={`/store/${encodeURIComponent(store.slug)}`} target="_blank" rel="noreferrer" className="mt-4 inline-flex rounded-lg border border-[#b89545] px-3 py-2 text-xs font-bold text-[#92713a] hover:bg-[#f7f4ec]">{t.viewPublic} ↗</Link>
+                    <div className="shops-slug"><small>{t.slug}</small><strong dir="ltr">/store/{store.slug}</strong></div>{store.account_status === "active" && store.verification_status === "verified" ? <Link href={`/store/${encodeURIComponent(store.slug)}`} target="_blank" rel="noreferrer" className="mt-4 inline-flex rounded-lg border border-[#b89545] px-3 py-2 text-xs font-bold text-[#92713a] hover:bg-[#f7f4ec]">{t.viewPublic} ↗</Link> : <p className="shops-note" role="status">{t.publicUnavailable}</p>}
                   </article>
                 ))}
               </div>
@@ -138,7 +143,7 @@ export default function ShopsPage() {
                 <label>{t.storeName}<input value={name} onChange={e => setName(e.target.value)} minLength={2} maxLength={120} required placeholder={locale === "ar" ? "مثال: متجر الأناقة" : "e.g. Elegance Store"} /></label>
                 <label>{t.account}<select value={accountId} onChange={e => setAccountId(e.target.value)} required>
                   <option value="">{t.choose}</option>
-                  {accounts.map(account => <option key={account.id} value={account.id}>{account.display_name}</option>)}
+                  {accounts.map(account => <option key={account.id} value={account.id}>{account.display_name}{account.status !== "active" || account.verification_status !== "verified" ? ` · ${t.unverified}` : ` · ${t.verified}`}</option>)}
                 </select></label>
                 {accounts.length === 0 && <p className="shops-note">{t.noAccounts}</p>}
                 <button type="submit" disabled={creating || !accountId}>{creating ? t.creating : t.submit}<span>↗</span></button>
