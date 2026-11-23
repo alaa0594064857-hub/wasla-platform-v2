@@ -22,7 +22,6 @@ const copy = {
     retry: "إعادة المحاولة", error: "تعذر إكمال الطلب. تحقق من تسجيل الدخول وصلاحيات الحساب.",
     active: "نشط", suspended: "موقوف", slug: "رابط المتجر", owner: "حساب النشاط",
     success: "تم إنشاء المتجر بنجاح.", intro: "مساحة عمل التاجر", viewPublic: "معاينة المتجر العام",
-    verificationPending: "حساب النشاط بانتظار التحقق. يمكنك تجهيز المتجر وإدارته، لكنه لن يظهر للزوار حتى اعتماد الحساب.",
     publicUnavailable: "المتجر غير متاح للعامة حتى يكتمل توثيق حساب النشاط.", verified: "موثّق", unverified: "غير موثّق",
   },
   en: {
@@ -34,7 +33,6 @@ const copy = {
     retry: "Try again", error: "Could not complete the request. Check your sign-in and account permissions.",
     active: "Active", suspended: "Suspended", slug: "Shop address", owner: "Business account",
     success: "Your shop was created successfully.", intro: "Seller workspace", viewPublic: "View public shop",
-    verificationPending: "Business verification is pending. You can prepare and manage this shop, but visitors will not see it until the account is approved.",
     publicUnavailable: "This shop is not public until its business account is verified.", verified: "Verified", unverified: "Unverified",
   },
 };
