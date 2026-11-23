@@ -66,6 +66,7 @@ describe("public catalog privacy and visibility", () => {
     const sql = String(mocks.query.mock.calls[0][0]);
     expect(sql).toContain("p.status = 'active'");
     expect(sql).toContain("p.stock_quantity > 0");
+    expect(sql).toContain("bp.verification_status = 'verified'");
     expect(sql).not.toMatch(/supplier_name|supplier_price|source_product_url|source_offer/i);
   });
 
@@ -104,6 +105,7 @@ describe("public catalog privacy and visibility", () => {
     expect(data.products).toHaveLength(1);
     expect(JSON.stringify(data)).not.toMatch(/supplier|source_offer|supplier_price|supplier_name/i);
     expect(String(mocks.query.mock.calls[0][0])).toContain("s.status = 'active'");
+    expect(String(mocks.query.mock.calls[0][0])).toContain("bp.verification_status = 'verified'");
     expect(String(mocks.query.mock.calls[1][0])).toContain("status = 'active'");
     expect(String(mocks.query.mock.calls[1][0])).toContain("stock_quantity > 0");
     expect(String(mocks.query.mock.calls[1][0])).not.toMatch(/supplier|source_offer/i);
@@ -146,6 +148,7 @@ describe("public member store directory", () => {
     const sql = String(mocks.query.mock.calls[0][0]);
     expect(sql).toContain("s.status = 'active'");
     expect(sql).toContain("a.status = 'active'");
+    expect(sql).toContain("bp.verification_status = 'verified'");
     expect(sql).toContain("p.status = 'active'");
     expect(sql).toContain("p.stock_quantity > 0");
     expect(sql).toContain("LIMIT 50");
