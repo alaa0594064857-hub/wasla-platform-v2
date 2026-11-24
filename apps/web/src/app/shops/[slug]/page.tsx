@@ -82,7 +82,7 @@ export default function ShopManagementPage(){
      <div className="shops-info-row"><small>{t.status}</small><strong className="shops-info-status">{store.status==="active"?t.active:store.status}</strong></div>
      <div className="shops-info-row"><small>{t.accountStatus}</small><strong>{store.account_status==="active"?t.active:(locale==="ar"?"بانتظار التحقق":"Pending verification")}</strong></div>
      <div className="shops-info-row"><small>{t.verification}</small><strong>{store.verification_status==="verified"?t.verified:store.verification_status==="rejected"?t.rejected:t.unverified}</strong></div>
-     {store.account_status!=="active"&&<><p role="status" className="shops-note">{t.accountPending}</p><p className="shops-note">{t.verificationHelp} <Link href="/support?category=trade_business" style={{color:"#8b6c37",fontWeight:700,textDecoration:"underline"}}>{t.verificationHelpLink} ↗</Link></p></>}
+     {(store.account_status!=="active"||store.verification_status!=="verified")&&<><p role="status" className="shops-note">{t.accountPending}</p><p className="shops-note">{t.verificationHelp} <Link href="/support?category=trade_business" style={{color:"#8b6c37",fontWeight:700,textDecoration:"underline"}}>{t.verificationHelpLink} ↗</Link></p></>}
      {store.account_status==="active"&&store.verification_status==="verified"&&<p role="status" className="shops-note">{t.accountActive}</p>}
      <div className="shops-info-row"><small>{t.account}</small><strong>{store.account_name}</strong></div>
      <div className="shops-info-row"><small>{t.address}</small><strong dir="ltr">/store/{store.slug}</strong></div>
