@@ -10,7 +10,7 @@ function respond(response: ServerResponse, status: number, data: Record<string, 
   response.end(JSON.stringify(data));
 }
 
-/** Public, read-only catalog endpoints. Only active stores and published products are exposed. */
+/** Public, read-only catalog endpoints. Only active, verified stores and published products are exposed. */
 export async function handlePublicCatalogRequest(
   request: IncomingMessage,
   response: ServerResponse,
@@ -36,6 +36,7 @@ export async function handlePublicCatalogRequest(
          FROM store_products p
          INNER JOIN stores s ON s.id = p.store_id AND s.status = 'active'
          INNER JOIN accounts a ON a.id = s.account_id AND a.status = 'active'
+         INNER JOIN business_profiles bp ON bp.account_id = a.id AND bp.verification_status = 'verified'
          WHERE p.id = $1 AND p.status = 'active' AND p.stock_quantity > 0
          LIMIT 1`,
         [productId],
@@ -57,7 +58,7 @@ export async function handlePublicCatalogRequest(
               bp.description AS "businessDescription", bp.website, bp.logo_reference AS "logoReference"
        FROM stores s
        INNER JOIN accounts a ON a.id = s.account_id AND a.status = 'active'
-       LEFT JOIN business_profiles bp ON bp.account_id = a.id
+       INNER JOIN business_profiles bp ON bp.account_id = a.id AND bp.verification_status = 'verified'
        WHERE s.slug = $1 AND s.status = 'active'
        LIMIT 1`,
       [storeSlug],
@@ -81,7 +82,7 @@ export async function handlePublicCatalogRequest(
   }
 }
 
-/** Public directory of active member stores. Search is bounded and exposes no internal supplier data. */
+/** Public directory of active, verified member stores. Search is bounded and exposes no internal supplier data. */
 export async function handlePublicStoresDirectoryRequest(
   request: IncomingMessage,
   response: ServerResponse,
@@ -106,7 +107,7 @@ export async function handlePublicStoresDirectoryRequest(
               COUNT(p.id)::int AS "activeProductCount"
        FROM stores s
        INNER JOIN accounts a ON a.id = s.account_id AND a.status = 'active'
-       LEFT JOIN business_profiles bp ON bp.account_id = a.id
+       INNER JOIN business_profiles bp ON bp.account_id = a.id AND bp.verification_status = 'verified'
        LEFT JOIN store_products p ON p.store_id = s.id AND p.status = 'active' AND p.stock_quantity > 0
        WHERE s.status = 'active'
          AND ($1 = '' OR s.name ILIKE '%' || $1 || '%' OR a.display_name ILIKE '%' || $1 || '%')
