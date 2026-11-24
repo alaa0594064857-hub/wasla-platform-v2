@@ -19,7 +19,8 @@ const copy = {
     sort: "ترتيب حسب", newest: "الأحدث", nameAZ: "الاسم: أ إلى ي", nameZA: "الاسم: ي إلى أ", priceLow: "السعر: الأقل أولاً", priceHigh: "السعر: الأعلى أولاً",
     count: "منتج", emptyTitle: "لا توجد منتجات مطابقة", empty: "جرّب تغيير كلمات البحث أو العودة لاحقاً.",
     all: "كل المنتجات", visit: "زيارة الموقع", track: "طلباتي مع هذا المتجر", about: "عن المتجر",
-    returns: "الإرجاع والاستبدال", loading: "نجهّز متجرك...", notFound: "تعذر العثور على هذا المتجر.",
+    returns: "الإرجاع والاستبدال", loading: "نجهّز متجرك...", notFound: "هذا المتجر غير موجود أو لم يصبح متاحاً للعامة بعد.",
+    loadError: "تعذر تحميل المتجر الآن. حاول مرة أخرى.",
     retry: "إعادة المحاولة", noDescription: "اكتشف مجموعة المنتجات المتاحة لدى هذا المتجر.",
     viewProduct: "عرض التفاصيل", seller: "البائع", secure: "تجربة تسوق واضحة ومباشرة",
     rights: "تظل حقوق المستهلك الإلزامية بموجب القانون المعمول به محفوظة.",
@@ -34,7 +35,8 @@ const copy = {
     sort: "Sort by", newest: "Newest", nameAZ: "Name: A to Z", nameZA: "Name: Z to A", priceLow: "Price: low to high", priceHigh: "Price: high to low",
     count: "products", emptyTitle: "No matching products", empty: "Try another search or check back later.",
     all: "All products", visit: "Visit website", track: "My orders with this store", about: "About this store",
-    returns: "Returns & exchanges", loading: "Preparing your store...", notFound: "This store could not be found.",
+    returns: "Returns & exchanges", loading: "Preparing your store...", notFound: "This store was not found or is not publicly available yet.",
+    loadError: "This store could not be loaded right now. Please try again.",
     retry: "Try again", noDescription: "Explore the products currently available from this store.",
     viewProduct: "View details", seller: "Seller", secure: "A clear and straightforward shopping experience",
     rights: "Mandatory consumer rights under applicable law remain unaffected.",
@@ -76,16 +78,21 @@ export default function PublicStorePage() {
     setError("");
     try {
       const response = await fetch(`/api/public/stores/${encodeURIComponent(params.slug)}`, { cache: "no-store" });
+      if (response.status === 404) {
+        setError(t.notFound);
+        return;
+      }
+      if (!response.ok) throw new Error(`Store request failed with HTTP ${response.status}`);
       const data = await response.json();
-      if (!response.ok || !data.success || !data.store || !Array.isArray(data.products)) throw new Error("store");
+      if (!data.success || !data.store || !Array.isArray(data.products)) throw new Error("Invalid store response");
       setStore(data.store);
       setProducts(data.products);
     } catch {
-      setError(t.notFound);
+      setError(t.loadError);
     } finally {
       setLoading(false);
     }
-  }, [params.slug, t.notFound]);
+  }, [params.slug, t.notFound, t.loadError]);
 
   useEffect(() => { void loadStore(); }, [loadStore]);
 
