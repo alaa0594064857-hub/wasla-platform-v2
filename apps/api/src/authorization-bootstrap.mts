@@ -32,6 +32,7 @@ const definitions: readonly RoleDefinition[] = [
   { name: "platform_owner", scope: "platform", permissions: [
     "platform.users.read", "platform.users.manage", "platform.reports.read",
     "platform.reports.manage", "platform.settings.manage", "platform.audit.read", "platform.manage",
+    "platform.security.read",
   ] },
   { name: "platform_admin", scope: "platform", permissions: [
     "platform.users.read", "platform.users.manage", "platform.reports.read",
