@@ -1,5 +1,5 @@
 # WASLA V2 — Production Launch Readiness Audit
-Date: 2026-11-25
+Date: 2026-11-26
 Branch: `main`
 Repository: `alaa0594064857-hub/wasla-platform-v2`
 
@@ -7,14 +7,17 @@ This audit records observed production evidence and release blockers. It does no
 
 ## Verified in this checkpoint
 
-- GitHub Actions WASLA CI completed successfully for `main` commit `63c3b6bea0a75151311db919cbf49dd2712f96de` (run 45696950858).
-- Render primary API service `wasla-apiwasla-api-v2` and web service `wasla-web` both completed deployment of that commit with status `live`.
-- Render logs show the API listening on port 10000 and the web app reporting Next.js ready. No warning/error-level logs were returned in the queried recent log window.
+- GitHub Actions CI for the AI retry API and owner UI changes completed successfully; the corresponding API and web Render deployments are live.
+- Render's primary API service `wasla-apiwasla-api-v2` and web service `wasla-web` are not suspended. The web service reports Next.js ready; the API reports listening on port 10000.
+- The queried API and web warning/error log windows for 2026-11-25 returned no warning/error-level entries. This is a bounded log check, not a substitute for browser-based end-to-end testing.
 - Production database `wasla-db` is available and not suspended; database identity observed as `wasla_9ty9`.
+- The owner account `alaa0594064857@gmail.com` is active, email-verified, and has an active `platform_owner` role assignment. No re-registration or role change is needed.
+- AI manager is enabled and not paused. The 15-minute scheduler is deployed and has successful runs. Latest observed runs report no queued work to process.
+- Production AI task inventory: 4 clean results awaiting owner review, 9 legacy rate-limited drafts that require revalidation, 6 failed tasks, and 0 queued tasks. Retry support is deployed for the old rate-limited states; old drafts must not be approved as fresh results. No task was manually retried and no Gemini usage was triggered during this audit.
+- Affiliate research currently contains 5 private draft candidates, 0 published items, and an Amazon US program with status `pending_approval`. No Amazon affiliate links or product offers are publicly live.
 - Required application tables exist, including users, accounts, business profiles, stores, store products, subscriptions, subscription plans, invoices, payment events, messaging, notifications, trade, official-store, AI-task and support tables.
-- Subscription records are currently empty: `subscription_plans=0`, `subscriptions=0`, `subscription_invoices=0`, `subscription_payment_events=0`.
-- Current member-store data contains one active store `wasla-test-store` named `WASLA Global Store`. Its business account is `pending_verification`; its business profile is `unverified`; it has zero active in-stock products.
-- Public catalog code intentionally exposes only active stores belonging to active accounts with a verified business profile, and only active in-stock products. Therefore the current test store is correctly withheld from public discovery until its business verification is genuinely completed.
+- Production counts observed: 1 account, 1 store, 0 member-store products, 0 messages, 0 notifications, 0 support tickets, 0 official-store products, 0 subscription plans and 0 subscriptions.
+- The single member store `wasla-test-store` (`WASLA Global Store`) has store status `active`, but its business account is `pending_verification` and its business profile is `unverified`. It has zero products. The public catalog intentionally requires an active account and verified business profile, so the store is correctly withheld from public discovery. Do not bypass this gate.
 - Sponsored subscriptions are specified in `docs/architecture/sponsored-subscriptions.md` and tracked in issue #196. No sponsorship API, intake, sponsorship records, or payment flow is implemented by that specification alone.
 
 ## Release blockers / owner decisions
@@ -29,6 +32,7 @@ This audit records observed production evidence and release blockers. It does no
 8. **Mobile release:** native Android/iOS builds, physical-device tests, push delivery and store submission metadata remain outstanding.
 9. **Legal, privacy, accessibility and localization:** review terms, seller disclosures, consumer rights, privacy/deletion retention, accessibility and full Arabic/English coverage before broad commercial launch.
 10. **Database continuity/capacity:** database is currently available on Render's small 0.1c-256mb plan. Confirm renewal/expiry and backup/restore arrangements in Render before relying on it for sustained production traffic.
+11. **Legacy Render API:** an older service named `wasla-api` remains present with auto-deploy disabled. Do not delete it until its usage and dependencies are explicitly confirmed; the active primary API is `wasla-apiwasla-api-v2`.
 
 ## Operational guardrails
 
@@ -39,7 +43,7 @@ This audit records observed production evidence and release blockers. It does no
 
 ## Immediate next sequence
 
-1. Verify the owner/business review flow and complete legitimate business verification.
+1. Review and verify the member business only after its real supporting evidence is checked.
 2. Publish a real test product through the full owner approval workflow and verify the public store page.
 3. Confirm production email sender and external delivery.
 4. Execute hosted multi-account security and user-journey acceptance tests.
