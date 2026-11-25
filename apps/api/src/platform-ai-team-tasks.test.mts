@@ -165,6 +165,22 @@ describe("WASLA owner digital team task API", () => {
     expect(String(mocks.query.mock.calls.find(call => String(call[0]).includes("SET status='queued', attempt_count=0"))?.[0])).toContain("error_code='PROVIDER_RATE_LIMIT'");
   });
 
+  it("requeues legacy rate-limited review rows and clears stale unusable output", async () => {
+    mocks.query.mockImplementation(async (sql: string) => {
+      if (String(sql).includes("FROM platform_ai_manager_control WHERE")) return { rows: [{ enabled: true, pausedReason: null }] };
+      if (String(sql).includes("FROM platform_ai_provider_state")) return { rows: [] };
+      if (String(sql).includes("SET status='queued', attempt_count=0")) return { rows: [{ id: "11111111-1111-4111-8111-111111111111", specialistKey: "translator", title: "Translate", status: "queued", attemptCount: 0 }] };
+      return { rows: [], rowCount: 0 };
+    });
+    const base = await startServer();
+    const response = await fetch(base + "/api/platform/ai/tasks/11111111-1111-4111-8111-111111111111/retry", { method: "POST" });
+    expect(response.status).toBe(200);
+    const update = mocks.query.mock.calls.find(call => String(call[0]).includes("SET status='queued', attempt_count=0"));
+    expect(String(update?.[0])).toContain("status IN ('failed','needs_owner_review')");
+    expect(String(update?.[0])).toContain("result_text=NULL");
+    expect(String(update?.[0])).toContain("error_code='PROVIDER_RATE_LIMIT'");
+  });
+
   it("does not change failed tasks while Gemini cooldown is active", async () => {
     mocks.query.mockImplementation(async (sql: string) => {
       if (String(sql).includes("FROM platform_ai_manager_control WHERE")) return { rows: [{ enabled: true, pausedReason: null }] };
