@@ -362,6 +362,7 @@ export async function handlePlatformAiTeamTasksRequest(req: IncomingMessage, res
           `UPDATE platform_ai_team_tasks
            SET status = $3, updated_at = NOW(), finished_at = NOW()
            WHERE id = $1 AND owner_user_id = $2 AND status = 'needs_owner_review'
+             AND error_code IS NULL AND result_text IS NOT NULL AND length(trim(result_text)) > 0
            RETURNING id, specialist_key AS "specialistKey", title, status,
                      result_text AS "resultText", updated_at AS "updatedAt", finished_at AS "finishedAt"`,
           [taskId, access.userId, nextStatus],
