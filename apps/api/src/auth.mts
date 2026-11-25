@@ -65,8 +65,12 @@ async function sendWASLAEmail(
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    console.error("WASLA transactional email delivery failed:", errorText);
+    // Do not log the provider response body: it may contain recipient or
+    // request details. Keep operational logs limited to the HTTP status.
+    console.error(
+      "WASLA transactional email delivery failed (provider HTTP status):",
+      response.status,
+    );
     throw new Error("Could not send WASLA email");
   }
 }
