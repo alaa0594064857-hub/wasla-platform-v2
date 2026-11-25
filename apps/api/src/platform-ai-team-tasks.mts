@@ -419,8 +419,10 @@ export async function handlePlatformAiTeamTasksRequest(req: IncomingMessage, res
       const retried = await db.query(
         `UPDATE platform_ai_team_tasks
          SET status='queued', attempt_count=0, error_code=NULL, next_attempt_at=NULL,
+             result_text=NULL, provider_model=NULL, output_characters=NULL,
              finished_at=NULL, started_at=NULL, updated_at=NOW()
-         WHERE id=$1 AND owner_user_id=$2 AND status='failed'
+         WHERE id=$1 AND owner_user_id=$2
+           AND status IN ('failed','needs_owner_review')
            AND error_code='PROVIDER_RATE_LIMIT'
          RETURNING id, specialist_key AS "specialistKey", title, status,
                    attempt_count AS "attemptCount"` ,
