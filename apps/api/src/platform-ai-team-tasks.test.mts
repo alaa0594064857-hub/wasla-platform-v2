@@ -90,7 +90,7 @@ describe("WASLA owner digital team task API", () => {
       if (String(sql).includes("FROM platform_ai_provider_state")) {
         return { rows: [{ cooldownUntil: "2026-11-15T09:00:00.000Z", lastErrorCode: "PROVIDER_RATE_LIMIT" }] };
       }
-      if (String(sql).includes("GROUP BY status")) {
+      if ((String(sql).includes("GROUP BY status") || String(sql).includes("GROUP BY 1"))) {
         return { rows: [{ status: "queued", count: 15 }, { status: "failed", count: 3 }] };
       }
       if (String(sql).includes("FROM platform_ai_team_tasks") && String(sql).includes("ORDER BY created_at DESC")) {
