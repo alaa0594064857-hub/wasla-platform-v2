@@ -198,6 +198,9 @@ describe("WASLA owner digital team task API", () => {
     const update = mocks.query.mock.calls.find(call => String(call[0]).includes("SET status = $3"));
     expect(update?.[1]).toEqual(["11111111-1111-4111-8111-111111111111", "owner-1", "completed"]);
     expect(String(update?.[0])).toContain("status = 'needs_owner_review'");
+    expect(String(update?.[0])).toContain("error_code IS NULL");
+    expect(String(update?.[0])).toContain("result_text IS NOT NULL");
+    expect(String(update?.[0])).toContain("length(trim(result_text)) > 0");
     expect(mocks.query.mock.calls.some(call => String(call[0]).includes("INSERT INTO platform_ai_team_task_events") && call[1]?.[2] === "task_result_approved")).toBe(true);
   });
 
