@@ -91,7 +91,8 @@ describe("WASLA database role permission scope integrity", () => {
        INNER JOIN role_permissions rp ON rp.role_id = r.id AND rp.scope_type = r.scope_type
        INNER JOIN permissions p ON p.id = rp.permission_id AND p.scope_type = rp.scope_type
        WHERE (r.scope_type = 'account' AND r.name IN ('account_owner', 'account_admin', 'account_manager', 'account_employee', 'account_viewer'))
-          OR (r.scope_type = 'store' AND r.name IN ('store_owner', 'store_admin', 'store_manager', 'store_employee'))`,
+          OR (r.scope_type = 'store' AND r.name IN ('store_owner', 'store_admin', 'store_manager', 'store_employee'))
+          OR (r.scope_type = 'platform' AND r.name = 'platform_owner')`,
     );
     const grants = new Set(result.rows.map((row) => `${row.role}:${row.permission_key}`));
     expect(grants.has("account_employee:account.product.create")).toBe(true);
@@ -99,6 +100,7 @@ describe("WASLA database role permission scope integrity", () => {
     expect(grants.has("store_manager:store.product.create")).toBe(true);
     expect(grants.has("store_employee:store.product.read")).toBe(true);
     expect(grants.has("store_employee:store.product.create")).toBe(false);
+    expect(grants.has("platform_owner:platform.security.read")).toBe(true);
   });
 });
 
