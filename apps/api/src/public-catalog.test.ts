@@ -110,6 +110,28 @@ describe("public catalog privacy and visibility", () => {
     expect(String(mocks.query.mock.calls[1][0])).toContain("stock_quantity > 0");
     expect(String(mocks.query.mock.calls[1][0])).not.toMatch(/supplier|source_offer/i);
   });
+  it("keeps an unverified member store hidden from the public store page", async () => {
+    mocks.query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
+    const baseUrl = await startServer({ storeSlug: "pending-member-store" });
+    const response = await fetch(baseUrl);
+    const data = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(data).toMatchObject({ success: false, error: "Store not found" });
+    expect(String(mocks.query.mock.calls[0][0])).toContain("bp.verification_status = 'verified'");
+  });
+
+  it("keeps products from unverified businesses hidden from direct public product links", async () => {
+    mocks.query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
+    const baseUrl = await startServer({ productId: "33333333-3333-4333-8333-333333333333" });
+    const response = await fetch(baseUrl);
+    const data = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(data).toMatchObject({ success: false, error: "Product not found" });
+    expect(String(mocks.query.mock.calls[0][0])).toContain("bp.verification_status = 'verified'");
+  });
+
 });
 
 
