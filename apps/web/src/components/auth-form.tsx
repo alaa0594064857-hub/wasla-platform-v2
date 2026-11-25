@@ -161,23 +161,35 @@ export default function AuthForm({ mode }: { mode: AuthMode }) {
       }
 
       // Resolve the signed-in account's server-verified platform role before choosing its landing page.
+      // Retry transient API cold-start/session propagation failures instead of silently sending the owner to /account.
       let destination = "/account";
-      try {
-        const accessResponse = await fetch("/api/platform/security", {
-          credentials: "include",
-          cache: "no-store",
-        });
-        if (accessResponse.ok) {
-          const accessData = await accessResponse.json();
-          if (accessData?.success && accessData.platformAccess?.roles?.includes("platform_owner")) {
-            destination = "/owner";
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          const accessResponse = await fetch("/api/platform/security", {
+            credentials: "include",
+            cache: "no-store",
+          });
+
+          if (accessResponse.ok) {
+            const accessData = await accessResponse.json();
+            if (accessData?.success && accessData.platformAccess?.roles?.includes("platform_owner")) {
+              destination = "/owner";
+            }
+            break;
           }
+
+          // A 403 is a definitive authorization result; 5xx and 401 can be transient immediately after sign-in.
+          if (accessResponse.status === 403 || accessResponse.status === 404) break;
+        } catch {
+          // Retry network and temporary upstream failures.
         }
-      } catch {
-        // Keep the normal account landing page if the security check is temporarily unavailable.
+
+        if (attempt < 2) {
+          await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
+        }
       }
+
       router.replace(destination);
-      router.refresh();
     } catch {
       setError(isRegister ? t.registerError : t.loginError);
     } finally {
