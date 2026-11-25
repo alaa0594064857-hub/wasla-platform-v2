@@ -188,8 +188,8 @@ export async function handlePlatformAiTeamTasksRequest(req: IncomingMessage, res
       );
       const providerState = providerResult.rows[0] || null;
       const countsResult = await db.query(
-        `SELECT status, COUNT(*)::int AS count
-         FROM platform_ai_team_tasks WHERE owner_user_id = $1 GROUP BY status`,
+        `SELECT CASE WHEN status = 'needs_owner_review' AND (error_code IS NOT NULL OR result_text IS NULL OR length(trim(result_text)) = 0) THEN 'failed' ELSE status END AS status, COUNT(*)::int AS count
+         FROM platform_ai_team_tasks WHERE owner_user_id = $1 GROUP BY 1`,
         [access.userId],
       );
       const taskCounts = Object.fromEntries(countsResult.rows.map((row: { status: string; count: number }) => [row.status, row.count]));
