@@ -1218,9 +1218,9 @@ if (process.env.NODE_ENV !== "test") {
       await ensurePlatformOwnerRole();
       await ensurePersonalThemesTable();
       await ensureStoreProductsTable();
+      await ensureMemberStoreOrderTables();
       const { ensureMemberStoreAffiliateTables } = await import("./member-store-affiliates.mjs");
       await ensureMemberStoreAffiliateTables();
-      await ensureMemberStoreOrderTables();
       const { ensureMemberStoreReturnPolicyTables } = await import("./member-store-return-policy-schema.mjs");
       await ensureMemberStoreReturnPolicyTables();
       await ensureNetworkTables();
