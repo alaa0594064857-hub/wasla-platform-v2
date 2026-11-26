@@ -118,7 +118,7 @@ describe("WASLA member-store order lifecycle schema", () => {
     await ensureMemberStoreOrderTables();
     await ensureMemberStoreReturnPolicyTables();
     await ensureVerifiedReviewTables();
-    const { ensureMemberStoreAffiliateTables } = await import("./member-store-affiliates.mjs");
+    await ensureMemberStoreAffiliateTables();
     await ensureMemberStoreAffiliateTables();
   });
 
