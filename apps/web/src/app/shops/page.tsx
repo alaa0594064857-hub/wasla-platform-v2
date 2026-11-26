@@ -68,23 +68,31 @@ export default function ShopsPage() {
   const t = copy[locale];
   const dir = locale === "ar" ? "rtl" : "ltr";
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (signal?: AbortSignal) => {
     setLoading(true); setError("");
     try {
       const [accountData, storeData] = await Promise.all([
-        request<{ accounts: Account[] }>("/api/accounts"),
-        request<{ stores: Store[] }>("/api/stores"),
+        request<{ accounts: Account[] }>("/api/accounts", { signal }),
+        request<{ stores: Store[] }>("/api/stores", { signal }),
       ]);
+      if (signal?.aborted) return;
       setAccounts(accountData.accounts);
       setStores(storeData.stores);
       setAccountId(current => current && accountData.accounts.some(a => a.id === current)
         ? current : accountData.accounts[0]?.id ?? "");
     } catch (cause) {
+      if (signal?.aborted || (cause instanceof Error && cause.name === "AbortError")) return;
       setError(cause instanceof Error ? cause.message : t.error);
-    } finally { setLoading(false); }
+    } finally {
+      if (!signal?.aborted) setLoading(false);
+    }
   }, [t.error]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const controller = new AbortController();
+    void load(controller.signal);
+    return () => controller.abort();
+  }, [load]);
 
   async function createStore(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setCreating(true); setError(""); setMessage("");
