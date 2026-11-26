@@ -215,3 +215,80 @@ export async function handleMemberStoreAffiliateRequest(req: IncomingMessage, re
     send(res,200,{success:true,application:updated.rows[0]});
   }
 }
+
+
+/** Public discovery exposes only active programs from verified, active merchants. */
+export async function handlePublicMemberAffiliatePrograms(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  if (req.method !== "GET") { send(res,405,{success:false,error:"Method not allowed"}); return; }
+  const result = await getDatabasePool().query(
+    `SELECT p.id,p.name,p.description,p.commission_bps AS "commissionBps",
+      s.name AS "merchantStoreName",s.slug AS "merchantStoreSlug",
+      COUNT(DISTINCT ap.product_id)::int AS "eligibleProductCount"
+     FROM member_store_affiliate_programs p
+     JOIN stores s ON s.id=p.merchant_store_id AND s.status='active'
+     JOIN accounts a ON a.id=s.account_id AND a.status='active'
+     JOIN business_profiles bp ON bp.account_id=a.id AND bp.verification_status='verified'
+     JOIN member_store_affiliate_products ap ON ap.program_id=p.id
+     JOIN store_products sp ON sp.id=ap.product_id AND sp.store_id=s.id AND sp.status='active' AND sp.stock_quantity>0
+     WHERE p.status='active'
+     GROUP BY p.id,s.name,s.slug ORDER BY p.created_at DESC LIMIT 100`,
+  );
+  send(res,200,{success:true,programs:result.rows});
+}
+
+/** Merchant can activate or pause a draft program after confirming its terms. */
+export async function handleMemberAffiliateProgramStatus(req: IncomingMessage, res: ServerResponse, slug: string, programId: string): Promise<void> {
+  if (req.method !== "PATCH" || !uuid.test(programId)) { send(res,405,{success:false,error:"Invalid program status request"}); return; }
+  const current = await sessionFor(req,res); if (!current) return;
+  let input: Record<string,unknown>|null;
+  try { input=await body(req); } catch(error) { send(res,error instanceof Error && error.message==="too_large"?413:400,{success:false,error:"Invalid request body"}); return; }
+  const next = input?.status;
+  if (!input || !["active","paused","closed"].includes(String(next)) || input.termsConfirmed !== true) {
+    send(res,400,{success:false,error:"Choose active, paused or closed and confirm the program terms"}); return;
+  }
+  const db=getDatabasePool();
+  const found=await db.query(
+    `SELECT p.id,p.merchant_store_id AS "storeId",p.status,
+      COUNT(DISTINCT ap.product_id)::int AS "productCount",
+      COUNT(DISTINCT sp.id)::int AS "eligibleCount"
+     FROM member_store_affiliate_programs p JOIN stores s ON s.id=p.merchant_store_id
+     LEFT JOIN member_store_affiliate_products ap ON ap.program_id=p.id
+     LEFT JOIN store_products sp ON sp.id=ap.product_id AND sp.store_id=s.id AND sp.status='active' AND sp.stock_quantity>0
+     WHERE p.id=$1 AND s.slug=$2 AND s.status='active'
+     GROUP BY p.id,s.id`,
+    [programId,slug],
+  );
+  if(!found.rowCount){send(res,404,{success:false,error:"Affiliate program not found"});return;}
+  const access=await storePermission(found.rows[0].storeId,current.user.id,["store.order.manage","account.order.manage"]);
+  if(!access){send(res,403,{success:false,error:"Merchant store management permission required"});return;}
+  if(next==="active" && (!found.rows[0].productCount || found.rows[0].eligibleCount!==found.rows[0].productCount)){
+    send(res,409,{success:false,error:"Add at least one published, in-stock product before activating this program"});return;
+  }
+  const updated=await db.query(
+    `UPDATE member_store_affiliate_programs SET status=$2,updated_at=NOW() WHERE id=$1
+     RETURNING id,status,updated_at AS "updatedAt"`,
+    [programId,next],
+  );
+  send(res,200,{success:true,program:updated.rows[0]});
+}
+
+/** Merchant-only application queue, scoped to the merchant's own store. */
+export async function handleMemberAffiliateApplicationsList(req: IncomingMessage,res: ServerResponse,slug:string):Promise<void>{
+  if(req.method!=="GET"){send(res,405,{success:false,error:"Method not allowed"});return;}
+  const current=await sessionFor(req,res);if(!current)return;
+  const db=getDatabasePool();
+  const store=await db.query("SELECT id FROM stores WHERE slug=$1 AND status='active' LIMIT 1",[slug]);
+  if(!store.rowCount){send(res,404,{success:false,error:"Store not found"});return;}
+  const access=await storePermission(store.rows[0].id,current.user.id,["store.order.read","store.order.manage","account.order.read","account.order.manage"]);
+  if(!access){send(res,403,{success:false,error:"Store management permission required"});return;}
+  const rows=await db.query(
+    `SELECT a.id,a.status,a.message,a.created_at AS "createdAt",p.id AS "programId",
+      p.name AS "programName",affiliate.name AS "affiliateStoreName",affiliate.slug AS "affiliateStoreSlug"
+     FROM member_store_affiliate_applications a
+     JOIN member_store_affiliate_programs p ON p.id=a.program_id
+     JOIN stores affiliate ON affiliate.id=a.affiliate_store_id
+     WHERE p.merchant_store_id=$1 ORDER BY a.created_at DESC LIMIT 100`,
+    [store.rows[0].id],
+  );
+  send(res,200,{success:true,applications:rows.rows});
+}
