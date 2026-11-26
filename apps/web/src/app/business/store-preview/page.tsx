@@ -54,7 +54,7 @@ export default function PrivateStorePreviewIndex() {
           <Link href="/business" className="business-refresh">{ar ? "العودة للأعمال" : "Back to business"}</Link>
         </div>
         <div className="business-alert" role="note" style={{ marginBottom: 20 }}>
-          {ar ? "وضع معاينة خاص — لا يمكن للزوار الوصول إلى هذه الصفحة. حالة التوثيق والنشر العام لا تتغير هنا." : "Private preview mode — visitors cannot access this page. Verification and public publishing status are not changed here."}
+          {ar ? "وضع معاينة خاص — لا تظهر بيانات المتجر إلا للمستخدم المسجل الذي يملك الصلاحية. حالة التوثيق والنشر العام لا تتغير هنا." : "Private preview mode — store data is returned only to signed-in users with store permissions. Verification and public publishing status are not changed here."}
         </div>
         {loading ? <div className="business-loading">{ar ? "جارٍ تحميل المتاجر..." : "Loading stores..."}</div> : error ? (
           <div className="business-alert business-alert-error" role="alert">{error}</div>
