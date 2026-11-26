@@ -595,6 +595,19 @@ export async function handleMemberStoreOrdersRequest(
     respond(response, 404, { success: false, error: "Order not found, access denied, or transition not allowed" });
     return;
   }
+  if (body.status === "cancelled" || body.status === "rejected") {
+    await client.query(
+      `INSERT INTO member_store_affiliate_commission_ledger
+        (attribution_id,event_type,amount,currency,idempotency_key,reference_type,reference_id,metadata)
+       SELECT a.id,'reversal',-a.commission_amount,a.currency,
+         'order:'||a.order_id::text||':'||a.product_id::text||':reversal',
+         'order',a.order_id,jsonb_build_object('reason', $2)
+       FROM member_store_order_affiliate_attributions a
+       WHERE a.order_id=$1 AND a.commission_amount > 0
+       ON CONFLICT(idempotency_key) DO NOTHING`,
+      [orderId,body.status],
+    );
+  }
   if (body.status === "cancelled" && acceptedCancellation) {
     if (!Array.isArray(acceptedCancellation.items) || acceptedCancellation.items.length === 0) {
       await client.query("ROLLBACK");
