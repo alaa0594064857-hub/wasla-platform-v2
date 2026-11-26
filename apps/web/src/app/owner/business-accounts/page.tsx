@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
@@ -26,19 +26,22 @@ export default function BusinessAccountReviewPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
-  async function load() {
+  const load = useCallback(async (signal?: AbortSignal) => {
     setError("");
-    const response = await fetch("/api/platform/business-accounts", { credentials: "include", cache: "no-store" });
+    const response = await fetch("/api/platform/business-accounts", {
+      credentials: "include", cache: "no-store", signal,
+    });
     const data = await response.json();
     if (!response.ok || !data.success || !Array.isArray(data.accounts)) throw new Error(data.error || "load-failed");
-    setAccounts(data.accounts);
-  }
+    if (!signal?.aborted) setAccounts(data.accounts);
+  }, []);
 
   useEffect(() => {
     if (isPending) return;
     if (!session?.user) { router.replace("/login"); return; }
     let active = true;
-    fetch("/api/platform/security", { credentials: "include", cache: "no-store" })
+    const controller = new AbortController();
+    fetch("/api/platform/security", { credentials: "include", cache: "no-store", signal: controller.signal })
       .then(async response => {
         if (!response.ok) throw new Error("restricted");
         return response.json();
@@ -49,12 +52,16 @@ export default function BusinessAccountReviewPage() {
           data.platformAccess?.permissions?.includes("platform.manage");
         setAllowed(Boolean(ok));
         if (!ok) return;
-        return load();
+        return load(controller.signal);
       })
-      .catch(() => { if (active) setError(ar ? "تعذر التحقق من صلاحيات المالك أو تحميل الحسابات." : "Could not verify owner access or load business accounts."); })
-      .finally(() => { if (active) setChecking(false); });
-    return () => { active = false; };
-  }, [isPending, session?.user?.id, router]);
+      .catch(() => {
+        if (active && !controller.signal.aborted) {
+          setError(ar ? "تعذر التحقق من صلاحيات المالك أو تحميل الحسابات." : "Could not verify owner access or load business accounts.");
+        }
+      })
+      .finally(() => { if (active && !controller.signal.aborted) setChecking(false); });
+    return () => { active = false; controller.abort(); };
+  }, [isPending, session?.user?.id, router, ar, load]);
 
   async function decide(account: BusinessAccount, decision: "approve" | "reject") {
     const note = (notes[account.id] || "").trim();
@@ -103,7 +110,7 @@ export default function BusinessAccountReviewPage() {
       <div style={styles.stats}><div style={styles.stat}><strong>{pending.length}</strong><span>{ar ? "بانتظار المراجعة" : "Awaiting review"}</span></div><div style={styles.stat}><strong>{active.length}</strong><span>{ar ? "حسابات نشطة" : "Active accounts"}</span></div><div style={styles.stat}><strong>{accounts.length}</strong><span>{ar ? "إجمالي الحسابات" : "Total accounts"}</span></div></div>
       {error && <p role="alert" style={styles.error}>{error}</p>}
       {message && <p role="status" style={styles.success}>{message}</p>}
-      <div style={styles.sectionHead}><h2>{ar ? "طلبات التحقق" : "Verification queue"}</h2><button style={styles.reload} onClick={() => void load()}>{ar ? "تحديث" : "Refresh"}</button></div>
+      <div style={styles.sectionHead}><h2>{ar ? "طلبات التحقق" : "Verification queue"}</h2><button style={styles.reload} onClick={() => void load().catch(() => setError(ar ? "تعذر تحديث قائمة الحسابات." : "Could not refresh the business account list."))}>{ar ? "تحديث" : "Refresh"}</button></div>
       {pending.length === 0 && <p style={styles.empty}>{ar ? "لا توجد حسابات بانتظار التحقق حالياً." : "No business accounts are waiting for verification."}</p>}
       {pending.map(account => <article key={account.id} style={styles.card}>
         <div style={styles.cardTop}><div><h3>{account.display_name}</h3><p>{account.legal_name}</p></div><span style={styles.pending}>{label(account.status)}</span></div>
