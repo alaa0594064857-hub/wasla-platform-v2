@@ -909,10 +909,13 @@ async function handleRequest(
   const memberAffiliateLinkMatch = requestUrl.pathname.match(/^\/api\/affiliate-applications\/([0-9a-f-]{36})\/link$/i);
   const memberAffiliateReviewMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/affiliate-applications(?:\/([0-9a-f-]{36}))?$/i);
   const memberAffiliateEarningsMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/affiliate-earnings$/i);
-  if (requestUrl.pathname === "/api/public/affiliate-programs" || memberAffiliateProgramsMatch || memberAffiliateApplicationMatch || memberAffiliateReviewMatch || memberAffiliateLinkMatch || memberAffiliateEarningsMatch) {
+  const memberAffiliateMembershipsMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/affiliate-memberships$/i);
+  if (requestUrl.pathname === "/api/public/affiliate-programs" || memberAffiliateProgramsMatch || memberAffiliateApplicationMatch || memberAffiliateReviewMatch || memberAffiliateLinkMatch || memberAffiliateEarningsMatch || memberAffiliateMembershipsMatch) {
     try {
-      const { handleMemberStoreAffiliateRequest, handlePublicMemberAffiliatePrograms, handleMemberAffiliateProgramStatus, handleMemberAffiliateApplicationsList, handleMemberAffiliateLinkIssue, handleMemberAffiliateEarnings } = await import("./member-store-affiliates.mjs");
-      if (memberAffiliateEarningsMatch) {
+      const { handleMemberStoreAffiliateRequest, handlePublicMemberAffiliatePrograms, handleMemberAffiliateProgramStatus, handleMemberAffiliateApplicationsList, handleMemberAffiliateLinkIssue, handleMemberAffiliateEarnings, handleMemberAffiliateMemberships } = await import("./member-store-affiliates.mjs");
+      if (memberAffiliateMembershipsMatch) {
+        await handleMemberAffiliateMemberships(request, response, decodeURIComponent(memberAffiliateMembershipsMatch[1]));
+      } else if (memberAffiliateEarningsMatch) {
         await handleMemberAffiliateEarnings(request, response, decodeURIComponent(memberAffiliateEarningsMatch[1]));
       } else if (memberAffiliateLinkMatch) {
         await handleMemberAffiliateLinkIssue(request, response, memberAffiliateLinkMatch[1]);
