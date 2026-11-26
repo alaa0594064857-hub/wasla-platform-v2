@@ -59,7 +59,7 @@ export async function handlePlatformBusinessAccountsRequest(
          LEFT JOIN roles r ON r.id = am.role_id AND r.scope_type = am.role_scope
          LEFT JOIN users u ON u.id = am.user_id
          WHERE a.status IN ('pending_verification', 'active', 'suspended')
-         GROUP BY a.id, bp.verification_status
+         GROUP BY a.id, bp.description, bp.website, bp.contact_information, bp.verification_status
          ORDER BY CASE a.status WHEN 'pending_verification' THEN 0 WHEN 'suspended' THEN 1 ELSE 2 END,
                   a.created_at DESC
          LIMIT 200`,
