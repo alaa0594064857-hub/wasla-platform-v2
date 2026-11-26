@@ -353,7 +353,7 @@ export async function handleMemberStoreOrdersRequest(
            JOIN member_store_affiliate_applications a ON a.id=l.application_id AND a.status='approved'
            JOIN member_store_affiliate_programs p ON p.id=a.program_id AND p.status='active'
            JOIN stores affiliate ON affiliate.id=a.affiliate_store_id AND affiliate.status='active'
-           JOIN accounts affiliate_account ON affiliate_account.id=affiliate.account_id AND affiliate_account.status='active'
+           JOIN accounts affiliate_account ON affiliate_account.id=affiliate.account_id AND affiliate_account.status IN ('active','pending_verification')
            WHERE l.token_hash=$1 AND l.active=true AND p.merchant_store_id=$2
            LIMIT 1`,
           [tokenHash,store.rows[0].id],
