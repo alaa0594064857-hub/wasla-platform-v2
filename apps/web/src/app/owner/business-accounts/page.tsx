@@ -91,6 +91,7 @@ export default function BusinessAccountReviewPage() {
 
   const pending = accounts.filter(a => a.status === "pending_verification");
   const active = accounts.filter(a => a.status === "active");
+  const rejected = accounts.filter(a => a.verification_status === "rejected");
   const label = (value: string) => ({
     company: ar ? "شركة" : "Company", supplier: ar ? "مورد" : "Supplier",
     manufacturer: ar ? "مصنع" : "Manufacturer", trader: ar ? "تاجر" : "Trader",
@@ -136,6 +137,9 @@ export default function BusinessAccountReviewPage() {
         <label style={styles.check}><input type="checkbox" checked={Boolean(confirmations[account.id])} onChange={e => setConfirmations(v => ({ ...v, [account.id]: e.target.checked }))} />{ar ? "أؤكد أنني راجعت هوية النشاط التجاري والأدلة الداعمة بنفسي." : "I confirm that I personally reviewed the business identity and supporting evidence."}</label>
         <div style={styles.actions}><button disabled={busy === account.id || account.active_owner_count < 1} onClick={() => void decide(account, "approve")} style={styles.approve}>{busy === account.id ? (ar ? "جارٍ الحفظ..." : "Saving...") : (ar ? "اعتماد وتفعيل" : "Approve & activate")}</button><button disabled={busy === account.id} onClick={() => void decide(account, "reject")} style={styles.reject}>{ar ? "رفض التحقق" : "Reject verification"}</button></div>
       </article>)}
+      <div style={styles.sectionHead}><h2>{ar ? "الحسابات المرفوضة" : "Rejected accounts"}</h2></div>
+      {rejected.length === 0 && <p style={styles.empty}>{ar ? "لا توجد حسابات مرفوضة." : "No rejected accounts."}</p>}
+      {rejected.map(account => <div key={account.id} style={styles.activeRow}><strong>{account.display_name}</strong><span>{label(account.account_type)} · {label(account.status)} · {label(account.verification_status || "unverified")}</span></div>)}
       <div style={styles.sectionHead}><h2>{ar ? "الحسابات النشطة" : "Active accounts"}</h2></div>
       {active.map(account => <div key={account.id} style={styles.activeRow}><strong>{account.display_name}</strong><span>{label(account.account_type)} · {label(account.verification_status || "unverified")}</span></div>)}
     </div>
