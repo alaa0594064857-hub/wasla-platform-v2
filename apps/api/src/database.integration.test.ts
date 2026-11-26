@@ -119,7 +119,6 @@ describe("WASLA member-store order lifecycle schema", () => {
     await ensureMemberStoreReturnPolicyTables();
     await ensureVerifiedReviewTables();
     await ensureMemberStoreAffiliateTables();
-    await ensureMemberStoreAffiliateTables();
   });
 
   it("creates the event, review, return-policy and affiliate schema idempotently", async () => {
