@@ -135,6 +135,7 @@ export default function PrivateStorePreviewPage() {
                 <p>{store.account_name || ""}{store.country_code ? ` · ${store.country_code}` : ""}</p>
               </div>
             </section>
+            <div className="mt-5"><Link href={"/store/" + encodeURIComponent(slug) + "/affiliates"} className="inline-flex rounded-xl bg-[#14233b] px-5 py-3 text-sm font-bold text-white">{ar ? "إدارة التسويق بالعمولة بين المتاجر" : "Manage store-to-store affiliates"} ↗</Link></div>
             {store.business_description && <p className="mt-5 max-w-3xl text-sm leading-8 text-slate-600">{store.business_description}</p>}
             {store.website && <a href={store.website} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex text-sm font-bold text-[#92713a] underline">{ar ? "موقع النشاط" : "Business website"} ↗</a>}
 
