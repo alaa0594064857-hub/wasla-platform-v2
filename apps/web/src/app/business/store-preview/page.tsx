@@ -51,7 +51,7 @@ export default function PrivateStorePreviewIndex() {
             <h1>{ar ? "معاينة متاجري الخاصة" : "My private store previews"}</h1>
             <p>{ar ? "هذه المعاينة لا تنشر المتجر للعامة، وتظهر فقط بعد التحقق من صلاحيات حسابك." : "These previews do not publish stores publicly and are shown only after your account permissions are checked."}</p>
           </div>
-          <Link href="/business" className="business-refresh">{ar ? "العودة للأعمال" : "Back to business"}</Link>
+          <div className="flex flex-wrap gap-2"><Link href="/affiliate-marketplace" className="business-refresh">{ar ? "سوق فرص العمولة" : "Affiliate marketplace"}</Link><Link href="/business" className="business-refresh">{ar ? "العودة للأعمال" : "Back to business"}</Link></div>
         </div>
         <div className="business-alert" role="note" style={{ marginBottom: 20 }}>
           {ar ? "وضع معاينة خاص — لا تظهر بيانات المتجر إلا للمستخدم المسجل الذي يملك الصلاحية. حالة التوثيق والنشر العام لا تتغير هنا." : "Private preview mode — store data is returned only to signed-in users with store permissions. Verification and public publishing status are not changed here."}
