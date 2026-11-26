@@ -121,7 +121,7 @@ export async function handleMemberStoreAffiliateRequest(req: IncomingMessage, re
     const bps = input?.commissionBps;
     const productIds = input?.productIds;
     if (!input || name.length < 3 || name.length > 120 || description.length > 1200 ||
-      !Number.isInteger(bps) || (bps as number) < 1 || (bps as number) > 5000 ||
+      typeof bps !== "number" || !Number.isInteger(bps) || bps < 1 || bps > 5000 ||
       !Array.isArray(productIds) || productIds.length < 1 || productIds.length > 100 ||
       productIds.some(value => typeof value !== "string" || !uuid.test(value)) ||
       new Set(productIds).size !== productIds.length) {
