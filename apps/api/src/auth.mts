@@ -6,6 +6,11 @@ import { expo } from "@better-auth/expo";
 import { getDrizzleDatabase, getDatabasePool } from "./database.js";
 import * as schema from "./db/schema.js";
 import { buildBetterAuthTrustedOrigins } from "./trusted-origins.mjs";
+import {
+  buildPasswordResetUrl,
+  PASSWORD_RESET_TOKEN_TTL_SECONDS,
+  REVOKE_SESSIONS_ON_PASSWORD_RESET,
+} from "./password-recovery.mjs";
 
 const secret = process.env.BETTER_AUTH_SECRET;
 const resendApiKey = process.env.RESEND_API_KEY;
@@ -144,12 +149,9 @@ export const auth = betterAuth({
     enabled: true,
     requireEmailVerification: true,
     // Keep recovery-token lifetime explicit and revoke older sessions after recovery.
-    resetPasswordTokenExpiresIn: 3600,
-    revokeSessionsOnPasswordReset: true,
+    resetPasswordTokenExpiresIn: PASSWORD_RESET_TOKEN_TTL_SECONDS,
+    revokeSessionsOnPasswordReset: REVOKE_SESSIONS_ON_PASSWORD_RESET,
     sendResetPassword: async ({ user, token }) => {
-      const webBaseUrl = process.env.WASLA_WEB_URL ?? "https://wasla.trade";
-      const resetUrl = new URL("/reset-password", webBaseUrl);
-      resetUrl.searchParams.set("token", token);
 
       await sendWASLAEmail(
         user.email,
@@ -158,7 +160,7 @@ export const auth = betterAuth({
           "A password reset was requested for your WASLA account.",
           "",
           "Use this link to choose a new password:",
-          resetUrl.toString(),
+          buildPasswordResetUrl(token),
           "",
           "If you did not request this, you can ignore this email.",
         ],
