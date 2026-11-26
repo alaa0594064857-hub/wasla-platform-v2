@@ -296,7 +296,7 @@ export async function handleAccountsRequest(
         return;
       }
       const normalized = value.trim();
-      if (field === "email" && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(normalized)) {
+      if (field === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
         respond(response, 400, { success: false, error: "Invalid business email" });
         return;
       }
