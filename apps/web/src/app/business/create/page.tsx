@@ -2,7 +2,6 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useLocale } from "../../../components/locale-provider";
 import WorkspaceHeader from "../../../components/workspace-header";
 
@@ -30,6 +29,9 @@ const labels = {
     saving: "جارٍ الإنشاء...",
     error: "تعذر إنشاء الحساب. تحقق من البيانات وحاول مرة أخرى.",
     required: "يرجى إدخال الاسمين القانوني والظاهر بشكل صحيح.",
+    createdTitle: "تم إنشاء الحساب التجاري بنجاح",
+    createdMessage: "حسابك الآن بانتظار مراجعة وصلة. لن يظهر نشاطك أو متجرك للعامة قبل التحقق من بيانات النشاط واعتمادها.",
+    openBusiness: "فتح إدارة الأعمال",
   },
   en: {
     brand: "WASLA",
@@ -52,13 +54,15 @@ const labels = {
     saving: "Creating...",
     error: "Could not create the account. Check the details and try again.",
     required: "Enter valid legal and display names.",
+    createdTitle: "Business account created successfully",
+    createdMessage: "Your account is now awaiting WASLA review. Your business and store will not appear publicly until its details are verified and approved.",
+    openBusiness: "Open business management",
   },
 };
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 export default function CreateBusinessAccountPage() {
-  const router = useRouter();
   const { locale } = useLocale();
   const [accountType, setAccountType] = useState<AccountType>("company");
   const [legalName, setLegalName] = useState("");
@@ -68,6 +72,7 @@ export default function CreateBusinessAccountPage() {
   const [website, setWebsite] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [created, setCreated] = useState(false);
   const t = labels[locale];
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -98,8 +103,7 @@ export default function CreateBusinessAccountPage() {
       if (!response.ok || data.success !== true) {
         throw new Error("Business account creation failed");
       }
-      router.replace("/business");
-      router.refresh();
+      setCreated(true);
     } catch {
       setError(t.error);
     } finally {
@@ -132,6 +136,13 @@ export default function CreateBusinessAccountPage() {
 
         {error && <div className="business-alert business-alert-error" role="alert">{error}</div>}
 
+        {created ? (
+          <section className="business-empty" role="status" aria-live="polite">
+            <h2>{t.createdTitle}</h2>
+            <p>{t.createdMessage}</p>
+            <Link href="/business" className="business-primary-link">{t.openBusiness}</Link>
+          </section>
+        ) : (
         <form className="business-invite-form" onSubmit={submit}>
           <label>
             <span>{t.type}</span>
@@ -174,8 +185,9 @@ export default function CreateBusinessAccountPage() {
             <span>↗</span>
           </button>
         </form>
+        )}
 
-        <p><Link href="/business" className="business-primary-link">{t.back}</Link></p>
+        {!created && <p><Link href="/business" className="business-primary-link">{t.back}</Link></p>}
         <footer className="business-footer">{locale === "ar" ? "وصلة · منصة عالمية للتجارة والأعمال" : "WASLA · A global platform for commerce and business"}</footer>
       </section>
     </main>
