@@ -372,6 +372,7 @@ export async function handleMemberAffiliateLinkIssue(req: IncomingMessage, res: 
      JOIN member_store_affiliate_programs p ON p.id=a.program_id
      JOIN stores merchant ON merchant.id=p.merchant_store_id AND merchant.status='active'
      JOIN stores affiliate ON affiliate.id=a.affiliate_store_id AND affiliate.status='active'
+     JOIN accounts affiliate_account ON affiliate_account.id=affiliate.account_id AND affiliate_account.status IN ('active','pending_verification')
      WHERE a.id=$1 LIMIT 1`,
     [applicationId],
   );
