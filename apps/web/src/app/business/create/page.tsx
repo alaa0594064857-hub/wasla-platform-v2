@@ -25,6 +25,12 @@ const labels = {
     country: "رمز الدولة (اختياري - حرفان)",
     description: "نبذة عن النشاط (اختياري)",
     website: "الموقع الإلكتروني (اختياري)",
+    contactHeading: "بيانات التواصل (اختيارية)",
+    email: "البريد الإلكتروني التجاري",
+    phone: "رقم الهاتف",
+    whatsapp: "رقم واتساب",
+    address: "عنوان النشاط التجاري",
+    city: "المدينة",
     submit: "إنشاء الحساب التجاري",
     saving: "جارٍ الإنشاء...",
     error: "تعذر إنشاء الحساب. تحقق من البيانات وحاول مرة أخرى.",
@@ -50,6 +56,12 @@ const labels = {
     country: "Country code (optional - 2 letters)",
     description: "Business description (optional)",
     website: "Website (optional)",
+    contactHeading: "Contact details (optional)",
+    email: "Business email",
+    phone: "Phone number",
+    whatsapp: "WhatsApp number",
+    address: "Business address",
+    city: "City",
     submit: "Create business account",
     saving: "Creating...",
     error: "Could not create the account. Check the details and try again.",
@@ -70,6 +82,11 @@ export default function CreateBusinessAccountPage() {
   const [countryCode, setCountryCode] = useState("");
   const [description, setDescription] = useState("");
   const [website, setWebsite] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+  const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [created, setCreated] = useState(false);
@@ -97,6 +114,7 @@ export default function CreateBusinessAccountPage() {
           countryCode: countryCode.trim() || undefined,
           description: description.trim() || undefined,
           website: website.trim() || undefined,
+          contactInformation: { email, phone, whatsapp, address, city },
         }),
       });
       const data = await response.json();
@@ -178,6 +196,28 @@ export default function CreateBusinessAccountPage() {
           <label>
             <span>{t.website}</span>
             <input type="url" value={website} onChange={(event) => setWebsite(event.target.value)} maxLength={2048} placeholder="https://" />
+          </label>
+
+          <h2 className="business-section-label">{t.contactHeading}</h2>
+          <label>
+            <span>{t.email}</span>
+            <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} maxLength={255} autoComplete="email" />
+          </label>
+          <label>
+            <span>{t.phone}</span>
+            <input type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} maxLength={255} autoComplete="tel" />
+          </label>
+          <label>
+            <span>{t.whatsapp}</span>
+            <input type="tel" value={whatsapp} onChange={(event) => setWhatsapp(event.target.value)} maxLength={255} />
+          </label>
+          <label>
+            <span>{t.address}</span>
+            <input value={address} onChange={(event) => setAddress(event.target.value)} maxLength={500} autoComplete="street-address" />
+          </label>
+          <label>
+            <span>{t.city}</span>
+            <input value={city} onChange={(event) => setCity(event.target.value)} maxLength={255} autoComplete="address-level2" />
           </label>
 
           <button type="submit" disabled={loading} className="business-invite-button">
