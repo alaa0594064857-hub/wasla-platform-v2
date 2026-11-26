@@ -428,3 +428,28 @@ export async function handleMemberAffiliateEarnings(req: IncomingMessage,res: Se
   ]);
   send(res,200,{success:true,totals:totals.rows,entries:entries.rows,notice:"Amounts are internal pending commission records only. WASLA does not hold funds or offer withdrawals in this phase."});
 }
+
+
+/** List programs this store applied to; the affiliate owner, not the merchant, receives the referral link. */
+export async function handleMemberAffiliateMemberships(req:IncomingMessage,res:ServerResponse,slug:string):Promise<void>{
+  if(req.method!=="GET"){send(res,405,{success:false,error:"Method not allowed"});return;}
+  const current=await sessionFor(req,res);if(!current)return;
+  const db=getDatabasePool();
+  const store=await db.query("SELECT id FROM stores WHERE slug=$1 AND status='active' LIMIT 1",[slug]);
+  if(!store.rowCount){send(res,404,{success:false,error:"Store not found"});return;}
+  const access=await storePermission(store.rows[0].id,current.user.id,["store.order.read","store.order.manage","account.order.read","account.order.manage"]);
+  if(!access){send(res,403,{success:false,error:"Affiliate store access required"});return;}
+  const rows=await db.query(
+    `SELECT a.id,a.status,a.created_at AS "appliedAt",p.id AS "programId",p.name AS "programName",
+      p.description,p.commission_bps AS "commissionBps",p.status AS "programStatus",
+      merchant.name AS "merchantStoreName",merchant.slug AS "merchantStoreSlug",
+      (l.id IS NOT NULL AND l.active=true) AS "hasActiveLink"
+     FROM member_store_affiliate_applications a
+     JOIN member_store_affiliate_programs p ON p.id=a.program_id
+     JOIN stores merchant ON merchant.id=p.merchant_store_id
+     LEFT JOIN member_store_affiliate_links l ON l.application_id=a.id
+     WHERE a.affiliate_store_id=$1 ORDER BY a.created_at DESC LIMIT 100`,
+    [store.rows[0].id],
+  );
+  send(res,200,{success:true,memberships:rows.rows});
+}
