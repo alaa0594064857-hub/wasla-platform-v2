@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { createHash, randomBytes } from "node:crypto";
 import { fromNodeHeaders } from "better-auth/node";
 import { auth } from "./auth.mjs";
 import { getDatabasePool } from "./database.js";
@@ -42,7 +43,7 @@ async function storePermission(storeId: string, userId: string, permissions: str
   return result.rows[0] ?? null;
 }
 
-/** Idempotent schema bootstrap; no payouts, wallets or order attribution are enabled in this phase. */
+/** Idempotent schema bootstrap for member-to-member affiliate programs and audit-safe attribution. */
 export async function ensureMemberStoreAffiliateTables(): Promise<void> {
   const db = getDatabasePool();
   await db.query(`
@@ -85,6 +86,67 @@ export async function ensureMemberStoreAffiliateTables(): Promise<void> {
   await db.query(`CREATE INDEX IF NOT EXISTS member_store_affiliate_programs_public_idx ON member_store_affiliate_programs(status, created_at DESC)`);
   await db.query(`CREATE INDEX IF NOT EXISTS member_store_affiliate_applications_store_idx ON member_store_affiliate_applications(affiliate_store_id, created_at DESC)`);
   await db.query(`CREATE INDEX IF NOT EXISTS member_store_affiliate_applications_program_idx ON member_store_affiliate_applications(program_id, status, created_at DESC)`);
+
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS member_store_affiliate_links (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      application_id uuid NOT NULL UNIQUE REFERENCES member_store_affiliate_applications(id) ON DELETE RESTRICT,
+      token_hash char(64) NOT NULL UNIQUE,
+      active boolean NOT NULL DEFAULT true,
+      created_at timestamptz NOT NULL DEFAULT NOW(),
+      last_used_at timestamptz
+    )
+  `);
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS member_store_order_affiliate_attributions (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      order_id uuid NOT NULL REFERENCES member_store_orders(id) ON DELETE RESTRICT,
+      product_id uuid NOT NULL REFERENCES store_products(id) ON DELETE RESTRICT,
+      program_id uuid NOT NULL REFERENCES member_store_affiliate_programs(id) ON DELETE RESTRICT,
+      application_id uuid NOT NULL REFERENCES member_store_affiliate_applications(id) ON DELETE RESTRICT,
+      merchant_store_id uuid NOT NULL REFERENCES stores(id) ON DELETE RESTRICT,
+      affiliate_store_id uuid NOT NULL REFERENCES stores(id) ON DELETE RESTRICT,
+      quantity integer NOT NULL CHECK (quantity > 0),
+      commission_bps integer NOT NULL CHECK (commission_bps BETWEEN 1 AND 5000),
+      line_subtotal numeric(14,2) NOT NULL CHECK (line_subtotal >= 0),
+      commission_amount numeric(14,2) NOT NULL CHECK (commission_amount >= 0),
+      currency varchar(3) NOT NULL,
+      created_at timestamptz NOT NULL DEFAULT NOW(),
+      UNIQUE (order_id, product_id)
+    )
+  `);
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS member_store_affiliate_commission_ledger (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      attribution_id uuid NOT NULL REFERENCES member_store_order_affiliate_attributions(id) ON DELETE RESTRICT,
+      event_type varchar(16) NOT NULL CHECK (event_type IN ('pending','reversal')),
+      amount numeric(14,2) NOT NULL,
+      currency varchar(3) NOT NULL,
+      idempotency_key varchar(180) NOT NULL UNIQUE,
+      reference_type varchar(32) NOT NULL,
+      reference_id uuid NOT NULL,
+      metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+      created_at timestamptz NOT NULL DEFAULT NOW()
+    )
+  `);
+  await db.query(`CREATE INDEX IF NOT EXISTS member_store_affiliate_links_active_idx ON member_store_affiliate_links(active, application_id)`);
+  await db.query(`CREATE INDEX IF NOT EXISTS member_store_order_affiliations_order_idx ON member_store_order_affiliate_attributions(order_id)`);
+  await db.query(`CREATE INDEX IF NOT EXISTS member_store_order_affiliations_affiliate_idx ON member_store_order_affiliate_attributions(affiliate_store_id, created_at DESC)`);
+  await db.query(`
+    CREATE OR REPLACE FUNCTION wasla_reject_member_affiliate_ledger_mutation()
+    RETURNS trigger LANGUAGE plpgsql AS $wasla$
+    BEGIN
+      RAISE EXCEPTION 'member_store_affiliate_commission_ledger is append-only';
+    END;
+    $wasla$
+  `);
+  await db.query(`DROP TRIGGER IF EXISTS member_store_affiliate_commission_ledger_immutable ON member_store_affiliate_commission_ledger`);
+  await db.query(`
+    CREATE TRIGGER member_store_affiliate_commission_ledger_immutable
+    BEFORE UPDATE OR DELETE ON member_store_affiliate_commission_ledger
+    FOR EACH ROW EXECUTE FUNCTION wasla_reject_member_affiliate_ledger_mutation()
+  `);
+
 }
 
 /** Merchant manages their program; an affiliate store can request to join; merchant explicitly approves. */
@@ -291,4 +353,38 @@ export async function handleMemberAffiliateApplicationsList(req: IncomingMessage
     [store.rows[0].id],
   );
   send(res,200,{success:true,applications:rows.rows});
+}
+
+
+/** Issue or rotate a referral token for an approved affiliate application. Only its store manager can retrieve the raw token. */
+export async function handleMemberAffiliateLinkIssue(req: IncomingMessage, res: ServerResponse, applicationId: string): Promise<void> {
+  if (req.method !== "POST" || !uuid.test(applicationId)) { send(res,405,{success:false,error:"Invalid affiliate link request"}); return; }
+  const current=await sessionFor(req,res); if(!current)return;
+  const db=getDatabasePool();
+  const application=await db.query(
+    `SELECT a.id,a.status,a.affiliate_store_id AS "affiliateStoreId",
+      merchant.slug AS "merchantSlug",merchant.id AS "merchantStoreId",
+      p.status AS "programStatus"
+     FROM member_store_affiliate_applications a
+     JOIN member_store_affiliate_programs p ON p.id=a.program_id
+     JOIN stores merchant ON merchant.id=p.merchant_store_id AND merchant.status='active'
+     JOIN stores affiliate ON affiliate.id=a.affiliate_store_id AND affiliate.status='active'
+     WHERE a.id=$1 LIMIT 1`,
+    [applicationId],
+  );
+  if(!application.rowCount || application.rows[0].status!=="approved" || application.rows[0].programStatus!=="active"){
+    send(res,409,{success:false,error:"Only approved applications in active programs can receive referral links"});return;
+  }
+  const access=await storePermission(application.rows[0].affiliateStoreId,current.user.id,["store.order.manage","account.order.manage"]);
+  if(!access){send(res,403,{success:false,error:"Affiliate store management permission required"});return;}
+  const token=randomBytes(32).toString("base64url");
+  const tokenHash=createHash("sha256").update(token).digest("hex");
+  const saved=await db.query(
+    `INSERT INTO member_store_affiliate_links(application_id,token_hash,active)
+     VALUES($1,$2,true)
+     ON CONFLICT(application_id) DO UPDATE SET token_hash=EXCLUDED.token_hash,active=true,created_at=NOW(),last_used_at=NULL
+     RETURNING id,created_at AS "createdAt"`,
+    [applicationId,tokenHash],
+  );
+  send(res,201,{success:true,link:{id:saved.rows[0].id,token,relativeUrl:`/store/${encodeURIComponent(application.rows[0].merchantSlug)}?ref=${encodeURIComponent(token)}`,createdAt:saved.rows[0].createdAt},notice:"This token is shown once. Generate a new link if you lose it."});
 }
