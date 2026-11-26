@@ -48,6 +48,7 @@ export async function handlePlatformBusinessAccountsRequest(
       const result = await pool.query(
         `SELECT a.id, a.account_type, a.legal_name, a.display_name, a.status,
                 a.country_code, a.created_at,
+                bp.description, bp.website, bp.contact_information,
                 bp.verification_status,
                 COUNT(DISTINCT s.id)::int AS store_count,
                 COUNT(DISTINCT CASE WHEN am.status = 'active' AND r.name = 'account_owner' AND u.status = 'active' AND u.email_verified = TRUE THEN am.user_id END)::int AS active_owner_count
