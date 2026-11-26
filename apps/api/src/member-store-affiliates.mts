@@ -242,7 +242,10 @@ export async function handleMemberStoreAffiliateRequest(req: IncomingMessage, re
       const inserted = await db.query(
         `INSERT INTO member_store_affiliate_applications(program_id,affiliate_store_id,applicant_user_id,message)
          VALUES($1,$2,$3,$4)
-         ON CONFLICT(program_id,affiliate_store_id) DO NOTHING
+         ON CONFLICT(program_id,affiliate_store_id) DO UPDATE
+           SET status='pending',applicant_user_id=EXCLUDED.applicant_user_id,message=EXCLUDED.message,
+               reviewed_by=NULL,reviewed_at=NULL,updated_at=NOW()
+           WHERE member_store_affiliate_applications.status IN ('rejected','withdrawn')
          RETURNING id,status,created_at AS "createdAt"`,
         [id,affiliateStore.rows[0].id,current.user.id,message || null],
       );
