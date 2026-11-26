@@ -85,6 +85,7 @@ Current implementation status (source review, 2026-11-26):
 - The presence and correctness of these production environment-variable values cannot be inferred from repository source. Never expose their values in logs, issues, or chat.
 - The Better Auth base URL uses `BETTER_AUTH_URL`, with the primary Render API URL as a fallback. The trusted-origin helper includes the current Render web origin and `https://wasla.trade`, plus explicitly configured origins.
 - Password-reset links use `WASLA_WEB_URL`, falling back to `https://wasla.trade`.
+- Password-reset tokens have an explicitly configured one-hour lifetime, and successful password resets revoke the user's existing sessions.
 - Provider failure logging records only the HTTP status, not the Resend response body.
 
 Email delivery must use a verified sender identity, and the full registration, verification, resend, login and password-reset flows must be tested against a real external mailbox before public production registration is considered ready. A successful API response alone does not prove inbox delivery.
