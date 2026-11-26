@@ -908,10 +908,13 @@ async function handleRequest(
   const memberAffiliateApplicationMatch = requestUrl.pathname.match(/^\/api\/affiliate-programs\/([0-9a-f-]{36})\/applications$/i);
   const memberAffiliateLinkMatch = requestUrl.pathname.match(/^\/api\/affiliate-applications\/([0-9a-f-]{36})\/link$/i);
   const memberAffiliateReviewMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/affiliate-applications(?:\/([0-9a-f-]{36}))?$/i);
-  if (requestUrl.pathname === "/api/public/affiliate-programs" || memberAffiliateProgramsMatch || memberAffiliateApplicationMatch || memberAffiliateReviewMatch || memberAffiliateLinkMatch) {
+  const memberAffiliateEarningsMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/affiliate-earnings$/i);
+  if (requestUrl.pathname === "/api/public/affiliate-programs" || memberAffiliateProgramsMatch || memberAffiliateApplicationMatch || memberAffiliateReviewMatch || memberAffiliateLinkMatch || memberAffiliateEarningsMatch) {
     try {
-      const { handleMemberStoreAffiliateRequest, handlePublicMemberAffiliatePrograms, handleMemberAffiliateProgramStatus, handleMemberAffiliateApplicationsList, handleMemberAffiliateLinkIssue } = await import("./member-store-affiliates.mjs");
-      if (memberAffiliateLinkMatch) {
+      const { handleMemberStoreAffiliateRequest, handlePublicMemberAffiliatePrograms, handleMemberAffiliateProgramStatus, handleMemberAffiliateApplicationsList, handleMemberAffiliateLinkIssue, handleMemberAffiliateEarnings } = await import("./member-store-affiliates.mjs");
+      if (memberAffiliateEarningsMatch) {
+        await handleMemberAffiliateEarnings(request, response, decodeURIComponent(memberAffiliateEarningsMatch[1]));
+      } else if (memberAffiliateLinkMatch) {
         await handleMemberAffiliateLinkIssue(request, response, memberAffiliateLinkMatch[1]);
       } else if (requestUrl.pathname === "/api/public/affiliate-programs") {
         await handlePublicMemberAffiliatePrograms(request, response);
