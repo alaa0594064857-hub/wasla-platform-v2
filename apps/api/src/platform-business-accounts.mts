@@ -123,7 +123,7 @@ export async function handlePlatformBusinessAccountsRequest(
       }
 
       const nextVerification = decision === "approve" ? "verified" : "rejected";
-      const nextStatus = decision === "approve" ? "active" : "pending_verification";
+      const nextStatus = decision === "approve" ? "active" : "suspended";
       const profile = await client.query(
         `UPDATE business_profiles SET verification_status = $2, updated_at = NOW()
          WHERE account_id = $1 RETURNING account_id`,
