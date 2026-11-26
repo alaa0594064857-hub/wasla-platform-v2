@@ -72,6 +72,11 @@ export default function PublicStorePage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("newest");
+  const [affiliateReferralToken, setAffiliateReferralToken] = useState("");
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get("ref") ?? "";
+    if (/^[A-Za-z0-9_-]{32,128}$/.test(token)) setAffiliateReferralToken(token);
+  }, []);
 
   const loadStore = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
@@ -251,7 +256,7 @@ export default function PublicStorePage() {
             ) : (
               <div className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 xl:grid-cols-4">
                 {visibleProducts.map((product, index) => (
-                  <Link key={product.id} href={`/product/${product.id}`} className="group overflow-hidden rounded-2xl border border-[#e9e6df] bg-white transition duration-300 hover:-translate-y-1 hover:border-[#d6c49c] hover:shadow-[0_18px_50px_rgba(23,38,61,.10)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#c6a15b]/40">
+                  <Link key={product.id} href={affiliateReferralToken ? `/product/${product.id}?ref=${encodeURIComponent(affiliateReferralToken)}` : `/product/${product.id}`} className="group overflow-hidden rounded-2xl border border-[#e9e6df] bg-white transition duration-300 hover:-translate-y-1 hover:border-[#d6c49c] hover:shadow-[0_18px_50px_rgba(23,38,61,.10)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#c6a15b]/40">
                     <div className="relative aspect-[4/4.5] overflow-hidden bg-[#f0eee8]">
                       {product.imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
