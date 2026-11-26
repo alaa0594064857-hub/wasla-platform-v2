@@ -585,7 +585,8 @@ export async function handleMemberStoreOrdersRequest(
                o.status, o.carrier_name AS "carrierName", o.tracking_number AS "trackingNumber",
                o.tracking_url AS "trackingUrl", o.shipped_at AS "shippedAt",
                o.delivery_confirmed_at AS "deliveryConfirmedAt", o.updated_at AS "updatedAt",
-               o.items, o.store_id AS "storeId"`,
+               o.items, o.store_id AS "storeId",
+               EXISTS (SELECT 1 FROM member_store_order_affiliate_attributions aa WHERE aa.order_id=o.id AND aa.commission_amount>0) AS "hasAffiliateAttribution"`,
     [body.status, note, orderId, slug, session.user.id, ["store.order.manage", "account.order.manage"],
       carrierName || null, trackingNumber || null, trackingUrl || null, session.user.id],
     );
@@ -594,7 +595,7 @@ export async function handleMemberStoreOrdersRequest(
     respond(response, 404, { success: false, error: "Order not found, access denied, or transition not allowed" });
     return;
   }
-  if (body.status === "cancelled" || body.status === "rejected") {
+  if ((body.status === "cancelled" || body.status === "rejected") && result.rows[0].hasAffiliateAttribution === true) {
     await client.query(
       `INSERT INTO member_store_affiliate_commission_ledger
         (attribution_id,event_type,amount,currency,idempotency_key,reference_type,reference_id,metadata)
