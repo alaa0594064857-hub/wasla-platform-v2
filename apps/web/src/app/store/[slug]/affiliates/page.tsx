@@ -9,6 +9,7 @@ type Product = { id: string; title: string; status: string; stockQuantity: numbe
 type Program = { id: string; name: string; description: string | null; commissionBps: number; status: string; productCount: number; pendingApplications: number };
 type Application = { id: string; status: string; message: string | null; programId: string; programName: string; affiliateStoreName: string; affiliateStoreSlug: string };
 type Earning = { currency: string; netPending: string };
+type Membership = { id: string; status: string; programId: string; programName: string; description: string | null; commissionBps: number; programStatus: string; merchantStoreName: string; merchantStoreSlug: string; hasActiveLink: boolean };
 
 export default function StoreAffiliateManagementPage() {
   const params = useParams<{ slug: string }>();
@@ -19,6 +20,7 @@ export default function StoreAffiliateManagementPage() {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [totals, setTotals] = useState<Earning[]>([]);
+  const [memberships, setMemberships] = useState<Membership[]>([]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [commission, setCommission] = useState("10");
@@ -34,7 +36,8 @@ export default function StoreAffiliateManagementPage() {
     rate: "نسبة العمولة %", products: "المنتجات المؤهلة", noProducts: "لا توجد منتجات منشورة ومتوفرة حالياً.",
     draft: "مسودة", active: "نشط", paused: "متوقف", closed: "مغلق", save: "حفظ كمسودة", loading: "جارٍ تحميل بيانات العمولة...",
     programs: "برامج متجرك", noPrograms: "لم تنشئ أي برنامج بعد.", activate: "تفعيل البرنامج", pause: "إيقاف مؤقت",
-    applications: "طلبات الانضمام", noApplications: "لا توجد طلبات انضمام حالياً.", approve: "موافقة", reject: "رفض",
+    applications: "طلبات الانضمام إلى متجرك", noApplications: "لا توجد طلبات انضمام حالياً.", approve: "موافقة", reject: "رفض",
+    joinedPrograms: "البرامج التي انضم إليها متجرك", noMemberships: "لم تنضم إلى أي برنامج بعد.", merchantProgram: "برنامج التاجر",
     affiliateStore: "المتجر المسوّق", copyLink: "إنشاء ونسخ رابط التسويق", linkCopied: "تم إنشاء الرابط. انسخه وشاركه.",
     earnings: "سجل العمولات", noEarnings: "لا توجد عمولات مسجلة بعد.", pending: "مبالغ معلّقة حسب الطلبات",
     safety: "العمولات هنا سجلات داخلية تقديرية مرتبطة بالطلبات. لا تحتفظ وصلة بأموال البيع ولا توفر سحباً آلياً في هذه المرحلة. تُعكس العمولة عند رفض الطلب أو إلغائه أو استلام المرتجع.",
@@ -46,7 +49,8 @@ export default function StoreAffiliateManagementPage() {
     rate: "Commission rate %", products: "Eligible products", noProducts: "No published, in-stock products are available yet.",
     draft: "Draft", active: "Active", paused: "Paused", closed: "Closed", save: "Save as draft", loading: "Loading affiliate data...",
     programs: "Your programs", noPrograms: "You have not created a program yet.", activate: "Activate program", pause: "Pause",
-    applications: "Applications", noApplications: "No applications yet.", approve: "Approve", reject: "Reject",
+    applications: "Applications to your store", noApplications: "No applications yet.", approve: "Approve", reject: "Reject",
+    joinedPrograms: "Programs your store joined", noMemberships: "Your store has not joined any programs yet.", merchantProgram: "Merchant program",
     affiliateStore: "Affiliate store", copyLink: "Generate and copy referral link", linkCopied: "Referral link generated. Copy and share it.",
     earnings: "Commission activity", noEarnings: "No commission records yet.", pending: "Pending amounts by currency",
     safety: "These are internal estimated commission records tied to orders. WASLA does not hold sale funds or offer automatic withdrawals in this phase. Commission is reversed for rejected/cancelled orders or received returns.",
@@ -57,19 +61,21 @@ export default function StoreAffiliateManagementPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [productResponse, programResponse, applicationResponse, earningResponse] = await Promise.all([
+      const [productResponse, programResponse, applicationResponse, earningResponse, membershipResponse] = await Promise.all([
         fetch("/api/stores/" + encodeURIComponent(slug) + "/products", { credentials: "include", cache: "no-store" }),
         fetch("/api/stores/" + encodeURIComponent(slug) + "/affiliate-programs", { credentials: "include", cache: "no-store" }),
         fetch("/api/stores/" + encodeURIComponent(slug) + "/affiliate-applications", { credentials: "include", cache: "no-store" }),
-        fetch("/api/stores/" + encodeURIComponent(slug) + "/affiliate-earnings", { credentials: "include", cache: "no-store" })
+        fetch("/api/stores/" + encodeURIComponent(slug) + "/affiliate-earnings", { credentials: "include", cache: "no-store" }),
+        fetch("/api/stores/" + encodeURIComponent(slug) + "/affiliate-memberships", { credentials: "include", cache: "no-store" })
       ]);
-      const [pd, pg, ap, er] = await Promise.all([productResponse.json(), programResponse.json(), applicationResponse.json(), earningResponse.json()]);
-      if (!productResponse.ok || !programResponse.ok || !applicationResponse.ok || !earningResponse.ok ||
-          !pd.success || !pg.success || !ap.success || !er.success) throw new Error("load");
+      const [pd, pg, ap, er, ms] = await Promise.all([productResponse.json(), programResponse.json(), applicationResponse.json(), earningResponse.json(), membershipResponse.json()]);
+      if (!productResponse.ok || !programResponse.ok || !applicationResponse.ok || !earningResponse.ok || !membershipResponse.ok ||
+          !pd.success || !pg.success || !ap.success || !er.success || !ms.success) throw new Error("load");
       setProducts((Array.isArray(pd.products) ? pd.products : []).filter((p: Product) => p.status === "active" && Number(p.stockQuantity) > 0));
       setPrograms(Array.isArray(pg.programs) ? pg.programs : []);
       setApplications(Array.isArray(ap.applications) ? ap.applications : []);
       setTotals(Array.isArray(er.totals) ? er.totals : []);
+      setMemberships(Array.isArray(ms.memberships) ? ms.memberships : []);
     } catch {
       setMessage(t.error);
     } finally { setLoading(false); }
@@ -183,7 +189,17 @@ export default function StoreAffiliateManagementPage() {
             <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-bold">{application.affiliateStoreName}</h3><p className="text-sm text-slate-500">{application.programName} · {application.status}</p>{application.message && <p className="mt-2 text-sm">{application.message}</p>}</div>
               {application.status==="pending" && <div className="flex gap-2"><button disabled={busy} onClick={()=>void reviewApplication(application.id,"approve")} className="rounded-lg bg-[#14233b] px-3 py-2 text-xs font-bold text-white">{t.approve}</button><button disabled={busy} onClick={()=>void reviewApplication(application.id,"reject")} className="rounded-lg border px-3 py-2 text-xs font-bold">{t.reject}</button></div>}
             </div>
-            {application.status==="approved" && <div className="mt-3 space-y-2"><button disabled={busy} onClick={()=>void issueLink(application.id)} className="rounded-lg border border-[#d8c69f] px-3 py-2 text-xs font-bold">{t.copyLink}</button>{links[application.id] && <input readOnly value={links[application.id]} onFocus={e=>e.currentTarget.select()} className="block w-full rounded-lg border border-[#ddd5c4] px-3 py-2 text-xs" />}</div>}
+          </article>)}
+        </div>}
+      </section>
+      <section className="rounded-2xl border border-[#e5dfd1] bg-white p-5 shadow-sm">
+        <h2 className="text-xl font-bold">{t.joinedPrograms}</h2>
+        {memberships.length===0 ? <p className="mt-4 text-sm text-slate-500">{t.noMemberships}</p> : <div className="mt-4 space-y-3">
+          {memberships.map(membership=><article key={membership.id} className="rounded-xl border border-[#eee8dc] p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-bold">{membership.programName}</h3><p className="mt-1 text-sm text-slate-500">{t.merchantProgram}: {membership.merchantStoreName}</p><p className="mt-1 text-xs text-slate-500">{(membership.commissionBps/100).toFixed(2)}% · {membership.status} · {membership.programStatus}</p></div>
+              {membership.status==="approved" && membership.programStatus==="active" && <button disabled={busy} onClick={()=>void issueLink(membership.id)} className="rounded-lg border border-[#d8c69f] px-3 py-2 text-xs font-bold">{t.copyLink}</button>}
+            </div>
+            {links[membership.id] && <input readOnly value={links[membership.id]} onFocus={e=>e.currentTarget.select()} className="mt-3 block w-full rounded-lg border border-[#ddd5c4] px-3 py-2 text-xs" />}
           </article>)}
         </div>}
       </section>
