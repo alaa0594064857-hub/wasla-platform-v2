@@ -1037,6 +1037,22 @@ async function handleRequest(
     return;
   }
 
+  const businessAccountMatch = requestUrl.pathname.match(/^\/api\/accounts\/([^/]+)$/);
+  if (businessAccountMatch) {
+    try {
+      const { handleBusinessAccountDetailRequest } = await import("./business-account-detail.mjs");
+      await handleBusinessAccountDetailRequest(request, response, businessAccountMatch[1]);
+    } catch (error) {
+      console.error("WASLA business account detail route error:", error);
+      if (!response.headersSent) {
+        sendJson(response, 500, { success: false, error: "Business account service error" });
+      } else {
+        response.destroy(error instanceof Error ? error : undefined);
+      }
+    }
+    return;
+  }
+
   if (requestUrl.pathname === "/api/accounts") {
     try {
       const { handleAccountsRequest } = await import("./accounts.mjs");
