@@ -73,11 +73,11 @@ export default function PublicStorePage() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("newest");
 
-  const loadStore = useCallback(async () => {
+  const loadStore = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch(`/api/public/stores/${encodeURIComponent(params.slug)}`, { cache: "no-store" });
+      const response = await fetch(`/api/public/stores/${encodeURIComponent(params.slug)}`, { cache: "no-store", signal });
       if (response.status === 404) {
         setError(t.notFound);
         return;
@@ -87,22 +87,29 @@ export default function PublicStorePage() {
       if (!data.success || !data.store || !Array.isArray(data.products)) throw new Error("Invalid store response");
       setStore(data.store);
       setProducts(data.products);
-    } catch {
+    } catch (cause) {
+      if (cause instanceof Error && cause.name === "AbortError") return;
       setError(t.loadError);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, [params.slug, t.notFound, t.loadError]);
 
-  useEffect(() => { void loadStore(); }, [loadStore]);
+  useEffect(() => {
+    const controller = new AbortController();
+    void loadStore(controller.signal);
+    return () => controller.abort();
+  }, [loadStore]);
 
   useEffect(() => {
-    let active = true;
-    fetch(`/api/stores/${encodeURIComponent(params.slug)}/return-policy`, { cache: "no-store" })
+    const controller = new AbortController();
+    fetch(`/api/stores/${encodeURIComponent(params.slug)}/return-policy`, { cache: "no-store", signal: controller.signal })
       .then(async response => response.ok ? response.json() : null)
-      .then(data => { if (active) setReturnPolicy(data?.status === "published" ? data.policy : null); })
-      .catch(() => { if (active) setReturnPolicy(null); });
-    return () => { active = false; };
+      .then(data => setReturnPolicy(data?.status === "published" ? data.policy : null))
+      .catch(cause => {
+        if (!(cause instanceof Error && cause.name === "AbortError")) setReturnPolicy(null);
+      });
+    return () => controller.abort();
   }, [params.slug]);
 
   const visibleProducts = useMemo(() => {
