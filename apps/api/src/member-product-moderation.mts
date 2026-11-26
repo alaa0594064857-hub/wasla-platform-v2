@@ -94,6 +94,7 @@ export async function handleMemberProductModeration(
          FROM store_products p
          INNER JOIN stores s ON s.id = p.store_id
          INNER JOIN accounts a ON a.id = s.account_id
+         LEFT JOIN business_profiles bp ON bp.account_id = a.id
          WHERE p.id = $1
          FOR UPDATE OF p`,
         [productId],
@@ -112,6 +113,11 @@ export async function handleMemberProductModeration(
       if (product.store_status !== "active" || product.account_status !== "active") {
         await client.query("ROLLBACK");
         reply(response, 409, { success: false, code: "STORE_NOT_ACTIVE", error: "The store or business account is not active" });
+        return;
+      }
+      if (decision === "approve" && product.business_verification_status !== "verified") {
+        await client.query("ROLLBACK");
+        reply(response, 409, { success: false, code: "BUSINESS_VERIFICATION_REQUIRED", error: "The business must be verified before its products can be published" });
         return;
       }
 
