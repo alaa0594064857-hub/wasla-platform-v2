@@ -106,6 +106,22 @@ export async function handleMemberStoreReturn(req: IncomingMessage, res: ServerR
      }
     }
     result=await client.query("UPDATE member_store_return_requests SET status='item_received',item_received_at=NOW(),restocked_at=CASE WHEN $2 THEN NOW() ELSE NULL END,updated_at=NOW() WHERE id=$1 RETURNING id,status,item_received_at AS \"itemReceivedAt\",restocked_at AS \"restockedAt\"",[request.id,restock]);
+    if(Array.isArray(request.returnItems)){
+     for(const returned of request.returnItems){
+      if(!returned||typeof returned!=="object"||typeof returned.productId!=="string"||!Number.isSafeInteger(returned.quantity)||returned.quantity<1) continue;
+      await client.query(
+       `INSERT INTO member_store_affiliate_commission_ledger
+        (attribution_id,event_type,amount,currency,idempotency_key,reference_type,reference_id,metadata)
+        SELECT a.id,'reversal',-ROUND(a.commission_amount*$3/a.quantity,2),a.currency,
+          'return:'||$1::text||':'||a.product_id::text,'return',$1,
+          jsonb_build_object('returnedQuantity',$3,'orderedQuantity',a.quantity)
+        FROM member_store_order_affiliate_attributions a
+        WHERE a.order_id=$2 AND a.product_id=$4 AND a.quantity >= $3 AND a.commission_amount > 0
+        ON CONFLICT(idempotency_key) DO NOTHING`
+       ,[request.id,orderId,returned.quantity,returned.productId],
+      );
+     }
+    }
    }else{
     if(request.buyerId!==session.user.id){await client.query("ROLLBACK");send(res,403,{success:false,error:"Only the buyer can close this request"});return;}
     if(!["rejected","item_received"].includes(request.status)){await client.query("ROLLBACK");send(res,409,{success:false,error:"Only a rejected request or a return confirmed received can be closed"});return;}
