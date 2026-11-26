@@ -10,6 +10,8 @@ type BusinessAccount = {
   id: string; account_type: string; legal_name: string; display_name: string;
   status: string; country_code: string | null; created_at: string;
   verification_status: string | null; store_count: number; active_owner_count: number;
+  description: string | null; website: string | null;
+  contact_information: Record<string, unknown> | null;
 };
 
 export default function BusinessAccountReviewPage() {
@@ -115,6 +117,19 @@ export default function BusinessAccountReviewPage() {
       {pending.map(account => <article key={account.id} style={styles.card}>
         <div style={styles.cardTop}><div><h3>{account.display_name}</h3><p>{account.legal_name}</p></div><span style={styles.pending}>{label(account.status)}</span></div>
         <div style={styles.meta}><span>{label(account.account_type)}</span><span>{account.country_code || (ar ? "الدولة غير محددة" : "Country not set")}</span><span>{ar ? "المتاجر" : "Stores"}: {account.store_count}</span><span>{ar ? "المالكون النشطون" : "Active owners"}: {account.active_owner_count}</span><span>{ar ? "التحقق" : "Verification"}: {label(account.verification_status || "unverified")}</span></div>
+        <section style={styles.businessDetails} aria-label={ar ? "بيانات النشاط التجاري" : "Business details"}>
+          <h4 style={styles.detailsHeading}>{ar ? "بيانات النشاط التجاري" : "Business details"}</h4>
+          {account.description && <p style={styles.detailDescription}>{account.description}</p>}
+          {account.website && <p style={styles.detailLine}>{ar ? "الموقع الإلكتروني" : "Website"}: <a href={account.website} target="_blank" rel="noopener noreferrer">{account.website}</a></p>}
+          <div style={styles.contactGrid}>
+            {typeof account.contact_information?.email === "string" && <p style={styles.contactItem}>{ar ? "البريد" : "Email"}: <a href={`mailto:${account.contact_information.email}`}>{account.contact_information.email}</a></p>}
+            {typeof account.contact_information?.phone === "string" && <p style={styles.contactItem}>{ar ? "الهاتف" : "Phone"}: {account.contact_information.phone}</p>}
+            {typeof account.contact_information?.whatsapp === "string" && <p style={styles.contactItem}>WhatsApp: {account.contact_information.whatsapp}</p>}
+            {typeof account.contact_information?.city === "string" && <p style={styles.contactItem}>{ar ? "المدينة" : "City"}: {account.contact_information.city}</p>}
+            {typeof account.contact_information?.address === "string" && <p style={styles.contactItem}>{ar ? "العنوان" : "Address"}: {account.contact_information.address}</p>}
+          </div>
+          {!account.description && !account.website && !Object.values(account.contact_information || {}).some(value => typeof value === "string" && value.trim()) && <p style={styles.missingDetails}>{ar ? "لم يقدّم النشاط وصفاً أو بيانات تواصل إضافية." : "No business description or additional contact details were provided."}</p>}
+        </section>
         {account.active_owner_count < 1 && <p style={styles.error}>{ar ? "لا يوجد مالك نشط؛ يجب حل الملكية قبل المراجعة." : "No active account owner. Resolve ownership before review."}</p>}
         <label style={styles.fieldLabel}>{ar ? "ملاحظة المراجعة (سبب القرار والأدلة التي تم التحقق منها)" : "Review note (decision rationale and evidence checked)"}</label>
         <textarea value={notes[account.id] || ""} onChange={e => setNotes(v => ({ ...v, [account.id]: e.target.value }))} rows={3} maxLength={1000} style={styles.textarea} placeholder={ar ? "اكتب ملخصاً واضحاً للمستندات والتحقق..." : "Summarize the documents and checks performed..."} />
@@ -142,6 +157,13 @@ const styles: Record<string, React.CSSProperties> = {
   cardTop:{display:"flex",justifyContent:"space-between",gap:12,alignItems:"start"},
   pending:{background:"#f4ead5",color:"#765b2b",borderRadius:99,padding:"6px 10px",fontSize:12,fontWeight:800},
   meta:{display:"flex",flexWrap:"wrap",gap:8,margin:"12px 0 18px",fontSize:12,color:"#687386"},
+  businessDetails:{background:"#faf8f3",border:"1px solid #eee7db",borderRadius:12,padding:14,margin:"0 0 18px"},
+  detailsHeading:{margin:"0 0 8px",fontSize:14,color:"#14243a"},
+  detailDescription:{margin:"0 0 8px",lineHeight:1.7,color:"#465469",whiteSpace:"pre-wrap"},
+  detailLine:{margin:"6px 0",fontSize:13,overflowWrap:"anywhere"},
+  contactGrid:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(210px,1fr))",gap:"4px 12px"},
+  contactItem:{margin:"4px 0",fontSize:13,overflowWrap:"anywhere"},
+  missingDetails:{margin:"6px 0 0",fontSize:12,color:"#8a6b35"},
   fieldLabel:{display:"block",fontWeight:700,marginBottom:8},
   textarea:{width:"100%",border:"1px solid #d8d1c5",borderRadius:10,padding:12,resize:"vertical",font:"inherit"},
   check:{display:"flex",gap:10,alignItems:"flex-start",margin:"14px 0",lineHeight:1.6,fontSize:13},
