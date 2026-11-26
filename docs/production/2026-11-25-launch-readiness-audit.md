@@ -49,3 +49,17 @@ This audit records observed production evidence and release blockers. It does no
 4. Execute hosted multi-account security and user-journey acceptance tests.
 5. Implement and test issue #196 sponsorship workflow while keeping billing disabled.
 6. Reassess remaining commercial/mobile/legal release gates before announcing a broad launch.
+
+
+## Database continuity and exposure review — 2026-11-26
+
+Read-only Render inspection of `wasla-db` found:
+
+- Instance status is `available` and not suspended; PostgreSQL 18, region `ohio`.
+- Compute plan is `0.1c-256mb`, provisioned disk is 1 GB, disk autoscaling is disabled, and high availability is disabled.
+- External IP allow list currently contains `0.0.0.0/0` ("everywhere"). This does not mean the database is unauthenticated, but it leaves the external endpoint broadly reachable at the network layer. Review whether external access is still needed before narrowing it; Render services in the same region/workspace should use the internal connection path.
+- Sampled metrics around 2026-11-25 23:02–2026-11-26 00:02 UTC showed 0–1 active connections, low CPU use, and memory readings around 43–56 MiB. This is a short sample, not a capacity or load test.
+- The Render Postgres skill reference describes automatic daily snapshots, but retention varies by plan. The connected account inspection did not expose backup history, retention, or a completed restore drill. Therefore backup availability/retention and recoverability remain **unverified**.
+- No plan, allow-list, disk, HA, or database settings were changed. No database export or restore was performed.
+
+Follow-up is tracked in issue #199. Do not claim disaster-recovery readiness until a current backup is visible, retention is known, and a restore has been tested on an isolated non-production instance.
