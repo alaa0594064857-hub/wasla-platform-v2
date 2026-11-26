@@ -388,7 +388,6 @@ it("notifies the buyer when a merchant accepts a pending request", async () => {
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "33333333-3333-4333-8333-333333333333", accountId: "44444444-4444-4444-8444-444444444444" }] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ delivery_enabled: false, pickup_enabled: true, service_areas: [], delivery_fee: null, fee_currency: "USD", preparation_days: 0, updated_at: "2026-11-19T00:00:00.000Z" }] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: productId, title: "Affiliate item", sku: "AFF-1", price: "12.50", currency: "USD", stockQuantity: 4 }] })
-      .mockResolvedValueOnce({ rowCount: 0, rows: [] }) // idempotency lookup
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ linkId: "77777777-7777-4777-8777-777777777777", programId: "88888888-8888-4888-8888-888888888888", applicationId: "99999999-9999-4999-8999-999999999999", merchantStoreId: "33333333-3333-4333-8333-333333333333", affiliateStoreId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", affiliateAccountId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", commissionBps: 1000 }] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ isSelfReferral: false }] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [{ productId }] })
@@ -408,7 +407,7 @@ it("notifies the buyer when a merchant accepts a pending request", async () => {
     });
 
     expect(response.status).toBe(201);
-    const attributionCall = clientQuery.mock.calls[10];
+    const attributionCall = clientQuery.mock.calls[9];
     expect(String(attributionCall[0])).toContain("member_store_order_affiliate_attributions");
     expect(attributionCall[1]).toEqual([
       "cccccccc-cccc-4ccc-8ccc-cccccccccccc", productId,
@@ -416,7 +415,7 @@ it("notifies the buyer when a merchant accepts a pending request", async () => {
       "33333333-3333-4333-8333-333333333333", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       2, 1000, "25.00", "2.50", "USD",
     ]);
-    const ledgerCall = clientQuery.mock.calls[11];
+    const ledgerCall = clientQuery.mock.calls[10];
     expect(String(ledgerCall[0])).toContain("member_store_affiliate_commission_ledger");
     expect(ledgerCall[1]).toContain("2.50");
     expect(ledgerCall[1]).toContain("pending:cccccccc-cccc-4ccc-8ccc-cccccccccccc:" + productId);
