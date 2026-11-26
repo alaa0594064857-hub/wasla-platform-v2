@@ -90,7 +90,8 @@ export async function handleMemberProductModeration(
       await client.query("BEGIN");
       const locked = await client.query(
         `SELECT p.id, p.status, p.store_id, s.status AS store_status,
-                a.id AS account_id, a.status AS account_status
+                a.id AS account_id, a.status AS account_status,
+                bp.verification_status AS business_verification_status
          FROM store_products p
          INNER JOIN stores s ON s.id = p.store_id
          INNER JOIN accounts a ON a.id = s.account_id
