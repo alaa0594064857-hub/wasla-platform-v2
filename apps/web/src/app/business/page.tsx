@@ -375,14 +375,19 @@ export default function BusinessManagementPage() {
             <p>{t.subtitle}</p>
           </div>
 
-          <button
-            type="button"
-            className="business-refresh"
-            onClick={() => void loadAccounts()}
-            disabled={loading}
-          >
-            ↻ {t.refresh}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href="/business/store-preview" className="business-refresh">
+              {locale === "ar" ? "معاينة المتاجر الخاصة ↗" : "Private store previews ↗"}
+            </Link>
+            <button
+              type="button"
+              className="business-refresh"
+              onClick={() => void loadAccounts()}
+              disabled={loading}
+            >
+              ↻ {t.refresh}
+            </button>
+          </div>
         </div>
 
         {error && (
