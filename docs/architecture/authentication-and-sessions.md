@@ -76,15 +76,18 @@ Production requirements:
   or replace previous tokens.
 - Unverified users must have restricted access.
 
-Current implementation status:
+Current implementation status (source review, 2026-11-26):
 
-- Email/password authentication is configured.
-- Email verification is enabled in Better Auth and required before normal sign-in.
-- Verification and password-reset email delivery both depend on Resend configuration.
-- Without a verified custom sender/domain, delivery remains restricted to the configured Resend test recipient.
-- The API now has a production-safe Better Auth base URL fallback and always retains the current Render web origin in its trusted-origin list, while also merging explicitly configured origins. The purchased custom domain must be added to BETTER_AUTH_TRUSTED_ORIGINS and BETTER_AUTH_URL when it is connected.
+- Email/password authentication is configured in `apps/api/src/auth.mts`.
+- Email verification is required before normal sign-in; verification links expire after one hour. Better Auth owns token validation and consumption.
+- Verification and password-reset messages are sent through the Resend API.
+- If `RESEND_FROM_EMAIL` is set, it is used as the sender. If it is absent, the code falls back to Resend's shared `onboarding@resend.dev` sender and restricts recipients to the configured `RESEND_TEST_RECIPIENT`.
+- The presence and correctness of these production environment-variable values cannot be inferred from repository source. Never expose their values in logs, issues, or chat.
+- The Better Auth base URL uses `BETTER_AUTH_URL`, with the primary Render API URL as a fallback. The trusted-origin helper includes the current Render web origin and `https://wasla.trade`, plus explicitly configured origins.
+- Password-reset links use `WASLA_WEB_URL`, falling back to `https://wasla.trade`.
+- Provider failure logging records only the HTTP status, not the Resend response body.
 
-Email delivery must be configured with a verified sender and the full registration, verification, login and password-reset flows must be tested before public production registration is opened.
+Email delivery must use a verified sender identity, and the full registration, verification, resend, login and password-reset flows must be tested against a real external mailbox before public production registration is considered ready. A successful API response alone does not prove inbox delivery.
 
 ## 6. Login Security
 
@@ -235,10 +238,11 @@ Implemented foundations:
 
 Not yet production-ready:
 
-- Verified production sender/domain and successful external delivery of verification and password-reset emails.
-- Confirmation of BETTER_AUTH_URL and BETTER_AUTH_TRUSTED_ORIGINS for the final purchased domain.
+- Confirm the live Render API service has the required email variable names configured, without exposing secret values.
+- Confirm the configured sender identity is verified in Resend and receive verification and password-reset messages in a real external mailbox.
+- Test link host, expiry, one-time use, resend invalidation, and invalid/expired password-reset tokens end to end.
 - Complete authentication security tests, including rate limiting, session revocation and suspended-account denial.
-- Final production deployment and custom-domain checks.
+- Complete hosted production authentication and custom-domain checks.
 
 No production authentication service
 or production credentials are configured
