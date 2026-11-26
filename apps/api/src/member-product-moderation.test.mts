@@ -95,6 +95,7 @@ describe("member product moderation", () => {
     expect(await response.json()).toMatchObject({ success: true, status: "active" });
     expect(clientQuery.mock.calls[0][0]).toBe("BEGIN");
     expect(String(clientQuery.mock.calls[1][0])).toContain("FOR UPDATE OF p");
+    expect(String(clientQuery.mock.calls[1][0])).toContain("bp.verification_status AS business_verification_status");
     expect(clientQuery.mock.calls[2][1]).toEqual([productId, "active"]);
     expect(String(clientQuery.mock.calls[3][0])).toContain("INSERT INTO audit_logs");
     expect(clientQuery.mock.calls[4][0]).toBe("COMMIT");
