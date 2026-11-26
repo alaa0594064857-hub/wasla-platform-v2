@@ -354,7 +354,6 @@ export async function handleMemberStoreOrdersRequest(
            JOIN member_store_affiliate_programs p ON p.id=a.program_id AND p.status='active'
            JOIN stores affiliate ON affiliate.id=a.affiliate_store_id AND affiliate.status='active'
            JOIN accounts affiliate_account ON affiliate_account.id=affiliate.account_id AND affiliate_account.status='active'
-           JOIN business_profiles affiliate_profile ON affiliate_profile.account_id=affiliate_account.id AND affiliate_profile.verification_status='verified'
            WHERE l.token_hash=$1 AND l.active=true AND p.merchant_store_id=$2
            LIMIT 1`,
           [tokenHash,store.rows[0].id],
