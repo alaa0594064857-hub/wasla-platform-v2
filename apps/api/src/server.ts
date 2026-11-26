@@ -904,6 +904,26 @@ async function handleRequest(
     return;
   }
 
+  const memberAffiliateProgramsMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/affiliate-programs$/i);
+  const memberAffiliateApplicationMatch = requestUrl.pathname.match(/^\/api\/affiliate-programs\/([0-9a-f-]{36})\/applications$/i);
+  const memberAffiliateReviewMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/affiliate-applications\/([0-9a-f-]{36})$/i);
+  if (memberAffiliateProgramsMatch || memberAffiliateApplicationMatch || memberAffiliateReviewMatch) {
+    try {
+      const { handleMemberStoreAffiliateRequest } = await import("./member-store-affiliates.mjs");
+      if (memberAffiliateProgramsMatch) {
+        await handleMemberStoreAffiliateRequest(request, response, "programs", decodeURIComponent(memberAffiliateProgramsMatch[1]));
+      } else if (memberAffiliateApplicationMatch) {
+        await handleMemberStoreAffiliateRequest(request, response, "apply", undefined, memberAffiliateApplicationMatch[1]);
+      } else if (memberAffiliateReviewMatch) {
+        await handleMemberStoreAffiliateRequest(request, response, "applications", decodeURIComponent(memberAffiliateReviewMatch[1]), memberAffiliateReviewMatch[2]);
+      }
+    } catch (error) {
+      console.error("WASLA member-store affiliate route error:", error);
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Member-store affiliate service error" });
+      else response.destroy(error instanceof Error ? error : undefined);
+    }
+    return;
+  }
   const memberStoreOrderMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/orders(?:\/([0-9a-f-]{36}))?$/i);
   if (memberStoreOrderMatch) {
     try {
@@ -1186,6 +1206,8 @@ if (process.env.NODE_ENV !== "test") {
       await ensurePlatformOwnerRole();
       await ensurePersonalThemesTable();
       await ensureStoreProductsTable();
+      const { ensureMemberStoreAffiliateTables } = await import("./member-store-affiliates.mjs");
+      await ensureMemberStoreAffiliateTables();
       await ensureMemberStoreOrderTables();
       const { ensureMemberStoreReturnPolicyTables } = await import("./member-store-return-policy-schema.mjs");
       await ensureMemberStoreReturnPolicyTables();
