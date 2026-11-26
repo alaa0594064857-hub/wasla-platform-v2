@@ -173,6 +173,7 @@ export async function handleAccountsRequest(
       countryCode,
       description,
       website,
+      contactInformation: rawContactInformation,
     } = body;
 
     if (
@@ -279,6 +280,29 @@ export async function handleAccountsRequest(
       }
     }
 
+    const contactInformation: Record<string, string> = {};
+    if (rawContactInformation !== undefined && !isObject(rawContactInformation)) {
+      respond(response, 400, { success: false, error: "Contact information must be an object" });
+      return;
+    }
+    const contactFields = ["email", "phone", "whatsapp", "address", "city"] as const;
+    const suppliedContact = isObject(rawContactInformation) ? rawContactInformation : {};
+    for (const field of contactFields) {
+      const value = suppliedContact[field];
+      if (value === undefined || value === null || value === "") continue;
+      const maxLength = field === "address" ? 500 : 255;
+      if (typeof value !== "string" || value.trim().length > maxLength) {
+        respond(response, 400, { success: false, error: `Invalid ${field} value` });
+        return;
+      }
+      const normalized = value.trim();
+      if (field === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+        respond(response, 400, { success: false, error: "Invalid business email" });
+        return;
+      }
+      contactInformation[field] = normalized;
+    }
+
     const client = await pool.connect();
 
     try {
@@ -338,9 +362,10 @@ export async function handleAccountsRequest(
         `INSERT INTO business_profiles (
            account_id,
            description,
-           website
+           website,
+           contact_information
          )
-         VALUES ($1, $2, $3)`,
+         VALUES ($1, $2, $3, $4::jsonb)`,
         [
           account.id,
           typeof description === "string"
@@ -349,6 +374,7 @@ export async function handleAccountsRequest(
           typeof website === "string" && website.trim()
             ? website.trim()
             : null,
+          JSON.stringify(contactInformation),
         ],
       );
 
