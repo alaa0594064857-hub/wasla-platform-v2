@@ -440,7 +440,7 @@ export default function BusinessManagementPage() {
               </label>
 
               {selected && (
-                <article className="business-account-card">
+                <Link href={`/business/${selected.id}`} className="business-account-card" aria-label={locale === "ar" ? `تعديل بيانات ${selected.display_name}` : `Edit ${selected.display_name}`}>
                   <div className="business-account-symbol">W</div>
                   <div className="business-account-info">
                     <span>{accountTypeLabel(selected.account_type)}</span>
@@ -448,9 +448,9 @@ export default function BusinessManagementPage() {
                     <p>{selected.legal_name}</p>
                   </div>
                   <div className="business-account-role">
-                    {roleLabel(selected.role)}
+                    {locale === "ar" ? "تعديل البيانات ↗" : "Edit details ↗"}
                   </div>
-                </article>
+                </Link>
               )}
             </section>
 
