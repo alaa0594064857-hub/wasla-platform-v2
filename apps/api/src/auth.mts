@@ -143,6 +143,9 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,
+    // Keep recovery-token lifetime explicit and revoke older sessions after recovery.
+    resetPasswordTokenExpiresIn: 3600,
+    revokeSessionsOnPasswordReset: true,
     sendResetPassword: async ({ user, token }) => {
       const webBaseUrl = process.env.WASLA_WEB_URL ?? "https://wasla.trade";
       const resetUrl = new URL("/reset-password", webBaseUrl);
