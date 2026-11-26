@@ -388,3 +388,39 @@ export async function handleMemberAffiliateLinkIssue(req: IncomingMessage, res: 
   );
   send(res,201,{success:true,link:{id:saved.rows[0].id,token,relativeUrl:`/store/${encodeURIComponent(application.rows[0].merchantSlug)}?ref=${encodeURIComponent(token)}`,createdAt:saved.rows[0].createdAt},notice:"This token is shown once. Generate a new link if you lose it."});
 }
+
+
+/** Affiliate-store owners can inspect recorded pending and reversed amounts; these are not withdrawable balances. */
+export async function handleMemberAffiliateEarnings(req: IncomingMessage,res: ServerResponse,slug:string):Promise<void>{
+  if(req.method!=="GET"){send(res,405,{success:false,error:"Method not allowed"});return;}
+  const current=await sessionFor(req,res);if(!current)return;
+  const db=getDatabasePool();
+  const store=await db.query("SELECT id FROM stores WHERE slug=$1 AND status='active' LIMIT 1",[slug]);
+  if(!store.rowCount){send(res,404,{success:false,error:"Store not found"});return;}
+  const access=await storePermission(store.rows[0].id,current.user.id,["store.order.read","store.order.manage","account.order.read","account.order.manage"]);
+  if(!access){send(res,403,{success:false,error:"Affiliate store access required"});return;}
+  const [totals,entries]=await Promise.all([
+    db.query(
+      `SELECT l.currency,SUM(l.amount)::text AS "netPending"
+       FROM member_store_order_affiliate_attributions a
+       JOIN member_store_affiliate_commission_ledger l ON l.attribution_id=a.id
+       WHERE a.affiliate_store_id=$1
+       GROUP BY l.currency ORDER BY l.currency`,
+      [store.rows[0].id],
+    ),
+    db.query(
+      `SELECT a.id,a.order_id AS "orderId",a.product_id AS "productId",a.quantity,
+        a.commission_bps AS "commissionBps",a.line_subtotal::text AS "lineSubtotal",
+        a.commission_amount::text AS "commissionAmount",a.currency,
+        a.created_at AS "createdAt",m.name AS "merchantStoreName",
+        COALESCE(SUM(l.amount),0)::text AS "netPending"
+       FROM member_store_order_affiliate_attributions a
+       JOIN stores m ON m.id=a.merchant_store_id
+       LEFT JOIN member_store_affiliate_commission_ledger l ON l.attribution_id=a.id
+       WHERE a.affiliate_store_id=$1
+       GROUP BY a.id,m.name ORDER BY a.created_at DESC LIMIT 100`,
+      [store.rows[0].id],
+    ),
+  ]);
+  send(res,200,{success:true,totals:totals.rows,entries:entries.rows,notice:"Amounts are internal pending commission records only. WASLA does not hold funds or offer withdrawals in this phase."});
+}
