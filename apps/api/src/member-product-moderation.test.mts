@@ -82,7 +82,7 @@ describe("member product moderation", () => {
   it("approves a locked draft and writes its audit event in the same transaction", async () => {
     clientQuery
       .mockResolvedValueOnce({ rowCount: null, rows: [] })
-      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: productId, status: "draft", store_status: "active", account_status: "active" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: productId, status: "draft", store_status: "active", account_status: "active", business_verification_status: "verified" }] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [] })
       .mockResolvedValueOnce({ rowCount: 1, rows: [] })
       .mockResolvedValueOnce({ rowCount: null, rows: [] });
@@ -101,6 +101,26 @@ describe("member product moderation", () => {
     expect(release).toHaveBeenCalledOnce();
   });
 
+  it("does not publish a product until the business profile is verified", async () => {
+    clientQuery
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{
+        id: productId, status: "draft", store_status: "active", account_status: "active",
+        business_verification_status: "unverified",
+      }] })
+      .mockResolvedValueOnce({ rowCount: null, rows: [] });
+    const base = await startServer();
+    const response = await fetch(`${base}/api/platform/member-products/review/${productId}`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ decision: "approve" }),
+    });
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ success: false, code: "BUSINESS_VERIFICATION_REQUIRED" });
+    expect(clientQuery.mock.calls[2][0]).toBe("ROLLBACK");
+    expect(clientQuery.mock.calls.some(call => String(call[0]).includes("UPDATE store_products"))).toBe(false);
+    expect(clientQuery.mock.calls.some(call => String(call[0]).includes("INSERT INTO audit_logs"))).toBe(false);
+  });
+
   it("requires a meaningful rejection reason before opening a transaction", async () => {
     const base = await startServer();
     const response = await fetch(`${base}/api/platform/member-products/review/${productId}`, {
@@ -114,7 +134,7 @@ describe("member product moderation", () => {
   it("rejects repeated decisions when the product is no longer a draft", async () => {
     clientQuery
       .mockResolvedValueOnce({ rowCount: null, rows: [] })
-      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: productId, status: "active", store_status: "active", account_status: "active" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: productId, status: "active", store_status: "active", account_status: "active", business_verification_status: "verified" }] })
       .mockResolvedValueOnce({ rowCount: null, rows: [] });
     const base = await startServer();
     const response = await fetch(`${base}/api/platform/member-products/review/${productId}`, {
