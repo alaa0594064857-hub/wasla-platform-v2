@@ -4,7 +4,7 @@ type SessionIdentity = { user: { id: string } };
 
 type GuardDependencies = {
   getSession: (request: IncomingMessage) => Promise<SessionIdentity | null>;
-  query: (sql: string, values: unknown[]) => Promise<{ rows: unknown[] }>;
+  query: (sql: string, values: string[]) => Promise<{ rows: unknown[] }>;
 };
 
 /**
@@ -42,7 +42,6 @@ export async function enforceActiveVerifiedSession(
   response.writeHead(401, {
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store",
-    "Set-Cookie": "better-auth.session_token=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax",
   });
   response.end(JSON.stringify({
     success: false,
