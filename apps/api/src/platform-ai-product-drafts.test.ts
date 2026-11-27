@@ -34,7 +34,7 @@ beforeEach(async () => {
   previousModel = process.env.GEMINI_MODEL;
   process.env.GEMINI_API_KEY = "test-key-not-real";
   delete process.env.GEMINI_MODEL;
-  mocks.authorize.mockResolvedValue({ userId: "owner-1" });
+  mocks.authorize.mockResolvedValue({ userId: "owner-1", roleNames: ["platform_owner"] });
   mocks.control.mockResolvedValue({ enabled: true, pausedReason: null });
   const client = { query: vi.fn(async (sql: string) => {
     if (sql.includes("INSERT INTO official_store_products")) return { rows: [{
