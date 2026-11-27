@@ -68,7 +68,7 @@ export async function handleOfficialStoreCandidateEnrichment(req: IncomingMessag
     const access = await authorizePlatformPermission(req, res, "platform.manage");
     if (!access) return;
     if (!access.roleNames.includes("platform_owner")) {
-      reply(response, 403, { success: false, error: "Platform owner access required" });
+      reply(res, 403, { success: false, error: "Platform owner access required" });
       return;
     }
     const db = getDatabasePool();
