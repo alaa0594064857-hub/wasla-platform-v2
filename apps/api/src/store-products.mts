@@ -253,9 +253,7 @@ export async function handleStoreProductDetailRequest(
       respond(response, 400, { success: false, error: "No product changes supplied" }); return;
     }
     const pool = getDatabasePool();
-    const allowActiveStockUpdate = Object.keys(body).length === 1 && body.stockQuantity !== undefined;
-    const queryValues = [slug, session.user.id, productId, ...values, allowActiveStockUpdate];
-    const activeGuardParameter = "$" + String(queryValues.length);
+    const queryValues = [slug, session.user.id, productId, ...values];
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
@@ -280,7 +278,7 @@ export async function handleStoreProductDetailRequest(
         `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, account_id, store_id, metadata)
          SELECT $1, $2, 'product', $3, s.account_id, s.id, $4::jsonb
          FROM stores s WHERE s.id = $5`,
-        [session.user.id, allowActiveStockUpdate ? 'product.stock_updated' : 'product.updated', result.rows[0].id, JSON.stringify({ changed_fields: Object.keys(body), status: result.rows[0].status }), result.rows[0].storeId],
+        [session.user.id, Object.keys(body).length === 1 && body.stockQuantity !== undefined ? 'product.stock_updated' : 'product.updated', result.rows[0].id, JSON.stringify({ changed_fields: Object.keys(body), status: result.rows[0].status }), result.rows[0].storeId],
       );
       await client.query("COMMIT");
       respond(response, 200, { success: true, product: result.rows[0] });
