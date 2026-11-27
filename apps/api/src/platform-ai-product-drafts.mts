@@ -40,6 +40,10 @@ function safeObject(value: unknown): Record<string, unknown> {
 export async function handleAiProductDraftRequest(request: IncomingMessage, response: ServerResponse): Promise<void> {
   const access = await authorizePlatformPermission(request, response, "platform.manage");
   if (!access) return;
+    if (!access.roleNames.includes("platform_owner")) {
+      reply(response, 403, { success: false, error: "Platform owner access required" });
+      return;
+    }
   if (request.method !== "POST") {
     reply(response, 405, { success: false, error: "Method not allowed" });
     return;
