@@ -29,7 +29,7 @@ export function shouldEnforceSessionGuard(pathname: string): boolean {
   const isBetterAuthRoute = pathname === "/api/auth" || pathname.startsWith("/api/auth/");
   const isPublicCatalogRoute =
     pathname === "/api/public/stores" ||
-    pathname.startsWith("/api/public/stores/") ||
+    /^\/api\/public\/stores\/[^/]+$/.test(pathname) ||
     (pathname.startsWith("/api/public/products/") &&
       /^[0-9a-f-]{36}$/i.test(pathname.slice("/api/public/products/".length)));
 
