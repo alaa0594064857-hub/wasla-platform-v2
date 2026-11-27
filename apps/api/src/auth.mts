@@ -228,11 +228,14 @@ export const auth = betterAuth({
     afterEmailVerification: async (user) => {
       const database = getDatabasePool();
 
+      // Email verification may activate only a newly registered account.
+      // Never let an old verification link reactivate suspended/deactivated users.
       await database.query(
         `UPDATE users
          SET status = 'active',
              updated_at = NOW()
-         WHERE id = $1`,
+         WHERE id = $1
+           AND status = 'pending_verification'`,
         [user.id],
       );
     },
