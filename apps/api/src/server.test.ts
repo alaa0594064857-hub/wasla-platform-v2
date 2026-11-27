@@ -58,11 +58,22 @@ describe("session guard routing", () => {
     expect(shouldEnforceSessionGuard("/api/auth/request-password-reset")).toBe(false);
   });
 
+  it("skips the application session guard for public catalog reads, including requests with stale cookies", () => {
+    expect(shouldEnforceSessionGuard("/api/public/stores")).toBe(false);
+    expect(shouldEnforceSessionGuard("/api/public/stores/example-shop")).toBe(false);
+    expect(shouldEnforceSessionGuard("/api/public/stores/example-shop/products")).toBe(true);
+    expect(shouldEnforceSessionGuard("/api/public/stores/example-shop/admin")).toBe(true);
+    expect(shouldEnforceSessionGuard("/api/public/products/123e4567-e89b-12d3-a456-426614174000")).toBe(false);
+  });
+
   it("keeps the session guard enabled for application and similarly named routes", () => {
     expect(shouldEnforceSessionGuard("/api/stores")).toBe(true);
     expect(shouldEnforceSessionGuard("/api/messages")).toBe(true);
     expect(shouldEnforceSessionGuard("/api/authentication")).toBe(true);
     expect(shouldEnforceSessionGuard("/api/auth-extra")).toBe(true);
+    expect(shouldEnforceSessionGuard("/api/public/messages")).toBe(true);
+    expect(shouldEnforceSessionGuard("/api/public/stores-admin")).toBe(true);
+    expect(shouldEnforceSessionGuard("/api/public/products/not-a-uuid")).toBe(true);
   });
 });
 
