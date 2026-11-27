@@ -23,7 +23,7 @@ async function startServer(sourceId?: string): Promise<string> {
 
 beforeEach(async () => {
   ({ handleOfficialStoreDataSourcesRequest } = await import("./official-store-data-sources.mjs"));
-  mocks.authorize.mockResolvedValue({ userId: "platform-owner" });
+  mocks.authorize.mockResolvedValue({ userId: "platform-owner", roleNames: ["platform_owner"] });
 });
 
 afterEach(async () => {
