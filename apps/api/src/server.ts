@@ -20,6 +20,15 @@ function sendJson(
   response.end(JSON.stringify(data));
 }
 
+/**
+ * Better Auth owns its public lifecycle endpoints (sign-in, verification,
+ * password recovery and sign-out). They must not be blocked by the application
+ * session guard when a browser sends an expired or stale session cookie.
+ */
+export function shouldEnforceSessionGuard(pathname: string): boolean {
+  return pathname !== "/api/auth" && !pathname.startsWith("/api/auth/");
+}
+
 async function handleRequest(
   request: IncomingMessage,
   response: ServerResponse,
@@ -39,7 +48,7 @@ async function handleRequest(
     "http://localhost",
   );
 
-  if (request.headers.cookie) {
+  if (request.headers.cookie && shouldEnforceSessionGuard(requestUrl.pathname)) {
     try {
       const [{ auth }, { fromNodeHeaders }, { getDatabasePool }, { enforceActiveVerifiedSession }] = await Promise.all([
         import("./auth.mjs"),
