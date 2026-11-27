@@ -107,17 +107,27 @@ describe("store product operation permissions", () => {
     expect(mocks.connect).not.toHaveBeenCalled();
   });
 
-  it("rejects direct public publishing until the platform owner approves the product", async () => {
+  it("allows an authorized seller to publish a new product directly", async () => {
     mocks.query.mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "store-1", account_id: "account-1" }] });
+    const clientQuery = vi.fn()
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "product-1", title: "Public product", status: "active" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: null, rows: [] });
+    const release = vi.fn();
+    mocks.connect.mockResolvedValueOnce({ query: clientQuery, release });
     const baseUrl = await startServer();
     const response = await fetch(`${baseUrl}/api/stores/sample-store/products`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title: "Public product", price: 10, currency: "USD", stockQuantity: 1, status: "active" }),
     });
-    expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ success: false, code: "PRODUCT_REVIEW_REQUIRED" });
-    expect(mocks.connect).not.toHaveBeenCalled();
+    expect(response.status).toBe(201);
+    expect(await response.json()).toMatchObject({ success: true, product: { status: "active" } });
+    expect(clientQuery.mock.calls[1][0]).toContain("INSERT INTO store_products");
+    expect(clientQuery.mock.calls[1][1][10]).toBe("active");
+    expect(clientQuery.mock.calls[3][0]).toBe("COMMIT");
+    expect(release).toHaveBeenCalledOnce();
   });
 
   it("requires product-create permission before accepting a new product", async () => {
@@ -137,16 +147,25 @@ describe("store product operation permissions", () => {
     expect(mocks.connect).not.toHaveBeenCalled();
   });
 
-  it("prevents publishing an existing draft directly from the seller update route", async () => {
+  it("allows an authorized seller to publish an existing draft directly", async () => {
+    const clientQuery = vi.fn()
+      .mockResolvedValueOnce({ rowCount: null, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: "product-1", storeId: "store-1", title: "Published item", price: "10.00", currency: "USD", stockQuantity: 2, status: "active" }] })
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: null, rows: [] });
+    const release = vi.fn();
+    mocks.connect.mockResolvedValueOnce({ query: clientQuery, release });
     const baseUrl = await startServer();
     const response = await fetch(`${baseUrl}/api/stores/sample-store/products/product-1`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "active" }),
     });
-    expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ success: false, code: "PRODUCT_REVIEW_REQUIRED" });
-    expect(mocks.connect).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ success: true, product: { status: "active" } });
+    expect(String(clientQuery.mock.calls[1][0])).toContain("status = $4");
+    expect(clientQuery.mock.calls[3][0]).toBe("COMMIT");
+    expect(release).toHaveBeenCalledOnce();
   });
 
   it("allows an authorized seller to update stock on a published product without changing its content", async () => {
