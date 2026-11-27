@@ -97,6 +97,10 @@ export async function handleOfficialStoreImportCandidatesRequest(request: Incomi
   try {
     const access = await authorizePlatformPermission(request, response, "platform.manage");
     if (!access) return;
+    if (!access.roleNames.includes("platform_owner")) {
+      reply(response, 403, { success: false, error: "Platform owner access required" });
+      return;
+    }
     if (request.method !== "POST") { reply(response, 405, { success: false, error: "Method not allowed" }); return; }
     let body: Record<string, unknown> | null;
     try { body = await readBody(request); } catch (error) {
