@@ -77,6 +77,18 @@ describe("WASLA AI product drafts", () => {
     expect(mocks.connect).not.toHaveBeenCalled();
   });
 
+  it("rejects platform admins even if platform.manage is unexpectedly present", async () => {
+    mocks.authorize.mockResolvedValueOnce({ userId: "admin-1", roleNames: ["platform_admin"], permissions: ["platform.manage"] });
+    const upstream = vi.fn();
+    vi.stubGlobal("fetch", upstream);
+    const base = await startServer();
+    const response = await nativeFetch(base, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt: "Private draft" }) });
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ success: false, error: "Platform owner access required" });
+    expect(upstream).not.toHaveBeenCalled();
+    expect(mocks.connect).not.toHaveBeenCalled();
+  });
+
   it("does not call Gemini or write a draft when the manager is paused", async () => {
     mocks.control.mockResolvedValueOnce({ enabled: false, pausedReason: "maintenance" });
     const upstream = vi.fn();
