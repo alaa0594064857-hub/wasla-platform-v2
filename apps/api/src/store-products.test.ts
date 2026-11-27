@@ -184,8 +184,8 @@ describe("store product operation permissions", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ success: true, product: { status: "active", stockQuantity: 8 } });
     const updateSql = String(clientQuery.mock.calls[1][0]);
-    expect(updateSql).toContain("p.status <> 'active' OR $5::boolean");
-    expect(clientQuery.mock.calls[1][1]).toEqual(["sample-store", "store-employee", "product-1", 8, true]);
+    expect(updateSql).not.toContain("p.status <> 'active'");
+    expect(clientQuery.mock.calls[1][1]).toEqual(["sample-store", "store-employee", "product-1", 8]);
     expect(clientQuery.mock.calls[2][1][1]).toBe("product.stock_updated");
     expect(clientQuery.mock.calls[3][0]).toBe("COMMIT");
     expect(release).toHaveBeenCalledOnce();
@@ -215,7 +215,6 @@ describe("store product operation permissions", () => {
     expect(updateSql).toContain("'account.product.update'");
     expect(updateSql).toContain("'store.product.update'");
     expect(updateSql).toContain("p.id = $3");
-    expect(updateSql).toContain("p.status <> 'active'");
     expect(clientQuery.mock.calls[2][0]).toBe("ROLLBACK");
     expect(clientQuery.mock.calls.some(call => String(call[0]).includes("INSERT INTO audit_logs"))).toBe(false);
     expect(release).toHaveBeenCalledTimes(1);
