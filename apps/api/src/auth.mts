@@ -117,6 +117,18 @@ export const auth = betterAuth({
     },
   },
 
+  rateLimit: {
+    enabled: true,
+    window: 60,
+    max: 100,
+    customRules: {
+      "/sign-in/email": { window: 60, max: 5 },
+      "/sign-up/email": { window: 60, max: 5 },
+      "/request-password-reset": { window: 60, max: 3 },
+      "/reset-password": { window: 60, max: 5 },
+    },
+  },
+
   databaseHooks: {
     user: {
       create: {
@@ -138,6 +150,29 @@ export const auth = betterAuth({
             });
           }
           return { data: user };
+        },
+      },
+    },
+    session: {
+      create: {
+        before: async (session) => {
+          const activeUser = await getDatabasePool().query(
+            `SELECT id
+             FROM users
+             WHERE id = $1
+               AND status = 'active'
+               AND email_verified = TRUE
+             LIMIT 1`,
+            [session.userId],
+          );
+
+          if (activeUser.rows.length !== 1) {
+            throw new APIError("FORBIDDEN", {
+              message: "An active, verified account is required.",
+            });
+          }
+
+          return { data: session };
         },
       },
     },
