@@ -26,7 +26,13 @@ function sendJson(
  * session guard when a browser sends an expired or stale session cookie.
  */
 export function shouldEnforceSessionGuard(pathname: string): boolean {
-  return pathname !== "/api/auth" && !pathname.startsWith("/api/auth/");
+  const isBetterAuthRoute = pathname === "/api/auth" || pathname.startsWith("/api/auth/");
+  const isPublicCatalogRoute =
+    pathname === "/api/public/stores" ||
+    pathname.startsWith("/api/public/stores/") ||
+    /^\\/api\\/public\\/products\\/[0-9a-f-]{36}$/i.test(pathname);
+
+  return !isBetterAuthRoute && !isPublicCatalogRoute;
 }
 
 async function handleRequest(
