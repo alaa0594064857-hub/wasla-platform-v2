@@ -58,6 +58,10 @@ export async function handleOfficialStoreDataSourcesRequest(req: IncomingMessage
   try {
     const access = await authorizePlatformPermission(req, res, "platform.manage");
     if (!access) return;
+    if (!access.roleNames.includes("platform_owner")) {
+      reply(res, 403, { success: false, error: "Platform owner access required" });
+      return;
+    }
     const db = getDatabasePool();
     if (req.method === "GET" && !sourceId) {
       const result = await db.query(
