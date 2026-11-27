@@ -39,6 +39,36 @@ async function handleRequest(
     "http://localhost",
   );
 
+  if (request.headers.cookie) {
+    try {
+      const [{ auth }, { fromNodeHeaders }, { getDatabasePool }, { enforceActiveVerifiedSession }] = await Promise.all([
+        import("./auth.mjs"),
+        import("better-auth/node"),
+        import("./database.js"),
+        import("./auth-session-guard.mjs"),
+      ]);
+
+      const allowed = await enforceActiveVerifiedSession(request, response, {
+        getSession: async (incomingRequest) => auth.api.getSession({
+          headers: fromNodeHeaders(incomingRequest.headers),
+          query: { disableCookieCache: true },
+        }),
+        query: (sql, values) => getDatabasePool().query(sql, values),
+      });
+
+      if (!allowed) return;
+    } catch (error) {
+      console.error("WASLA session lifecycle validation error:", error);
+      if (!response.headersSent) {
+        sendJson(response, 503, {
+          success: false,
+          error: "Authentication validation unavailable",
+        });
+      }
+      return;
+    }
+  }
+
   if (
     requestUrl.pathname === "/api/auth" ||
     requestUrl.pathname.startsWith("/api/auth/")
