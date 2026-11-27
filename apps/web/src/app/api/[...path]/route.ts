@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 const API_BASE = (
   process.env.WASLA_API_URL ?? "https://wasla-apiwasla-api-v2.onrender.com"
-).replace(/\\/$/, "");
+).replace(/\/$/, "");
 
 // Keep oversized requests from being fully buffered by the web service before
 // they reach the API's own route-level validation.
@@ -57,8 +57,8 @@ async function readLimitedBody(request: NextRequest): Promise<ArrayBuffer | null
 
 async function proxy(request: NextRequest): Promise<Response> {
   const incoming = new URL(request.url);
-  const apiPath = incoming.pathname.replace(/^\\/api\\/?/, "");
-  const target = new URL(`/api/${apiPath}${incoming.search}`, API_BASE);
+  const apiPath = incoming.pathname.replace(/^\/api\/?/, "");
+  const target = new URL("/api/" + apiPath + incoming.search, API_BASE);
 
   const headers = new Headers(request.headers);
   headers.delete("host");
