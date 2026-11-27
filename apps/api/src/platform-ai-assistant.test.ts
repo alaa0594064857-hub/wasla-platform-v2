@@ -26,7 +26,7 @@ beforeEach(async () => {
   ({ handlePlatformAiAssistantRequest: handler } = await import("./platform-ai-assistant.mjs"));
   previousApiKey = process.env.GEMINI_API_KEY;
   process.env.GEMINI_API_KEY = "test-key-not-real";
-  mocks.authorize.mockResolvedValue({ userId: "owner-1" });
+  mocks.authorize.mockResolvedValue({ userId: "owner-1", roleNames: ["platform_owner"], permissions: ["platform.manage"] });
   mocks.query.mockResolvedValue({ rows: [] });
 });
 
