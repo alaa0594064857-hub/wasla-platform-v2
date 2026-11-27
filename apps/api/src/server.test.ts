@@ -61,6 +61,8 @@ describe("session guard routing", () => {
   it("skips the application session guard for public catalog reads, including requests with stale cookies", () => {
     expect(shouldEnforceSessionGuard("/api/public/stores")).toBe(false);
     expect(shouldEnforceSessionGuard("/api/public/stores/example-shop")).toBe(false);
+    expect(shouldEnforceSessionGuard("/api/public/stores/example-shop/products")).toBe(true);
+    expect(shouldEnforceSessionGuard("/api/public/stores/example-shop/admin")).toBe(true);
     expect(shouldEnforceSessionGuard("/api/public/products/123e4567-e89b-12d3-a456-426614174000")).toBe(false);
   });
 
