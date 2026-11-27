@@ -52,6 +52,15 @@ describe("WASLA owner AI order context", () => {
     expect(String(mocks.query.mock.calls[0][0])).toContain("CREATE TABLE IF NOT EXISTS platform_ai_manager_control");
   });
 
+  it("denies platform admins even if an unexpected permission grant includes platform.manage", async () => {
+    mocks.authorize.mockResolvedValueOnce({ userId: "admin-1", roleNames: ["platform_admin"], permissions: ["platform.manage"] });
+    const base = await startServer();
+    const response = await fetch(base);
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ success: false, error: "Platform owner access required" });
+    expect(mocks.query).not.toHaveBeenCalled();
+  });
+
   it("includes a bounded order snapshot without customer personal data", async () => {
     mocks.query
       .mockResolvedValueOnce({ rows: [] })
