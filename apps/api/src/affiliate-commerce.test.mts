@@ -125,7 +125,7 @@ describe("affiliate outbound redirect", () => {
 
 describe("affiliate owner metrics", () => {
   it("returns distinct item and click counts without multiplying item totals", async () => {
-    mocks.authorize.mockResolvedValueOnce({ user: { id: "owner-1" } });
+    mocks.authorize.mockResolvedValueOnce({ userId: "owner-1", roleNames: ["platform_owner"] });
     mocks.query
       .mockResolvedValueOnce({ rows: [{ id: "program-1", item_count: 5, published_item_count: 2, click_count: 7 }] })
       .mockResolvedValueOnce({ rows: [] });
@@ -159,7 +159,7 @@ describe("owner review of AI research drafts", () => {
   };
 
   it("requires an explicit owner confirmation before changing a candidate", async () => {
-    mocks.authorize.mockResolvedValueOnce({ user: { id: "owner-1" } });
+    mocks.authorize.mockResolvedValueOnce({ userId: "owner-1", roleNames: ["platform_owner"] });
     const baseUrl = await startServer((req, res) => { void handleAffiliateCommerceRequest(req, res); });
     const response = await fetch(baseUrl + "/", {
       method: "POST",
@@ -171,7 +171,7 @@ describe("owner review of AI research drafts", () => {
   });
 
   it("publishes only a reviewed HTTPS editorial card with no affiliate link", async () => {
-    mocks.authorize.mockResolvedValueOnce({ user: { id: "owner-1" } });
+    mocks.authorize.mockResolvedValueOnce({ userId: "owner-1", roleNames: ["platform_owner"] });
     mocks.query
       .mockResolvedValueOnce({ rows: [candidate] })
       .mockResolvedValueOnce({ rows: [{ id: validId }] });
@@ -193,7 +193,7 @@ describe("owner review of AI research drafts", () => {
   });
 
   it("allows the owner to explicitly approve a seeded editorial draft", async () => {
-    mocks.authorize.mockResolvedValueOnce({ user: { id: "owner-1" } });
+    mocks.authorize.mockResolvedValueOnce({ userId: "owner-1", roleNames: ["platform_owner"] });
     mocks.query
       .mockResolvedValueOnce({ rows: [{ ...candidate, content_source: "editorial" }] })
       .mockResolvedValueOnce({ rows: [{ id: validId }] });
@@ -210,7 +210,7 @@ describe("owner review of AI research drafts", () => {
   });
 
   it("rejects retailer marketplace sources from editorial publication", async () => {
-    mocks.authorize.mockResolvedValueOnce({ user: { id: "owner-1" } });
+    mocks.authorize.mockResolvedValueOnce({ userId: "owner-1", roleNames: ["platform_owner"] });
     mocks.query.mockResolvedValueOnce({ rows: [{ ...candidate, source_url: "https://www.amazon.com/dp/B000000000" }] });
     const baseUrl = await startServer((req, res) => { void handleAffiliateCommerceRequest(req, res); });
     const response = await fetch(baseUrl + "/", {
@@ -223,7 +223,7 @@ describe("owner review of AI research drafts", () => {
   });
 
   it("archives an unverified draft without publishing it", async () => {
-    mocks.authorize.mockResolvedValueOnce({ user: { id: "owner-1" } });
+    mocks.authorize.mockResolvedValueOnce({ userId: "owner-1", roleNames: ["platform_owner"] });
     mocks.query
       .mockResolvedValueOnce({ rows: [candidate] })
       .mockResolvedValueOnce({ rows: [{ id: validId }] });
