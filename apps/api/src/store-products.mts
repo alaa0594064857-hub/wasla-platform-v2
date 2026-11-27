@@ -126,10 +126,6 @@ export async function handleStoreProductsRequest(
     const currency = typeof body.currency === "string" ? body.currency.trim().toUpperCase() : "USD";
     const stock = body.stockQuantity;
     const status = body.status === undefined ? "draft" : body.status;
-    if (status === "active") {
-      respond(response, 409, { success: false, code: "PRODUCT_REVIEW_REQUIRED", error: "Products must be reviewed and approved by the platform owner before public publishing. Save the product as a draft for review." });
-      return;
-    }
     if (title.length < 2 || title.length > 180 || description.length > 5000 ||
         sku.length > 80 || !/^\d{1,10}(\.\d{1,2})?$/.test(price) ||
         !/^[A-Z]{3}$/.test(currency) || !Number.isSafeInteger(stock) ||
@@ -206,7 +202,7 @@ export async function handleStoreProductDetailRequest(
     const values: unknown[] = [];
     const add = (column: string, value: unknown) => {
       values.push(value);
-      fields.push(`${column} = ${values.length + 3}`);
+      fields.push(`${column} = $${values.length + 3}`);
     };
     if (body.title !== undefined) {
       if (typeof body.title !== "string" || body.title.trim().length < 2 || body.title.trim().length > 180) {
@@ -251,19 +247,13 @@ export async function handleStoreProductDetailRequest(
       if (typeof body.status !== "string" || !statuses.has(body.status as ProductStatus)) {
         respond(response, 400, { success: false, error: "Invalid product status" }); return;
       }
-      if (body.status === "active") {
-        respond(response, 409, { success: false, code: "PRODUCT_REVIEW_REQUIRED", error: "Products must be reviewed and approved by the platform owner before public publishing. Keep the product as a draft for review." });
-        return;
-      }
       add("status", body.status);
     }
     if (fields.length === 0) {
       respond(response, 400, { success: false, error: "No product changes supplied" }); return;
     }
     const pool = getDatabasePool();
-    const allowActiveStockUpdate = Object.keys(body).length === 1 && body.stockQuantity !== undefined;
-    const queryValues = [slug, session.user.id, productId, ...values, allowActiveStockUpdate];
-    const activeGuardParameter = "$" + String(queryValues.length);
+    const queryValues = [slug, session.user.id, productId, ...values];
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
@@ -271,7 +261,6 @@ export async function handleStoreProductDetailRequest(
         `UPDATE store_products p SET ${fields.join(", ")}, updated_at = NOW()
          FROM stores s
          WHERE p.id = $3 AND p.store_id = s.id AND s.slug = $1
-           AND (p.status <> 'active' OR ${activeGuardParameter}::boolean)
            AND s.status = 'active' AND ${hasStoreProductPermissionSql(["account.product.update", "store.product.update"])}
          RETURNING p.id, p.store_id AS "storeId", p.title, p.description, p.sku,
            p.price::text AS price, p.currency, p.stock_quantity AS "stockQuantity",
@@ -288,7 +277,7 @@ export async function handleStoreProductDetailRequest(
         `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, account_id, store_id, metadata)
          SELECT $1, $2, 'product', $3, s.account_id, s.id, $4::jsonb
          FROM stores s WHERE s.id = $5`,
-        [session.user.id, allowActiveStockUpdate ? 'product.stock_updated' : 'product.updated', result.rows[0].id, JSON.stringify({ changed_fields: Object.keys(body), status: result.rows[0].status }), result.rows[0].storeId],
+        [session.user.id, Object.keys(body).length === 1 && body.stockQuantity !== undefined ? 'product.stock_updated' : 'product.updated', result.rows[0].id, JSON.stringify({ changed_fields: Object.keys(body), status: result.rows[0].status }), result.rows[0].storeId],
       );
       await client.query("COMMIT");
       respond(response, 200, { success: true, product: result.rows[0] });
