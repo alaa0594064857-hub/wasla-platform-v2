@@ -1,7 +1,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Server } from "node:http";
-import { createWaslaServer } from "./server";
+import { createWaslaServer, shouldEnforceSessionGuard } from "./server";
 import { checkDatabaseConnection } from "./database.js";
 
 vi.mock("./database.js", async (importOriginal) => {
@@ -48,6 +48,22 @@ afterEach(async () => {
 
   server = undefined;
   vi.clearAllMocks();
+});
+
+describe("session guard routing", () => {
+  it("skips the application session guard for Better Auth lifecycle routes", () => {
+    expect(shouldEnforceSessionGuard("/api/auth")).toBe(false);
+    expect(shouldEnforceSessionGuard("/api/auth/sign-in/email")).toBe(false);
+    expect(shouldEnforceSessionGuard("/api/auth/verify-email")).toBe(false);
+    expect(shouldEnforceSessionGuard("/api/auth/request-password-reset")).toBe(false);
+  });
+
+  it("keeps the session guard enabled for application and similarly named routes", () => {
+    expect(shouldEnforceSessionGuard("/api/stores")).toBe(true);
+    expect(shouldEnforceSessionGuard("/api/messages")).toBe(true);
+    expect(shouldEnforceSessionGuard("/api/authentication")).toBe(true);
+    expect(shouldEnforceSessionGuard("/api/auth-extra")).toBe(true);
+  });
 });
 
 describe("WASLA API", () => {

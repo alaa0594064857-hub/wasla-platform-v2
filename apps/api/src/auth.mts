@@ -6,6 +6,7 @@ import { expo } from "@better-auth/expo";
 import { getDrizzleDatabase, getDatabasePool } from "./database.js";
 import * as schema from "./db/schema.js";
 import { buildBetterAuthTrustedOrigins } from "./trusted-origins.mjs";
+import { activatePendingVerification } from "./user-verification-lifecycle.mjs";
 import {
   buildPasswordResetUrl,
   PASSWORD_RESET_TOKEN_TTL_SECONDS,
@@ -227,14 +228,7 @@ export const auth = betterAuth({
 
     afterEmailVerification: async (user) => {
       const database = getDatabasePool();
-
-      await database.query(
-        `UPDATE users
-         SET status = 'active',
-             updated_at = NOW()
-         WHERE id = $1`,
-        [user.id],
-      );
+      await activatePendingVerification(database.query.bind(database), user.id);
     },
   },
 
