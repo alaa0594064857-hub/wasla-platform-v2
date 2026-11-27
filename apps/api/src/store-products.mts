@@ -126,10 +126,6 @@ export async function handleStoreProductsRequest(
     const currency = typeof body.currency === "string" ? body.currency.trim().toUpperCase() : "USD";
     const stock = body.stockQuantity;
     const status = body.status === undefined ? "draft" : body.status;
-    if (status === "active") {
-      respond(response, 409, { success: false, code: "PRODUCT_REVIEW_REQUIRED", error: "Products must be reviewed and approved by the platform owner before public publishing. Save the product as a draft for review." });
-      return;
-    }
     if (title.length < 2 || title.length > 180 || description.length > 5000 ||
         sku.length > 80 || !/^\d{1,10}(\.\d{1,2})?$/.test(price) ||
         !/^[A-Z]{3}$/.test(currency) || !Number.isSafeInteger(stock) ||
@@ -250,10 +246,6 @@ export async function handleStoreProductDetailRequest(
     if (body.status !== undefined) {
       if (typeof body.status !== "string" || !statuses.has(body.status as ProductStatus)) {
         respond(response, 400, { success: false, error: "Invalid product status" }); return;
-      }
-      if (body.status === "active") {
-        respond(response, 409, { success: false, code: "PRODUCT_REVIEW_REQUIRED", error: "Products must be reviewed and approved by the platform owner before public publishing. Keep the product as a draft for review." });
-        return;
       }
       add("status", body.status);
     }
