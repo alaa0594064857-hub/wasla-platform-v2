@@ -27,7 +27,7 @@ async function startServer(): Promise<string> {
 
 beforeEach(() => {
   mocks.getSession.mockResolvedValue({ user: { id: "platform-owner" } });
-  mocks.authorize.mockResolvedValue({ userId: "platform-owner", roleNames: ["owner"], permissions: ["platform.manage"] });
+  mocks.authorize.mockResolvedValue({ userId: "platform-owner", roleNames: ["platform_owner"], permissions: ["platform.manage"] });
   mocks.query.mockResolvedValue({
     rowCount: 1,
     rows: [{
