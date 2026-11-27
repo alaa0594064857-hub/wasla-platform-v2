@@ -49,6 +49,15 @@ describe("official store order desk", () => {
     expect(mocks.query).not.toHaveBeenCalled();
   });
 
+  it("rejects platform admins even if permission is granted unexpectedly", async () => {
+    mocks.authorize.mockResolvedValueOnce({ userId: "admin-1", roleNames: ["platform_admin"], permissions: ["platform.manage"] });
+    const baseUrl = await startServer();
+    const response = await fetch(baseUrl);
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ success: false, error: "Platform owner access required" });
+    expect(mocks.query).not.toHaveBeenCalled();
+  });
+
   it("lists only a bounded set of owner-visible order fields and is explicitly read-only", async () => {
     mocks.query.mockResolvedValueOnce({ rows: [{ id: "order-1", orderStatus: "awaiting_supplier" }] });
     const baseUrl = await startServer();
