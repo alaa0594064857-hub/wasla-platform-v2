@@ -34,7 +34,7 @@ async function startServer(): Promise<string> {
 
 beforeEach(() => {
   mocks.getSession.mockResolvedValue({ user: { id: "platform-owner" } });
-  mocks.authorize.mockResolvedValue(true);
+  mocks.authorize.mockResolvedValue({ userId: "platform-owner", roleNames: ["platform_owner"], permissions: ["platform.manage"] });
   mocks.connect.mockResolvedValue({ query: mocks.clientQuery, release: vi.fn() });
   mocks.clientQuery.mockImplementation(async (sql: string) => {
     if (sql.includes("UPDATE trade_opportunities")) {
