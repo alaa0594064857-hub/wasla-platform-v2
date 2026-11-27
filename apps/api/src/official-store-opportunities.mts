@@ -51,6 +51,10 @@ export async function handleOfficialStoreOpportunityAssessment(request: Incoming
   try {
     const access = await authorizePlatformPermission(request, response, "platform.manage");
     if (!access) return;
+    if (!access.roleNames.includes("platform_owner")) {
+      reply(response, 403, { success: false, error: "Platform owner access required" });
+      return;
+    }
     if (request.method === "GET") {
       const saved = await getDatabasePool().query(
         `SELECT id, title, market, currency, score, recommendation, assessment, created_at
