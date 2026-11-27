@@ -75,6 +75,10 @@ export async function handlePlatformAiAssistantRequest(req: IncomingMessage, res
   try {
     const access = await authorizePlatformPermission(req, res, "platform.manage");
     if (!access) return;
+    if (!access.roleNames.includes("platform_owner")) {
+      reply(res, 403, { success: false, error: "Platform owner access required" });
+      return;
+    }
     const apiKey = process.env.GEMINI_API_KEY?.trim();
     const model = process.env.GEMINI_MODEL?.trim() || "gemini-3.5-flash-lite";
     const control = await getPlatformAiManagerControl();
