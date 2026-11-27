@@ -26,7 +26,7 @@ beforeEach(async () => {
   ({ handlePlatformAiAssistantRequest: handler } = await import("./platform-ai-assistant.mjs"));
   previousApiKey = process.env.GEMINI_API_KEY;
   process.env.GEMINI_API_KEY = "test-key-not-real";
-  mocks.authorize.mockResolvedValue({ userId: "owner-1" });
+  mocks.authorize.mockResolvedValue({ userId: "owner-1", roleNames: ["platform_owner"], permissions: ["platform.manage"] });
   mocks.query.mockResolvedValue({ rows: [] });
 });
 
@@ -50,6 +50,15 @@ describe("WASLA owner AI order context", () => {
     expect(data.readOnlyDataAccess).toBe(true);
     expect(mocks.query).toHaveBeenCalled();
     expect(String(mocks.query.mock.calls[0][0])).toContain("CREATE TABLE IF NOT EXISTS platform_ai_manager_control");
+  });
+
+  it("denies platform admins even if an unexpected permission grant includes platform.manage", async () => {
+    mocks.authorize.mockResolvedValueOnce({ userId: "admin-1", roleNames: ["platform_admin"], permissions: ["platform.manage"] });
+    const base = await startServer();
+    const response = await fetch(base);
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ success: false, error: "Platform owner access required" });
+    expect(mocks.query).not.toHaveBeenCalled();
   });
 
   it("includes a bounded order snapshot without customer personal data", async () => {

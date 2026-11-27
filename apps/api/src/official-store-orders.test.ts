@@ -27,7 +27,7 @@ async function startServer(orderId?: string): Promise<string> {
 
 beforeEach(async () => {
   ({ handleOfficialStoreOrdersRequest } = await import("./official-store-orders.mjs"));
-  mocks.authorize.mockResolvedValue({ userId: "platform-owner" });
+  mocks.authorize.mockResolvedValue({ userId: "platform-owner", roleNames: ["platform_owner"] });
 });
 
 afterEach(async () => {
@@ -46,6 +46,15 @@ describe("official store order desk", () => {
     const baseUrl = await startServer();
     const response = await fetch(baseUrl);
     expect(response.status).toBe(403);
+    expect(mocks.query).not.toHaveBeenCalled();
+  });
+
+  it("rejects platform admins even if permission is granted unexpectedly", async () => {
+    mocks.authorize.mockResolvedValueOnce({ userId: "admin-1", roleNames: ["platform_admin"], permissions: ["platform.manage"] });
+    const baseUrl = await startServer();
+    const response = await fetch(baseUrl);
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ success: false, error: "Platform owner access required" });
     expect(mocks.query).not.toHaveBeenCalled();
   });
 

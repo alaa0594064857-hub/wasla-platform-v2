@@ -42,6 +42,10 @@ export async function handlePlatformBusinessAccountsRequest(
   try {
     const access = await authorizePlatformPermission(request, response, "platform.manage");
     if (!access) return;
+    if (!access.roleNames.includes("platform_owner")) {
+      reply(response, 403, { success: false, error: "Platform owner access required" });
+      return;
+    }
     const pool = getDatabasePool();
 
     if (request.method === "GET") {

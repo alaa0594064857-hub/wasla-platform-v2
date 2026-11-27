@@ -34,7 +34,7 @@ beforeEach(async () => {
   previousModel = process.env.GEMINI_MODEL;
   process.env.GEMINI_API_KEY = "test-key-not-real";
   delete process.env.GEMINI_MODEL;
-  mocks.authorize.mockResolvedValue({ userId: "owner-1" });
+  mocks.authorize.mockResolvedValue({ userId: "owner-1", roleNames: ["platform_owner"] });
   mocks.control.mockResolvedValue({ enabled: true, pausedReason: null });
   const client = { query: vi.fn(async (sql: string) => {
     if (sql.includes("INSERT INTO official_store_products")) return { rows: [{
@@ -73,6 +73,18 @@ describe("WASLA AI product drafts", () => {
       body: JSON.stringify({ prompt: "Private product details" }),
     });
     expect(response.status).toBe(403);
+    expect(upstream).not.toHaveBeenCalled();
+    expect(mocks.connect).not.toHaveBeenCalled();
+  });
+
+  it("rejects platform admins even if platform.manage is unexpectedly present", async () => {
+    mocks.authorize.mockResolvedValueOnce({ userId: "admin-1", roleNames: ["platform_admin"], permissions: ["platform.manage"] });
+    const upstream = vi.fn();
+    vi.stubGlobal("fetch", upstream);
+    const base = await startServer();
+    const response = await nativeFetch(base, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt: "Private draft" }) });
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ success: false, error: "Platform owner access required" });
     expect(upstream).not.toHaveBeenCalled();
     expect(mocks.connect).not.toHaveBeenCalled();
   });

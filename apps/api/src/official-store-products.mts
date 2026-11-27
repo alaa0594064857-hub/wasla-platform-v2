@@ -120,6 +120,10 @@ export async function handleOfficialStoreProductsRequest(
 
     const access = await authorizePlatformPermission(request, response, "platform.manage");
     if (!access) return;
+    if (!access.roleNames.includes("platform_owner")) {
+      reply(response, 403, { success: false, error: "Platform owner access required" });
+      return;
+    }
 
     if (request.method === "GET" && !productId) {
       const result = await db.query(

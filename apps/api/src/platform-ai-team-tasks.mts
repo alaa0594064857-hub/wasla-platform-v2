@@ -152,6 +152,10 @@ async function addEvent(taskId: string, ownerId: string, actorType: string, acto
 export async function handlePlatformAiTeamTasksRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const access = await authorizePlatformPermission(req, res, "platform.manage");
   if (!access) return;
+  if (!access.roleNames.includes("platform_owner")) {
+    reply(res, 403, { success: false, error: "Platform owner access required" });
+    return;
+  }
 
   try {
     await ensureTaskTables();

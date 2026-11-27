@@ -67,6 +67,10 @@ export async function handleOfficialStoreCandidateEnrichment(req: IncomingMessag
   try {
     const access = await authorizePlatformPermission(req, res, "platform.manage");
     if (!access) return;
+    if (!access.roleNames.includes("platform_owner")) {
+      reply(res, 403, { success: false, error: "Platform owner access required" });
+      return;
+    }
     const db = getDatabasePool();
     await db.query(`
       CREATE TABLE IF NOT EXISTS official_store_candidate_enrichments (

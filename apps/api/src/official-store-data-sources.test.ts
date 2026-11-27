@@ -23,7 +23,7 @@ async function startServer(sourceId?: string): Promise<string> {
 
 beforeEach(async () => {
   ({ handleOfficialStoreDataSourcesRequest } = await import("./official-store-data-sources.mjs"));
-  mocks.authorize.mockResolvedValue({ userId: "platform-owner" });
+  mocks.authorize.mockResolvedValue({ userId: "platform-owner", roleNames: ["platform_owner"] });
 });
 
 afterEach(async () => {
@@ -35,6 +35,15 @@ afterEach(async () => {
 });
 
 describe("authorized official-store data source registry", () => {
+  it("rejects platform admins before accessing the owner-only registry", async () => {
+    mocks.authorize.mockResolvedValueOnce({ userId: "admin-1", roleNames: ["platform_admin"], permissions: ["platform.manage"] });
+    const baseUrl = await startServer();
+    const response = await fetch(baseUrl);
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ success: false, error: "Platform owner access required" });
+    expect(mocks.query).not.toHaveBeenCalled();
+  });
+
   it("always registers a new source as pending review, never automatically approved", async () => {
     mocks.query.mockResolvedValueOnce({ rows: [{ id: "source-id", permission_status: "pending_review" }] });
     const baseUrl = await startServer();

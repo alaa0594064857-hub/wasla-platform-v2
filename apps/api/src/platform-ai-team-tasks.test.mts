@@ -55,6 +55,15 @@ describe("WASLA owner digital team task API", () => {
     expect(mocks.query).not.toHaveBeenCalled();
   });
 
+  it("denies platform admins even if an unexpected permission grant includes platform.manage", async () => {
+    mocks.authorize.mockResolvedValueOnce({ userId: "admin-1", roleNames: ["platform_admin"], permissions: ["platform.manage"] });
+    const base = await startServer();
+    const response = await fetch(base + "/api/platform/ai/tasks");
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ success: false, error: "Platform owner access required" });
+    expect(mocks.query).not.toHaveBeenCalled();
+  });
+
   it("lists only the authenticated owner's tasks with a bounded limit", async () => {
     const base = await startServer();
     const response = await fetch(base + "/api/platform/ai/tasks?limit=500");

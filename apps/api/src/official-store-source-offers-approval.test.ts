@@ -25,7 +25,7 @@ async function startServer(offerId: string): Promise<string> {
 
 beforeEach(async () => {
   ({ handleOfficialStoreSourceOffersRequest } = await import("./official-store-source-offers.mjs"));
-  mocks.authorize.mockResolvedValue({ userId: "platform-owner" });
+  mocks.authorize.mockResolvedValue({ userId: "platform-owner", roleNames: ["platform_owner"], permissions: ["platform.manage"] });
   mocks.connect.mockResolvedValue({ query: mocks.clientQuery, release: mocks.release });
 });
 

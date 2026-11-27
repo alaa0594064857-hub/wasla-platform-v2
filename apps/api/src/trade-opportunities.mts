@@ -168,6 +168,10 @@ export async function handleTradeOpportunitiesRequest(
     if (request.method === "GET" && opportunityId === "matches") {
       const owner = await authorizePlatformPermission(request, response, "platform.manage");
       if (!owner) return;
+      if (!owner.roleNames.includes("platform_owner")) {
+        reply(response, 403, { success: false, error: "Platform owner access required" });
+        return;
+      }
       const result = await db.query(
         `SELECT o.id, o.account_id, a.display_name AS account_name, o.opportunity_type, o.title,
                 o.product_category, o.quantity::text AS quantity, o.quantity_unit,
@@ -189,6 +193,10 @@ export async function handleTradeOpportunitiesRequest(
       if (opportunityId === "review") {
         const owner = await authorizePlatformPermission(request, response, "platform.manage");
         if (!owner) return;
+      if (!owner.roleNames.includes("platform_owner")) {
+        reply(response, 403, { success: false, error: "Platform owner access required" });
+        return;
+      }
         const result = await db.query(`SELECT o.*, a.display_name AS account_name
           FROM trade_opportunities o INNER JOIN accounts a ON a.id=o.account_id
           WHERE o.review_status='pending_review' ORDER BY o.created_at ASC LIMIT 200`);
@@ -198,6 +206,10 @@ export async function handleTradeOpportunitiesRequest(
       if (opportunityId === "review-history") {
         const owner = await authorizePlatformPermission(request, response, "platform.manage");
         if (!owner) return;
+      if (!owner.roleNames.includes("platform_owner")) {
+        reply(response, 403, { success: false, error: "Platform owner access required" });
+        return;
+      }
         const result = await db.query(
           `SELECT o.id, o.title, o.opportunity_type, o.review_status, o.reviewed_at,
                   a.display_name AS account_name, e.event_type, e.note,
@@ -214,6 +226,10 @@ export async function handleTradeOpportunitiesRequest(
       if (opportunityId) {
         const owner = await authorizePlatformPermission(request, response, "platform.manage");
         if (!owner) return;
+      if (!owner.roleNames.includes("platform_owner")) {
+        reply(response, 403, { success: false, error: "Platform owner access required" });
+        return;
+      }
         const result = await db.query(`SELECT o.*, a.display_name AS account_name FROM trade_opportunities o INNER JOIN accounts a ON a.id=o.account_id WHERE o.id=$1 LIMIT 1`, [opportunityId]);
         if (!result.rowCount) { reply(response, 404, { success: false, error: "Opportunity not found" }); return; }
         reply(response, 200, { success: true, opportunity: result.rows[0] });
@@ -311,6 +327,10 @@ export async function handleTradeOpportunitiesRequest(
     if (!opportunityId || !uuid(opportunityId)) { reply(response, 400, { success: false, error: "A valid opportunity ID is required" }); return; }
     const owner = await authorizePlatformPermission(request, response, "platform.manage");
     if (!owner) return;
+      if (!owner.roleNames.includes("platform_owner")) {
+        reply(response, 403, { success: false, error: "Platform owner access required" });
+        return;
+      }
     let body: Record<string, unknown>;
     try { body = await readBody(request); } catch {
       reply(response, 400, { success: false, error: "Invalid JSON body" }); return;
