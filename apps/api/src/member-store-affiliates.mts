@@ -320,6 +320,7 @@ export async function handleMemberAffiliateProgramStatus(req: IncomingMessage, r
      LEFT JOIN member_store_affiliate_products ap ON ap.program_id=p.id
      LEFT JOIN store_products sp ON sp.id=ap.product_id AND sp.store_id=s.id AND sp.status='active' AND sp.stock_quantity>0
      WHERE p.id=$1 AND s.slug=$2 AND s.status='active'
+       AND EXISTS (SELECT 1 FROM accounts merchant_account JOIN business_profiles merchant_profile ON merchant_profile.account_id=merchant_account.id AND merchant_profile.verification_status='verified' WHERE merchant_account.id=s.account_id AND merchant_account.status='active')
      GROUP BY p.id,s.id`,
     [programId,slug],
   );
