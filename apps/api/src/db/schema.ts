@@ -246,6 +246,7 @@ export const businessProfiles = pgTable("business_profiles", {
     .references(() => accounts.id, { onDelete: "cascade" }),
   description: text("description"),
   website: text("website"),
+  logoReference: text("logo_reference"),
   contactInformation: jsonb("contact_information").$type<
     Record<string, unknown>
   >(),
