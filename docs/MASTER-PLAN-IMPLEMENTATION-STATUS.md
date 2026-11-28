@@ -1,5 +1,35 @@
 # WASLA V2 — Master Plan Implementation Status
 
+Last reviewed: 2026-11-21
+Repository: `alaa0594064857-hub/wasla-platform-v2` (`main`)
+
+## Latest verified checkpoint — 2026-11-21
+
+This checkpoint supersedes older deployment and database observations below where dates conflict. It records verified state only; it is not a launch-readiness certification.
+
+- The latest confirmed production deployment observed on 2026-11-20 was commit `2279888d8589ca7e84140a6c7cce00f35376e519`; Render reported the API and web services live. A successful deploy does not establish end-to-end correctness.
+- The Render PostgreSQL service `wasla-db` remains on the Free plan, with a scheduled expiry/deletion date of 2026-12-04 unless the owner changes the plan. No upgrade or paid resource change is authorized by this checkpoint.
+- The latest read-only production data review found one member store, zero member-store products, zero official-store products, zero trade opportunities, zero brokerage agreements, zero product inquiries, zero member-store orders, zero official-store orders, zero messages and zero affiliate clicks. The only business account remained `pending_verification`; the one store record was active. These counts are point-in-time observations, not live guarantees.
+- The affiliate program record for Amazon/Türkiye was `pending_approval`; its five affiliate items were drafts. No affiliate approval, live outbound earning link, sale or payout was verified.
+- The AI task scheduler cron was present and scheduled, but recent logs showed runs with `processed: 0` and intermittent connection timeouts. Do not treat the scheduled job as proof that specialist tasks are executing successfully.
+- PR #179 contains owner approve/reject controls for AI task results, status-count corrections, stale-error display cleanup and bounded retry improvements. Its CI run #44910865460 passed all listed checks, but PR #179 remained a draft and was not merged or deployed. Do not merge without owner approval.
+- PR #176's member-store delivery/pickup workflow is merged and was included in the 2026-11-20 deployment. It records a fulfilment snapshot and does not collect payment, reserve inventory or integrate a carrier.
+- Public product and store catalogues expose only active stores and published, in-stock products. The production catalogue had no products at the time of the review, so a functioning page does not yet mean customers can buy products.
+- Public `/terms` and `/privacy` pages were not found at the expected App Router paths during this review. Do not publish invented legal terms or privacy promises; these require the owner's legal entity/contact details, actual data practices and jurisdiction-specific review.
+- The authenticated support centre exists at `/support`; it redirects unauthenticated visitors to sign-in. A public support/contact entry point and public legal disclosures remain to be designed and reviewed.
+- No production payment gateway, merchant payout flow, carrier integration, refund processing, verified email sender/domain, scalable media object storage, or native Android/iOS store release was verified.
+
+### Immediate no-cost work priorities
+
+1. Keep PR #179 separate until the owner reviews and explicitly authorizes merging.
+2. Complete hosted two-account acceptance tests for registration, account verification, shop ownership, product publication, order request, messaging and cross-account privacy before advertising these workflows as operational.
+3. Prepare truthful, owner-reviewed legal/privacy/support content before public commercial launch; do not invent company identity, address, tax details, retention periods or refund terms.
+4. Keep affiliate items unpublished until the program approves the publisher and the platform can legally receive and invoice payouts in the owner's tax jurisdiction.
+5. Resolve the Free database expiry before 2026-12-04; any paid upgrade requires the owner's explicit decision.
+
+---
+
+
 Last reviewed: 2026-11-10
 Repository: `alaa0594064857-hub/wasla-platform-v2` (`main`)
 
