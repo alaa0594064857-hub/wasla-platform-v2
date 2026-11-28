@@ -93,7 +93,8 @@ describe("member store returns and exchanges",()=>{
    .mockResolvedValueOnce({rowCount:1,rows:[{}]})
    .mockResolvedValueOnce({rowCount:1,rows:[{id:"33333333-3333-4333-8333-333333333333"}]})
    .mockResolvedValueOnce({rowCount:1,rows:[{id:requestId,status:"item_received",restockedAt:new Date()}]})
-   .mockResolvedValueOnce({rowCount:1,rows:[]})
+   .mockResolvedValueOnce({rowCount:1,rows:[]}) // affiliate return reversal; no matching attribution in this test
+   .mockResolvedValueOnce({rowCount:1,rows:[]}) // audit
    .mockResolvedValueOnce({rowCount:null,rows:[]});
   const base=await start();
   const response=await fetch(base+path+"/received",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({restock:true})});
@@ -103,9 +104,11 @@ describe("member store returns and exchanges",()=>{
   expect(String(restockCall[0])).toContain("stock_quantity=stock_quantity+$3");
   expect(restockCall[1]).toEqual(["33333333-3333-4333-8333-333333333333",store,1]);
   expect(String(clientQuery.mock.calls[5][0])).toContain("restocked_at=CASE WHEN $2 THEN NOW()");
+  expect(String(clientQuery.mock.calls[6][0])).toContain("member_store_affiliate_commission_ledger");
+  expect(clientQuery.mock.calls[6][1]).toEqual([requestId,order,1,"33333333-3333-4333-8333-333333333333"]);
   expect(clientQuery.mock.calls[5][1]).toEqual([requestId,true]);
-  expect(clientQuery.mock.calls[6][1][3]).toContain('"restocked":true');
-  expect(clientQuery.mock.calls[6][1][3]).toContain('"restockedItems":[{"productId":"33333333-3333-4333-8333-333333333333","quantity":1}]');
+  expect(clientQuery.mock.calls[7][1][3]).toContain('"restocked":true');
+  expect(clientQuery.mock.calls[7][1][3]).toContain('"restockedItems":[{"productId":"33333333-3333-4333-8333-333333333333","quantity":1}]');
  });
  it("does not restock legacy orders without a recorded inventory commitment",async()=>{
   const merchant="55555555-5555-4555-8555-555555555555";

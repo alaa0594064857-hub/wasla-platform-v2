@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { fromNodeHeaders } from "better-auth/node";
 import { auth } from "./auth.mjs";
 import { getDatabasePool } from "./database.js";
@@ -204,6 +204,11 @@ export async function handleMemberStoreOrdersRequest(
       lines.push({ productId: item.productId, quantity: item.quantity as number });
     }
     const note = typeof body.note === "string" ? body.note.trim() : "";
+    const affiliateReferralToken = body.affiliateReferralToken === undefined ? "" : typeof body.affiliateReferralToken === "string" ? body.affiliateReferralToken.trim() : null;
+    if (affiliateReferralToken === null || affiliateReferralToken.length > 128 || (affiliateReferralToken.length > 0 && affiliateReferralToken.length < 32)) {
+      respond(response, 400, { success: false, error: "Invalid affiliate referral token" });
+      return;
+    }
     if (note.length > 2000) {
       respond(response, 400, { success: false, error: "Order note is too long" });
       return;
@@ -337,6 +342,56 @@ export async function handleMemberStoreOrdersRequest(
         respond(response, 200, { success: true, order: existing.rows[0], reused: true });
         return;
       }
+      let affiliateAttribution: { linkId: string; programId: string; applicationId: string; merchantStoreId: string; affiliateStoreId: string; commissionBps: number; productIds: Set<string> } | null = null;
+      if (affiliateReferralToken) {
+        const tokenHash = createHash("sha256").update(affiliateReferralToken).digest("hex");
+        const referral = await client.query(
+          `SELECT l.id AS "linkId",p.id AS "programId",a.id AS "applicationId",
+             p.merchant_store_id AS "merchantStoreId",a.affiliate_store_id AS "affiliateStoreId",
+             p.commission_bps AS "commissionBps",affiliate.account_id AS "affiliateAccountId"
+           FROM member_store_affiliate_links l
+           JOIN member_store_affiliate_applications a ON a.id=l.application_id AND a.status='approved'
+           JOIN member_store_affiliate_programs p ON p.id=a.program_id AND p.status='active'
+           JOIN stores merchant ON merchant.id=p.merchant_store_id AND merchant.status='active'
+           JOIN accounts merchant_account ON merchant_account.id=merchant.account_id AND merchant_account.status='active'
+           JOIN business_profiles merchant_profile ON merchant_profile.account_id=merchant_account.id AND merchant_profile.verification_status='verified'
+           JOIN stores affiliate ON affiliate.id=a.affiliate_store_id AND affiliate.status='active'
+           JOIN accounts affiliate_account ON affiliate_account.id=affiliate.account_id AND affiliate_account.status IN ('active','pending_verification')
+           WHERE l.token_hash=$1 AND l.active=true AND p.merchant_store_id=$2
+           LIMIT 1`,
+          [tokenHash,store.rows[0].id],
+        );
+        if (referral.rowCount) {
+          const selfReferral = await client.query(
+            `SELECT EXISTS(
+               SELECT 1 FROM account_members am
+               WHERE am.account_id=$1 AND am.user_id=$2 AND am.status='active'
+             ) OR EXISTS(
+               SELECT 1 FROM store_members sm
+               WHERE sm.store_id=$3 AND sm.user_id=$2 AND sm.status='active'
+             ) AS "isSelfReferral"`,
+            [referral.rows[0].affiliateAccountId,session.user.id,referral.rows[0].affiliateStoreId],
+          );
+          if (!selfReferral.rows[0]?.isSelfReferral) {
+            const eligible = await client.query(
+              "SELECT product_id AS \"productId\" FROM member_store_affiliate_products WHERE program_id=$1 AND product_id=ANY($2::uuid[])",
+              [referral.rows[0].programId,snapshots.map(item=>item.productId)],
+            );
+            if (eligible.rowCount) {
+              affiliateAttribution = {
+                linkId:referral.rows[0].linkId,
+                programId:referral.rows[0].programId,
+                applicationId:referral.rows[0].applicationId,
+                merchantStoreId:referral.rows[0].merchantStoreId,
+                affiliateStoreId:referral.rows[0].affiliateStoreId,
+                commissionBps:Number(referral.rows[0].commissionBps),
+                productIds:new Set(eligible.rows.map(item=>item.productId)),
+              };
+              await client.query("UPDATE member_store_affiliate_links SET last_used_at=NOW() WHERE id=$1",[affiliateAttribution.linkId]);
+            }
+          }
+        }
+      }
       const orderNumber = `WS-${Date.now().toString(36).toUpperCase()}-${randomUUID().slice(0, 6).toUpperCase()}`;
       const created = await client.query(
         `WITH actor_context AS MATERIALIZED (SELECT set_config('wasla.actor_user_id', $11, true))
@@ -352,6 +407,39 @@ export async function handleMemberStoreOrdersRequest(
           Number(store.rows[0].returnPolicyVersion) > 0 ? store.rows[0].returnPolicyVersion : null,
           session.user.id, JSON.stringify(fulfilmentSnapshot)],
       );
+      if (affiliateAttribution) {
+        for (const item of snapshots) {
+          if (!affiliateAttribution.productIds.has(item.productId)) continue;
+          const unitMinor = decimalToMinorUnits(item.unitPrice, fractionDigits);
+          if (unitMinor === null) throw new Error("Invalid product price for affiliate calculation");
+          const lineMinor = unitMinor * BigInt(item.quantity);
+          const commissionMinor = lineMinor * BigInt(affiliateAttribution.commissionBps) / 10000n;
+          if (commissionMinor <= 0n) continue;
+          const lineSubtotal = minorUnitsToDecimal(lineMinor, fractionDigits);
+          const commissionAmount = minorUnitsToDecimal(commissionMinor, fractionDigits);
+          const attribution = await client.query(
+            `INSERT INTO member_store_order_affiliate_attributions
+              (order_id,product_id,program_id,application_id,merchant_store_id,affiliate_store_id,
+               quantity,commission_bps,line_subtotal,commission_amount,currency)
+             VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+             ON CONFLICT(order_id,product_id) DO NOTHING
+             RETURNING id`,
+            [created.rows[0].id,item.productId,affiliateAttribution.programId,affiliateAttribution.applicationId,
+              affiliateAttribution.merchantStoreId,affiliateAttribution.affiliateStoreId,item.quantity,
+              affiliateAttribution.commissionBps,lineSubtotal,commissionAmount,currency],
+          );
+          if (attribution.rowCount) {
+            await client.query(
+              `INSERT INTO member_store_affiliate_commission_ledger
+                (attribution_id,event_type,amount,currency,idempotency_key,reference_type,reference_id,metadata)
+               VALUES($1,'pending',$2,$3,$4,'order',$5,$6::jsonb)
+               ON CONFLICT(idempotency_key) DO NOTHING`,
+              [attribution.rows[0].id,commissionAmount,currency,`pending:${created.rows[0].id}:${item.productId}`,
+                created.rows[0].id,JSON.stringify({quantity:item.quantity,commissionBps:affiliateAttribution.commissionBps})],
+            );
+          }
+        }
+      }
       await client.query(
         `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, store_id, metadata)
          VALUES ($1, 'member_store.order_requested', 'member_store_order', $2, $3, $4::jsonb)`,
@@ -500,7 +588,8 @@ export async function handleMemberStoreOrdersRequest(
                o.status, o.carrier_name AS "carrierName", o.tracking_number AS "trackingNumber",
                o.tracking_url AS "trackingUrl", o.shipped_at AS "shippedAt",
                o.delivery_confirmed_at AS "deliveryConfirmedAt", o.updated_at AS "updatedAt",
-               o.items, o.store_id AS "storeId"`,
+               o.items, o.store_id AS "storeId",
+               EXISTS (SELECT 1 FROM member_store_order_affiliate_attributions aa WHERE aa.order_id=o.id AND aa.commission_amount>0) AS "hasAffiliateAttribution"`,
     [body.status, note, orderId, slug, session.user.id, ["store.order.manage", "account.order.manage"],
       carrierName || null, trackingNumber || null, trackingUrl || null, session.user.id],
     );
@@ -508,6 +597,19 @@ export async function handleMemberStoreOrdersRequest(
     await client.query("ROLLBACK");
     respond(response, 404, { success: false, error: "Order not found, access denied, or transition not allowed" });
     return;
+  }
+  if ((body.status === "cancelled" || body.status === "rejected") && result.rows[0].hasAffiliateAttribution === true) {
+    await client.query(
+      `INSERT INTO member_store_affiliate_commission_ledger
+        (attribution_id,event_type,amount,currency,idempotency_key,reference_type,reference_id,metadata)
+       SELECT a.id,'reversal',-a.commission_amount,a.currency,
+         'order:'||a.order_id::text||':'||a.product_id::text||':reversal',
+         'order',a.order_id,jsonb_build_object('reason', $2)
+       FROM member_store_order_affiliate_attributions a
+       WHERE a.order_id=$1 AND a.commission_amount > 0
+       ON CONFLICT(idempotency_key) DO NOTHING`,
+      [orderId,body.status],
+    );
   }
   if (body.status === "cancelled" && acceptedCancellation) {
     if (!Array.isArray(acceptedCancellation.items) || acceptedCancellation.items.length === 0) {

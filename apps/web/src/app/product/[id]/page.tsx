@@ -38,6 +38,11 @@ export default function PublicProductPage() {
   const [inquiryOpen, setInquiryOpen] = useState(false);
   const [inquiryText, setInquiryText] = useState("");
   const [quantity, setQuantity] = useState("1");
+  const [affiliateReferralToken, setAffiliateReferralToken] = useState("");
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get("ref") ?? "";
+    if (/^[A-Za-z0-9_-]{32,128}$/.test(token)) setAffiliateReferralToken(token);
+  }, []);
   const [deliveryOptions, setDeliveryOptions] = useState<DeliveryOptions | null>(null);
   const [fulfilmentMethod, setFulfilmentMethod] = useState<"delivery" | "pickup">("delivery");
   const [serviceArea, setServiceArea] = useState("");
@@ -126,7 +131,7 @@ export default function PublicProductPage() {
       const response = await fetch(`/api/stores/${encodeURIComponent(product.storeSlug)}/orders`, {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() },
-        body: JSON.stringify({ items: [{ productId: product.id, quantity: count }], fulfilmentMethod, serviceArea: fulfilmentMethod === "delivery" ? serviceArea : null, deliveryAddress: fulfilmentMethod === "delivery" ? deliveryAddress : null })
+        body: JSON.stringify({ items: [{ productId: product.id, quantity: count }], fulfilmentMethod, serviceArea: fulfilmentMethod === "delivery" ? serviceArea : null, deliveryAddress: fulfilmentMethod === "delivery" ? deliveryAddress : null, ...(affiliateReferralToken ? { affiliateReferralToken } : {}) })
       });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(typeof data.error === "string" ? data.error : "order");

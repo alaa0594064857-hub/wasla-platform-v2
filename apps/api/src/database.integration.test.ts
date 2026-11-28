@@ -112,13 +112,16 @@ describe("WASLA member-store order lifecycle schema", () => {
     await ensureMemberStoreOrderTables();
     await ensureMemberStoreReturnPolicyTables();
     await ensureVerifiedReviewTables();
+    const { ensureMemberStoreAffiliateTables } = await import("./member-store-affiliates.mjs");
+    await ensureMemberStoreAffiliateTables();
     // Startup bootstraps must remain safe when repeated after a restart.
     await ensureMemberStoreOrderTables();
     await ensureMemberStoreReturnPolicyTables();
     await ensureVerifiedReviewTables();
+    await ensureMemberStoreAffiliateTables();
   });
 
-  it("creates the event, review and return-policy schema idempotently", async () => {
+  it("creates the event, review, return-policy and affiliate schema idempotently", async () => {
     const tables = await pool.query(
       `SELECT
         to_regclass('public.member_store_order_events') IS NOT NULL AS events,
@@ -127,7 +130,12 @@ describe("WASLA member-store order lifecycle schema", () => {
         to_regclass('public.verified_product_reviews') IS NOT NULL AS verified_reviews,
         to_regclass('public.member_store_return_requests') IS NOT NULL AS return_requests,
         to_regclass('public.member_store_return_policy_versions') IS NOT NULL AS return_policy_versions,
-        to_regclass('public.member_store_return_escalations') IS NOT NULL AS return_escalations`,
+        to_regclass('public.member_store_return_escalations') IS NOT NULL AS return_escalations,
+        to_regclass('public.member_store_affiliate_programs') IS NOT NULL AS affiliate_programs,
+        to_regclass('public.member_store_affiliate_applications') IS NOT NULL AS affiliate_applications,
+        to_regclass('public.member_store_affiliate_links') IS NOT NULL AS affiliate_links,
+        to_regclass('public.member_store_order_affiliate_attributions') IS NOT NULL AS affiliate_attributions,
+        to_regclass('public.member_store_affiliate_commission_ledger') IS NOT NULL AS affiliate_ledger`,
     );
     expect(tables.rows[0]).toMatchObject({
       events: true,
@@ -137,6 +145,11 @@ describe("WASLA member-store order lifecycle schema", () => {
       return_requests: true,
       return_policy_versions: true,
       return_escalations: true,
+      affiliate_programs: true,
+      affiliate_applications: true,
+      affiliate_links: true,
+      affiliate_attributions: true,
+      affiliate_ledger: true,
     });
 
     const triggers = await pool.query(
@@ -147,14 +160,16 @@ describe("WASLA member-store order lifecycle schema", () => {
          AND (c.relname,t.tgname) IN (
            ('member_store_orders','member_store_orders_capture_events'),
            ('member_store_order_events','member_store_order_events_immutable'),
-           ('member_store_delivery_evidence','member_store_delivery_evidence_immutable')
+           ('member_store_delivery_evidence','member_store_delivery_evidence_immutable'),
+           ('member_store_affiliate_commission_ledger','member_store_affiliate_commission_ledger_immutable')
          )`,
     );
     const triggerNames = new Set(triggers.rows.map((row) => `${row.table_name}:${row.trigger_name}`));
     expect(triggerNames.has("member_store_orders:member_store_orders_capture_events")).toBe(true);
     expect(triggerNames.has("member_store_order_events:member_store_order_events_immutable")).toBe(true);
     expect(triggerNames.has("member_store_delivery_evidence:member_store_delivery_evidence_immutable")).toBe(true);
-    expect(triggers.rowCount).toBe(3);
+    expect(triggerNames.has("member_store_affiliate_commission_ledger:member_store_affiliate_commission_ledger_immutable")).toBe(true);
+    expect(triggers.rowCount).toBe(4);
 
     const indexes = await pool.query(
       `SELECT indexname FROM pg_indexes

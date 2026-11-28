@@ -952,11 +952,20 @@ async function handleRequest(
 
   const memberAffiliateProgramsMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/affiliate-programs(?:\/([0-9a-f-]{36}))?$/i);
   const memberAffiliateApplicationMatch = requestUrl.pathname.match(/^\/api\/affiliate-programs\/([0-9a-f-]{36})\/applications$/i);
+  const memberAffiliateLinkMatch = requestUrl.pathname.match(/^\/api\/affiliate-applications\/([0-9a-f-]{36})\/link$/i);
   const memberAffiliateReviewMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/affiliate-applications(?:\/([0-9a-f-]{36}))?$/i);
-  if (requestUrl.pathname === "/api/public/affiliate-programs" || memberAffiliateProgramsMatch || memberAffiliateApplicationMatch || memberAffiliateReviewMatch) {
+  const memberAffiliateEarningsMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/affiliate-earnings$/i);
+  const memberAffiliateMembershipsMatch = requestUrl.pathname.match(/^\/api\/stores\/([^/]+)\/affiliate-memberships$/i);
+  if (requestUrl.pathname === "/api/public/affiliate-programs" || memberAffiliateProgramsMatch || memberAffiliateApplicationMatch || memberAffiliateReviewMatch || memberAffiliateLinkMatch || memberAffiliateEarningsMatch || memberAffiliateMembershipsMatch) {
     try {
-      const { handleMemberStoreAffiliateRequest, handlePublicMemberAffiliatePrograms, handleMemberAffiliateProgramStatus, handleMemberAffiliateApplicationsList } = await import("./member-store-affiliates.mjs");
-      if (requestUrl.pathname === "/api/public/affiliate-programs") {
+      const { handleMemberStoreAffiliateRequest, handlePublicMemberAffiliatePrograms, handleMemberAffiliateProgramStatus, handleMemberAffiliateApplicationsList, handleMemberAffiliateLinkIssue, handleMemberAffiliateEarnings, handleMemberAffiliateMemberships } = await import("./member-store-affiliates.mjs");
+      if (memberAffiliateMembershipsMatch) {
+        await handleMemberAffiliateMemberships(request, response, decodeURIComponent(memberAffiliateMembershipsMatch[1]));
+      } else if (memberAffiliateEarningsMatch) {
+        await handleMemberAffiliateEarnings(request, response, decodeURIComponent(memberAffiliateEarningsMatch[1]));
+      } else if (memberAffiliateLinkMatch) {
+        await handleMemberAffiliateLinkIssue(request, response, memberAffiliateLinkMatch[1]);
+      } else if (requestUrl.pathname === "/api/public/affiliate-programs") {
         await handlePublicMemberAffiliatePrograms(request, response);
       } else if (memberAffiliateProgramsMatch && memberAffiliateProgramsMatch[2]) {
         await handleMemberAffiliateProgramStatus(request, response, decodeURIComponent(memberAffiliateProgramsMatch[1]), memberAffiliateProgramsMatch[2]);
@@ -1258,9 +1267,9 @@ if (process.env.NODE_ENV !== "test") {
       await ensurePlatformOwnerRole();
       await ensurePersonalThemesTable();
       await ensureStoreProductsTable();
+      await ensureMemberStoreOrderTables();
       const { ensureMemberStoreAffiliateTables } = await import("./member-store-affiliates.mjs");
       await ensureMemberStoreAffiliateTables();
-      await ensureMemberStoreOrderTables();
       const { ensureMemberStoreReturnPolicyTables } = await import("./member-store-return-policy-schema.mjs");
       await ensureMemberStoreReturnPolicyTables();
       await ensureNetworkTables();
