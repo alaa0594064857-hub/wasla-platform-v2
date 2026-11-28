@@ -5,7 +5,7 @@ import { authorizePlatformPermission } from "./platform-security.mjs";
 import { getDatabasePool } from "./database.js";
 
 vi.mock("./platform-security.mjs", () => ({ authorizePlatformPermission: vi.fn() }));
-vi.mock("./database.js", () => ({ getDatabasePool: vi.fn() }));
+vi.mock("./database.js", async importOriginal => {\n  const actual = await importOriginal<typeof import("./database.js")>();\n  return { ...actual, getDatabasePool: vi.fn() };\n});
 
 let server: Server | undefined;
 const query = vi.fn();
