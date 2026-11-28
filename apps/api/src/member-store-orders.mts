@@ -352,6 +352,9 @@ export async function handleMemberStoreOrdersRequest(
            FROM member_store_affiliate_links l
            JOIN member_store_affiliate_applications a ON a.id=l.application_id AND a.status='approved'
            JOIN member_store_affiliate_programs p ON p.id=a.program_id AND p.status='active'
+           JOIN stores merchant ON merchant.id=p.merchant_store_id AND merchant.status='active'
+           JOIN accounts merchant_account ON merchant_account.id=merchant.account_id AND merchant_account.status='active'
+           JOIN business_profiles merchant_profile ON merchant_profile.account_id=merchant_account.id AND merchant_profile.verification_status='verified'
            JOIN stores affiliate ON affiliate.id=a.affiliate_store_id AND affiliate.status='active'
            JOIN accounts affiliate_account ON affiliate_account.id=affiliate.account_id AND affiliate_account.status IN ('active','pending_verification')
            WHERE l.token_hash=$1 AND l.active=true AND p.merchant_store_id=$2
